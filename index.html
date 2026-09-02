@@ -1185,6 +1185,11 @@
   .nmfield{margin-top:12px}
   .nmlab{font-size:12.5px;color:var(--gray);margin-bottom:4px}
   .subnote{margin:1px 0 4px;padding-left:16px;font-size:11.5px;line-height:1.5;color:var(--gray)}
+  /* ★ 82차 ⑥. 「아직 안 정한 돈」이 채워야 할 숙제로 안 보이게 하는 한 줄.
+     새 색은 안 만든다 — 알약과 같은 호박 계열(--est)이다.
+     경고가 아니라 안심시키는 줄이라 상자도 테두리도 안 두른다 */
+  .unsetok{margin:2px 0 6px;padding-left:16px;font-size:11.5px;
+           line-height:1.5;color:var(--est)}
   /* 36차 1-3 — 짚고 넘어갈 것. 새 색을 만들지 않고 --warn 을 쓴다 */
   .subnote.warn{color:var(--warn);font-weight:700}
   /* 375px 에서 꼬리표가 낱말 가운데서 잘려 내려간다. 한 덩어리로 움직이게 */
@@ -1518,7 +1523,13 @@
   .ycard.yin,.ycard.yout{background:var(--paper)}
   .ycard.yin .ycname,.ycard.yin .ycval{color:var(--good)}
   .ycard.yout .ycname,.ycard.yout .ycval{color:var(--warn)}
-  .ycard.yprof{min-height:52px;margin:4px -8px 0;padding:0 16px;border:0!important;
+  /* ★ 82차 ①. margin:4px -8px 0 이 부모(.ycards)보다 좌우 8px씩 넓게 만들어
+     1년 화면이 390px·700px 두 폭 모두에서 오른쪽으로 8px 넘쳤다 (실측 [-8, 398] / 몸통 390).
+     한 달 화면은 이 상자를 안 써서 멀쩡했다. 77-1차에 진한 초록 상자로 바꾼 자리다.
+     ★ 음수 여백을 걷고 안쪽 여백을 16 → 8 로 줄인다.
+       글자가 시작하는 자리는 그대로다 — 예전엔 (-8 + 16) = 8, 지금은 (0 + 8) = 8.
+       높이·색·둥근 모서리·강조 느낌은 한 값도 안 바꾼다. 색칠된 폭만 부모에 맞춘다 */
+  .ycard.yprof{min-height:52px;margin:4px 0 0;padding:0 8px;border:0!important;
                border-radius:var(--rad);background:var(--brand);color:var(--paper)}
   .ycard.yprof .ysign,.ycard.yprof .ycname,.ycard.yprof .ycval{color:var(--paper);font-size:14px}
   .ycard.ybal .ycval{color:var(--ink)}
@@ -1631,7 +1642,8 @@
     <div class="updrop" id="updrop">
       <p><b>거래내역 파일</b>을 올려주세요 (.xlsx · 경남은행 .html)<br>
         <span class="dropsub">1년치를 올리면 월별 흐름도 함께 볼 수 있습니다.<br>
-        
+        나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.<br>
+
         안 열리면 <a class="asklink" href="http://pf.kakao.com/_bijxaX/chat"
           target="_blank" rel="noopener noreferrer">여기로 알려주세요</a>.</span></p>
       <label class="upfile">파일 고르기
@@ -7029,6 +7041,9 @@ function drawFileList() {
   acts.appendChild(go);
   acts.appendChild(add);
   host.appendChild(acts);
+  /* ★ 82차 ⑤. 「＋ 파일 더 올리기」 바로 옆에서 뜻을 밝힌다 —
+     여기가 나눠 올릴지 말지 정하시는 자리다 */
+  host.appendChild(el('div', 'obcov', SPLIT_UPLOAD_TIP));
   if (!ok.length) {
     /* ★ 50차 ③. 전부 「거래 0건」이면 다시 받으라는 말은 거짓말이다.
        제대로 된 .xlsx 이고 시키는 대로 해도 똑같은 파일이 또 나온다 */
@@ -12764,6 +12779,15 @@ function drawInDetail(host, d) {
   host.appendChild(box);
 }
 
+/* ★ 82차 ④. 몇 달 미만이면 「평균이 아직 안 잡힐 수 있다」를 적는가.
+   여섯 달 안팎이 적당하다는 요청서 판단을 그대로 쓴다 */
+var SHORT_SPAN_MONTHS = 6;
+/* ★ 82차 ⑤. 나눠 올려도 합쳐진다 — 71차 ②로 기능은 이미 있는데 화면에 안 적혀 있었다.
+   승우 약사가 파일 용량 때문에 5개월치만 넣으셨다.
+   ★ 두 가지를 다 말해야 한다. 「합쳐진다」만 있으면
+     「그럼 처음부터 다시 분류해야 하나」 싶어 안 하시게 된다 */
+var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
+
 /* 화면 맨 아래 면책 문구. 숫자를 가리지 않게 회색 작은 글씨로 끝에만 둔다 */
 /* 「추정치」가 아니다 — 계좌에 찍힌 것을 더한 것이고 검산까지 맞춰놨다.
    그렇게 써두면 사장님이 우리 숫자를 안 믿으신다.
@@ -12798,10 +12822,17 @@ var WHY = {
            '{{주인}}이 가져가신 돈이나 개인 지출은 여기 안 들어갑니다.'],
   profit: ['사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.',
            '회계상 계산하는 순이익과는 다를 수 있습니다.',
+           /* ★ 82차 ③. 승우 약사 지적 — 약국은 매입한 의약품을 반품할 수 있고
+              재고로도 남는다. 식당처럼 그달에 다 소모되는 업종이 아니다.
+              ★ 업종으로 가르지 않는다. 물음표 안에만 두고 기본 화면에는 안 보인다 —
+                DISCLAIMER_2 는 안 건드린다 (그쪽이 기본 화면에 나가는 줄이다) */
+           '산 물건이 재고로 남는 업종은 계좌에서 나간 돈이 그달의 비용과 다를 수 있습니다.',
            '이 계좌에 실제로 오간 돈만 셉니다. 현금 매출·외상·재고는 안 들어 있습니다.',
            '대출 상환은 지출에 들어갑니다.'],
   unset:  ['매출인지 지출인지 아직 안 정하신 거래입니다.',
-           '정하기 전까지는 매출에도 지출에도 안 넣습니다. 그래서 순이익이 달라질 수 있습니다.'],
+           '정하기 전까지는 매출에도 지출에도 안 넣습니다. 그래서 순이익이 달라질 수 있습니다.',
+           /* ★ 82차 ⑥. 0으로 만들어야 하는 자리가 아니다 */
+           '다 채우지 않으셔도 됩니다. 확실하지 않은 것을 억지로 정하면 숫자가 오히려 틀어집니다.'],
   keep:   ['사업이 아니라 {{주인}} 개인으로 오간 돈입니다.',
            '매출도 지출도 아니라 순이익에서 뺐습니다. 잔액에는 반영됩니다.'],
   bal:    ['그 달 마지막 날 계좌에 남아 있던 돈입니다.',
@@ -13121,6 +13152,19 @@ function dueSpread() {
    펼치면 잔액·들어올 돈·나갈 돈·예상 잔액 네 줄.
    ★ 「모자랍니다」라고 단정하지 않는다. 늘 「가능성 ○%」다.
    ★ 화면 금지어(예측·전망·추정)는 그대로 지킨다 — 여기 한 글자도 안 쓴다 */
+/* ── 82차 ② · 이 대표님은 돈에 여유가 뚜렷한가 ────────────────────
+   ★ 새 계산을 만들지 않는다. dueCard() 가 이미 낸 「모자랄 가능성 비율」을 본다 —
+     그 값이 곧 최근 잔액 흐름으로 잰 여유다. 20% 아래는 이미 초록(good) 구간이다.
+   ★ 판단이 어려우면(표본이 모자라 비율이 null) 여유로 안 본다 —
+     모르는 것을 「넉넉하다」로 읽으면 안 된다. 그때는 지금처럼 맨 위에 둔다 */
+var DUE_EASY_PCT = 20;
+function dueIsEasy() {
+  var c;
+  try { c = dueCard(); } catch (e) { c = null; }
+  if (!c) return false;                       /* 카드 자체가 없으면 자리 문제도 없다 */
+  if (c.비율 === null) return false;          /* 판단이 어려우면 맨 위 그대로 */
+  return c.비율 < DUE_EASY_PCT;
+}
 function drawDueCard(host, months) {
   var c;
   try { c = dueCard(); } catch (e) { c = null; }
@@ -13312,6 +13356,14 @@ function drawResultInner(months) {
     host.appendChild(el('div', 'shortnote',
       '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.'));
   }
+  /* ★ 82차 ④. 승우 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
+     개업 초기라 매입이 몰린 시기였다. 사실만 적는다 —
+     「나중엔 좋아집니다」 같은 앞일은 단정하지 않는다.
+     ★ 여섯 달 미만일 때만이다. 자료가 넉넉하면 이 줄은 아예 안 나온다 */
+  if (months.length && months.length < SHORT_SPAN_MONTHS) {
+    host.appendChild(el('div', 'shortnote',
+      won(months.length) + '개월치입니다. 달마다 들쭉날쭉해 평균이 아직 안 잡힐 수 있습니다.'));
+  }
 
   /* ── 툴바 두 줄 ──
      줄 1: 보는 달 · 보기 방식   줄 2: 누르는 것들
@@ -13451,8 +13503,13 @@ function drawResultInner(months) {
   }
 
   /* ★ 76-2차. 다음 달 초까지 모자랄 가능성은 월 결과의 첫 핵심정보다.
-     숫자 검산이 맞은 뒤, 손익 숫자와 그래프보다 먼저 한 번만 보여준다. */
-  drawDueCard(host, months);
+     숫자 검산이 맞은 뒤, 손익 숫자와 그래프보다 먼저 한 번만 보여준다.
+   ★ 82차 ②. 다만 돈이 넉넉한 대표님에게는 첫 화면 첫 자리가 쓸모없는 칸이 된다 —
+     「약국은 돈이 모자랄 일이 거의 없고요」(승우 약사).
+     여유가 뚜렷하면 아래로 내린다. 없애지는 않는다.
+   ★ 업종으로 가르지 않는다. 그 대표님 자료로 이미 계산한 모자랄 가능성 비율만 본다 */
+  var 여유 = dueIsEasy();
+  if (!여유) drawDueCard(host, months);
 
   /* ★ 36차. 음수를 아스키 하이픈으로 내면 화면에서 마이너스로 안 읽히고
      색 규칙(나간 돈·적자는 빨강)에도 안 걸린다. 부호를 떼어 따로 돌려준다 */
@@ -14053,9 +14110,21 @@ function drawResultInner(months) {
       if (d.uOut) host.appendChild(calcRow('　나간 돈', won(d.uOut)));
       if (d.uIn)  host.appendChild(calcRow('　들어온 돈', won(d.uIn)));
       host.appendChild(el('div', 'subnote', '이 돈은 매출에도 지출에도 넣지 않았습니다'));
+      /* ★ 82차 ⑥. 펼친 자리에서는 왜 여기 두는 편이 나은지까지 말한다.
+         승우 약사가 「사업·개인이 섞인 카드」를 억지로 의약품 매입으로 찍으셨다 —
+         개인이 쓴 돈이 지출로 들어가 순이익이 실제보다 나쁘게 나왔다 */
+      host.appendChild(el('div', 'subnote',
+        '사업과 개인이 섞인 카드처럼 한쪽으로 정할 수 없는 것은 여기 두는 것이 맞습니다.'));
       /* ★ 43차 4단계. 여기서 바로 정하실 수 있게 한다 */
       drawUnsetDetail(host, d, months);
     }, 'sidebox unsetbox', 'unset');
+    /* ★ 82차 ⑥. 이번 통화에서 가장 값어치 있는 발견 —
+       앱은 설계대로 혼용 카드를 안 나누고 여기 뒀는데, 승우 약사가 그것을
+       「덜 끝난 숙제」로 느껴 하나하나 억지로 채우셨다. 그래서 숫자가 틀어졌다.
+       화면이 사용자로 하여금 정확도를 스스로 망가뜨리게 만들고 있었다.
+       ★ 0으로 만들라고 재촉하지 않는다는 것을 펼치지 않아도 보이게 둔다 */
+    host.appendChild(el('div', 'unsetok',
+      '다 채우지 않으셔도 됩니다. 확실하지 않은 것은 여기 두는 편이 낫습니다.'));
   }
 
   /* ── 36차 F-3·4·5 ── 안 묻고 넘긴 것을 반드시 화면에 드러낸다.
@@ -14319,6 +14388,10 @@ function drawResultInner(months) {
        지난달과 견주는 사실이라 예측으로 안 읽힌다 */
 
   drawChecks(host, d, months, checkCards);
+
+  /* ★ 82차 ②. 여유가 뚜렷해서 맨 위에서 내린 카드는 여기 둔다 —
+     없애지 않는다. 접힌 채로 나오므로 한 줄만 차지한다 */
+  if (여유) drawDueCard(host, months);
 
   var foot = el('div', 'upstat');
   foot.style.marginTop = '14px';
@@ -15486,6 +15559,33 @@ function drawDayChart(host, m, d, months) {
   var stepD = rg.step;
   if (hi === lo) hi = lo + 1;
 
+  /* ── 82차 ⑦ · 날마다의 계좌 잔액 ──────────────────────────────
+     「내가 이 날 돈을 왜 이리 많이 썼지?」를 볼 수 있어야 한다 (요한 요청).
+     ★ 새로 계산하지 않는다. balanceAt(m, 날) 이 이미 하는 일이다 —
+       계좌마다 그 날까지의 마지막 거래 잔액을 더한 값이다.
+     ★ 그래서 거래가 없는 날은 앞 날 잔액이 저절로 이어진다.
+       잔액은 거래가 없어도 남아 있는 값이라 선을 끊으면 거짓이 된다
+       (1년 그림에서 자료 없는 달을 끊는 것과 뜻이 다르다) */
+  var bal = [], bLo = null, bHi = null;
+  for (i = 1; i <= f.last; i++) {
+    var bv = balanceAt(m, i);
+    if (bv === null) bv = (bal.length ? bal[bal.length - 1] : 0);
+    bal.push(bv);
+    if (bLo === null || bv < bLo) bLo = bv;
+    if (bHi === null || bv > bHi) bHi = bv;
+  }
+  /* 잔액 그림은 0을 바닥으로 잡는다 — 1년 그림과 같은 자다 */
+  var rgB = axisRange(Math.min(0, bLo === null ? 0 : bLo), bHi === null ? 1 : bHi);
+  var blo = rgB.lo, bhi = rgB.hi, stepB = rgB.step;
+  if (bhi === blo) bhi = blo + 1;
+
+  /* ★ 두 그림의 x축을 맞춘다 — 위아래로 눈이 오가야 「이 날 많이 썼구나」가 보인다.
+     왼쪽 자리는 눈금 글자 길이로 정해지므로, 둘 중 넓은 쪽에 둘 다 맞춘다.
+     안 맞추면 잔액 눈금이 더 길어 그림 둘이 어긋난다 */
+  var ticksD = axisTicks(lo, hi, stepD);
+  var ticksB = axisTicks(blo, bhi, stepB);
+  var LEFT공통 = Math.max(axisLeft(ticksD), axisLeft(ticksB));
+
   host.appendChild(chHead('일별 흐름', [
     ['kgood', '■ 사업으로 번 돈'], ['kwarn', '■ 사업에 쓴 돈'], ['kprof', '— 계좌 순이익(이번 달 누적)']
   ], monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
@@ -15495,8 +15595,8 @@ function drawDayChart(host, m, d, months) {
   /* ★ 66-7차 ①. 1년치 그림과 같은 자로 그린다 — 픽셀 고정, 높이 고정.
      화면에 붙인 뒤에 재야 참값이 나온다 */
   fitChart(box, CH_H2, function (svg, W) {
-    var ticks = axisTicks(lo, hi, stepD);
-    var LEFT = axisLeft(ticks), RIGHT = 10, PAD = 10, BOT = 16;
+    var ticks = ticksD;
+    var LEFT = LEFT공통, RIGHT = 10, PAD = 10, BOT = 16;
     var PH = CH_H2 - BOT;
     var colW = (W - LEFT - RIGHT) / f.last;
     var bw = Math.max(2, Math.min(9, colW * 0.62));
@@ -15548,6 +15648,57 @@ function drawDayChart(host, m, d, months) {
     pt.textContent = 알약글;
     svg.appendChild(pt);
     /* 날짜는 다 적으면 뭉개진다. 1·5·10·15·20·25·마지막만 */
+    [1, 5, 10, 15, 20, 25, f.last].forEach(function (day, k, arr) {
+      if (day > f.last) return;
+      if (k < arr.length - 1 && arr[arr.length - 1] - day < 3 && day !== 1) return;
+      var t = svgEl('text', { x: x(day), y: PH + 12, 'text-anchor': 'middle',
+        'font-size': '10', fill: 'var(--gray)' });
+      t.textContent = (+m.slice(5, 7)) + '/' + day;
+      svg.appendChild(t);
+    });
+  });
+
+  /* ── 82차 ⑦ · 그림 2 · 계좌 잔액 ────────────────────────────────
+     1년 화면의 「월말 계좌 잔액」과 같은 형태·같은 색이다 (var(--now) 선).
+     새 모양을 만들지 않는다.
+     ★ 위 「일별 흐름」 바로 아래에 둔다. 거래처를 덜 정해 위 그림이 안 나오면
+       여기까지 오지도 않는다 — 위쪽 d.blocked·f.last 검사를 그대로 물려받는다 */
+  host.appendChild(chHead('계좌 잔액', [['know', '— 계좌 잔액']],
+    monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
+  var box2 = el('div', 'dchart');
+  host.appendChild(box2);
+  fitChart(box2, CH_H3, function (svg, W) {
+    var LEFT = LEFT공통, RIGHT = 10, PAD = 12, BOT = 16;
+    var PH = CH_H3 - BOT;
+    var colW = (W - LEFT - RIGHT) / f.last;
+    function y(v) {
+      if (bhi === blo) return PAD;
+      return PAD + (bhi - v) / (bhi - blo) * (PH - PAD * 2);
+    }
+    /* ★ 위 그림과 같은 자리 계산이다 — 한 글자도 다르면 x축이 어긋난다 */
+    function x(day) { return LEFT + (day - 1) * colW + colW / 2; }
+    ticksB.forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: LEFT - 4, y1: y(v), x2: W - RIGHT, y2: y(v),
+        stroke: 'var(--line)', 'stroke-width': v === 0 ? 1 : 0.6,
+        opacity: v === 0 ? '0.9' : '0.55' }));
+      var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
+        'font-size': '11', fill: 'var(--gray)' });
+      t.textContent = axisTxt(v);
+      svg.appendChild(t);
+    });
+    /* ★ 선을 끊지 않는다. 거래가 없는 날도 잔액은 그대로 남아 있다 */
+    var seg = [];
+    for (i = 1; i <= f.last; i++) seg.push(x(i) + ' ' + y(bal[i - 1]));
+    if (seg.length > 1) {
+      svg.appendChild(svgEl('path', { d: 'M ' + seg.join(' L '), fill: 'none',
+        stroke: 'var(--now)', 'stroke-width': 2.2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    }
+    /* ★ 1년 그림은 달마다 점을 찍는다. 여기서는 하루 사이가 10px 남짓이라
+       날마다 찍으면 점이 서로 붙어 선이 안 보인다. 마지막 날에만 같은 점을 찍는다 */
+    svg.appendChild(svgEl('circle', { cx: x(f.last), cy: y(bal[bal.length - 1]), r: 3,
+      fill: 'var(--paper)', stroke: 'var(--now)', 'stroke-width': 2 }));
+    /* ★ 날짜 줄도 위 그림과 똑같은 날만 적는다 (1·5·10·15·20·25·마지막) */
     [1, 5, 10, 15, 20, 25, f.last].forEach(function (day, k, arr) {
       if (day > f.last) return;
       if (k < arr.length - 1 && arr[arr.length - 1] - day < 3 && day !== 1) return;
