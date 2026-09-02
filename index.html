@@ -6460,7 +6460,7 @@ function reopenInstall() {
 
 fillBiz();        /* 정적 화면의 {{주인}}·{{곳}} 을 채운다. 그림 그리기 전에 */
 drawTopInApp();   /* 첫 화면을 열자마자 — 카톡 안이면 여기서 먼저 알려야 한다 */
-/* 빌드 표시는 <div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.01 23:48 · 96ec852</div>
+/* 빌드 표시는
 </body> 바로 앞에 붙고, 이 줄은 그 앞에서 돈다.
    문서가 다 읽힌 뒤에 불러야 판 이름을 읽을 수 있다 */
 document.addEventListener('DOMContentLoaded', useOpened);
@@ -9345,7 +9345,7 @@ function whyFrom(bits, spark) {
   }
   var s = whyClause(b[0]) + '지만, ' + whyClause(b[1]) + '어 어느 쪽인지 확실하지 않습니다.';
   /* 이유가 셋 이상이면 앞의 둘만 말하고 이렇게 맺는다 */
-  if (b.length > 2) s += ' 그 밖에도 걸리는 것이 있습니다.';
+  if (b.length > 2) s += ' 이유가 더 있습니다.';
   return [s + ' 직접 골라주세요.'];
 }
 
@@ -16651,5 +16651,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.01 23:48 · 96ec852</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 83차</div>
 </body></html>
