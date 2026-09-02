@@ -1,0 +1,32 @@
+# 새로 배포해도 폰 홈 화면 아이콘으로 열면 옛 화면이 나오던 것 (56차).
+# 서비스 워커는 범인이 아니다 — sw.js 는 respondWith 를 안 부르니 캐시하지 않는다.
+# 순수하게 HTTP 캐시다. 링크를 한 번 열어본 폰에 옛 화면이 남는다.
+#
+# ★ index.html 은 회차마다 바뀐다. 절대 캐시하지 않는다.
+# ★ sw.js 도 no-store — 서비스 워커가 옛것으로 굳으면 고칠 길이 막힌다.
+# ★ xlsx는 오래 캐시한다. manifest와 아이콘은 브랜드 변경이 즉시 보이도록
+#    캐시하지 않는다 (73차 — 옛 브랜드 설치 창 재노출 방지).
+
+/index.html
+  Cache-Control: no-store
+
+/
+  Cache-Control: no-store
+
+/sw.js
+  Cache-Control: no-store
+
+/xlsx.full.min.js
+  Cache-Control: public, max-age=604800
+
+/manifest.json
+  Cache-Control: no-store
+
+/icon-180.png
+  Cache-Control: no-store
+
+/icon-192.png
+  Cache-Control: no-store
+
+/icon-512.png
+  Cache-Control: no-store
