@@ -571,6 +571,38 @@
   .chone svg,.dchart svg{display:block;margin:0 auto}
   .dcnote{margin-top:4px;font-size:11.5px;color:var(--gray)}
   .dcjump{margin-top:4px}
+  /* ★ 84차 · 칸을 누르면 그날이 열린다 ─────────────────────────
+     ★ 누르는 자리는 막대가 아니라 칸 전체다. 390px 에서 칸폭이 10px 남짓이라
+       막대를 손가락으로 겨눌 수가 없고, 번 돈이 없는 날은 막대가 아예 없다.
+     ★ 새 색은 안 만든다 — 선택 띠는 본문색(--ink)을 아주 옅게 깐 것이고
+       나머지는 이미 쓰던 --panel · --line · --edge · --est 다 */
+  .dchit{fill:transparent;cursor:pointer}
+  .dcsel{fill:var(--ink);opacity:.07;pointer-events:none}
+  .dcday{margin:8px auto 0;width:100%;max-width:640px;
+         background:var(--paper);border:1px solid var(--line);
+         border-radius:var(--rad-lg);padding:12px 14px;box-sizing:border-box}
+  .dcnav{display:flex;align-items:center;justify-content:center;gap:12px}
+  .dcarrow{width:34px;height:34px;flex:none;border:1px solid var(--edge);
+           background:var(--paper);color:var(--ink);border-radius:var(--rad-pill);
+           font-family:inherit;font-size:14px;line-height:1;cursor:pointer}
+  .dcarrow:disabled{color:var(--line);border-color:var(--line);cursor:default}
+  /* ★ 날짜를 크게 적는 것이 이 회차에서 제일 중요하다 —
+     글자 없는 막대를 눌렀을 때 내가 누르려던 날이 맞는지 여기서만 안다 */
+  .dcbig{flex:1;min-width:0;text-align:center;font-size:18px;font-weight:700}
+  .dcdow{color:var(--est);margin-left:4px}
+  .dcsum{margin-top:6px;text-align:center;font-size:12.5px;color:var(--gray)}
+  .dcgrp{margin-top:12px}
+  .dcgh{display:flex;gap:8px;align-items:baseline;font-size:13px;font-weight:700}
+  .dcgh .dcgn{flex:1;min-width:0}
+  .dcgh .dcga{flex:none;font-variant-numeric:tabular-nums}
+  .dcgh.tapx .chev{color:var(--gray);font-weight:400;margin-left:4px}
+  /* 거래 한 줄은 .rawpeek · .rawrow 를 그대로 쓴다. 이름 아래 적요만 더 붙는다 */
+  .dcnm{flex:1;min-width:0}
+  .dcnm .dcnmt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dcsub{font-size:11px;color:var(--gray);overflow:hidden;
+         text-overflow:ellipsis;white-space:nowrap}
+  .dcnone{margin-top:14px;text-align:center;font-size:13.5px}
+  .dcbal{margin-top:5px;text-align:center;font-size:12.5px;color:var(--gray)}
   .chkey .kprof{color:var(--brand)}
   /* ★ 46차 ①(2). 올리는 화면 맨 위. 접히지 않는다 —
      못 읽는 파일을 올리기 전에 알려드리는 것이 이 줄의 뜻이다.
@@ -15771,6 +15803,251 @@ function dailyFlow(m, cutDay) {
   });
   return { last: last, earn: earn, spend: spend };
 }
+/* ── 84차 · 칸을 누르면 그날이 열린다 ──────────────────────────────
+   82-1차에서 날짜 글자를 이틀 간격으로 촘촘히 넣었다. 그런데 막대는 하루도
+   안 빠지고 다 있고 날짜 글자는 이틀에 하나뿐이라, 글자가 없는 날은 어느
+   막대인지 눈으로 세야 했다 — 「9」와 「11」 사이 막대가 10일이라는 걸
+   세어봐야 안다. 라벨을 아무리 촘촘히 해도 이건 안 풀린다.
+   누른 뒤 화면이 푼다.
+   ★ 그림은 「이 날 많이 썼다」까지만 말한다. 「무엇에 썼는지」는 그날 거래를 봐야 한다.
+   ★ 계산을 안 바꾼다. 새 숫자를 만들지 않고 이미 있는 값을 다른 자리에 보여줄 뿐이다.
+   ★ 고른 날은 UP 에만 둔다 — 저장통(fc.picks · fc.manual)에는 안 들어간다.
+     달을 옮기면 저절로 풀린다 (열쇠에 달이 들어 있다) */
+function dayPick(m) {
+  var p = UP && UP.dayPick;
+  return (p && p.m === m) ? p.d : null;
+}
+function setDayPick(m, day) {
+  UP.dayPick = (day === null) ? null : { m: m, d: day };
+}
+/* 고른 날 칸에 옅은 세로 띠. 두 그림에 같이 깔린다 */
+function daySelBand(svg, m, f, LEFT, colW, H) {
+  var sel = dayPick(m);
+  if (sel === null || sel < 1 || sel > f.last) return;
+  svg.appendChild(svgEl('rect', { x: LEFT + (sel - 1) * colW, y: 0,
+    width: colW, height: H, 'class': 'dcsel' }));
+}
+/* ★ 누르는 자리는 막대가 아니라 칸 전체다 —
+   390px 화면에서 칸폭이 10px 안팎이라 막대를 손가락으로 겨눌 수 없고,
+   번 돈이 없는 날은 막대가 아예 없다.
+   ★ 띠끼리 겹치지 않게 잇대어 둔다. 겹치면 옆날이 눌린다 —
+     왼끝이 LEFT+(i-1)*colW 이고 폭이 colW 라 앞뒤 띠가 정확히 맞닿는다 */
+function dayHits(svg, m, f, months, LEFT, colW, H) {
+  for (var i = 1; i <= f.last; i++) {
+    var hit = svgEl('rect', { x: LEFT + (i - 1) * colW, y: 0,
+      width: colW, height: H, 'class': 'dchit' });
+    (function (day) {
+      hit.addEventListener('click', function () {
+        /* 같은 날을 다시 누르면 닫힌다 */
+        setDayPick(m, dayPick(m) === day ? null : day);
+        drawResult(months);
+      });
+    })(i);
+    svg.appendChild(hit);
+  }
+}
+/* ── 84차 ④ · 그날 거래를 세 갈래로 가른다 ─────────────────────────
+   막대는 사업 거래만 그린다. 아직 안 정한 돈·계좌 간 이체·사업 외 용도는 빠져 있다.
+   그런데 목록에 그것들이 없으면 계좌에는 있는 거래가 화면에 없어서 「빠졌네」가 된다.
+   그렇다고 다 섞으면 목록 합계가 위 요약과 안 맞아 보인다. 세 갈래로 나눠 둘 다 푼다.
+   ★ 가르는 잣대도 차례도 dailyFlow 와 한 글자도 다르지 않다 —
+     앞의 두 갈래가 막대이고, 셋을 합치면 그날 계좌에 든 거래 전부다.
+   ★ 줄 차례는 UP.rows 에 있는 그대로다. 잔액이 이어지도록 이미 맞춰 둔 차례라
+     여기서 다시 정렬하지 않는다 */
+function daySplit(m, day) {
+  var earn = [], spend = [], rest = [];
+  UP.rows.forEach(function (r) {
+    if (monthOf(r.at) !== m) return;
+    if (+r.at.slice(8, 10) !== day) return;
+    if (isUnknown(r)) { rest.push({ r: r, why: '아직 안 정한 돈' }); return; }
+    if (xferOn(r)) { rest.push({ r: r, why: XFER_PART }); return; }
+    var c = catOf(r);
+    if (isKeep(c)) { rest.push({ r: r, why: c }); return; }
+    if (c === '매출' || r.amount > 0) earn.push(r);   /* 취소·환불은 음수로 깎인다 */
+    else spend.push(r);
+  });
+  return { earn: earn, spend: spend, rest: rest };
+}
+/* 직접 넣으신 금액 가운데 그 날짜에 적으신 것 (83차 ②) */
+function manualItem(id) {
+  var f = ((UP.manual && UP.manual.items) || []).filter(function (it) {
+    return it.id === id;
+  })[0];
+  if (f) return { name: f.name, side: f.side };
+  return { name: CASH_NAME, side: 'in' };      /* 현금매출은 items 에 없다 (83차 ①) */
+}
+function dayManual(m, day) {
+  var out = [];
+  ((UP.manual && UP.manual.days && UP.manual.days[m]) || []).forEach(function (it) {
+    if (+it.day !== day) return;
+    var one = manualItem(it.id);
+    out.push({ name: one.name, side: one.side, amt: +it.amt || 0 });
+  });
+  return out;
+}
+/* ── 거래 한 줄 ── 새로 만들지 않는다. .rawpeek · .rawrow 를 그대로 쓴다.
+   ★ 거래처 이름 아래에 적요를 작게 단다. 이름과 다를 때만이다 (81차 ③).
+   ★ 계좌가 둘 이상이면 어느 계좌인지 같이 단다 */
+var DAY_PEEK = 10;         /* 한 갈래에 한 번에 보이는 줄 수 (④) */
+function dayRow(box, r, 계좌여럿, 왜) {
+  var row = el('div', 'rawrow');
+  var when = el('span', 'rawat');
+  when.textContent = clockText(r.at);
+  row.appendChild(when);
+  var nm = el('div', 'dcnm');
+  nm.appendChild(el('div', 'dcnmt', showName(r.payee)));
+  var 밑 = [];
+  var mo = String(r.memo == null ? '' : r.memo).trim();
+  if (mo && mo !== String(r.payee).trim() && mo !== showName(r.payee)) 밑.push(mo);
+  if (계좌여럿) 밑.push(bankName(accOf(r)));
+  if (왜) 밑.push(왜);
+  if (밑.length) nm.appendChild(el('div', 'dcsub', 밑.join(' · ')));
+  row.appendChild(nm);
+  row.appendChild(el('span', 'rawamt num ' + (r.amount < 0 ? 'sgn-minus' : 'sgn-plus'),
+    (r.amount > 0 ? '+' : '') + won(r.amount)));
+  box.appendChild(row);
+}
+/* ── 84차 ②③④⑤ · 두 그림 바로 아래에 그날을 편다 ──────────────────
+   새 창을 띄우지 않는다. 82차 ⑦에서 두 그림을 위아래로 붙인 까닭이
+   「눈이 오갈 수 있어야 한다」였다 — 창을 띄우면 그림이 가려져
+   「이 막대가 그 막대였나」를 잃는다.
+   ★ 여기서는 보기만 한다. 「아직 안 정한 돈」이 보여도 여기서 못 정한다 (⑥) */
+function drawDayPanel(host, m, f, months, bal) {
+  var day = dayPick(m);
+  if (day === null || day < 1 || day > f.last) return;
+  var at = m + '-' + (day < 10 ? '0' + day : '' + day);
+  var 계좌여럿 = !!(UP.banks && UP.banks.length > 1);
+  var s = daySplit(m, day);
+  var mans = dayManual(m, day);
+  var box = el('div', 'dcday');
+  host.appendChild(box);
+
+  /* ── ③ 맨 위 · 날짜를 크게 ──
+     ★ 글자 없는 막대를 눌렀을 때, 내가 누르려던 날이 맞는지 여기서만 안다.
+     ★ 좌우 화살표를 단다 — 칸폭이 10px 라 한 칸 옆을 잘못 누르는 일이 흔하다.
+       그때 다시 겨누지 않고 화살표 한 번으로 옮겨간다.
+     ★ 그 달 첫날의 ◀, 마지막 날의 ▶ 는 흐리게 하고 안 눌리게 한다.
+       진행 중인 달에서는 f.last 가 자료가 끝난 날이라 그 뒤로 못 간다 */
+  var nav = el('div', 'dcnav');
+  function 화살표(글, 갈날) {
+    var b = el('button', 'dcarrow', 글);
+    b.type = 'button';
+    if (갈날 < 1 || 갈날 > f.last) b.disabled = true;
+    else b.addEventListener('click', function () {
+      setDayPick(m, 갈날);          /* 그림의 선택 표시도 같이 옮겨간다 */
+      drawResult(months);
+    });
+    return b;
+  }
+  nav.appendChild(화살표('◀', day - 1));
+  var big = el('div', 'dcbig', dayText(at));
+  var dw = dowText(at);
+  /* 요일을 함께 적는다 — 「이 날이 무슨 요일이었지」가 매출을 읽는 데 쓰인다 */
+  if (dw) big.appendChild(el('span', 'dcdow', '(' + dw + ')'));
+  nav.appendChild(big);
+  nav.appendChild(화살표('▶', day + 1));
+  box.appendChild(nav);
+
+  /* ── ⑤ 거래가 없는 날 ──
+     그냥 닫아버리면 「눌렀는데 왜 안 열리지」가 된다.
+     잔액은 앞날에서 이어진 값이다 (82차 ⑦에서 정한 대로) */
+  if (!s.earn.length && !s.spend.length && !s.rest.length && !mans.length) {
+    box.appendChild(el('div', 'dcnone', '이 날은 거래가 없습니다'));
+    var bv = bal[day - 1];
+    box.appendChild(el('div', 'dcbal', '계좌 잔액 ' + won(bv == null ? 0 : bv) + '원'));
+    return;
+  }
+
+  /* 요약 두 숫자는 그림의 막대와 같은 값이다 — 아래 첫 두 갈래의 합이다 */
+  box.appendChild(el('div', 'dcsum',
+    '번 돈 ' + manwon(f.earn[day]) + ' · 쓴 돈 ' + manwon(f.spend[day])));
+
+  /* 열 건까지 보이고 「외 N건 보기」로 더 본다 — .rawpeek 가 이미 그렇게 한다 */
+  function 더보기(pk, 열쇠, 전체, 몇) {
+    if (전체 <= 몇) return;
+    var b = el('button', 'oblink rawmorebtn', '외 ' + won(전체 - 몇) + '건 보기');
+    b.type = 'button';
+    b.addEventListener('click', function () {
+      UP.open = UP.open || {};
+      UP.open[열쇠] = 몇 + DAY_PEEK;
+      drawResult(months);
+    });
+    pk.appendChild(b);
+  }
+
+  /* 앞의 두 갈래 — 합이 위 요약과 정확히 같다 (막대에 든 것 그대로다).
+     거래가 하나도 없는 갈래는 줄을 안 만든다 */
+  [['in', '사업으로 번 돈', f.earn[day], s.earn],
+   ['out', '사업에 쓴 돈', f.spend[day], s.spend]].forEach(function (g) {
+    var 손 = mans.filter(function (x) {
+      return g[0] === 'in' ? x.side === 'in' : x.side !== 'in';
+    });
+    if (!g[3].length && !손.length) return;
+    var wrap = el('div', 'dcgrp');
+    var h = el('div', 'dcgh');
+    h.appendChild(el('div', 'dcgn', g[1]));
+    h.appendChild(el('div', 'dcga num', manwon(g[2])));
+    wrap.appendChild(h);
+    var pk = el('div', 'rawpeek');
+    var 열쇠 = 'dc:' + g[0] + ':' + at;
+    var 몇 = (UP.open && UP.open[열쇠]) || DAY_PEEK;
+    g[3].slice(0, 몇).forEach(function (r) { dayRow(pk, r, 계좌여럿); });
+    더보기(pk, 열쇠, g[3].length, 몇);
+    /* ★ 직접 넣으신 현금매출도 그날에 보인다 (83차 ②).
+       계좌에 안 들어온 돈이라 ✎ 표시로 갈라 보여야 한다 */
+    손.forEach(function (x) {
+      var row = el('div', 'rawrow');
+      row.appendChild(el('span', 'rawat'));
+      var nm = el('div', 'dcnm');
+      var t = el('div', 'dcnmt', x.name);
+      t.appendChild(el('span', 'manmark', ' ✎'));
+      nm.appendChild(t);
+      row.appendChild(nm);
+      row.appendChild(el('span',
+        'rawamt num ' + (g[0] === 'in' ? 'sgn-plus' : 'sgn-minus'),
+        (g[0] === 'in' ? '+' : '−') + won(Math.abs(x.amt))));
+      pk.appendChild(row);
+    });
+    if (손.length) {
+      pk.appendChild(el('div', 'rawmore',
+        '✎ 는 직접 넣으신 금액입니다 — 계좌에 안 들어온 돈이라 위 합계에 안 듭니다'));
+    }
+    wrap.appendChild(pk);
+    box.appendChild(wrap);
+  });
+
+  /* 세 번째 갈래는 접어 둔다. 다만 있다는 것은 보여야 한다 —
+     건수와 합계를 줄에 적는다 */
+  if (s.rest.length) {
+    var restSum = 0;
+    s.rest.forEach(function (x) { restSum += Math.abs(x.r.amount); });
+    var wrap3 = el('div', 'dcgrp');
+    var 열쇠3 = 'dcrest:' + at;
+    var open3 = !!(UP.open && UP.open[열쇠3]);
+    var h3 = el('div', 'dcgh tapx');
+    var n3 = el('div', 'dcgn', '여기 안 든 것 ' + won(s.rest.length) + '건');
+    n3.appendChild(el('span', 'chev', open3 ? ' ▴' : ' ▾'));
+    h3.appendChild(n3);
+    h3.appendChild(el('div', 'dcga num', manwon(restSum)));
+    h3.addEventListener('click', function () {
+      UP.open = UP.open || {};
+      UP.open[열쇠3] = !open3;
+      drawResult(months);
+    });
+    wrap3.appendChild(h3);
+    if (open3) {
+      var pk3 = el('div', 'rawpeek');
+      var 열쇠3n = 'dcrestn:' + at;
+      var 몇3 = (UP.open && UP.open[열쇠3n]) || DAY_PEEK;
+      s.rest.slice(0, 몇3).forEach(function (x) {
+        dayRow(pk3, x.r, 계좌여럿, x.why);
+      });
+      더보기(pk3, 열쇠3n, s.rest.length, 몇3);
+      wrap3.appendChild(pk3);
+    }
+    box.appendChild(wrap3);
+  }
+}
 function drawDayChart(host, m, d, months) {
   /* ★ 66차 ④. 막힌 달에는 그림을 안 그린다 — 끝값이 가리킬 순이익이 없다.
      ★ 66-13차 ③. 그런데 아무 말 없이 사라지면 그림이 원래 없는 줄 아신다.
@@ -15852,6 +16129,8 @@ function drawDayChart(host, m, d, months) {
       t.textContent = axisTxt(v);
       svg.appendChild(t);
     });
+    /* ★ 84차 ①. 고른 날 띠는 막대 아래에 깐다 — 막대 색을 흐리지 않으려는 것이다 */
+    daySelBand(svg, m, f, LEFT, colW, CH_H2);
     for (i = 1; i <= f.last; i++) {
       var cx = x(i), y0 = y(0);
       if (f.earn[i] > 0) {
@@ -15896,6 +16175,8 @@ function drawDayChart(host, m, d, months) {
       t.textContent = String(day);
       svg.appendChild(t);
     });
+    /* ★ 84차 ①. 누르는 띠는 맨 위에 얹는다 — 막대가 없는 날도 눌려야 한다 */
+    dayHits(svg, m, f, months, LEFT, colW, CH_H2);
   });
 
   /* ── 82차 ⑦ · 그림 2 · 계좌 잔액 ────────────────────────────────
@@ -15926,6 +16207,8 @@ function drawDayChart(host, m, d, months) {
       t.textContent = axisTxt(v);
       svg.appendChild(t);
     });
+    /* ★ 84차 ①. 두 그림에 같이 표시한다 — 어느 쪽을 눌러도 같은 날이 열린다 */
+    daySelBand(svg, m, f, LEFT, colW, CH_H3);
     /* ★ 선을 끊지 않는다. 거래가 없는 날도 잔액은 그대로 남아 있다 */
     var seg = [];
     for (i = 1; i <= f.last; i++) seg.push(x(i) + ' ' + y(bal[i - 1]));
@@ -15945,7 +16228,11 @@ function drawDayChart(host, m, d, months) {
       t.textContent = String(day);
       svg.appendChild(t);
     });
+    dayHits(svg, m, f, months, LEFT, colW, CH_H3);
   });
+
+  /* ── 84차 ② · 열린 화면은 두 그림 바로 아래다 ── */
+  drawDayPanel(host, m, f, months, bal);
 }
 
 /* ── 71차 ⑤ · 「한 해」 보기 ─────────────────────────────────────
@@ -16651,5 +16938,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 83차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 84차</div>
 </body></html>
