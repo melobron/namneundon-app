@@ -961,16 +961,10 @@
   .periodhead{margin-top:20px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
   .ph1{font-size:16px;font-weight:800}
   .ph2{margin-top:4px;font-size:12.5px;color:var(--gray)}
-  /* 숫자보다 먼저 보이는 경고 요약 */
-  .checktop{margin-top:10px;padding:11px 13px;background:var(--warnbg);
-            border:1px solid var(--warnline);border-radius:var(--rad);
-            display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .checktop .ct1{flex:1;min-width:180px;font-size:13px;line-height:1.6;font-weight:600}
+  /* ★ 86차 ⑦. 「확인할 게 N가지 있습니다」 상자(.checktop)와 「보기 ↓」(.ctbtn)를
+     없앴다. 그 붉은 상자를 아래 「확인이 필요합니다 · N건」 제목이 그대로 물려받는다 —
+     색도 여백도 그 상자가 쓰던 것 그대로다. 새 색은 안 만든다 */
   .ctmark{color:var(--warn);font-weight:800}
-  .ctbtn{flex:none;border:1px solid var(--warn);background:var(--paper);
-         color:var(--warn);border-radius:var(--rad);padding:5px 12px;
-         font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
-  .ctbtn:hover{background:var(--warn);color:var(--paper)}
   .orow .p.small .pctbase{display:block}
   .howlink{display:block;font-size:12.5px;color:var(--gray);font-weight:400;margin-top:4px}
   .sumrow{border-top:1px solid var(--ink);margin-top:4px;font-weight:800}
@@ -984,6 +978,10 @@
   .catn{white-space:nowrap}
   .checks{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
   .ckhead{font-size:14.5px;font-weight:800;margin-bottom:4px}
+  /* ★ 86차 ⑦. 없앤 .checktop 의 붉은 상자가 이 제목으로 왔다 */
+  .ckhead.ckwarn{padding:11px 13px;background:var(--warnbg);
+                 border:1px solid var(--warnline);border-radius:var(--rad);
+                 margin-bottom:10px}
   .ckfix{margin-top:10px}
   .ckcard.done{background:var(--panel);border-color:var(--line)}
   .ckcard.done .ckq{font-weight:600;color:var(--gray)}
@@ -1218,8 +1216,28 @@
   .cashday{align-items:center;font-size:13px}
   .cashadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 0 10px}
   .cashadd .maninput{width:112px}
-  .cashadd .cashdayin{width:128px;text-align:left}
   .cashadd .subnote{flex-basis:100%;padding-left:0;color:var(--warn)}
+  /* ★ 85차 ②③. 금액 칸 뒤에 「원」, 날짜 칸 앞에 지금 보는 달과 뒤에 「일」.
+     칸 안에 넣으면 지울 때 같이 지워진다 — 바깥에 글자로 둔다.
+     ★ 한 덩이(fixgrp)로 묶어 두면 320px 에서 줄이 바뀌어도
+       「8월」과 「일」이 칸에서 떨어져 나가지 않는다.
+     ★ 새 색은 안 만든다 */
+  .cashadd .fixgrp{display:flex;align-items:center;gap:5px;flex:none}
+  .cashadd .fixlab{flex:none;font-size:13px;color:var(--ink)}
+  .cashadd .cashdayin{width:72px;text-align:right}
+  /* ★ 86차 ③. 숫자 칸의 위아래 화살표를 없앤다 —
+     휴대폰에서 누를 수 있는 크기가 아니라 자리만 먹었다.
+     숫자 자판이 뜨는 것과 막는 규칙은 그대로다 (type=number 를 그대로 둔다) */
+  input.cashdayin::-webkit-outer-spin-button,
+  input.cashdayin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input.cashdayin{-moz-appearance:textfield}
+  /* ★ 86차 ⑨. 나간 쪽 항목 이름 칸. 금액 칸보다 조금 좁게 둔다 */
+  .cashadd .nameinput{width:104px;text-align:left}
+  /* ★ 86차 ⑨. 직접 넣으신 항목의 이름 줄 — 그 아래 날짜 줄들이 딸린다 */
+  .manitem{align-items:center;font-size:13.5px;font-weight:700}
+  .cashadd .cashhint{flex-basis:100%;margin:1px 0 2px;font-size:11.5px;
+                     line-height:1.5;color:var(--gray)}
+  .cashday .fixlab{flex:none;font-size:13px;color:var(--ink)}
   /* 36차 H — 이름 고치기 칸 */
   .nmfield{margin-top:12px}
   .nmlab{font-size:12.5px;color:var(--gray);margin-bottom:4px}
@@ -1594,6 +1612,18 @@
     border-radius:var(--rad);background:var(--brand);color:var(--paper)}
   .res.mcalc.mprofit .msign,.res.mcalc.mprofit .lab,.res.mcalc.mprofit .v{
     color:var(--paper);font-size:14px}
+  /* ★ 85차 ①. 「조금만 더 정하면 나옵니다」에 갈 곳을 준다.
+     문장일 뿐 갈 곳이 없었다. 바로 아래에 「아직 안 정한 곳 N곳」 단추가 있지만
+     초록 띠가 훨씬 크고 눈에 먼저 들어와서, 대표님은 띠를 누르셨다 (요한 실기기).
+     ★ 띠 자체의 크기·색은 그대로다 — 흰 상자만 그 안에 들어간다.
+     ★ 새 색은 안 만든다. 흰색(--paper)·초록(--brand)과
+       그림자에 쓰는 --brand2 뿐이고 셋 다 이미 있는 색이다.
+     ★ 「달이 끝나면 나옵니다」에는 안 씌운다 — 그건 대표님이 하실 일이 없다 */
+  .res.mcalc.mprofit .v.waitgo{justify-self:end;border:0;font-family:inherit;
+    background:var(--paper);color:var(--brand);border-radius:var(--rad-pill);
+    padding:8px 14px;font-size:14px;font-weight:800;line-height:1.2;
+    white-space:nowrap;cursor:pointer;box-shadow:0 1px 2px var(--brand2)}
+  .res.mcalc.mprofit .v.waitgo:active{background:var(--panel)}
 
   /* 검산이 안 맞으면 숫자를 하나도 보여주지 않는다 (인수인계 §10-3) */
   body.failed > *:not(.err){display:none}
@@ -11754,6 +11784,34 @@ function manwonB(v) {
   return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', manwon(v));
 }
 
+/* ── 85차 ② · 치는 동안 콤마가 붙는 금액 칸 ──────────────────────
+   지금은 5000000 이라고 치신다. 0이 몇 개인지 세야 한다.
+   ★ 저장되는 값은 지금과 한 자리도 안 다르다 — 콤마는 보이기만 하는 것이다.
+     읽는 자(moneyRead)는 예전에 자리마다 흩어져 있던 그 식 그대로다 —
+     숫자 아닌 글자를 걷어내고 반올림한다. 그래서 대표님이 콤마를 직접
+     치셔도 예전처럼 그대로 받는다.
+   ★ 다 치고 딴 데를 눌러야 붙으면 세는 수고가 그대로다.
+     그래서 change 가 아니라 input 에 붙인다 */
+function moneyRead(v) {
+  return Math.max(0, Math.round(+String(v).replace(/[^0-9]/g, '') || 0));
+}
+function moneyLive(inp) {
+  inp.addEventListener('input', function () {
+    /* 앞의 0은 걷어낸다 — 「007」이 그대로 남으면 콤마 자리가 어긋난다 */
+    var raw = String(inp.value).replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+    var t = raw ? won(+raw) : '';
+    if (t === inp.value) return;
+    /* 가운데를 고치실 때 커서가 끝으로 튀지 않게, 뒤에서 센 자리를 지킨다 */
+    var at = inp.selectionStart;
+    var 뒤 = inp.value.length - (at == null ? inp.value.length : at);
+    inp.value = t;
+    var p = t.length - 뒤;
+    if (p < 0) p = 0;
+    if (p > t.length) p = t.length;
+    try { inp.setSelectionRange(p, p); } catch (e) { }
+  });
+}
+
 /* 거래내역의 마지막 거래 시각 — 언제까지의 숫자인지 위에 크게 적는다 */
 function asOfText() {
   var at = '';
@@ -13278,19 +13336,19 @@ function dueSpread() {
    펼치면 잔액·들어올 돈·나갈 돈·예상 잔액 네 줄.
    ★ 「모자랍니다」라고 단정하지 않는다. 늘 「가능성 ○%」다.
    ★ 화면 금지어(예측·전망·추정)는 그대로 지킨다 — 여기 한 글자도 안 쓴다 */
-/* ── 82차 ② · 이 대표님은 돈에 여유가 뚜렷한가 ────────────────────
-   ★ 새 계산을 만들지 않는다. dueCard() 가 이미 낸 「모자랄 가능성 비율」을 본다 —
-     그 값이 곧 최근 잔액 흐름으로 잰 여유다. 20% 아래는 이미 초록(good) 구간이다.
-   ★ 판단이 어려우면(표본이 모자라 비율이 null) 여유로 안 본다 —
-     모르는 것을 「넉넉하다」로 읽으면 안 된다. 그때는 지금처럼 맨 위에 둔다 */
-var DUE_EASY_PCT = 20;
-function dueIsEasy() {
-  var c;
-  try { c = dueCard(); } catch (e) { c = null; }
-  if (!c) return false;                       /* 카드 자체가 없으면 자리 문제도 없다 */
-  if (c.비율 === null) return false;          /* 판단이 어려우면 맨 위 그대로 */
-  return c.비율 < DUE_EASY_PCT;
-}
+/* ── 86차 ① · 82차 ②를 철회한다 ──────────────────────────────────
+   82차 ②는 「모자랄 가능성이 20% 아래면 여유로 보고 카드를 아래로 내린다」였다.
+   근거는 「약국은 돈이 모자랄 일이 거의 없고요」(승우 약사)였고, 고장이 아니라
+   일부러 넣은 것이었다. 그런데 요한 화면이 0%라 카드가 내려갔다 — 설계대로였지만
+   맨 위에 있어야 할 것이 안 보였다.
+   ★ 이제 어느 대표님이든 늘 맨 위에 두고 늘 펼친 채로 시작한다.
+     접는 것은 대표님이 정하신다 — 앱이 미리 접어 두지 않는다.
+     승우 약사의 말은 「접을 수 있게 된 것」으로 갈음한다.
+   ★ dueIsEasy() 와 DUE_EASY_PCT 를 없앤다. 자리를 가르는 길 자체를 없애야
+     다음에 또 「왜 안 보이지」가 안 생긴다.
+   ★ 펼침 열쇠를 __due(열림) 에서 __dueShut(접힘) 으로 뒤집는다 —
+     UP.open 은 달을 옮길 때 비워지는 통이라, 열림으로 두면 비워질 때마다
+     접힌 채로 돌아간다. 접힘으로 두어야 「늘 펼친 채로」가 지켜진다 */
 function drawDueCard(host, months) {
   var c;
   try { c = dueCard(); } catch (e) { c = null; }
@@ -13325,7 +13383,7 @@ function drawDueCard(host, months) {
   아이콘.appendChild(svgEl('circle', { cx: 20, cy: 32, r: 2.4, fill: 'currentColor' }));
   box.appendChild(아이콘);
 
-  var open = !!UP.open.__due;
+  var open = !UP.open.__dueShut;
   var top = el('div', 'duetop tapx');
   var lab = el('div', 'duelab');
   lab.appendChild(document.createTextNode(까지 + '까지 모자랄 가능성'));
@@ -13352,7 +13410,7 @@ function drawDueCard(host, months) {
   }
 
   top.addEventListener('click', function () {
-    UP.open.__due = !UP.open.__due;
+    UP.open.__dueShut = !UP.open.__dueShut;
     drawResult(months);
   });
   if (open) {
@@ -13630,12 +13688,9 @@ function drawResultInner(months) {
 
   /* ★ 76-2차. 다음 달 초까지 모자랄 가능성은 월 결과의 첫 핵심정보다.
      숫자 검산이 맞은 뒤, 손익 숫자와 그래프보다 먼저 한 번만 보여준다.
-   ★ 82차 ②. 다만 돈이 넉넉한 대표님에게는 첫 화면 첫 자리가 쓸모없는 칸이 된다 —
-     「약국은 돈이 모자랄 일이 거의 없고요」(승우 약사).
-     여유가 뚜렷하면 아래로 내린다. 없애지는 않는다.
-   ★ 업종으로 가르지 않는다. 그 대표님 자료로 이미 계산한 모자랄 가능성 비율만 본다 */
-  var 여유 = dueIsEasy();
-  if (!여유) drawDueCard(host, months);
+   ★ 86차 ①. 82차 ②의 「여유가 뚜렷하면 아래로 내린다」를 철회했다.
+     어느 대표님이든 늘 맨 위에 · 늘 펼친 채로 둔다. 접는 것은 대표님이 정하신다 */
+  drawDueCard(host, months);
 
   /* ★ 36차. 음수를 아스키 하이픈으로 내면 화면에서 마이너스로 안 읽히고
      색 규칙(나간 돈·적자는 빨강)에도 안 걸린다. 부호를 떼어 따로 돌려준다 */
@@ -13782,7 +13837,8 @@ function drawResultInner(months) {
   var full = lastD >= monthDays(UP.month);
   var leftDays = monthDays(UP.month) - lastD;
   var checkCards = collectChecks(d, months);
-  var checkLeft = checksLeft(checkCards);
+  /* ★ 86차 ⑦. 여기서 세던 checkLeft 는 없앤 상자에만 쓰이던 값이다.
+     남은 건수는 drawChecks 가 제 자리에서 다시 센다 (같은 자 — warnOk) */
 
   var card = el('div', 'pnl');
   var hostSave = host;
@@ -13944,8 +14000,23 @@ function drawResultInner(months) {
         subRow('그 밖의 입금', '__otherin', won(d.otherIn), null, function () {
           drawInDetail(host, d);
         });
-        host.appendChild(el('div', 'subnote',
-          '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'));
+        /* ★ 86차 ②. 줄을 펴면 설명이 늘 통째로 나와 자리를 먹었다.
+           설명은 「자세히」 뒤로 접고 숫자 줄만 남긴다.
+           ★ 견주는 줄(「7월 같은 기간 대비」)은 접지 않는다 —
+             그건 설명이 아니라 사실이다.
+           ★ 새 모양을 만들지 않는다. 앱이 쓰던 oblink 와 ▾ 그대로다 */
+        var 왜열림 = !!UP.open.__otherinwhy;
+        var 왜 = el('button', 'oblink', '자세히 ' + (왜열림 ? '▴' : '▾'));
+        왜.type = 'button';
+        왜.addEventListener('click', function () {
+          UP.open.__otherinwhy = !왜열림;
+          drawResult(months);
+        });
+        host.appendChild(왜);
+        if (왜열림) {
+          host.appendChild(el('div', 'subnote',
+            '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'));
+        }
         /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다 */
         if (d.sales > 0 && d.otherIn / d.sales > 0.10) {
           host.appendChild(el('div', 'subnote warn',
@@ -13994,6 +14065,156 @@ function drawResultInner(months) {
       if (co) host.appendChild(el('div', 'subnote', co.full));
     }
   }
+  /* ── 86차 ④⑤⑨ · 직접 넣는 칸을 하나로 ────────────────────────────
+     들어온 쪽(현금매출)과 나간 쪽이 같은 칸·같은 규칙을 쓴다.
+     ★ 예전에는 「＋ 추가」를 누르면 그 자리에서 상자를 만들어 붙였다.
+       그래서 「넣기」로 다시 그리면 상자가 사라져, 하나 더 넣으려면
+       올라와서 또 눌러야 했다 — 여러 건 넣는 것이 이 기능의 뜻인데 그게 막혔다.
+       이제 열림·고침을 UP.open 에 두고 그리는 자가 상자를 낸다.
+       그래서 넣은 뒤에도 상자가 그대로 남고 칸만 비워진다.
+     ★ 화면은 안 움직인다 — drawResult 가 스크롤 자리를 지키고(56차),
+       칸으로 되돌아가는 focus 도 preventScroll 로 부른다.
+     ★ 저장은 fc.manual 의 items·amounts·days 그대로다. 새 칸을 안 만든다 */
+
+  /* 날짜 막는 규칙 — 들어온 쪽과 나간 쪽이 같은 자를 쓴다.
+     말은 83차에서 통과한 그대로다. 한 글자도 안 바꾼다 */
+  function 날짜재기(m, 진행, 끝날, dtxt) {
+    if (!dtxt) {
+      /* ★ 83차 ④-3. 진행 중인 달에는 날짜 없는 값을 안 받는다 */
+      if (진행) return { 말: '이 달은 아직 진행 중입니다. 며칠인지 적어주세요.' };
+      return { day: 0 };                 /* 0 = 날짜 없이 이 달 전체 */
+    }
+    var dd = +dtxt;
+    if (dd < 1 || dd > 끝날) {
+      return { 말: 진행
+        ? ('오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.')
+        : (monNum(m) + '은 ' + 끝날 + '일까지입니다.') };
+    }
+    return { day: dd };
+  }
+  /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 —
+     안 그러면 「월세」가 달마다 새로 생겨 줄이 쌓인다 (86차 ⑨) */
+  function manualFind(name, side) {
+    var t = String(name).trim();
+    var f = ((UP.manual && UP.manual.items) || []).filter(function (it) {
+      return it.side === side && String(it.name).trim() === t;
+    })[0];
+    return f ? f.id : null;
+  }
+  /* 금액·날짜(·항목 이름) 한 줄. opt.넣기(이름, 금액, 날) 이 참을 내면 넣은 것이다 */
+  function drawEntryBox(opt) {
+    var m = UP.month;
+    var box = el('div', 'catpanel cashadd');
+    var nameInp = null;
+    if (opt.이름칸) {
+      nameInp = document.createElement('input');
+      nameInp.type = 'text';
+      nameInp.className = 'maninput nameinput';
+      nameInp.placeholder = '항목 이름';
+      nameInp.value = opt.이름 || '';
+      box.appendChild(nameInp);
+    }
+    var amt = document.createElement('input');
+    amt.type = 'text'; amt.inputMode = 'numeric';
+    amt.className = 'maninput'; amt.placeholder = '금액';
+    if (opt.금액) amt.value = won(opt.금액);
+    moneyLive(amt);                       /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+    var 금액칸 = el('div', 'fixgrp');
+    금액칸.appendChild(amt);
+    /* ★ 85차 ②. 「원」은 칸 바깥에 글자로 둔다 — 안에 넣으면 지울 때 같이 지워진다 */
+    금액칸.appendChild(el('span', 'fixlab', '원'));
+    box.appendChild(금액칸);
+    var day = document.createElement('input');
+    day.type = 'number'; day.className = 'maninput cashdayin';
+    day.min = 1; day.max = opt.끝날;
+    if (opt.날) day.value = opt.날;
+    /* ★ 85차 ③. 앞에 지금 보고 있는 달, 뒤에 「일」. 달을 옮기면 앞의 달도 같이 바뀐다 */
+    var 날짜칸 = el('div', 'fixgrp');
+    날짜칸.appendChild(el('span', 'fixlab', monNum(m)));
+    날짜칸.appendChild(day);
+    날짜칸.appendChild(el('span', 'fixlab', '일'));
+    box.appendChild(날짜칸);
+    box.appendChild(el('div', 'cashhint', opt.진행
+      ? ('오늘까지만 넣을 수 있습니다 (1~' + opt.끝날 + '일)')
+      : '비워도 됩니다 — 비우면 이 달 전체로 칩니다'));
+    var msg = el('div', 'subnote', '');
+    var ok = el('button', 'upbtn on', '넣기');
+    ok.type = 'button';
+    ok.addEventListener('click', function () {
+      var nm = nameInp ? String(nameInp.value).trim() : null;
+      if (nameInp && !nm) { msg.textContent = '항목 이름을 적어주세요.'; return; }
+      var v = moneyRead(amt.value);       /* ★ 85차 ②. 예전 식 그대로다 — 콤마는 걷힌다 */
+      if (!v) { msg.textContent = '금액을 적어주세요.'; return; }
+      var 잰것 = 날짜재기(m, opt.진행, opt.끝날, String(day.value).replace(/[^0-9]/g, ''));
+      if (잰것.말) { msg.textContent = 잰것.말; return; }
+      opt.넣기(nm, v, 잰것.day);
+      drawResult(months);
+    });
+    /* ★ 86차 ④. 「취소」가 아니라 「닫기」다 — 넣은 것을 무르는 것이 아니라 칸을 접는 것이다 */
+    var no = el('button', 'upbtn plain', '닫기');
+    no.type = 'button';
+    no.addEventListener('click', function () { opt.닫기(); drawResult(months); });
+    box.appendChild(ok);
+    box.appendChild(no);
+    box.appendChild(msg);
+    host.appendChild(box);
+    /* 이어서 바로 치실 수 있게 — 화면은 안 움직인다 */
+    try { (nameInp || amt).focus({ preventScroll: true }); } catch (e) { }
+  }
+  /* 날짜별로 적으신 한 줄 — [수정] [지우기] (86차 ⑤) */
+  function 날줄(m, id, x, 열쇠, 고치기) {
+    var r = el('div', 'orow cashday');
+    r.appendChild(el('div', 'lab', '　　' + monNum(m) + ' ' + x.day + '일'));
+    r.appendChild(el('div', 'v num', won(x.amt)));
+    var ed = el('button', 'chbtn', '수정');
+    ed.type = 'button';
+    ed.addEventListener('click', function () { 고치기(열쇠); drawResult(months); });
+    r.appendChild(ed);
+    var del = el('button', 'chbtn', '지우기');
+    del.type = 'button';
+    del.addEventListener('click', function () {
+      manualDayRemove(m, id, x.day, x.amt);
+      drawResult(months);
+    });
+    r.appendChild(del);
+    host.appendChild(r);
+  }
+  /* 넣기·고치기가 실제로 저장하는 자리. 날 0 은 「날짜 없이 이 달 전체」다.
+     고칠 때는 지우고 다시 넣는다 — manualDayAdd 가 날짜순으로 꽂아 주므로
+     줄 차례가 안 튄다 (86차 ⑤) */
+  function 넣어두기(m, id, v, 날, 옛것) {
+    if (옛것) manualDayRemove(m, id, 옛것.day, 옛것.amt);
+    if (날) manualDayAdd(m, id, 날, v);
+    else manualSet(m, id, manualAmt(m, id) + v);
+  }
+  /* 날짜 없이 달로만 적으신 것 — 옛 저장분이라 있을 때만 보인다 (규칙 7) */
+  function 달전체줄(m, id, 달합, 진행) {
+    if (진행) {
+      if (달합) {
+        /* 끝난 뒤에 세겠다는 것을 밝힌다 — 조용히 빼면 숫자가 안 맞아 보인다 */
+        host.appendChild(el('div', 'subnote',
+          '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다'));
+      }
+      return;
+    }
+    var r2 = el('div', 'orow cashday');
+    r2.appendChild(el('div', 'lab', '　　날짜 없이 이 달 전체'));
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.className = 'maninput';
+    inp.value = 달합 ? won(달합) : '';
+    inp.placeholder = '0';
+    moneyLive(inp);                       /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+    inp.addEventListener('change', function () {
+      manualSet(m, id, moneyRead(inp.value));
+      drawResult(months);
+    });
+    r2.appendChild(inp);
+    r2.appendChild(el('span', 'fixlab', '원'));
+    host.appendChild(r2);
+  }
+
   /* 직접 넣기 칸. 끝난 달에만 나온다 (규칙 2) */
   /* ── 83차 ①②③ · 「현금매출」 한 줄과 그 아래 날짜별 목록 ──────────
      ★ 병원·치과는 한 건에 3천만원씩 들어오는 경우가 있어 날짜가 필요하다.
@@ -14023,86 +14244,112 @@ function drawResultInner(months) {
     host.appendChild(row);
     if (!open) return;
     /* 날짜별로 적으신 것 */
+    var 고침 = UP.open.__cashEdit || '';
     날들.forEach(function (it) {
-      var r = el('div', 'orow cashday');
-      r.appendChild(el('div', 'lab', '　　' + monNum(m) + ' ' + it.day + '일'));
-      r.appendChild(el('div', 'v num', won(it.amt)));
-      var del = el('button', 'chbtn', '지우기');
-      del.type = 'button';
-      del.addEventListener('click', function () {
-        manualDayRemove(m, CASH_ID, it.day, it.amt);
-        drawResult(months);
+      var 열쇠 = it.day + '|' + it.amt;
+      if (고침 === 열쇠) {
+        /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 금액과 날짜가 채워진 채로 */
+        drawEntryBox({
+          금액: it.amt, 날: it.day, 끝날: 끝날, 진행: 진행,
+          넣기: function (nm, v, 날) {
+            넣어두기(m, CASH_ID, v, 날, it);
+            UP.open.__cashEdit = '';
+          },
+          닫기: function () { UP.open.__cashEdit = ''; }
+        });
+        return;
+      }
+      날줄(m, CASH_ID, it, 열쇠, function (k) {
+        UP.open.__cashEdit = k; UP.open.__cashAdd = false;
       });
-      r.appendChild(del);
-      host.appendChild(r);
     });
     /* 날짜 없이 달로만 적으신 것 — 끝난 달에서만 받는다 (83차 ④-3) */
-    if (!진행) {
-      var r2 = el('div', 'orow cashday');
-      r2.appendChild(el('div', 'lab', '　　날짜 없이 이 달 전체'));
-      var inp = document.createElement('input');
-      inp.type = 'text';
-      inp.inputMode = 'numeric';
-      inp.className = 'maninput';
-      inp.value = 달합 ? won(달합) : '';
-      inp.placeholder = '0';
-      inp.addEventListener('change', function () {
-        var v = Math.max(0, Math.round(+String(inp.value).replace(/[^0-9]/g, '') || 0));
-        manualSet(m, CASH_ID, v);
+    달전체줄(m, CASH_ID, 달합, 진행);
+    /* ★ 86차 ④. 「＋ 추가」는 열림 상태만 켠다. 상자는 그리는 자가 낸다 —
+       그래야 「넣기」 뒤에도 상자가 그대로 남는다 */
+    if (UP.open.__cashAdd && !고침) {
+      drawEntryBox({
+        끝날: 끝날, 진행: 진행,
+        넣기: function (nm, v, 날) { 넣어두기(m, CASH_ID, v, 날, null); },
+        닫기: function () { UP.open.__cashAdd = false; }
+      });
+    } else if (!고침) {
+      var add = el('button', 'oblink', '＋ 추가');
+      add.type = 'button';
+      add.addEventListener('click', function () {
+        UP.open.__cashAdd = true;
         drawResult(months);
       });
-      r2.appendChild(inp);
-      host.appendChild(r2);
-    } else if (달합) {
-      /* 끝난 뒤에 세겠다는 것을 밝힌다 — 조용히 빼면 숫자가 안 맞아 보인다 */
-      host.appendChild(el('div', 'subnote',
-        '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다'));
+      host.appendChild(add);
     }
-    /* ＋ 추가 — 금액과 날짜를 한 줄에 */
-    var add = el('button', 'oblink', '＋ 추가');
+  }
+
+  /* ── 86차 ⑨ · 「사업에 쓴 돈」에 직접 넣기 — 항목명·금액·날짜 ──────────
+     ⑧에서 들어온 쪽 단추를 없애면 나간 쪽까지 직접 넣을 길이 막힌다.
+     그래서 나간 쪽은 없애지 않고 제대로 다시 만든다 (요한 지시).
+     ★ 들어온 쪽은 「현금매출」 하나로 충분하지만 나간 쪽은 무엇을 적을지
+       미리 알 수 없다 — 그래서 항목 이름도 대표님이 적으신다.
+     ★ 계산은 새로 만들 것이 없다. 여기 적은 금액은 manualSum('out') 으로
+       이미 manOut 에 배선돼 있어 「사업에 쓴 돈」에 더해진다.
+       계좌 잔액·검산(입금·출금 합계)·일별 흐름 막대에는 안 들어간다 —
+       계좌에서 나간 돈이 아니다. 들어온 쪽과 같은 규칙이다.
+     ★ 아무것도 안 적으면 숫자가 한 자리도 안 움직인다 (83차 ⑥과 같은 까닭) */
+  function drawOutManual(isFull) {
+    var m = UP.month;
+    var 진행 = !isFull;
+    var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
+    var 고침 = UP.open.__outEdit || '';
+    manualItems('out').forEach(function (it) {
+      var 날들 = manualDays(m, it.id);
+      var 달합 = manualAmt(m, it.id);
+      var head = el('div', 'orow manrow manitem');
+      var l = el('div', 'lab', '　' + it.name);
+      l.appendChild(el('span', 'manmark', ' ✎'));
+      head.appendChild(l);
+      var rm = el('button', 'chbtn', '지우기');
+      rm.type = 'button';
+      rm.addEventListener('click', function () { manualRemove(it.id); drawResult(months); });
+      head.appendChild(rm);
+      host.appendChild(head);
+      날들.forEach(function (x) {
+        var 열쇠 = it.id + '|' + x.day + '|' + x.amt;
+        if (고침 === 열쇠) {
+          /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 이미 채워진 채로 */
+          drawEntryBox({
+            금액: x.amt, 날: x.day, 끝날: 끝날, 진행: 진행,
+            넣기: function (nm, v, 날) {
+              넣어두기(m, it.id, v, 날, x);
+              UP.open.__outEdit = '';
+            },
+            닫기: function () { UP.open.__outEdit = ''; }
+          });
+          return;
+        }
+        날줄(m, it.id, x, 열쇠, function (k) {
+          UP.open.__outEdit = k; UP.open.__outAdd = false;
+        });
+      });
+      /* 옛 저장분 — 날짜 없이 달로만 적으신 것. 있을 때만 보인다 (규칙 7) */
+      if (달합) 달전체줄(m, it.id, 달합, 진행);
+    });
+    if (고침) return;                    /* 고치는 중에는 새로 넣는 칸을 안 연다 */
+    if (UP.open.__outAdd) {
+      drawEntryBox({
+        이름칸: true, 끝날: 끝날, 진행: 진행,
+        넣기: function (nm, v, 날) {
+          /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 */
+          var id = manualFind(nm, 'out') || manualAdd(nm, 'out');
+          넣어두기(m, id, v, 날, null);
+        },
+        닫기: function () { UP.open.__outAdd = false; }
+      });
+      return;
+    }
+    var add = el('button', 'oblink', '＋ 항목 추가');
     add.type = 'button';
     add.addEventListener('click', function () {
-      var box = el('div', 'catpanel cashadd');
-      var amt = document.createElement('input');
-      amt.type = 'text'; amt.inputMode = 'numeric';
-      amt.className = 'maninput'; amt.placeholder = '금액';
-      var day = document.createElement('input');
-      day.type = 'number'; day.className = 'maninput cashdayin';
-      day.min = 1; day.max = 끝날;
-      day.placeholder = 진행 ? ('며칠 (1~' + 끝날 + ')') : ('며칠 (1~' + 끝날 + ', 비워도 됨)');
-      box.appendChild(amt);
-      box.appendChild(day);
-      var msg = el('div', 'subnote', '');
-      var ok = el('button', 'upbtn on', '넣기');
-      ok.type = 'button';
-      ok.addEventListener('click', function () {
-        var v = Math.max(0, Math.round(+String(amt.value).replace(/[^0-9]/g, '') || 0));
-        if (!v) { msg.textContent = '금액을 적어주세요.'; return; }
-        var dtxt = String(day.value).replace(/[^0-9]/g, '');
-        if (!dtxt) {
-          /* ★ 83차 ④-3. 진행 중인 달에는 날짜 없는 값을 안 받는다 */
-          if (진행) { msg.textContent = '이 달은 아직 진행 중입니다. 며칠인지 적어주세요.'; return; }
-          manualSet(m, CASH_ID, 달합 + v);
-        } else {
-          var dd = +dtxt;
-          if (dd < 1 || dd > 끝날) {
-            msg.textContent = 진행
-              ? ('오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.')
-              : (monNum(m) + '은 ' + 끝날 + '일까지입니다.');
-            return;
-          }
-          manualDayAdd(m, CASH_ID, dd, v);
-        }
-        drawResult(months);
-      });
-      var no = el('button', 'upbtn plain', '취소');
-      no.type = 'button';
-      no.addEventListener('click', function () { drawResult(months); });
-      box.appendChild(ok);
-      box.appendChild(no);
-      box.appendChild(msg);
-      host.appendChild(box);
-      amt.focus();
+      UP.open.__outAdd = true;
+      drawResult(months);
     });
     host.appendChild(add);
   }
@@ -14136,7 +14383,15 @@ function drawResultInner(months) {
        만들라고 시키지 않는다 — 이미 있는 상태로 보인다.
        이름은 고정이고 대표님이 바꾸거나 지울 수 없다 */
     if (side === 'in') drawCashRow(isFull);
+    /* ★ 86차 ⑨. 나간 쪽은 무엇을 적을지 미리 알 수 없어 항목 이름도 대표님이 적으신다.
+       날짜 규칙은 들어온 쪽과 똑같다 — 그래서 진행 중인 달에도 이 자리가 열린다 */
+    if (side === 'out') { drawOutManual(isFull); return; }
     if (!isFull) return;               /* 진행 중인 달에는 적는 칸을 안 연다 (규칙 2) */
+    /* ★ 86차 ⑧. 들어온 쪽 「＋ 항목 추가」를 없앤다 — 직접 넣는 길을
+       「현금매출을 날짜별로」 하나로 좁힌다. 그 자리에 비슷한 단추가 둘이었다.
+       ★ 단추만 없앤다. 이미 만들어 두신 항목은 그대로 줄로 보이고 금액 칸도 있고
+         합계에도 그대로 든다 — 항목까지 없애면 적어두신 금액이 화면에서 사라진다.
+       ★ 저장 모양(items)은 한 글자도 안 바꾼다 */
     items.forEach(function (it) {
       var r2 = el('div', 'orow manrow');
       var l2 = el('div', 'lab', '　' + it.name);
@@ -14160,18 +14415,6 @@ function drawResultInner(months) {
       r2.appendChild(del);
       host.appendChild(r2);
     });
-    var add = el('button', 'oblink', '＋ 항목 추가');
-    add.type = 'button';
-    add.addEventListener('click', function () {
-      var box = el('div', 'catpanel');
-      host.appendChild(box);
-      drawNameBox(box, {
-        placeholder: side === 'in' ? '현금 매출' : '항목 이름',
-        onCancel: function () { drawResult(months); },
-        onDone: function (name) { manualAdd(name, side); drawResult(months); }
-      });
-    });
-    host.appendChild(add);
   }
 
   /* ── 덩어리 1 · 순이익을 만드는 두 줄 ── */
@@ -14205,8 +14448,21 @@ function drawResultInner(months) {
   if (d.blocked) {
     res.classList.add('waiting');
     var 안정한탓 = (d.uOut > 0 || d.uIn > 0);
-    res.appendChild(el('div', 'v wait',
-      안정한탓 ? '조금만 더 정하면 나옵니다' : '달이 끝나면 나옵니다'));
+    if (안정한탓) {
+      /* ★ 85차 ①. 여기까지는 문장일 뿐 갈 곳이 없었다. 흰 상자로 감싸 눌리게 한다.
+         ★ 갈 곳은 이미 있는 것을 그대로 쓴다 — resultNewButton 이 하는 일과 같다.
+           새 길을 만들지 않는다 */
+      var wg = el('button', 'v wait waitgo', '조금만 더 정하면 나옵니다 ›');
+      wg.type = 'button';
+      wg.addEventListener('click', function () {
+        useScreen('거래처 더 찍기');
+        moreFromResult();
+      });
+      res.appendChild(wg);
+    } else {
+      /* 「달이 끝나면」은 기다리는 것 말고 하실 일이 없다. 상자를 안 씌우고 안 눌린다 */
+      res.appendChild(el('div', 'v wait', '달이 끝나면 나옵니다'));
+    }
   } else {
     /* ★ 44차 1-1. 색은 「확정인가」만 말한다. 흑자·적자는 숫자 앞 − 가 말한다.
        43차에는 흑자일 때만 색을 붙여서, 적자 달은 안 정한 돈이 2,328만원인데도
@@ -14544,24 +14800,11 @@ function drawResultInner(months) {
     host.appendChild(pbox);
   }
 
-  /* 이 경고는 이 카드의 숫자에 대한 것이다. 따로 떨어져 있으면
-     화면 전체에 대한 경고처럼 읽히고 자리만 먹는다 */
-  if (checkLeft) {
-    var warn = el('div', 'checktop');
-    var wt = el('div', 'ct1');
-    wt.appendChild(el('span', 'ctmark', '⚠'));
-    wt.appendChild(document.createTextNode(' 확인할 게 ' + won(checkLeft) + '가지 있습니다'));
-    warn.appendChild(wt);
-    var go = el('button', 'ctbtn', '보기 ↓');
-    go.type = 'button';
-    go.addEventListener('click', function () {
-      var t = document.querySelector('#up-result .checks');
-      if (!t) return;
-      window.scrollTo(0, t.getBoundingClientRect().top + window.pageYOffset - 12);
-    });
-    warn.appendChild(go);
-    host.appendChild(warn);
-  }
+  /* ★ 86차 ⑦. 여기 있던 「확인할 게 N가지 있습니다」 상자를 없앤다.
+     「보기 ↓」를 눌러도 조금만 내려갔다 — 손가락으로 내려도 보이는 자리라
+     눌러야 할 까닭이 없었고 자리만 먹었다.
+     그 경고는 아래 「확인이 필요합니다 · N건」 제목으로 옮겼다 (drawChecks).
+     상자가 두 자리에서 같은 말을 하지 않는다 (49차) */
 
   host = hostSave;
   host.appendChild(card);
@@ -14631,9 +14874,7 @@ function drawResultInner(months) {
 
   drawChecks(host, d, months, checkCards);
 
-  /* ★ 82차 ②. 여유가 뚜렷해서 맨 위에서 내린 카드는 여기 둔다 —
-     없애지 않는다. 접힌 채로 나오므로 한 줄만 차지한다 */
-  if (여유) drawDueCard(host, months);
+  /* ★ 86차 ①. 여기 있던 「내려온 카드」 자리를 없앤다 — 카드는 늘 맨 위 하나뿐이다 */
 
   var foot = el('div', 'upstat');
   foot.style.marginTop = '14px';
@@ -14714,8 +14955,14 @@ function drawChecks(host, d, months, cards) {
   var done = cards.filter(function (c) { return warnOk(m, checkId(c)); });
   var left = todo.length;
   if (left) {
-    var hd = el('div', 'ckhead ckheadrow');
-    hd.appendChild(el('span', null, '확인이 필요합니다 · ' + won(left) + '건'));
+    /* ★ 86차 ⑦. 위에 있던 「확인할 게 N가지 있습니다」 상자가 여기로 왔다.
+       느낌표와 붉은 상자를 이 제목에 씌운다 — 색은 그 상자가 쓰던 것 그대로다.
+       0건이면 이 제목 자체가 안 나오므로 상자도 같이 사라진다 */
+    var hd = el('div', 'ckhead ckheadrow ckwarn');
+    var hs = el('span', null);
+    hs.appendChild(el('span', 'ctmark', '⚠'));
+    hs.appendChild(document.createTextNode(' 확인이 필요합니다 · ' + won(left) + '건'));
+    hd.appendChild(hs);
     /* ★ 38차 3번. 「맞습니다」를 누르면 카드가 접혀 사라진 것처럼 보인다.
        온보딩의 [되돌리기]와 같은 자리·같은 모양으로 되돌릴 길을 둔다 */
     if (UP.lastOk && UP.lastOk.m === m) {
@@ -15984,10 +16231,25 @@ function drawDayPanel(host, m, f, months, bal) {
     });
     if (!g[3].length && !손.length) return;
     var wrap = el('div', 'dcgrp');
-    var h = el('div', 'dcgh');
-    h.appendChild(el('div', 'dcgn', g[1]));
+    /* ★ 86차 ⑥. 거래가 서른 건 넘는 날은 한 갈래가 화면을 다 먹는다.
+       눌러서 접었다 편다 — 「여기 안 든 것」이 이미 쓰는 그 방식이다.
+       ★ 처음에는 둘 다 편 채로 둔다. 그래서 열쇠를 「접힘」으로 둔다 —
+         UP.open 은 달을 옮길 때 비워지는 통이라 열림으로 두면 다시 접힌다.
+       ★ 접어도 오른쪽 합계는 보인다 */
+    var 접힘 = 'dcshut:' + g[0] + ':' + at;
+    var 폄 = !(UP.open && UP.open[접힘]);
+    var h = el('div', 'dcgh tapx');
+    var gn = el('div', 'dcgn', g[1]);
+    gn.appendChild(el('span', 'chev', 폄 ? ' ▴' : ' ▾'));
+    h.appendChild(gn);
     h.appendChild(el('div', 'dcga num', manwon(g[2])));
+    h.addEventListener('click', function () {
+      UP.open = UP.open || {};
+      UP.open[접힘] = 폄;
+      drawResult(months);
+    });
     wrap.appendChild(h);
+    if (!폄) { box.appendChild(wrap); return; }
     var pk = el('div', 'rawpeek');
     var 열쇠 = 'dc:' + g[0] + ':' + at;
     var 몇 = (UP.open && UP.open[열쇠]) || DAY_PEEK;
@@ -16938,5 +17200,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 84차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 86차</div>
 </body></html>
