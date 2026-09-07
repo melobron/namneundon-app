@@ -24,7 +24,14 @@
 -->
 
 <style>
-  :root{--ink:#23201E;--paper:#FFFFFF;--panel:#F6F2EE;--line:#E7DFD7;
+  :root{
+        /* ★ 88차 ①. 「글씨 한 칸」. 화면의 모든 font-size 가
+           calc(수 * var(--fu)) 로 적혀 있어서, 이 한 값만 바꾸면
+           글자도 단추도 같이 커진다 — 큰 단을 쓰시는 분에게 단추만 작으면 앞뒤가 안 맞는다.
+           1px 이 지금 크기이고 여기가 제일 작은 단이다. 위로만 키운다 (개발자 확정).
+           ★ 색이 아니다 — 새 색은 하나도 안 늘었다 */
+        --fu:1px;
+        --ink:#23201E;--paper:#FFFFFF;--panel:#F6F2EE;--line:#E7DFD7;
         --gray:#8B8279;--warn:#C4443E;--good:#2C8055;
         /* 지금 계좌에 실제로 있는 돈 */
         --now:#2F5FBF;
@@ -67,19 +74,34 @@
   .num{font-variant-numeric:tabular-nums;letter-spacing:-.025em}
 
   header{display:flex;align-items:flex-start;gap:12px;padding:20px 30px 14px}
-  .hleft{flex:1;min-width:0}
-  .store{font-size:17px;font-weight:700}
+  /* ★ 88차 ①. 로고 오른쪽에 글씨 크기 단추 둘이 온다. 어느 화면에서나 같은 자리라야 찾으신다 */
+  .hleft{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+  .store{font-size:calc(17*var(--fu));font-weight:700}
   /* ★ 64-5차. 머리글 로고. 좁은 화면에서 오른쪽 단추와 부딪히면 줄어든다 —
      width:auto 로 두면 세로만 줄고 가로가 안 줄어 글자가 눌린다.
      object-fit:contain 을 함께 걸어 비율이 안 깨지게 한다 */
   .brandlogo{display:block;height:30px;width:auto;max-width:100%;object-fit:contain}
+  /* ★ 88차 ①. 글씨 크기 단추 둘 (가⁻ 가⁺).
+     새 색은 안 만든다 — 이미 쓰던 --edge · --ink · --paper · --panel 뿐이다.
+     글자가 calc(…*var(--fu)) 라 큰 단에서는 이 단추도 같이 커진다 */
+  .fsbtns{display:flex;align-items:center;gap:5px;flex:none}
+  .fsbtn{flex:none;border:1px solid var(--edge);background:var(--paper);color:var(--ink);
+         border-radius:var(--rad-pill);padding:2px 6px;font-family:inherit;
+         font-size:calc(12*var(--fu));font-weight:700;line-height:1.35;
+         cursor:pointer;white-space:nowrap}
+  .fsbtn:active{background:var(--panel)}
+  .fsbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  /* 더 갈 데가 없는 쪽은 흐리게 두고 안 눌리게 한다 —
+     눌러도 아무 일이 없는 단추가 또렷하면 「왜 안 되지」가 된다 */
+  .fsbtn:disabled{opacity:.35;cursor:default}
+  .fsbtn:disabled:active{background:var(--paper)}
   /* ★ 66차 ① · 첫 화면 스플래시. 브랜드 색 안에서만 쓴다 (새 색 금지) */
   .splash{position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;
           display:flex;flex-direction:column;align-items:center;justify-content:center;
           gap:14px;background:var(--brand);opacity:1;transition:opacity .4s ease}
   .splash.gone{opacity:0;pointer-events:none}
   .splashmark{width:74px;height:74px;border-radius:20px;display:block}
-  .splashcopy{color:var(--paper);font-size:18px;font-weight:800;letter-spacing:-.02em}
+  .splashcopy{color:var(--paper);font-size:calc(18*var(--fu));font-weight:800;letter-spacing:-.02em}
 
   /* ★ 63-9 · 저장되고 있다는 안심.
      늘 보이는 자리에 두되, 눌러야 할 것처럼 보이면 안 된다 —
@@ -87,44 +109,44 @@
   .hright{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
   .hsavedrow{display:flex;align-items:center;justify-content:flex-end;gap:6px}
   .savedchip{border:1px solid var(--goodline);background:var(--goodbg);color:var(--good);
-             border-radius:var(--rad-pill);padding:3px 10px;font-size:11.5px;font-weight:700;
+             border-radius:var(--rad-pill);padding:3px 10px;font-size:calc(11.5*var(--fu));font-weight:700;
              font-family:inherit;cursor:pointer;white-space:nowrap}
   .headimage{border:1px solid var(--edge);background:var(--paper);color:var(--gray)}
   .savedchip span{font-weight:800}
   .savedchip:active{opacity:.65}
   .savedwhy{margin:0 30px 6px;padding:10px 13px;background:var(--goodbg);
             border:1px solid var(--goodline);border-radius:var(--rad);
-            font-size:12.5px;line-height:1.65;color:var(--ink)}
+            font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--ink)}
 
   /* 뭔가 옮겼을 때만 나타나는 되돌리기 / 초기화 */
   .tools{display:none;flex:none;gap:6px;padding-top:2px}
   .tools.on{display:flex}
   .tb{border:1px solid;border-radius:var(--rad);background:var(--paper);
-      padding:5px 11px;font-size:12px;font-weight:700;font-family:inherit;
+      padding:5px 11px;font-size:calc(12*var(--fu));font-weight:700;font-family:inherit;
       cursor:pointer;white-space:nowrap}
   .tb.undo{color:var(--now);border-color:var(--nowline);background:var(--nowbg)}
   .tb.wipe{color:var(--warn);border-color:var(--warnline);background:var(--warnbg)}
   .tb:active{opacity:.65}
   .tb:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .sync{font-size:12px;color:var(--gray);margin-top:5px}
+  .sync{font-size:calc(12*var(--fu));color:var(--gray);margin-top:5px}
   .sync b{color:var(--ink);font-weight:600}
 
   .hero{padding:24px 30px 24px;border-top:1px solid var(--line)}
-  .hlab{font-size:15px;font-weight:600;color:var(--gray)}
+  .hlab{font-size:calc(15*var(--fu));font-weight:600;color:var(--gray)}
   /* 이 앱은 사업주용 가계부이고 계좌 잔액이 최종 값이다.
      24차 색 규칙이 「--now = 지금 계좌에 실제로 있는 돈」인데 정작 잔액에 안 썼다.
      순이익과 크기를 같게 두고 색으로 가른다 — 둘 다 잘 보이고 역할도 갈린다 */
-  .hnum{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.03em;
+  .hnum{font-size:calc(28*var(--fu));font-weight:800;line-height:1.15;letter-spacing:-.03em;
         margin-top:6px;color:var(--now)}
-  .hnum .won{font-size:16px;font-weight:700;margin-left:2px}
+  .hnum .won{font-size:calc(16*var(--fu));font-weight:700;margin-left:2px}
   /* 월초 · 지금 · 차이 */
   .hspan{margin-top:12px;padding-top:2px}
-  .hrow{display:flex;align-items:baseline;gap:10px;padding:4px 0;font-size:13.5px}
+  .hrow{display:flex;align-items:baseline;gap:10px;padding:4px 0;font-size:calc(13.5*var(--fu))}
   .hrl{flex:1;min-width:0;color:var(--gray)}
   .hrv{width:150px;text-align:right;flex:none;font-weight:600}
   .hrule{margin:4px 0;border-top:1px solid var(--line)}
-  .hnote{margin-top:6px;font-size:12px;line-height:1.6;color:var(--gray)}
-  .hsub{margin-top:11px;font-size:14px;color:var(--now)}
+  .hnote{margin-top:6px;font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
+  .hsub{margin-top:11px;font-size:calc(14*var(--fu));color:var(--now)}
   .hsub b{color:var(--now);font-weight:700}
   /* 지난달 같은 날 대비 — 늘었으면 파랑, 줄었으면 빨강 */
   /* 문장 중간에서 접히면 지저분해서 아예 다음 줄로 내린다 */
@@ -134,18 +156,18 @@
 
   /* ── 눌러서 펼치는 줄 ── */
   .row{display:flex;align-items:flex-start;gap:10px;padding:15px 30px;
-       font-size:16px;cursor:pointer;user-select:none;transition:background .12s}
+       font-size:calc(16*var(--fu));cursor:pointer;user-select:none;transition:background .12s}
   .row:active{background:var(--panel)}
   .row .lab{flex:1;min-width:0}
   .row .v{width:180px;text-align:right;font-weight:700;flex:none}
   /* 금액 오른쪽 칸 — 아래 칸별 줄의 % 칸과 폭을 맞춰야 숫자가 한 열로 내려온다 */
   .row .c{width:56px;flex:none}
-  .row .lab .chev{font-size:13px;color:var(--gray);margin-left:5px}
+  .row .lab .chev{font-size:calc(13*var(--fu));color:var(--gray);margin-left:5px}
   .row:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
   .chev{display:inline-block;transition:transform .22s ease}
   .row.open .chev{transform:rotate(180deg)}
   .flab{font-weight:600}
-  .fsub{display:block;font-size:12.5px;color:var(--gray);font-weight:400;
+  .fsub{display:block;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:400;
         margin-top:4px;line-height:1.45}
 
   .fold .row{border-top:1px solid var(--line)}
@@ -170,7 +192,7 @@
   .det-pad{padding:0 30px;transition:padding .22s ease}
   .det.open .det-pad{padding:11px 30px 15px}
   table.o{width:100%;border-collapse:collapse}
-  table.o td{padding:9px 0;font-size:14.5px;border-bottom:1px solid var(--line)}
+  table.o td{padding:9px 0;font-size:calc(14.5*var(--fu));border-bottom:1px solid var(--line)}
   table.o td.v{text-align:right;font-weight:600;width:150px}
   table.o tr:last-child td{border-bottom:none}
 
@@ -178,11 +200,11 @@
   /* 평소엔 접어둔다 — 어디까지나 옵션이라 첫 화면을 잡아먹으면 안 된다 */
   .adjzone{padding:0 30px}
   .adjtoggle{display:inline-flex;align-items:center;gap:6px;border:none;background:none;
-             padding:9px 0 10px;font-family:inherit;font-size:13px;font-weight:600;
+             padding:9px 0 10px;font-family:inherit;font-size:calc(13*var(--fu));font-weight:600;
              color:var(--gray);cursor:pointer}
   .adjtoggle:active{opacity:.6}
   .adjtoggle:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .adjtoggle .chev{font-size:11px;transition:transform .22s ease}
+  .adjtoggle .chev{font-size:calc(11*var(--fu));transition:transform .22s ease}
   .adjtoggle.open .chev{transform:rotate(180deg)}
   .adjtoggle.plus{color:var(--now)}
   .adjtoggle.minus{color:var(--warn)}
@@ -194,16 +216,16 @@
   .adj{margin-bottom:8px;padding:12px 14px;background:var(--nowbg);border:1px solid var(--nowline);
        border-radius:var(--rad);transition:background .15s,border-color .15s}
   .adj.on{background:var(--nowbg2);border-color:var(--nowline)}
-  .adjlab{font-size:14.5px;font-weight:700;color:var(--ink)}
+  .adjlab{font-size:calc(14.5*var(--fu));font-weight:700;color:var(--ink)}
   .adjbox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
   .adjwhen{height:34px;flex:none;border:1px solid var(--edge);border-radius:var(--rad);
-           background:var(--paper);padding:0 8px;font-size:13.5px;font-family:inherit;
+           background:var(--paper);padding:0 8px;font-size:calc(13.5*var(--fu));font-family:inherit;
            color:var(--ink);cursor:pointer}
   .adjwhen:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-  .adjeffect{display:none;margin-top:10px;font-size:12.5px;line-height:1.5;color:var(--ink)}
+  .adjeffect{display:none;margin-top:10px;font-size:calc(12.5*var(--fu));line-height:1.5;color:var(--ink)}
   .adj.on .adjeffect{display:block}
   .adjsign{width:32px;height:34px;flex:none;border:1px solid var(--edge);border-radius:var(--rad);
-           background:var(--paper);font-size:16px;font-weight:700;font-family:inherit;
+           background:var(--paper);font-size:calc(16*var(--fu));font-weight:700;font-family:inherit;
            color:var(--gray);cursor:pointer;line-height:1;padding:0}
   /* 부호 색은 화면 전체가 같다 — 더하기는 파랑, 빼기는 빨강 */
   .adj.on.plus .adjsign{color:var(--now);border-color:var(--now)}
@@ -214,16 +236,16 @@
     color:var(--warn);border-color:var(--warn)}
   .adjsign:focus-visible,.adjinput:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
   .adjinput{width:116px;height:34px;flex:none;border:1px solid var(--edge);border-radius:var(--rad);
-            background:var(--paper);padding:0 9px;font-size:14.5px;font-weight:700;
+            background:var(--paper);padding:0 9px;font-size:calc(14.5*var(--fu));font-weight:700;
             font-family:inherit;color:var(--ink);text-align:right;
             font-variant-numeric:tabular-nums;letter-spacing:-.025em}
   .adjinput:focus{outline:none;border-color:var(--ink)}
-  .adjwon{font-size:13px;color:var(--gray);flex:none}
+  .adjwon{font-size:calc(13*var(--fu));color:var(--gray);flex:none}
   /* 입력 중일 때만 나타나는 완료 버튼.
      폰 숫자 키패드에는 엔터가 없어서 이게 없으면 확정할 방법이 없다. */
   .adjdone{display:none;flex:none;align-items:center;height:34px;padding:0 12px;
            border:1px solid var(--ink);border-radius:var(--rad);background:var(--ink);color:var(--paper);
-           font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+           font-size:calc(13*var(--fu));font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
   .adjdone:active{opacity:.75}
   .adjdone:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .adj.editing .adjdone{display:inline-flex}
@@ -236,11 +258,11 @@
 
   /* 판 안쪽 항목 줄 */
   .orow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;
-        font-size:14.5px;border-bottom:1px solid var(--line)}
+        font-size:calc(14.5*var(--fu));border-bottom:1px solid var(--line)}
   .orow:last-of-type{border-bottom:none}
   .orow .lab{flex:1;min-width:0}
   .orow .v{width:150px;text-align:right;font-weight:600;flex:none}
-  .orow .p{width:56px;text-align:right;font-size:13.5px;color:var(--gray);
+  .orow .p{width:56px;text-align:right;font-size:calc(13.5*var(--fu));color:var(--gray);
            font-weight:600;flex:none}
   /* ★ 51차 ②. tapx 는 「눌러서 펴는 자리」라는 뜻인데, 커서는 부모 클래스와
      짝이 맞는 곳에서만 나왔다 — orow·cmprow 둘뿐이고
@@ -251,7 +273,7 @@
   .orow.tap{cursor:pointer;user-select:none;border-bottom:none}
   .orow.tap:active{opacity:.6}
   .orow.tap:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .orow .chev{font-size:13px;color:var(--gray);margin-left:5px}
+  .orow .chev{font-size:calc(13*var(--fu));color:var(--gray);margin-left:5px}
   .orow.open .chev{transform:rotate(180deg)}
 
   /* 거래 목록 */
@@ -265,33 +287,33 @@
   .itemwrap{border-bottom:1px solid var(--line)}
   .itemwrap:last-of-type{border-bottom:none}
   .item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;
-        font-size:14px;cursor:pointer;user-select:none}
+        font-size:calc(14*var(--fu));cursor:pointer;user-select:none}
   .item:active{background:var(--panel)}
   .item:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
   .item.static{cursor:default}
   .item.static:active{background:none}
-  .iday{width:42px;flex:none;color:var(--gray);font-size:12.5px;padding-top:1px}
+  .iday{width:42px;flex:none;color:var(--gray);font-size:calc(12.5*var(--fu));padding-top:1px}
   .iname{flex:1;min-width:0}
   .iamt{width:104px;text-align:right;font-weight:600;flex:none}
   .item.static .iamt{width:146px}
-  .ifix{width:42px;text-align:right;flex:none;color:var(--gray);font-size:12.5px;
+  .ifix{width:42px;text-align:right;flex:none;color:var(--gray);font-size:calc(12.5*var(--fu));
         white-space:nowrap;padding-top:1px}
-  .isub{display:block;font-size:12px;color:var(--gray);font-weight:400;
+  .isub{display:block;font-size:calc(12*var(--fu));color:var(--gray);font-weight:400;
         margin-top:3px;line-height:1.45}
-  .imoved{display:block;font-size:12.5px;font-weight:600;color:var(--good);
+  .imoved{display:block;font-size:calc(12.5*var(--fu));font-weight:600;color:var(--good);
           margin-top:4px}
   /* 다른 칸으로 옮겨나간 거래 — 원래 자리에 빨갛게 남고 합계에서는 빠진다 */
   .item.out .iday,.item.out .iname,.item.out .isub,.item.out .imoved{color:var(--warn)}
   .item.out .iamt{color:var(--warn);text-decoration:line-through}
   .item.out .tag{color:var(--warn);border-color:var(--warnline)}
   .outx{color:var(--warn);font-weight:700;margin-right:5px}
-  .inote{display:block;font-size:12.5px;font-weight:400;color:var(--gray);
+  .inote{display:block;font-size:calc(12.5*var(--fu));font-weight:400;color:var(--gray);
          margin-top:3px;line-height:1.45}
   /* 부호가 붙은 금액 — 더하기 파랑, 빼기 빨강 */
   .iin{color:var(--warn)}
   .sgn-plus{color:var(--now)}
   .sgn-minus{color:var(--warn)}
-  .tag{display:inline-block;font-size:11px;color:var(--gray);font-weight:600;
+  .tag{display:inline-block;font-size:calc(11*var(--fu));color:var(--gray);font-weight:600;
        border:1px solid var(--line);border-radius:var(--rad-pill);padding:1px 6px;
        margin-left:6px;vertical-align:1px;white-space:nowrap}
   /* 이름 안에 붙는 꼬리표 */
@@ -306,46 +328,46 @@
   .orow.est .lab{color:var(--est)}
   .item.est .tag{border-color:var(--estline)}
   .item.est .iday{color:var(--est);font-weight:700;font-style:italic}
-  .boxfoot{font-size:12px;color:var(--gray);padding:9px 0 2px;line-height:1.5}
+  .boxfoot{font-size:calc(12*var(--fu));color:var(--gray);padding:9px 0 2px;line-height:1.5}
 
   /* 나갈 돈의 확정 / 예상 소제목 */
   .sephead{display:flex;align-items:baseline;gap:10px;padding:11px 0 7px;
-           font-size:13px;font-weight:700;border-bottom:1px solid var(--line)}
+           font-size:calc(13*var(--fu));font-weight:700;border-bottom:1px solid var(--line)}
   .sephead .lab{flex:1;min-width:0}
   .sephead .v{width:104px;text-align:right;flex:none}
-  .sephead .note{font-size:11.5px;font-weight:400;color:var(--gray);margin-left:6px}
+  .sephead .note{font-size:calc(11.5*var(--fu));font-weight:400;color:var(--gray);margin-left:6px}
   .sepgrp+.sepgrp .sephead{margin-top:4px}
-  .errtag{color:var(--gray);font-size:12px;font-weight:600;white-space:nowrap}
+  .errtag{color:var(--gray);font-size:calc(12*var(--fu));font-weight:600;white-space:nowrap}
 
   /* ── 사업 ── */
   .biz{border-top:8px solid var(--panel);padding:20px 0 6px}
-  .bizlab{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.04em;
+  .bizlab{font-size:calc(13*var(--fu));font-weight:700;color:var(--ink);letter-spacing:.04em;
           margin-bottom:6px;padding:0 30px;text-align:center}
-  .bizsub{font-weight:400;letter-spacing:0;margin-left:6px;font-size:12px;color:var(--ink)}
+  .bizsub{font-weight:400;letter-spacing:0;margin-left:6px;font-size:calc(12*var(--fu));color:var(--ink)}
   .biz .row{border-bottom:1px solid var(--line);padding:13px 30px}
   .biz .row .v{font-weight:600}
   /* 맨 아래 결론 줄 — 배경을 진하게 깔아 눈이 여기서 멈추게 */
   .res{display:flex;align-items:flex-start;gap:10px;padding:15px 30px;
-       border-top:2px solid var(--ink);font-weight:700;font-size:16px;
+       border-top:2px solid var(--ink);font-weight:700;font-size:calc(16*var(--fu));
        background:var(--nowbg2)}
   .res.minus{background:var(--warnbg2)}
   .res .lab{flex:1;min-width:0}
   .res .v{width:180px;text-align:right;flex:none}
-  .res .pct{width:56px;text-align:right;font-size:14px;font-weight:700;flex:none}
+  .res .pct{width:56px;text-align:right;font-size:calc(14*var(--fu));font-weight:700;flex:none}
   .res .fsub{font-weight:400}
-  .calc{display:inline-block;font-size:12.5px;font-weight:400;color:var(--gray);
+  .calc{display:inline-block;font-size:calc(12.5*var(--fu));font-weight:400;color:var(--gray);
         margin-left:6px;letter-spacing:0}
 
 
   /* ── 확인 요청 ── */
   .ask{padding:20px 30px;border-top:1px solid var(--line);margin-top:14px}
-  .alab{font-size:14px;font-weight:700;margin-bottom:12px}
+  .alab{font-size:calc(14*var(--fu));font-weight:700;margin-bottom:12px}
   .card{border:1px solid var(--line);border-radius:var(--rad-lg);padding:13px 15px;
         margin-bottom:9px}
   .card:last-child{margin-bottom:0}
   .card.answered{background:var(--panel);border-color:var(--panel)}
   .card.answered .q{color:var(--gray)}
-  .q{font-size:15px;line-height:1.55}
+  .q{font-size:calc(15*var(--fu));line-height:1.55}
   .q b{font-weight:700}
   /* 카드 금액도 순이익에 미치는 방향대로 — 늘리면 파랑, 줄이면 빨강 */
   .q .amt-in{color:var(--now)}
@@ -353,7 +375,7 @@
   .btns{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
   .btns[hidden]{display:none}
   .b{border:1px solid var(--edge);border-radius:var(--rad);background:var(--paper);
-     padding:6px 14px;font-size:13.5px;font-weight:600;color:var(--ink);
+     padding:6px 14px;font-size:calc(13.5*var(--fu));font-weight:600;color:var(--ink);
      font-family:inherit;cursor:pointer;transition:background .12s,border-color .12s}
   .b:active{background:var(--panel)}
   /* ★ 64-5차. 주 행동 단추는 브랜드 초록이다 (전에는 --ink 였다).
@@ -368,31 +390,31 @@
   .btns+.menu{margin:10px 0 0}
   .menu[hidden]{display:none}
   .mi{display:block;width:100%;text-align:left;background:none;border:none;
-      border-bottom:1px solid var(--line);padding:12px 15px;font-size:15px;
+      border-bottom:1px solid var(--line);padding:12px 15px;font-size:calc(15*var(--fu));
       font-family:inherit;color:var(--ink);cursor:pointer}
   .mi:last-child{border-bottom:none}
   .mi:active{background:var(--panel)}
   .mi.add,.mi.keep{color:var(--gray);font-weight:600}
-  .mi .msub{display:block;font-size:12.5px;color:var(--gray);font-weight:400;
+  .mi .msub{display:block;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:400;
             margin-top:3px}
   .addbox{padding:12px 15px}
   .addbox input{width:100%;border:1px solid var(--edge);border-radius:var(--rad);
-                padding:10px 12px;font-size:15px;font-family:inherit;
+                padding:10px 12px;font-size:calc(15*var(--fu));font-family:inherit;
                 color:var(--ink);background:var(--paper)}
   .addbox input:focus{outline:none;border-color:var(--ink)}
   .addrow{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
-  .sugg{margin-top:12px;font-size:14px;line-height:1.5}
+  .sugg{margin-top:12px;font-size:calc(14*var(--fu));line-height:1.5}
 
   .done{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;
-        font-size:14px;font-weight:600}
+        font-size:calc(14*var(--fu));font-weight:600}
   .done[hidden]{display:none}
   .done .tick{color:var(--good)}
   /* ★ 66-9차 ③. 알약 박스로 통일 (.oblink 와 같은 규칙) */
   .undo{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad-pill);
-        padding:4px 11px;font-family:inherit;font-size:12.5px;font-weight:600;
+        padding:4px 11px;font-family:inherit;font-size:calc(12.5*var(--fu));font-weight:600;
         color:var(--gray);cursor:pointer}
 
-  footer{padding:14px 30px;font-size:11.5px;color:var(--gray);
+  footer{padding:14px 30px;font-size:calc(11.5*var(--fu));color:var(--gray);
          border-top:1px solid var(--line);text-align:center}
 
   /* ══ 엑셀 업로드 화면 ══ */
@@ -400,7 +422,7 @@
      사장님이 「내 거래내역 올려보기처럼 뭔가를 씌워서」라고 콕 집으신 그 모양.
      그 자리에서 펼쳐지는 것(▾)과 미루는 것(옅은 링크)은 따로 둔다 */
   .upbtn{border:1px solid var(--edge);border-radius:var(--rad);background:var(--paper);
-         padding:5px 11px;font-size:12px;font-weight:700;font-family:inherit;
+         padding:5px 11px;font-size:calc(12*var(--fu));font-weight:700;font-family:inherit;
          color:var(--ink);cursor:pointer;white-space:nowrap;flex:none;
          text-decoration:none;line-height:1.5}
   .upbtn:active{background:var(--panel)}
@@ -421,31 +443,31 @@
   #up.on{display:block}
   .upwrap{max-width:720px;margin:0 auto;padding:0 30px 40px}
   .uptop{display:flex;align-items:center;gap:10px;padding:18px 0 12px}
-  .uptitle{flex:1;font-size:17px;font-weight:700}
+  .uptitle{flex:1;font-size:calc(17*var(--fu));font-weight:700}
   /* ★ 66-9차 ③. 알약 박스로 통일 */
   .upclose{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad-pill);
-           font-family:inherit;font-size:12.5px;font-weight:600;
+           font-family:inherit;font-size:calc(12.5*var(--fu));font-weight:600;
            color:var(--gray);cursor:pointer;padding:5px 12px}
   /* ★ 74차. 보안 설명은 지우지 않고 필요한 순간에만 연다.
      아이콘만 두면 누르는 곳인지 놓칠 수 있어 ! 와 「안내」를 함께 쓴다. */
   .upinfobtn{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad-pill);
-             font-family:inherit;font-size:12.5px;font-weight:700;color:var(--gray);
+             font-family:inherit;font-size:calc(12.5*var(--fu));font-weight:700;color:var(--gray);
              cursor:pointer;padding:5px 10px;white-space:nowrap}
   .upinfobtn[aria-expanded="true"]{background:var(--nowbg);border-color:var(--nowline);color:var(--ink)}
   .upnote{background:var(--nowbg);border:1px solid var(--nowline);border-radius:var(--rad);
-          padding:12px 14px;font-size:13px;line-height:1.6;color:var(--ink)}
+          padding:12px 14px;font-size:calc(13*var(--fu));line-height:1.6;color:var(--ink)}
   .upnote b{font-weight:700}
   .upnote[hidden]{display:none}
   .updrop{margin-top:16px;border:2px dashed var(--edge);border-radius:var(--rad-lg);
           padding:34px 20px;text-align:center;background:var(--panel)}
   .updrop.over{border-color:var(--now);background:var(--nowbg)}
-  .updrop p{font-size:14px;color:var(--gray);margin-bottom:12px}
+  .updrop p{font-size:calc(14*var(--fu));color:var(--gray);margin-bottom:12px}
   /* ★ 64-5차. 「파일 고르기」도 주 행동이다 — .b.on 과 같은 초록으로 */
   .upfile{display:inline-block;border:1px solid var(--brand);border-radius:var(--rad);
-          background:var(--brand);color:var(--paper);padding:9px 20px;font-size:14px;
+          background:var(--brand);color:var(--paper);padding:9px 20px;font-size:calc(14*var(--fu));
           font-weight:700;cursor:pointer}
   .upfile:active{background:var(--brand2);border-color:var(--brand2)}
-  .dropsub{display:inline-block;margin-top:7px;font-size:12.5px;line-height:1.6}
+  .dropsub{display:inline-block;margin-top:7px;font-size:calc(12.5*var(--fu));line-height:1.6}
   /* ★ 65차 ②. 물어보실 곳으로 나가는 링크. 새 색은 안 만든다 —
      누르는 것이니 행동색(--brand)을 쓰고 밑줄로 링크임을 밝힌다 */
   .asklink{color:var(--brand);font-weight:700;text-decoration:underline}
@@ -461,12 +483,12 @@
   /* 폰 화면에 아이콘 만들기 */
   .a2hs{margin-top:14px;border:1px solid var(--ink);border-radius:var(--rad-lg);
         padding:14px 15px;background:var(--panel)}
-  .a2t{font-size:14.5px;font-weight:800;margin-bottom:8px}
-  .a2b{font-size:12.5px;line-height:1.7;color:var(--ink)}
-  .a2warn{margin-top:8px;font-size:12.5px;line-height:1.7;color:var(--warn);font-weight:600}
-  .a2point{margin-top:8px;font-size:13px;line-height:1.6;font-weight:600}
-  .a2arrow{display:inline-block;margin-right:5px;font-size:15px}
-  .a2b2{margin-top:6px;font-size:12.5px;line-height:1.65;color:var(--gray)}
+  .a2t{font-size:calc(14.5*var(--fu));font-weight:800;margin-bottom:8px}
+  .a2b{font-size:calc(12.5*var(--fu));line-height:1.7;color:var(--ink)}
+  .a2warn{margin-top:8px;font-size:calc(12.5*var(--fu));line-height:1.7;color:var(--warn);font-weight:600}
+  .a2point{margin-top:8px;font-size:calc(13*var(--fu));line-height:1.6;font-weight:600}
+  .a2arrow{display:inline-block;margin-right:5px;font-size:calc(15*var(--fu))}
+  .a2b2{margin-top:6px;font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--gray)}
   .instlink{display:block;margin-top:12px}
   /* 카톡·인스타 같은 앱 안 브라우저 안내 — 저장이 안 따라가는 게 핵심이라 눈에 띄게 */
   .a2in{margin-top:14px;border:1px solid var(--warnline);background:var(--warnbg);
@@ -474,11 +496,11 @@
   .a2acts{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
   .shicon{width:16px;height:16px;vertical-align:-3px;margin:0 1px}
   .a2move{margin-top:10px;border:1px solid var(--warnline);background:var(--warnbg);
-          border-radius:var(--rad-lg);padding:13px 15px;font-size:12.5px;line-height:1.7}
-  .unrlab{margin-top:11px;font-size:12px;color:var(--gray);font-weight:600}
-  .unrcols{margin-top:4px;font-size:13px;line-height:1.6;background:var(--paper);
+          border-radius:var(--rad-lg);padding:13px 15px;font-size:calc(12.5*var(--fu));line-height:1.7}
+  .unrlab{margin-top:11px;font-size:calc(12*var(--fu));color:var(--gray);font-weight:600}
+  .unrcols{margin-top:4px;font-size:calc(13*var(--fu));line-height:1.6;background:var(--paper);
            border-radius:var(--rad);padding:9px 11px;word-break:break-all}
-  .adjwarn{margin-top:7px;font-size:12.5px;color:var(--warn);font-weight:600}
+  .adjwarn{margin-top:7px;font-size:calc(12.5*var(--fu));color:var(--warn);font-weight:600}
   .adjwarn[hidden]{display:none}
   #a2hs-top{margin:14px 30px 0}
   #a2hs-top .a2in{margin-top:0}
@@ -486,18 +508,18 @@
   /* ★ 46차 ① · 은행별 안내. 접힌 줄 하나로 두고 새 색은 안 만든다 */
   .oblink2{color:var(--est);font-weight:700;white-space:nowrap}
   /* ★ 47차 ②. 뒤집힌 달에 붙는 사실 한 줄 */
-  .nowpct{margin-top:10px;font-size:14px;font-weight:700;color:var(--est)}
+  .nowpct{margin-top:10px;font-size:calc(14*var(--fu));font-weight:700;color:var(--est)}
   /* ★ 47차 ⑤ · 순이익 막대 + 잔액 선. 새 색은 안 만든다 */
   /* ★ 68차 ④. 잔액 그림 앞에서 한 번 쉰다 */
   .chbox{margin:0 0 14px}
   .chbox + .chbox{margin-top:22px}
   /* ★ 60차 ②. 제목이 12px·굵기 400·회색이라 옆의 숫자(굵기 800 검정)에 묻혔다.
      「그래프는 눈에 확 들어오는데 정작 이게 뭔지 설명하는 제목이 안 들어온다」 */
-  .chlab{font-size:14px;color:var(--ink);font-weight:800;text-align:center}
+  .chlab{font-size:calc(14*var(--fu));color:var(--ink);font-weight:800;text-align:center}
   /* ★ 66-8차 ③ · 1년치 요약 한 줄. 예전 .chsay(한 달짜리 문장) 자리를 잇는다 */
   /* ★ 68차 ③. 바탕 글자는 회색으로 낮춘다 — 흑자·적자만 남아 눈에 든다 */
-  .ysum{margin:9px 0 4px;font-size:13px;font-weight:400;line-height:1.55;color:var(--gray)}
-  .ysum2{margin-top:4px;font-size:12px;font-weight:800;color:var(--ink)}
+  .ysum{margin:9px 0 4px;font-size:calc(13*var(--fu));font-weight:400;line-height:1.55;color:var(--gray)}
+  .ysum2{margin-top:4px;font-size:calc(12*var(--fu));font-weight:800;color:var(--ink)}
   /* ★ 66-16차 ③ · 요약 줄의 흑자·적자. 뜻 색 체계 그대로 */
   .ysum .ysumg{color:var(--good)}
   .ysum .ysumw{color:var(--warn)}
@@ -525,7 +547,7 @@
   .chhead .chkey{justify-content:flex-end;margin-top:3px}
   /* ★ 66-4차 ③. 범례와 부제는 한 묶음으로 오른쪽에 선다 */
   .chright{margin-top:3px;text-align:right}
-  .chsub{font-size:11px;color:var(--gray);margin-top:2px;text-align:right}
+  .chsub{font-size:calc(11*var(--fu));color:var(--gray);margin-top:2px;text-align:right}
   /* ★ 48차 ②. 누를 수 있다는 것이 보여야 한다. 색만으로 구분하지 않는다 */
   /* ── 70차 ①·② · 진행 중 알약과 그룹 접기 ─────────────────────
      ★ 새 색은 없다 — 표의 「아직 안 정한 돈」 알약과 같은 호박 계열이다 */
@@ -535,7 +557,7 @@
   .runpill{display:block;width:-moz-fit-content;width:fit-content;margin:0 0 3px auto;
            padding:0 6px;border-radius:var(--rad-pill);
            background:var(--estbg);border:1px solid var(--estline);
-           color:var(--est);font-size:10px;font-weight:700;line-height:1.5;
+           color:var(--est);font-size:calc(10*var(--fu));font-weight:700;line-height:1.5;
            white-space:nowrap;text-decoration:none}
   /* ★ 76-2차. 진행 중 알약을 월 위에 두고, 다른 달도 같은 높이를 비워 둔다.
      월 이름의 기준선이 모두 같아야 아래 숫자 행이 흔들리지 않는다. */
@@ -543,9 +565,9 @@
   /* 그룹 줄 — 이름 칸을 누르면 세부가 펼쳐진다. 세부가 없는 줄에는 안 붙는다 */
   .ytab tr.ygrp td.rh{cursor:pointer}
   .ytab tr.ygrp td.rh:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
-  .ychev{margin-left:5px;font-size:10px;font-weight:700;opacity:.75}
+  .ychev{margin-left:5px;font-size:calc(10*var(--fu));font-weight:700;opacity:.75}
   /* 10.5px·사이 8px 이면 셋이 390px 한 줄에 들어간다 */
-  .chkey{display:flex;gap:9px;font-size:11px;font-weight:800;color:var(--gray);white-space:nowrap;
+  .chkey{display:flex;gap:9px;font-size:calc(11*var(--fu));font-weight:800;color:var(--gray);white-space:nowrap;
          flex-wrap:wrap}
   /* 새 색은 안 만든다. 그림에 쓰는 네 색 그대로다 */
   .chkey .kgood{color:var(--good)}
@@ -562,14 +584,14 @@
   .dcwait{margin:8px auto 0;width:100%;max-width:640px;
           background:var(--estbg);border:1px solid var(--estline);
           border-radius:var(--rad);padding:11px 13px;
-          font-size:12.5px;font-weight:700;color:var(--est)}
+          font-size:calc(12.5*var(--fu));font-weight:700;color:var(--est)}
   .chfoot{margin:5px auto 0;width:100%;max-width:640px;
-          font-size:11.5px;color:var(--gray);line-height:1.5}
+          font-size:calc(11.5*var(--fu));color:var(--gray);line-height:1.5}
   .chone,.dchart{margin:6px auto 0;width:100%;max-width:640px;
                  background:var(--paper);border:1px solid var(--line);
                  border-radius:var(--rad-lg);padding:8px 6px;box-sizing:border-box}
   .chone svg,.dchart svg{display:block;margin:0 auto}
-  .dcnote{margin-top:4px;font-size:11.5px;color:var(--gray)}
+  .dcnote{margin-top:4px;font-size:calc(11.5*var(--fu));color:var(--gray)}
   .dcjump{margin-top:4px}
   /* ★ 84차 · 칸을 누르면 그날이 열린다 ─────────────────────────
      ★ 누르는 자리는 막대가 아니라 칸 전체다. 390px 에서 칸폭이 10px 남짓이라
@@ -584,25 +606,25 @@
   .dcnav{display:flex;align-items:center;justify-content:center;gap:12px}
   .dcarrow{width:34px;height:34px;flex:none;border:1px solid var(--edge);
            background:var(--paper);color:var(--ink);border-radius:var(--rad-pill);
-           font-family:inherit;font-size:14px;line-height:1;cursor:pointer}
+           font-family:inherit;font-size:calc(14*var(--fu));line-height:1;cursor:pointer}
   .dcarrow:disabled{color:var(--line);border-color:var(--line);cursor:default}
   /* ★ 날짜를 크게 적는 것이 이 회차에서 제일 중요하다 —
      글자 없는 막대를 눌렀을 때 내가 누르려던 날이 맞는지 여기서만 안다 */
-  .dcbig{flex:1;min-width:0;text-align:center;font-size:18px;font-weight:700}
+  .dcbig{flex:1;min-width:0;text-align:center;font-size:calc(18*var(--fu));font-weight:700}
   .dcdow{color:var(--est);margin-left:4px}
-  .dcsum{margin-top:6px;text-align:center;font-size:12.5px;color:var(--gray)}
+  .dcsum{margin-top:6px;text-align:center;font-size:calc(12.5*var(--fu));color:var(--gray)}
   .dcgrp{margin-top:12px}
-  .dcgh{display:flex;gap:8px;align-items:baseline;font-size:13px;font-weight:700}
+  .dcgh{display:flex;gap:8px;align-items:baseline;font-size:calc(13*var(--fu));font-weight:700}
   .dcgh .dcgn{flex:1;min-width:0}
   .dcgh .dcga{flex:none;font-variant-numeric:tabular-nums}
   .dcgh.tapx .chev{color:var(--gray);font-weight:400;margin-left:4px}
   /* 거래 한 줄은 .rawpeek · .rawrow 를 그대로 쓴다. 이름 아래 적요만 더 붙는다 */
   .dcnm{flex:1;min-width:0}
   .dcnm .dcnmt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dcsub{font-size:11px;color:var(--gray);overflow:hidden;
+  .dcsub{font-size:calc(11*var(--fu));color:var(--gray);overflow:hidden;
          text-overflow:ellipsis;white-space:nowrap}
-  .dcnone{margin-top:14px;text-align:center;font-size:13.5px}
-  .dcbal{margin-top:5px;text-align:center;font-size:12.5px;color:var(--gray)}
+  .dcnone{margin-top:14px;text-align:center;font-size:calc(13.5*var(--fu))}
+  .dcbal{margin-top:5px;text-align:center;font-size:calc(12.5*var(--fu));color:var(--gray)}
   .chkey .kprof{color:var(--brand)}
   /* ★ 46차 ①(2). 올리는 화면 맨 위. 접히지 않는다 —
      못 읽는 파일을 올리기 전에 알려드리는 것이 이 줄의 뜻이다.
@@ -628,7 +650,7 @@
        같은 진한 초록 채움으로 올린다 — 새 색은 안 만든다 */
   .demobtn{border:1px solid var(--brand);background:var(--brand);color:var(--paper);
            border-radius:var(--rad);padding:9px 18px;font-family:inherit;
-           font-size:13.5px;font-weight:700;cursor:pointer}
+           font-size:calc(13.5*var(--fu));font-weight:700;cursor:pointer}
   .demobtn:active{background:var(--brand2);border-color:var(--brand2)}
   /* ★ 64-5차. 환영 자리·완료 자리의 마크. 앱 아이콘처럼 모서리를 둥글린다.
      .welemoji 는 지웠다 — 쓰는 자리가 없다 (남은 규칙은 화면에 안 나온다) */
@@ -636,8 +658,8 @@
      좌우 여백을 auto 로 두어 카드 한가운데에 세운다 */
   .welmark{width:30px;height:30px;display:block;margin:0 auto;border-radius:9px}
   .obmark{width:19px;height:19px;border-radius:6px;vertical-align:-4px;margin-right:4px}
-  .welbig{margin-top:8px;font-size:19px;font-weight:800;line-height:1.4}
-  .welsub{margin-top:5px;font-size:13.5px;color:var(--gray);line-height:1.6}
+  .welbig{margin-top:8px;font-size:calc(19*var(--fu));font-weight:800;line-height:1.4}
+  .welsub{margin-top:5px;font-size:calc(13.5*var(--fu));color:var(--gray);line-height:1.6}
   .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
   .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;
         gap:6px;padding:18px 10px;border:1px solid var(--edge);
@@ -646,11 +668,11 @@
   .tile:active{background:var(--panel)}
   .tile:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .tile img{width:36px;height:36px;display:block}
-  .tilename{font-size:15px;font-weight:800}
+  .tilename{font-size:calc(15*var(--fu));font-weight:800}
   /* 새 파랑을 만들지 않는다 — 이미 있는 --now 그대로 (49차) */
-  .tilesoon{font-size:11.5px;color:var(--now)}
-  .tradehead{font-size:14px;font-weight:700;line-height:1.6}
-  .tradesub{margin-top:4px;font-size:12.5px;color:var(--gray);line-height:1.6}
+  .tilesoon{font-size:calc(11.5*var(--fu));color:var(--now)}
+  .tradehead{font-size:calc(14*var(--fu));font-weight:700;line-height:1.6}
+  .tradesub{margin-top:4px;font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.6}
   /* ★ 63-13 · 「이어서 보기」. 타일보다 먼저 눈에 들어와야 한다 —
      돌아오신 분이 여기서 할 일은 자기 매장으로 가는 것이다.
      ★ 처음에는 --now 계열(옅은 파랑)로 두었는데, 바로 위 안심 고지가 같은 파랑이라
@@ -665,8 +687,8 @@
            border-radius:var(--rad);font-family:inherit;color:var(--ink);cursor:pointer}
   .gostore:hover{border-color:var(--ink)}
   .gostore:active{background:var(--panel)}
-  .gostore .gsname{display:block;font-size:14.5px;font-weight:700}
-  .gostore .gssub{display:block;margin-top:2px;font-size:12px;color:var(--gray)}
+  .gostore .gsname{display:block;font-size:calc(14.5*var(--fu));font-weight:700}
+  .gostore .gssub{display:block;margin-top:2px;font-size:calc(12*var(--fu));color:var(--gray)}
   /* ★ 63-12 · 홈 화면에 추가. 한 줄로 접어 두고 눌러야 펼쳐진다 */
   /* ★ 64-2차 2. 접힌 한 줄이던 것을 눈에 띄는 상자로 올린다.
      타일보다 위에 있어야 「정하기 전에 설치」라는 순서가 읽힌다.
@@ -676,15 +698,15 @@
   .instcornerbody[hidden]{display:none}
   .instcard{padding:14px 15px;border:1px solid var(--estline);
             background:var(--estbg);border-radius:var(--rad-lg);text-align:left}
-  .instbig{font-size:14.5px;font-weight:800;line-height:1.5}
-  .instsub{margin-top:4px;font-size:12.5px;line-height:1.65;color:var(--gray)}
+  .instbig{font-size:calc(14.5*var(--fu));font-weight:800;line-height:1.5}
+  .instsub{margin-top:4px;font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--gray)}
   .instcard .b{margin-top:10px}
   /* ★ 64-4차 2. 단추가 주된 길이다. 크게 · 폭을 채워 먼저 보이게 */
-  .instgo{width:100%;padding:11px 14px;font-size:14px;font-weight:800}
-  .instfold{margin-top:8px;font-size:12px}
-  .instcard .instwhy{margin-top:8px;font-size:12px;line-height:1.6;color:var(--gray)}
-  .insthead{font-size:12.5px}
-  .instbody{margin-top:8px;font-size:12.5px;line-height:1.75;color:var(--gray);
+  .instgo{width:100%;padding:11px 14px;font-size:calc(14*var(--fu));font-weight:800}
+  .instfold{margin-top:8px;font-size:calc(12*var(--fu))}
+  .instcard .instwhy{margin-top:8px;font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
+  .insthead{font-size:calc(12.5*var(--fu))}
+  .instbody{margin-top:8px;font-size:calc(12.5*var(--fu));line-height:1.75;color:var(--gray);
             text-align:left}
   .instbody .b{margin-bottom:8px}
   .instbody .instwhy{margin-top:7px;color:var(--ink)}
@@ -692,76 +714,76 @@
     .startcard{padding-top:34px}
     .instcorner{display:block;position:absolute;top:0;right:0;padding:6px 9px;
                 border:1px solid var(--edge);border-radius:var(--rad);background:var(--paper);
-                color:var(--gray);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+                color:var(--gray);font-family:inherit;font-size:calc(11.5*var(--fu));font-weight:700;cursor:pointer}
     .instcornerbody{margin-top:-2px;text-align:left}
   }
   .upmust{margin:0 0 12px;padding:11px 13px;background:var(--estbg);
           border:1px solid var(--estline);border-radius:var(--rad);
-          font-size:13px;line-height:1.6}
-  .bhelp{margin:10px 0 0;font-size:13px;line-height:1.6}
+          font-size:calc(13*var(--fu));line-height:1.6}
+  .bhelp{margin:10px 0 0;font-size:calc(13*var(--fu));line-height:1.6}
   .bhelp .bh1{font-weight:700;cursor:pointer;padding:8px 0}
-  .bhelp .bh2{color:var(--gray);font-size:12.5px}
-  .bhelp .bh3{color:var(--gray);font-size:12px;margin-top:8px}
+  .bhelp .bh2{color:var(--gray);font-size:calc(12.5*var(--fu))}
+  .bhelp .bh3{color:var(--gray);font-size:calc(12*var(--fu));margin-top:8px}
   .bhbtns{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}
-  .bhbtns .b{font-size:12.5px;padding:7px 10px}
+  .bhbtns .b{font-size:calc(12.5*var(--fu));padding:7px 10px}
   .bhdet{margin-top:6px;padding:10px 12px;background:var(--panel);border-radius:var(--rad)}
   .bhdet .bhname{font-weight:700;margin-bottom:6px}
-  .bhdet .bhsub{color:var(--gray);font-size:12px;margin-top:7px}
+  .bhdet .bhsub{color:var(--gray);font-size:calc(12*var(--fu));margin-top:7px}
   .bhdet .bhstep{margin-top:3px}
   .comeback{margin:8px 30px 0;padding:10px 12px;background:var(--estbg);
-            border:1px solid var(--estline);border-radius:var(--rad);font-size:13px;line-height:1.55}
+            border:1px solid var(--estline);border-radius:var(--rad);font-size:calc(13*var(--fu));line-height:1.55}
   .comeback .cb1{font-weight:700}
   .comebackhead{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
                 border:0;background:transparent;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
   .comebackbody{padding-top:7px}
   .comebackbody[hidden]{display:none}
-  .comeback .cb3{margin-top:5px;color:var(--gray);font-size:12px}
+  .comeback .cb3{margin-top:5px;color:var(--gray);font-size:calc(12*var(--fu))}
   .demotop{margin:0 30px;padding:9px 12px;background:var(--panel);border-radius:var(--rad);
-           font-size:12.5px;color:var(--gray);line-height:1.55}
-  .upstat{margin-top:16px;font-size:13.5px;line-height:1.6;color:var(--gray)}
+           font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.55}
+  .upstat{margin-top:16px;font-size:calc(13.5*var(--fu));line-height:1.6;color:var(--gray)}
   .upstat b{color:var(--ink)}
   /* 변호사 자문 — 화면과 약관 양쪽에 같은 문장을 둔다 */
   .dsc{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);
-       font-size:12px;line-height:1.6;color:var(--gray)}
+       font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
 
   .upbad{margin-top:16px;border:1px solid var(--warnline);background:var(--warnbg);
          border-radius:var(--rad);padding:14px}
-  .upbad h4{font-size:14.5px;font-weight:800;color:var(--warn);margin-bottom:8px}
-  .upbadrow{font-size:12.5px;line-height:1.7;background:var(--paper);
+  .upbad h4{font-size:calc(14.5*var(--fu));font-weight:800;color:var(--warn);margin-bottom:8px}
+  .upbadrow{font-size:calc(12.5*var(--fu));line-height:1.7;background:var(--paper);
             border-radius:var(--rad);padding:10px 12px;margin-top:9px;word-break:break-all}
   /* ★ 77차. 잔액 불일치는 긴 식 한 줄 대신 같은 크기의 두 값으로 보여준다.
      아래 확인 단추는 이 달의 원거래를 펼치고, 다시 올리기는 실제 수정 길로 간다. */
   .upbadcalc{margin-top:10px;background:var(--paper);border-radius:var(--rad);padding:4px 12px}
   .upbadcalcrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;
-                align-items:center;padding:9px 0;font-size:13.5px;line-height:1.5}
+                align-items:center;padding:9px 0;font-size:calc(13.5*var(--fu));line-height:1.5}
   .upbadcalcrow+.upbadcalcrow{border-top:1px solid var(--line)}
   .upbadcalcrow .num{font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
   .upbadtrades{margin-top:10px;max-height:330px;overflow:auto;background:var(--paper);
                border-radius:var(--rad);padding:4px 12px}
   .upbadtrade{display:grid;grid-template-columns:52px minmax(90px,1fr) auto;gap:8px;
-              align-items:baseline;padding:8px 0;font-size:12px;line-height:1.45}
+              align-items:baseline;padding:8px 0;font-size:calc(12*var(--fu));line-height:1.45}
   .upbadtrade+.upbadtrade{border-top:1px solid var(--line)}
   .upbadtrade .at{color:var(--gray);white-space:nowrap}
   .upbadtrade .payee{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .upbadtrade .amt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
   .upacts{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
-  .savehide{display:flex;align-items:center;gap:6px;margin:8px 0 4px;font-size:13px;color:var(--gray)}
+  .savehide{display:flex;align-items:center;gap:6px;margin:8px 0 4px;font-size:calc(13*var(--fu));color:var(--gray)}
 
   /* 온보딩 */
-  .obhead{font-size:15px;font-weight:700;margin-top:4px}
-  .obquestion{margin-top:18px;text-align:center;font-size:16px;font-weight:800;line-height:1.45}
-  .obsub{font-size:12.5px;color:var(--gray);margin-top:4px;line-height:1.5}
+  .obhead{font-size:calc(15*var(--fu));font-weight:700;margin-top:4px}
+  .obquestion{margin-top:18px;text-align:center;font-size:calc(16*var(--fu));font-weight:800;line-height:1.45}
+  .obsub{font-size:calc(12.5*var(--fu));color:var(--gray);margin-top:4px;line-height:1.5}
   .obauto{margin-top:9px;padding:9px 12px;background:var(--panel);border-radius:var(--rad);
-          font-size:14px;line-height:1.5;color:var(--ink)}
+          font-size:calc(14*var(--fu));line-height:1.5;color:var(--ink)}
   .obauto b{font-weight:800}
   .obcovline{margin-top:13px;display:flex;justify-content:space-between;
              align-items:baseline;gap:10px}
-  .obcovnum{font-size:14px;font-weight:800}
-  .obthr{margin-top:5px;font-size:12.5px;line-height:1.65;color:var(--ink)}
+  .obcovnum{font-size:calc(14*var(--fu));font-weight:800}
+  .obthr{margin-top:5px;font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--ink)}
   .obmuted{margin-top:9px;padding:10px 12px;background:var(--panel);
-           border-radius:var(--rad);font-size:12.5px;line-height:1.65;color:var(--gray)}
+           border-radius:var(--rad);font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--gray)}
   .jumpout{margin-top:12px;width:100%;padding:10px 14px}
-  .b.big{padding:10px 20px;font-size:15px;font-weight:800}
+  .b.big{padding:10px 20px;font-size:calc(15*var(--fu));font-weight:800}
   .b.dim{color:var(--gray);border-color:var(--line)}
   .obbar{height:6px;background:var(--line);border-radius:var(--rad-pill);margin:5px 0 5px;
          overflow:hidden}
@@ -773,7 +795,7 @@
   .obcovnum.ok{color:var(--good)}
   .obgoal{position:absolute;top:-3px;width:2px;height:12px;background:var(--gray);
           border-radius:1px}
-  .obgoalmsg{margin-top:3px;font-size:12.5px;font-weight:700;color:var(--good)}
+  .obgoalmsg{margin-top:3px;font-size:calc(12.5*var(--fu));font-weight:700;color:var(--good)}
   /* 37차 4번 — 「▲ 여기까지면 충분합니다」를 눈금과 같은 가로 위치에.
      가운데 맞추되 양 끝에서는 안쪽으로 물려 375px 에서 안 잘리게 한다 */
   .obbarwrap{position:relative;padding-bottom:32px}
@@ -793,50 +815,50 @@
   .frow{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;
         border:1px solid var(--line);border-radius:var(--rad);background:var(--paper)}
   .frow .fnm{flex:1;min-width:0}
-  .fbank{font-size:14.5px;font-weight:700;color:var(--ink);word-break:break-all}
-  .fmeta{margin-top:2px;font-size:12.5px;color:var(--gray)}
+  .fbank{font-size:calc(14.5*var(--fu));font-weight:700;color:var(--ink);word-break:break-all}
+  .fmeta{margin-top:2px;font-size:calc(12.5*var(--fu));color:var(--gray)}
   .fmeta.warnt{color:var(--warn)}
   .fask{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-        font-size:12.5px;color:var(--gray)}
-  .fbankin{width:120px;padding:5px 8px;font-size:13px}
+        font-size:calc(12.5*var(--fu));color:var(--gray)}
+  .fbankin{width:120px;padding:5px 8px;font-size:calc(13*var(--fu))}
   /* ▲ 는 눈금 바로 아래에 못 박는다. 글자만 넘칠 때 안쪽으로 민다 */
-  .obgoalarrow{position:absolute;top:7px;font-size:9px;line-height:1;color:var(--gray);
+  .obgoalarrow{position:absolute;top:7px;font-size:calc(9*var(--fu));line-height:1;color:var(--gray);
                transform:translateX(-50%)}
-  .obgoaltip{position:absolute;top:17px;font-size:11.5px;color:var(--gray);
+  .obgoaltip{position:absolute;top:17px;font-size:calc(11.5*var(--fu));color:var(--gray);
              white-space:nowrap;transform:translateX(-50%)}
   /* ★ 63-7. 「N곳 정하셨습니다」를 한참 뒤에야 알아보셨다. 막대 바로 밑 · 오른쪽 · 검정 */
-  .obcount{font-size:12.5px;color:var(--ink);text-align:right}
+  .obcount{font-size:calc(12.5*var(--fu));color:var(--ink);text-align:right}
   .obcard{margin-top:14px;border:1px solid var(--line);border-radius:var(--rad-lg);padding:16px}
   /* ★ 69차 ③. 이름과 「최근 거래 보기」가 한 줄에 앉는다.
      ★ 좁은 화면에서 이름이 길면 단추가 다음 줄로 내려간다 (flex-wrap).
        이름을 자르지 않는다 — 누구인지 아는 것이 이 화면의 일이다.
      ★ 단추는 이름 크기(19px)에 눌리지 않게 제 크기를 지킨다 */
-  .obname{font-size:19px;font-weight:800;line-height:1.35;word-break:break-all;
+  .obname{font-size:calc(19*var(--fu));font-weight:800;line-height:1.35;word-break:break-all;
           display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
   .obname .obnm{min-width:0}
-  .obname .oblink{flex:none;font-size:12.5px;font-weight:600;line-height:1.35}
-  .obmeta{margin-top:7px;font-size:13.5px;color:var(--gray)}
+  .obname .oblink{flex:none;font-size:calc(12.5*var(--fu));font-weight:600;line-height:1.35}
+  .obmeta{margin-top:7px;font-size:calc(13.5*var(--fu));color:var(--gray)}
   .obmeta .amt{font-weight:700}
   .obmeta .in{color:var(--now)}
   .obmeta .out{color:var(--warn)}
   .obbtns{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
   /* 35차 B — 방향별 사실 줄. 금액과 기간을 한 줄에 놓는다 */
   .obfacts{margin-top:11px;display:flex;flex-direction:column;gap:5px}
-  .obfact{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;font-size:13px}
+  .obfact{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;font-size:calc(13*var(--fu))}
   .obfact .flab{color:var(--gray);min-width:58px}
   .obfact .famt{font-weight:700;font-variant-numeric:tabular-nums;margin-left:auto}
   .obfact .famt.in{color:var(--now)}
   .obfact .famt.out{color:var(--warn)}
-  .obfact .fmeta{color:var(--gray);font-size:12.5px}
+  .obfact .fmeta{color:var(--gray);font-size:calc(12.5*var(--fu))}
   /* 35차 B — 어느 쪽을 묻는지 */
-  .obq{margin-top:13px;font-size:13.5px;font-weight:700;color:var(--ink)}
-  .obq .obqset{margin-left:7px;font-weight:400;font-size:12.5px;color:var(--gray)}
+  .obq{margin-top:13px;font-size:calc(13.5*var(--fu));font-weight:700;color:var(--ink)}
+  .obq .obqset{margin-left:7px;font-weight:400;font-size:calc(12.5*var(--fu));color:var(--gray)}
   /* 35차 A — 찍은 결과를 그 자리에서 한 줄로 */
-  .obsaid{margin-top:7px;font-size:12.5px;color:var(--good);font-weight:700}
+  .obsaid{margin-top:7px;font-size:calc(12.5*var(--fu));color:var(--good);font-weight:700}
   /* 35차 C — 새 항목이 사업 돈인지 묻는 자리 */
   .addrow2{margin-top:10px;display:flex;flex-wrap:wrap;gap:7px}
   .addrow2 .b{text-align:left}
-  .addrow2 .bsub{display:block;font-size:11.5px;font-weight:400;color:var(--gray);margin-top:2px}
+  .addrow2 .bsub{display:block;font-size:calc(11.5*var(--fu));font-weight:400;color:var(--gray);margin-top:2px}
   .oblater{margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
   /* ★ 66-9차 ③. 누를 수 있는 것은 밑줄 글줄이 아니라 알약 박스다.
      밑줄만으로는 「읽는 글」과 「누르는 것」이 모양으로 안 갈렸다.
@@ -846,19 +868,22 @@
   .oblink{display:inline-flex;align-items:center;gap:4px;
           border:1px solid var(--edge);background:var(--paper);
           border-radius:var(--rad-pill);padding:5px 12px;
-          font-family:inherit;font-size:12.5px;font-weight:600;
+          font-family:inherit;font-size:calc(12.5*var(--fu));font-weight:600;
           color:var(--gray);cursor:pointer;text-decoration:none}
   .oblink:active{background:var(--panel)}
+  /* ★ 87차 ②. 「자세히」는 회색 줄 묶음을 여닫는 손잡이다. 세로로 컸다 —
+     글자 크기는 그대로 두고 위아래 여백만 줄인다 */
+  .oblink.dtlbtn{padding:1px 10px;margin:2px 0 3px 16px}
   .oblink:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  .obdone{font-size:13.5px;color:var(--good);font-weight:700;margin-top:12px}
+  .obdone{font-size:calc(13.5*var(--fu));color:var(--good);font-weight:700;margin-top:12px}
   .obtick{margin-right:4px}
-  .obcov{font-size:12px;color:var(--gray)}
+  .obcov{font-size:calc(12*var(--fu));color:var(--gray)}
   .obbtns .b.hint{border-color:var(--ink);font-weight:700}
-  .obbtns .spark{margin-left:4px;font-size:11px}
-  .obwhy{margin-top:8px;font-size:12px;color:var(--gray);line-height:1.55}
+  .obbtns .spark{margin-left:4px;font-size:calc(11*var(--fu))}
+  .obwhy{margin-top:8px;font-size:calc(12*var(--fu));color:var(--gray);line-height:1.55}
   /* ★ 64-4. 은행이 준 그대로를 보여드리는 자리 */
   .rawpeek{margin-top:6px;padding:8px 10px;background:var(--panel);
-           border-radius:var(--rad);font-size:12px;line-height:1.6}
+           border-radius:var(--rad);font-size:calc(12*var(--fu));line-height:1.6}
   .rawrow{display:flex;gap:8px;align-items:baseline}
   /* ★ 67차 ①. 날짜 칸에 요일과 시각이 들어와 66px 로는 모자란다.
      너비를 고정하지 않고 줄바꿈만 막는다 — 이름 칸이 대신 줄어든다.
@@ -870,32 +895,32 @@
   .rawamt{flex:none;font-variant-numeric:tabular-nums}
   .rawmore{margin-top:4px;color:var(--gray)}
   .obask{margin-top:12px;background:var(--panel);border-radius:var(--rad);padding:11px 13px;
-         font-size:12.5px;line-height:1.65;color:var(--ink)}
-  .obask .askq{font-weight:700;font-size:13.5px;margin-bottom:6px}
+         font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--ink)}
+  .obask .askq{font-weight:700;font-size:calc(13.5*var(--fu));margin-bottom:6px}
   .askcard{margin-top:14px;border:1px solid var(--ink);border-radius:var(--rad-lg);
            padding:13px 14px;background:var(--panel)}
   .obnow{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;
-         background:var(--panel);border-radius:var(--rad);padding:9px 12px;font-size:12.5px}
+         background:var(--panel);border-radius:var(--rad);padding:9px 12px;font-size:calc(12.5*var(--fu))}
   .obnow .nm{color:var(--gray)}
   .obnow .to{font-weight:700}
   .obprev{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad);
-          padding:6px 13px;font-family:inherit;font-size:12.5px;color:var(--ink);
+          padding:6px 13px;font-family:inherit;font-size:calc(12.5*var(--fu));color:var(--ink);
           cursor:pointer}
   .obprev:hover{border-color:var(--ink)}
   .obprev[disabled]{opacity:.4;cursor:default}
   .obdoneacts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
-  .obnext{font-size:12.5px;color:var(--gray);margin-top:11px;line-height:1.6}
+  .obnext{font-size:calc(12.5*var(--fu));color:var(--gray);margin-top:11px;line-height:1.6}
   .obnext b{color:var(--ink);font-weight:700}
 
   /* 매장 이름 */
   .nminput{display:block;width:100%;max-width:340px;margin-top:12px;height:42px;
            border:1px solid var(--edge);border-radius:var(--rad);background:var(--paper);
-           padding:0 12px;font-family:inherit;font-size:16px;color:var(--ink)}
+           padding:0 12px;font-family:inherit;font-size:calc(16*var(--fu));color:var(--ink)}
   .nminput:focus{outline:none;border-color:var(--ink)}
-  .nminput.sm{height:32px;max-width:220px;margin:0;font-size:15px;font-weight:700}
+  .nminput.sm{height:32px;max-width:220px;margin:0;font-size:calc(15*var(--fu));font-weight:700}
   /* 전에 쓰시던 매장 */
   .oldstores{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
-  .oshead{font-size:13px;font-weight:700;color:var(--gray)}
+  .oshead{font-size:calc(13*var(--fu));font-weight:700;color:var(--gray)}
   .osbtns{margin-top:9px;display:flex;flex-direction:column;gap:6px;align-items:stretch}
   .osline{display:flex;align-items:center;gap:8px}
   .osline .osb{flex:1;min-width:0}
@@ -903,35 +928,42 @@
   /* ★ 66-9차 ③. 알약 박스로 통일. 목록 안이라 한 치수 작게 */
   .oslink{flex:none;border:1px solid var(--edge);background:var(--paper);
           border-radius:var(--rad-pill);padding:3px 10px;font-family:inherit;
-          font-size:11.5px;font-weight:600;color:var(--gray);cursor:pointer}
+          font-size:calc(11.5*var(--fu));font-weight:600;color:var(--gray);cursor:pointer}
   .oslink:hover{color:var(--warn)}
   .osb{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad);
-       padding:9px 16px;font-family:inherit;font-size:13.5px;color:var(--ink);
+       padding:9px 16px;font-family:inherit;font-size:calc(13.5*var(--fu));color:var(--ink);
        cursor:pointer;text-align:left;max-width:100%;word-break:break-all}
   .osb:hover{border-color:var(--ink)}
   .osb.new{color:var(--gray)}
   .shortnote{margin-top:8px;padding:9px 12px;background:var(--panel);border-radius:var(--rad);
-             font-size:12.5px;line-height:1.6;color:var(--ink)}
-  .rstore{padding:14px 0 0}
+             font-size:calc(12.5*var(--fu));line-height:1.6;color:var(--ink)}
+  /* ★ 89차 ③. 좌우가 0 이라 「예시 사업장」·「항목 관리」가 화면 끝에 붙었다.
+     로고가 받는 그 여백을 여기서도 받는다 — 30px 이고, 폰(≤520px)에서는
+     아래 한 곳에서 18px 로 한꺼번에 바뀐다. 값을 여기 새로 박지 않는다.
+     ★ padding 이 아니라 margin 이다. 이 줄들은 제 바탕색도 테두리도 없어서
+       보이는 모습은 똑같지만, padding 은 줄의 상자를 화면 끝에 그대로 두고
+       글자만 밀어낸다 — 그러면 재는 자리(left)가 0 으로 남아 로고와 안 맞는다.
+       margin 이면 상자와 글자가 같이 18px 로 온다 */
+  .rstore{padding:14px 0 0;margin:0 30px}
   .rstorebtn{border:none;background:none;padding:0;font-family:inherit;
-             font-size:17px;font-weight:800;color:var(--ink);cursor:pointer;
+             font-size:calc(17*var(--fu));font-weight:800;color:var(--ink);cursor:pointer;
              border-bottom:1px dashed var(--line)}
   .rstorebtn:hover{border-bottom-color:var(--gray)}
   /* 38차 1-1 — 이름 옆 [수정] */
   .rstore{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .rstoreedit{border:1px solid var(--edge);background:var(--paper);
               border-radius:var(--rad);padding:3px 9px;font-family:inherit;
-              font-size:12px;color:var(--gray);cursor:pointer}
+              font-size:calc(12*var(--fu));color:var(--gray);cursor:pointer}
   .rstoreedit:hover{border-color:var(--ink);color:var(--ink)}
 
   /* 전월 대비 · 예상 · 확인 카드 */
-  .cmprow{margin:-4px 0 6px;font-size:12.5px;font-weight:600;text-align:right}
+  .cmprow{margin:-4px 0 6px;font-size:calc(12.5*var(--fu));font-weight:600;text-align:right}
   .cmprow.up{color:var(--now)}
   .cmprow.down{color:var(--warn)}
-  .estnote{font-size:12px;color:var(--gray);margin:6px 0 4px;line-height:1.6}
+  .estnote{font-size:calc(12*var(--fu));color:var(--gray);margin:6px 0 4px;line-height:1.6}
   /* 시점 비교 */
   .asofbox{margin:4px 0 2px;padding-left:14px}
-  .asofrow{display:flex;align-items:baseline;gap:10px;padding:5px 0;font-size:13px}
+  .asofrow{display:flex;align-items:baseline;gap:10px;padding:5px 0;font-size:calc(13*var(--fu))}
   .asofrow .lab{flex:1;min-width:0;color:var(--gray)}
   .asofrow .v{width:150px;text-align:right;flex:none;font-weight:600}
   .asofrow .gap{width:118px;text-align:right;flex:none;font-weight:700}
@@ -943,41 +975,42 @@
     .asofrow .v{width:112px}
     .asofrow .gap{width:96px}
   }
-  .hnone{font-size:24px;font-weight:800;color:var(--gray);margin:6px 0 2px}
+  .hnone{font-size:calc(24*var(--fu));font-weight:800;color:var(--gray);margin:6px 0 2px}
   /* 잔액 다음으로 중요한 정보 — 스크롤해도 위에 붙어 있게 */
   .rasof{position:sticky;top:0;z-index:3;background:var(--paper);
-         font-size:15px;font-weight:700;color:var(--ink);
+         font-size:calc(15*var(--fu));font-weight:700;color:var(--ink);
          padding:9px 0 10px;margin-top:2px;border-bottom:1px solid var(--line)}
   /* ★ 66차 ② · 머리 배지. 왼쪽은 자료 끝날, 오른쪽은 최근 마감 달.
      ★ 66-2차. 이 덩이가 바로 위 .rasof 규칙 「안」에 끼어 들어가 있었다 —
        .rasof 가 두 줄짜리 규칙인데 첫 줄 뒤에 넣는 바람에 중괄호 안이었다.
        그러면 브라우저가 통째로 버려서 알약이 안 그려지고 맨글자만 붙어 보인다.
        여러 줄 규칙 사이에 새 규칙을 끼우지 않는다 */
-  .hbadge{margin-top:6px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-  .hbadge span{font-size:12px;font-weight:700;border-radius:var(--rad-pill);
+  /* ★ 89차 ③. 「오늘 … 기준」 알약도 같은 줄에 선다 */
+  .hbadge{margin:6px 30px 0;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .hbadge span{font-size:calc(12*var(--fu));font-weight:700;border-radius:var(--rad-pill);
                padding:2px 10px;white-space:nowrap}
   .hbadge .hb1{background:var(--panel);color:var(--gray)}
   .hbadge .hb2{background:var(--goodbg);border:1px solid var(--goodline);color:var(--brand)}
   .periodhead{margin-top:20px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
-  .ph1{font-size:16px;font-weight:800}
-  .ph2{margin-top:4px;font-size:12.5px;color:var(--gray)}
+  .ph1{font-size:calc(16*var(--fu));font-weight:800}
+  .ph2{margin-top:4px;font-size:calc(12.5*var(--fu));color:var(--gray)}
   /* ★ 86차 ⑦. 「확인할 게 N가지 있습니다」 상자(.checktop)와 「보기 ↓」(.ctbtn)를
      없앴다. 그 붉은 상자를 아래 「확인이 필요합니다 · N건」 제목이 그대로 물려받는다 —
      색도 여백도 그 상자가 쓰던 것 그대로다. 새 색은 안 만든다 */
   .ctmark{color:var(--warn);font-weight:800}
   .orow .p.small .pctbase{display:block}
-  .howlink{display:block;font-size:12.5px;color:var(--gray);font-weight:400;margin-top:4px}
+  .howlink{display:block;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:400;margin-top:4px}
   .sumrow{border-top:1px solid var(--ink);margin-top:4px;font-weight:800}
   .sumrow .lab{font-weight:800}
   .eq{margin-right:6px;color:var(--gray);font-weight:700}
   .adjrow .lab{color:var(--ink)}
   .orow[hidden]{display:none}
   .res .pct{position:relative}
-  .pctbase{display:block;font-size:10.5px;font-weight:600;color:var(--gray);
+  .pctbase{display:block;font-size:calc(10.5*var(--fu));font-weight:600;color:var(--gray);
            white-space:nowrap;margin-top:2px}
   .catn{white-space:nowrap}
   .checks{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px}
-  .ckhead{font-size:14.5px;font-weight:800;margin-bottom:4px}
+  .ckhead{font-size:calc(14.5*var(--fu));font-weight:800;margin-bottom:4px}
   /* ★ 86차 ⑦. 없앤 .checktop 의 붉은 상자가 이 제목으로 왔다 */
   .ckhead.ckwarn{padding:11px 13px;background:var(--warnbg);
                  border:1px solid var(--warnline);border-radius:var(--rad);
@@ -986,7 +1019,7 @@
   .ckcard.done{background:var(--panel);border-color:var(--line)}
   .ckcard.done .ckq{font-weight:600;color:var(--gray)}
   /* 조건이 풀렸어도 카드를 지우지 않는다. 한 줄만 단다 */
-  .ckeased{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--good)}
+  .ckeased{margin-top:6px;font-size:calc(12.5*var(--fu));font-weight:600;color:var(--good)}
   .ckback{margin-top:12px}
   .ckhead.done2{cursor:pointer;color:var(--gray);font-weight:700;margin-top:14px}
   .ckhead.done2 .chev{margin-left:6px}
@@ -1001,39 +1034,39 @@
     background:var(--paper);display:flex;flex-direction:column;color:var(--ink)}
   .imgprevhead{flex:none;display:flex;align-items:center;
     gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--paper)}
-  .imgprevtitle{flex:1;min-width:0;font-size:16px;font-weight:800}
+  .imgprevtitle{flex:1;min-width:0;font-size:calc(16*var(--fu));font-weight:800}
   .imgprevheadacts{display:flex;align-items:center;gap:6px;margin-left:auto}
   .imgprevheadacts .b{white-space:nowrap}
   .imgprevbody{flex:1;min-height:0;overflow:auto;padding:12px;background:var(--panel)}
-  .imgprevloading{text-align:center;padding:48px 12px;color:var(--gray);font-size:13px}
+  .imgprevloading{text-align:center;padding:48px 12px;color:var(--gray);font-size:calc(13*var(--fu))}
   .imgprevimg{display:block;width:100%;height:auto;max-width:1200px;margin:0 auto;background:var(--paper)}
   .imgprevfoot{flex:none;display:flex;align-items:center;justify-content:space-between;
     flex-wrap:wrap;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--paper)}
   .imgprevfoot .savehide{margin:0}
   @media(max-width:520px){
     .imgprevhead{gap:6px;padding:9px 8px}
-    .imgprevtitle{font-size:14px}
+    .imgprevtitle{font-size:calc(14*var(--fu))}
     .imgprevheadacts .b{min-height:40px;padding:7px 10px}
     .imgprevbody{padding:6px}
     .imgprevfoot{align-items:stretch}
     .imgprevfoot .savehide{flex-basis:100%}
   }
   .ckhead.done2{margin-top:16px;cursor:pointer;color:var(--gray)}
-  .ckhead.done2 .chev{margin-left:6px;font-size:12px}
+  .ckhead.done2 .chev{margin-left:6px;font-size:calc(12*var(--fu))}
   .simstore{margin-top:14px;padding:12px 13px;background:var(--panel);border-radius:var(--rad)}
   .simstore[hidden]{display:none}
   .projbox{margin:2px 0 8px;padding:10px 12px;background:var(--panel);
-           border-radius:var(--rad);font-size:13px;line-height:1.7;color:var(--ink)}
-  .costsum{font-size:12.5px;color:var(--gray);line-height:1.6;
+           border-radius:var(--rad);font-size:calc(13*var(--fu));line-height:1.7;color:var(--ink)}
+  .costsum{font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.6;
            padding:0 0 8px 14px;border-bottom:1px solid var(--line)}
-  .orow .p.small{font-size:12px;white-space:nowrap;width:76px}
-  .gcount{margin-left:7px;font-size:12px;color:var(--gray);font-weight:400}
+  .orow .p.small{font-size:calc(12*var(--fu));white-space:nowrap;width:76px}
+  .gcount{margin-left:7px;font-size:calc(12*var(--fu));color:var(--gray);font-weight:400}
   /* ★ 53차 ①. 낱말 뜻. ▾ 는 「안을 본다」, ? 는 「이게 뭔지」라
      뜻이 다르니 생김새도 다르다 — 회색 작은 동그라미로, ▾ 보다 옅게 */
   .why{display:inline-flex;align-items:center;justify-content:center;
        width:15px;height:15px;margin-left:6px;border-radius:50%;flex:none;
        border:1px solid var(--line);background:var(--paper);
-       font-size:10px;line-height:1;font-weight:600;color:var(--gray);
+       font-size:calc(10*var(--fu));line-height:1;font-weight:600;color:var(--gray);
        vertical-align:1px;cursor:pointer}
   .why:active{background:var(--panel)}
   /* ★ 54차 ③. 이름을 whytip 으로 가른다 — .whybox 는 45차부터 있던
@@ -1044,7 +1077,7 @@
    ★ 일부러 거슬리게 둔다. 설명은 한 번 읽고 접는 것이지 켜두는 것이 아니다.
    ★ --ink 바탕은 「한 달/1년치」 토글에 이어 둘째다. 셋째는 만들지 않는다 */
   .whytip{position:relative;margin:8px 0 6px;padding:10px 12px;border-radius:8px;
-          background:var(--ink);color:var(--panel);font-size:12.5px;line-height:1.6}
+          background:var(--ink);color:var(--panel);font-size:calc(12.5*var(--fu));line-height:1.6}
   /* 꼬리는 누른 ? 바로 아래로. x 는 그릴 때마다 재서 --tx 에 넣는다 */
   .whytip:before{content:'';position:absolute;bottom:100%;left:var(--tx,14px);
                  border:7px solid transparent;border-bottom-color:var(--ink)}
@@ -1063,52 +1096,52 @@
   .ytab td.whytd .whytip{position:sticky;left:10px;width:330px;max-width:100%}
   .unsetrow{border-top:1px solid var(--ink);margin-top:2px}
   .unsetacts{display:flex;gap:6px;padding:0 0 8px 14px}
-  .mark{margin-right:5px;font-size:11px}
+  .mark{margin-right:5px;font-size:calc(11*var(--fu))}
   .mark.mine{color:var(--good)}
   .mark.auto{color:var(--gray)}
-  .automsg{margin-left:7px;font-size:11.5px;color:var(--gray)}
+  .automsg{margin-left:7px;font-size:calc(11.5*var(--fu));color:var(--gray)}
   .autoask{display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-           padding:2px 0 9px 16px;font-size:12.5px;color:var(--gray)}
-  .npsub{margin-top:5px;font-size:13px;line-height:1.6;color:var(--ink)}
+           padding:2px 0 9px 16px;font-size:calc(12.5*var(--fu));color:var(--gray)}
+  .npsub{margin-top:5px;font-size:calc(13*var(--fu));line-height:1.6;color:var(--ink)}
   .res.waiting{background:var(--panel)}
-  .res .v.wait{width:180px;text-align:right;flex:none;font-size:14.5px;
+  .res .v.wait{width:180px;text-align:right;flex:none;font-size:calc(14.5*var(--fu));
                font-weight:700;color:var(--gray);white-space:nowrap}
-  .reseq{margin-left:8px;font-size:12.5px;color:var(--gray);font-weight:400}
-  .ressub{font-size:12.5px;color:var(--gray);padding:4px 0 0}
+  .reseq{margin-left:8px;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:400}
+  .ressub{font-size:calc(12.5*var(--fu));color:var(--gray);padding:4px 0 0}
   /* 금액 옆 기간 — 줄이 길어지니 이름 아래로 접어 내린다 */
-  .dspan{margin-top:2px;font-size:11.5px;line-height:1.5;color:var(--gray);font-weight:400}
-  .namecut{margin-top:2px;font-size:11px;line-height:1.5;color:var(--gray);font-weight:400}
-  .catspan{margin-bottom:8px;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .dspan{margin-top:2px;font-size:calc(11.5*var(--fu));line-height:1.5;color:var(--gray);font-weight:400}
+  .namecut{margin-top:2px;font-size:calc(11*var(--fu));line-height:1.5;color:var(--gray);font-weight:400}
+  .catspan{margin-bottom:8px;font-size:calc(12.5*var(--fu));font-weight:700;color:var(--ink)}
   /* 손익 카드 — 계산 순서대로 내려온다 */
   .pnl{margin-top:12px;border:1px solid var(--line);border-radius:var(--rad-lg);
        padding:13px 15px 15px;background:var(--paper)}
   .pnlhead{display:flex;align-items:baseline;gap:8px;padding-bottom:9px;
            border-bottom:1px solid var(--line);margin-bottom:6px}
   .pnlhead .ph1{flex:1;display:flex;align-items:baseline;gap:5px;
-                font-size:15px;font-weight:800;white-space:nowrap}
-  .pnlhead .phcount{font-size:11.5px;font-weight:600;color:var(--gray)}
-  .pnlhead .ph2{flex:none;font-size:12.5px;color:var(--gray);font-weight:600}
-  .pnleq{margin-top:10px;font-size:12px;line-height:1.6;color:var(--gray)}
+                font-size:calc(15*var(--fu));font-weight:800;white-space:nowrap}
+  .pnlhead .phcount{font-size:calc(11.5*var(--fu));font-weight:600;color:var(--gray)}
+  .pnlhead .ph2{flex:none;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
+  .pnleq{margin-top:10px;font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
   /* 굵은 선 두 줄로 세 덩어리를 가른다 — 계좌 흐름 / 손익 계산 / 결과 */
   .pnlrule{margin:10px 0;border-top:2px solid var(--ink)}
   /* ── 68차 ⑤ · 시작 화면 안내 상자 힘 빼기 ────────────────────
      보안 문구와 홈 화면 안내는 신뢰 장치라 자리를 옮기지 않는다.
      다만 처음 오신 분의 눈은 업종 타일로 가야 한다 — 힘만 뺀다.
      ★ 글자 0.85배 · 여백 축소 · 테두리 대비 낮춤 */
-  .startcard .upnote{font-size:11px;padding:9px 12px;border-color:var(--line)}
-  .startcard .instbig{font-size:12.5px}
-  .startcard .instsub{font-size:11px}
-  .startcard .instwhy{font-size:11px}
+  .startcard .upnote{font-size:calc(11*var(--fu));padding:9px 12px;border-color:var(--line)}
+  .startcard .instbig{font-size:calc(12.5*var(--fu))}
+  .startcard .instsub{font-size:calc(11*var(--fu))}
+  .startcard .instwhy{font-size:calc(11*var(--fu))}
   .startcard .instcard{padding:9px 12px;border-color:var(--line)}
-  .startcard .instcard .instwhy{font-size:11px}
+  .startcard .instcard .instwhy{font-size:calc(11*var(--fu))}
   /* ── 68차 ④ · 표 소제목 ── */
-  .ytabhead{margin:18px 0 0;font-size:15px;font-weight:800;color:var(--ink)}
+  .ytabhead{margin:18px 0 0;font-size:calc(15*var(--fu));font-weight:800;color:var(--ink)}
   /* ── 68차 ② · 「지금 계좌 잔액」 앞에서 한 번 쉰다 (10 → 20px) ── */
   .pnlrule + .orow.sidebox{margin-top:10px}
   /* ── 43차 · 세 덩어리를 눈으로 가른다 ──
      새 색을 만들지 않는다. 이미 있는 --est · --good · --now · --gray 만 쓴다 */
   .orow.bigrow .lab{font-weight:700}
-  .orow.bigrow .v{font-size:17px}
+  .orow.bigrow .v{font-size:calc(17*var(--fu))}
   .res.restop.est .v{color:var(--est)}
   /* ★ 44차 1-1. 확정된 적자만 빨강. 안 정한 것이 남아 있으면 호박이 이긴다.
      ★ 54차 ④. 색 규칙 한 줄을 고친다 —
@@ -1118,9 +1151,9 @@
   .res.restop.est.minus .v{color:var(--est)}
   .res.restop.fixed .v{color:var(--good)}
   /* ★ 68차 ②. 문장은 회색으로 낮추고 금액 둘만 호박 굵게 — 눈이 숫자로 먼저 간다 */
-  .errline{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--gray)}
+  .errline{margin:6px 0 0;font-size:calc(12.5*var(--fu));line-height:1.5;color:var(--gray)}
   .errline .errnum{color:var(--est);font-weight:700}
-  .whybox{margin-top:6px;padding:9px 10px;background:var(--panel);border-radius:var(--rad);font-size:12px}
+  .whybox{margin-top:6px;padding:9px 10px;background:var(--panel);border-radius:var(--rad);font-size:calc(12*var(--fu))}
   /* ★ 57차 ⑦. 「다음 달 10일까지」 한 장. 잔액 줄 바로 아래 */
   /* ★ 59차 ③. % 글자만 색이고 상자는 흰 바탕이었다. 상자를 통째로 칠한다 —
      「확인할 게 N가지 있습니다」 상자(.checktop)와 같은 방식이다. 새 색은 안 만든다.
@@ -1132,9 +1165,14 @@
        크림은 흰 바탕에서 거의 안 보여 카드가 그냥 지나쳐졌다.
      ★ 왼쪽에 아이콘 자리를 비워두고 아이콘은 그 자리에 얹는다.
        이렇게 하면 글자 마디를 하나도 안 건드려도 그림이 왼쪽에 선다 */
-  .duecard{position:relative;margin:10px 0 2px;padding:13px 14px 13px 54px;
+  .duecard{position:relative;margin:10px 0 2px;padding:13px 15px 13px 54px;
            border:1px solid var(--dueline);border-radius:var(--rad-lg);
            background:var(--duebg)}
+  /* ★ 87차 ①. 접었을 때는 한 줄 높이다. 위아래만 줄인다 —
+     왼쪽 54px 는 아이콘 자리라 그대로 두고, 아이콘도 줄인 만큼 같이 올린다.
+     펼친 모습(.duecard 자체)은 한 값도 안 바뀐다 */
+  .duecard.shut{padding-top:10px;padding-bottom:10px}
+  .duecard.shut .dueicon{top:9px}
   /* 세모 느낌표. 구간색은 그대로 따라간다 —
      53%(가운데 구간)에서 주황 세모가 나오는 것이 시안의 모습이다 */
   .dueicon{position:absolute;left:13px;top:12px;color:var(--dueicon)}
@@ -1142,9 +1180,9 @@
   .dueicon.est{color:var(--dueicon)}
   .dueicon.warn{color:var(--warn)}
   .duetop{display:flex;align-items:baseline;gap:8px;cursor:pointer}
-  .duelab{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:700}
-  .duepct{flex:none;font-size:20px;font-weight:800;letter-spacing:-.02em}
-  .duetop .chev{flex:none;font-size:13px;color:var(--gray);margin-left:2px}
+  .duelab{flex:1 1 auto;min-width:0;font-size:calc(13.5*var(--fu));font-weight:700}
+  .duepct{flex:none;font-size:calc(20*var(--fu));font-weight:800;letter-spacing:-.02em}
+  .duetop .chev{flex:none;font-size:calc(13*var(--fu));color:var(--gray);margin-left:2px}
   .duepct.good{color:var(--good)}
   .duepct.est{color:var(--est)}
   .duepct.warn{color:var(--warn)}
@@ -1152,15 +1190,15 @@
      칸마다 옅은 선과 여백을 두어 ①가능성 ②근거 ③참고 기간이 따로 읽힌다.
      390px 에서는 그대로 세로로 쌓인다 (블록이라 저절로 그렇다) */
   .duewhy{margin-top:9px;padding-top:9px;border-top:1px solid var(--estline);
-          font-size:12px;line-height:1.6;color:var(--gray)}
+          font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
   .duewhy + .duewhy{margin-top:7px;padding-top:7px}
   .duebtn{border:1px solid var(--edge);background:var(--paper);border-radius:6px;
-          padding:1px 6px;font-family:inherit;font-size:13px;font-weight:700;
+          padding:1px 6px;font-family:inherit;font-size:calc(13*var(--fu));font-weight:700;
           color:var(--ink);cursor:pointer}
   .duepick{margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
   .duedays{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
   .duedays button{border:1px solid var(--edge);background:var(--paper);border-radius:6px;
-                  width:38px;padding:5px 0;font-family:inherit;font-size:12.5px;
+                  width:38px;padding:5px 0;font-family:inherit;font-size:calc(12.5*var(--fu));
                   color:var(--ink);cursor:pointer}
   .duedays button.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
   .orow.sidebox .lab,.orow.sidebox .v{color:var(--gray)}
@@ -1176,44 +1214,56 @@
   /* ★ 78차. 질문을 생략한 작은 거래는 「아직 안 정한 거래」와 계산상 별도다.
      접기 전에도 별도 금액이 있음을 보여 주되, 한 줄에 섞어 합계처럼 보이지 않게 한다. */
   .orow.sidebox.unsetbox .gcount{display:block;margin:3px 0 0;
-    font-size:11.5px;line-height:1.45;color:var(--gray);font-weight:600}
+    font-size:calc(11.5*var(--fu));line-height:1.45;color:var(--gray);font-weight:600}
   .orow.balrow2 .v{color:var(--now);font-weight:700}
   .pnlthin{margin:8px 0 0;border-top:1px solid var(--line)}
-  .keepwhy{margin-top:7px;font-size:12px;line-height:1.6;color:var(--gray)}
+  .keepwhy{margin-top:7px;font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
   /* 비교 줄은 금액 아래 작게. 줄을 따로 차지하지 않는다 */
   .orow.flowrow{align-items:baseline;flex-wrap:wrap}
   /* 비교 줄은 줄을 넘겨 오른쪽에. 금액 칸(150px)에 넣으면 낱말이 잘린다 */
   .orow.flowrow .cmpin{flex-basis:100%;text-align:right;margin-top:2px;
-                       font-size:12px;font-weight:600;line-height:1.45}
+                       font-size:calc(12*var(--fu));font-weight:600;line-height:1.45}
   .cmpin.up{color:var(--now)}
   .cmpin.down{color:var(--warn)}
   .cmpin.flat{color:var(--gray)}
   .cmpin2{display:block;font-weight:400;color:var(--gray)}
-  .resasof{margin-top:5px;font-size:11.5px;color:var(--gray)}
+  .resasof{margin-top:5px;font-size:calc(11.5*var(--fu));color:var(--gray)}
   .pnl .orow{padding:6px 0}
-  .pctbase1{margin:6px 0 2px;font-size:11.5px;color:var(--gray);line-height:1.5}
-  .resbase{margin-top:2px;font-size:12.5px;color:var(--gray);font-weight:600}
+  /* ★ 88차 ③. 손익 카드 안 줄들의 숫자 오른쪽 끝을 윗줄들과 맞춘다.
+     ★ % 칸이 숫자 오른쪽에 서 있어서, 「매출」·「그 밖의 입금」처럼 % 가 없는 줄도
+       빈 칸 46px 만큼 안쪽으로 들어와 있었다. 비어 있으면 자리를 안 차지하게 한다.
+     ★ % 가 있는 줄(식자재 따위)은 % 를 숫자 왼쪽으로 옮긴다 — 이름 다음, 숫자 앞이다.
+       그래야 어느 줄이든 맨 오른쪽이 숫자라 끝이 한 열로 선다.
+       DOM 차례는 그대로 두고 보이는 차례만 바꾼다 (계산·저장과 무관하다).
+     ★ 이름 들여쓰기(앞의 전각 빈칸)는 그대로다 — 하위 항목인 것이 보여야 한다 */
+  .pnl .orow:not(.mcalc) > .p:empty{display:none}
+  .pnl .orow:not(.mcalc) > .p{order:1}
+  .pnl .orow:not(.mcalc) > .v{order:2}
+  /* 그 밖의 것(「수정」·「지우기」·직접 넣는 칸)은 지금처럼 숫자 뒤에 남는다 */
+  .pnl .orow:not(.mcalc) > *:not(.lab):not(.p):not(.v){order:3}
+  .pctbase1{margin:6px 0 2px;font-size:calc(11.5*var(--fu));color:var(--gray);line-height:1.5}
+  .resbase{margin-top:2px;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
   /* 36차 — 적자 비율은 빨강. 색 규칙 2-6 */
   .pctminus{color:var(--warn)}
   /* 36차 4단계 — 계좌 두 개 */
-  .hbanks{margin-top:4px;font-size:12.5px;color:var(--gray);font-variant-numeric:tabular-nums}
+  .hbanks{margin-top:4px;font-size:calc(12.5*var(--fu));color:var(--gray);font-variant-numeric:tabular-nums}
   .xferbox{margin-top:12px;padding:11px 13px;border:1px solid var(--edge);
            border-radius:var(--rad);background:var(--panel)}
-  .xfhead{font-size:13.5px;font-weight:700;color:var(--ink)}
-  .xfsub{margin-top:4px;font-size:12.5px;line-height:1.6;color:var(--gray)}
-  .xfnote{margin-top:9px;font-size:12.5px;line-height:1.6;color:var(--gray)}
+  .xfhead{font-size:calc(13.5*var(--fu));font-weight:700;color:var(--ink)}
+  .xfsub{margin-top:4px;font-size:calc(12.5*var(--fu));line-height:1.6;color:var(--gray)}
+  .xfnote{margin-top:9px;font-size:calc(12.5*var(--fu));line-height:1.6;color:var(--gray)}
   .addrow2{margin-top:10px}
   /* 36차 J — 직접 넣기 칸. 계좌에서 온 숫자와 눈으로 구분돼야 한다 */
   .manrow{align-items:center}
-  .manmark{color:var(--gray);font-size:11px}
+  .manmark{color:var(--gray);font-size:calc(11*var(--fu))}
   .maninput{width:130px;padding:5px 8px;border:1px solid var(--edge);
-            border-radius:var(--rad);font-family:inherit;font-size:13px;
+            border-radius:var(--rad);font-family:inherit;font-size:calc(13*var(--fu));
             text-align:right;font-variant-numeric:tabular-nums;background:var(--paper);
             color:var(--ink)}
-  .manleft{margin-top:9px;font-size:12.5px;color:var(--ink)}
+  .manleft{margin-top:9px;font-size:calc(12.5*var(--fu));color:var(--ink)}
   /* ★ 83차 ②③. 「현금매출」을 펼치면 나오는 날짜별 줄. 새 색은 안 만든다 —
      한 단 더 들어간 줄이라는 것만 여백으로 말한다 */
-  .cashday{align-items:center;font-size:13px}
+  .cashday{align-items:center;font-size:calc(13*var(--fu))}
   .cashadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 0 10px}
   .cashadd .maninput{width:112px}
   .cashadd .subnote{flex-basis:100%;padding-left:0;color:var(--warn)}
@@ -1223,55 +1273,60 @@
        「8월」과 「일」이 칸에서 떨어져 나가지 않는다.
      ★ 새 색은 안 만든다 */
   .cashadd .fixgrp{display:flex;align-items:center;gap:5px;flex:none}
-  .cashadd .fixlab{flex:none;font-size:13px;color:var(--ink)}
+  .cashadd .fixlab{flex:none;font-size:calc(13*var(--fu));color:var(--ink)}
   .cashadd .cashdayin{width:72px;text-align:right}
   /* ★ 86차 ③. 숫자 칸의 위아래 화살표를 없앤다 —
      휴대폰에서 누를 수 있는 크기가 아니라 자리만 먹었다.
      숫자 자판이 뜨는 것과 막는 규칙은 그대로다 (type=number 를 그대로 둔다) */
   input.cashdayin::-webkit-outer-spin-button,
   input.cashdayin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  input.cashdayin{-moz-appearance:textfield}
+  /* ★ 88차 ⑤. 파이어폭스용 한 줄. 86차 ③ 때 이미 들어와 있었고 그대로 둔다 —
+     표준 이름(appearance)만 나란히 적는다. 휴대폰에는 영향이 없다 */
+  input.cashdayin{-moz-appearance:textfield;appearance:textfield}
   /* ★ 86차 ⑨. 나간 쪽 항목 이름 칸. 금액 칸보다 조금 좁게 둔다 */
   .cashadd .nameinput{width:104px;text-align:left}
-  /* ★ 86차 ⑨. 직접 넣으신 항목의 이름 줄 — 그 아래 날짜 줄들이 딸린다 */
-  .manitem{align-items:center;font-size:13.5px;font-weight:700}
-  .cashadd .cashhint{flex-basis:100%;margin:1px 0 2px;font-size:11.5px;
+  /* ★ 86차 ⑨. 직접 넣으신 항목의 이름 줄 — 그 아래 날짜 줄들이 딸린다.
+     ★ 87차 ③. 위 항목들(인건비·월세·…)과 같은 줄 모양으로 맞췄다 —
+       오른쪽에 그 항목 합계가 서고 ▾ 로 접었다 편다 */
+  .manitem{align-items:center;font-size:calc(13.5*var(--fu));font-weight:700}
+  .manitemdel{padding:2px 0 8px 32px}
+  .cashadd .cashhint{flex-basis:100%;margin:1px 0 2px;font-size:calc(11.5*var(--fu));
                      line-height:1.5;color:var(--gray)}
-  .cashday .fixlab{flex:none;font-size:13px;color:var(--ink)}
+  .cashday .fixlab{flex:none;font-size:calc(13*var(--fu));color:var(--ink)}
   /* 36차 H — 이름 고치기 칸 */
   .nmfield{margin-top:12px}
-  .nmlab{font-size:12.5px;color:var(--gray);margin-bottom:4px}
-  .subnote{margin:1px 0 4px;padding-left:16px;font-size:11.5px;line-height:1.5;color:var(--gray)}
+  .nmlab{font-size:calc(12.5*var(--fu));color:var(--gray);margin-bottom:4px}
+  .subnote{margin:1px 0 4px;padding-left:16px;font-size:calc(11.5*var(--fu));line-height:1.5;color:var(--gray)}
   /* ★ 82차 ⑥. 「아직 안 정한 돈」이 채워야 할 숙제로 안 보이게 하는 한 줄.
      새 색은 안 만든다 — 알약과 같은 호박 계열(--est)이다.
      경고가 아니라 안심시키는 줄이라 상자도 테두리도 안 두른다 */
-  .unsetok{margin:2px 0 6px;padding-left:16px;font-size:11.5px;
+  .unsetok{margin:2px 0 6px;padding-left:16px;font-size:calc(11.5*var(--fu));
            line-height:1.5;color:var(--est)}
   /* 36차 1-3 — 짚고 넘어갈 것. 새 색을 만들지 않고 --warn 을 쓴다 */
   .subnote.warn{color:var(--warn);font-weight:700}
   /* 375px 에서 꼬리표가 낱말 가운데서 잘려 내려간다. 한 덩어리로 움직이게 */
-  .keeptag{margin-left:6px;font-size:11px;font-weight:400;color:var(--gray);white-space:nowrap}
+  .keeptag{margin-left:6px;font-size:calc(11*var(--fu));font-weight:400;color:var(--gray);white-space:nowrap}
   /* 아직 안 정함 — 호박색. 빨강은 적자 자리다 */
   /* 36차 F-3·4·5 — 안 묻고 넘긴 것. 숨기면 안 되는 줄이다 */
   .skipline{margin-top:10px;padding:9px 11px;background:var(--panel);border-radius:var(--rad);
-            font-size:12.5px;line-height:1.6;color:var(--ink)}
+            font-size:calc(12.5*var(--fu));line-height:1.6;color:var(--ink)}
   .skipline .sk1{cursor:pointer}
   .skipline .sk2{margin-top:5px;color:var(--warn);font-weight:700}
   .unsetline{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:5px 0 2px;
-             font-size:12.5px;line-height:1.6}
+             font-size:calc(12.5*var(--fu));line-height:1.6}
   .unsetline .ul1{flex:1;min-width:150px;color:var(--est);font-weight:700}
   .unsetline.big{padding:9px 11px;background:var(--estbg);border:1px solid var(--estline);
                  border-radius:var(--rad);margin:8px 0 4px}
   .unsetline .ctbtn{flex:none}
-  .cathid{display:block;font-size:11.5px;font-weight:700;color:var(--warn)}
+  .cathid{display:block;font-size:calc(11.5*var(--fu));font-weight:700;color:var(--warn)}
   /* 견줄 게 없을 때 쓰는 사실 한 줄 — 판정하지 않는다 */
-  .ratiofact{margin:2px 0 6px;padding-left:14px;font-size:12px;line-height:1.6;color:var(--gray)}
+  .ratiofact{margin:2px 0 6px;padding-left:14px;font-size:calc(12*var(--fu));line-height:1.6;color:var(--gray)}
   /* 거래처 찾기 — 목록에 없으면 사장님은 찾을 방법이 없다 */
   .findbar{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 4px}
   .findinp{flex:1;min-width:150px;height:36px;border:1px solid var(--edge);border-radius:var(--rad);
-           padding:0 10px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--paper)}
+           padding:0 10px;font-size:calc(14*var(--fu));font-family:inherit;color:var(--ink);background:var(--paper)}
   .findinp:focus{outline:none;border-color:var(--ink)}
-  .findcount{margin:4px 0 2px;font-size:12.5px;font-weight:700;color:var(--good)}
+  .findcount{margin:4px 0 2px;font-size:calc(12.5*var(--fu));font-weight:700;color:var(--good)}
   .findcount[hidden]{display:none}
   .findmore{margin-top:8px}
   .chbtn.wide{width:100%}
@@ -1290,24 +1345,24 @@
        위 두 줄(17px)보다 여전히 크고 색도 달라 주인공인 것은 그대로다 */
   .res.restop{flex-wrap:nowrap;align-items:baseline;border-top:none;background:none;
               border-radius:0;padding:2px 0 0;margin-top:0}
-  .res.restop .lab{flex:1 1 auto;font-size:14px;color:var(--gray);font-weight:700}
-  .res.restop .v{width:auto;flex:none;text-align:right;font-size:24px;
+  .res.restop .lab{flex:1 1 auto;font-size:calc(14*var(--fu));color:var(--gray);font-weight:700}
+  .res.restop .v{width:auto;flex:none;text-align:right;font-size:calc(24*var(--fu));
                  letter-spacing:-.03em;line-height:1.15;white-space:nowrap}
   /* 「달이 끝나면 나옵니다」도 같은 자리다 */
-  .res.restop .v.wait{width:auto;flex:none;text-align:right;font-size:15px;
+  .res.restop .v.wait{width:auto;flex:none;text-align:right;font-size:calc(15*var(--fu));
                       white-space:nowrap}
-  .res.restop .pct{width:auto;flex:none;font-size:14px;align-self:flex-end}
-  .res.restop .reseq{display:block;font-weight:400;font-size:12px;margin-left:0}
+  .res.restop .pct{width:auto;flex:none;font-size:calc(14*var(--fu));align-self:flex-end}
+  .res.restop .reseq{display:block;font-weight:400;font-size:calc(12*var(--fu));margin-left:0}
   /* 달이 안 끝났다는 말은 숫자 바로 밑에 붙어 있어야 한다 */
   .runwarn{margin-top:8px;padding:11px 13px;background:var(--estbg);
            border:1px solid var(--estline);border-radius:var(--rad)}
-  .runwarn .rw1{font-size:13px;font-weight:700;line-height:1.6}
-  .runwarn .rw2{margin-top:3px;font-size:12.5px;line-height:1.65;color:var(--gray)}
+  .runwarn .rw1{font-size:calc(13*var(--fu));font-weight:700;line-height:1.6}
+  .runwarn .rw2{margin-top:3px;font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--gray)}
   .balbox{margin-top:14px;border-top:1px solid var(--line)}
-  .resnote{margin-top:9px;font-size:13px;line-height:1.65;color:var(--ink)}
+  .resnote{margin-top:9px;font-size:calc(13*var(--fu));line-height:1.65;color:var(--ink)}
   .npbtn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--edge)}
   .npbtn.ghost:hover{border-color:var(--ink)}
-  .alldone{margin-top:10px;font-size:13px;color:var(--good);font-weight:600;
+  .alldone{margin-top:10px;font-size:calc(13*var(--fu));color:var(--good);font-weight:600;
            padding-left:14px}
   .mi.add{color:var(--now);font-weight:700}
 
@@ -1318,22 +1373,22 @@
   .catrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 10px;padding:9px 0;
           border-bottom:1px solid var(--line)}
   .catmv{display:flex;flex-direction:column;gap:2px;flex:none}
-  .mvb{border:none;background:none;font-family:inherit;font-size:11px;line-height:1;
+  .mvb{border:none;background:none;font-family:inherit;font-size:calc(11*var(--fu));line-height:1;
        color:var(--gray);cursor:pointer;padding:1px 3px}
   .mvb[disabled]{opacity:.25;cursor:default}
-  .catnm{flex:1;min-width:0;font-size:14px;font-weight:600;word-break:break-all}
-  .cattag{margin-left:6px;font-size:11px;font-weight:600;color:var(--gray);
+  .catnm{flex:1;min-width:0;font-size:calc(14*var(--fu));font-weight:600;word-break:break-all}
+  .cattag{margin-left:6px;font-size:calc(11*var(--fu));font-weight:600;color:var(--gray);
           background:var(--panel);border-radius:var(--rad-pill);padding:1px 7px;white-space:nowrap}
-  .catn{text-align:right;flex:none;font-size:13px;color:var(--gray);white-space:nowrap}
-  .catnote{margin-top:3px;font-size:11.5px;color:var(--gray);font-weight:400;
+  .catn{text-align:right;flex:none;font-size:calc(13*var(--fu));color:var(--gray);white-space:nowrap}
+  .catnote{margin-top:3px;font-size:calc(11.5*var(--fu));color:var(--gray);font-weight:400;
            line-height:1.45}
   .savebox{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
   /* 사용 기록 — 무엇이 나가는지 그대로 보이고, 긁어서 복사도 되게 */
   .usebox{margin-top:11px;padding:12px 13px;background:var(--panel);
-          border-radius:var(--rad);font-size:12px;line-height:1.75;
+          border-radius:var(--rad);font-size:calc(12*var(--fu));line-height:1.75;
           color:var(--ink);white-space:pre-wrap;word-break:break-all;
           font-variant-numeric:tabular-nums;user-select:text;-webkit-user-select:text}
-  .lswarn{margin-top:9px;font-size:12.5px;color:var(--warn);font-weight:600;
+  .lswarn{margin-top:9px;font-size:calc(12.5*var(--fu));color:var(--warn);font-weight:600;
           line-height:1.55}
   .catacts{flex-basis:100%;display:flex;gap:5px;justify-content:flex-end;
            margin-top:2px}
@@ -1346,7 +1401,7 @@
   .catbtn{display:inline-flex;align-items:center;gap:4px;
           border:1px solid var(--edge);background:var(--paper);
           border-radius:var(--rad-pill);padding:4px 11px;
-          font-family:inherit;font-size:12.5px;font-weight:600;
+          font-family:inherit;font-size:calc(12.5*var(--fu));font-weight:600;
           color:var(--gray);cursor:pointer}
   .catbtn:active{background:var(--panel)}
   .catbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -1359,43 +1414,45 @@
   .catprow:last-child{border-bottom:none}
   /* 거래처명이 1순위, 금액이 2순위, 건수는 보조 */
   .catpline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
-  .catpnm{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:700;word-break:break-all}
-  .catpamt{flex:none;margin-left:auto;font-size:13px;white-space:nowrap}
+  .catpnm{flex:1 1 auto;min-width:0;font-size:calc(13.5*var(--fu));font-weight:700;word-break:break-all}
+  .catpamt{flex:none;margin-left:auto;font-size:calc(13*var(--fu));white-space:nowrap}
   .catpn{font-weight:400;color:var(--gray)}
   /* 「최근 거래 보기」는 이 목록 안에서 제일 조용한 것이다 */
-  .catprow .oblink{margin-top:6px;padding:3px 9px;font-size:11.5px}
+  .catprow .oblink{margin-top:6px;padding:3px 9px;font-size:calc(11.5*var(--fu))}
   .catprow .rawpeek{margin-top:6px;background:var(--panel)}
   .addmsg{margin-top:9px}
-  .addq{font-size:13px;line-height:1.6;font-weight:600}
+  .addq{font-size:calc(13*var(--fu));line-height:1.6;font-weight:600}
 
   /* 확인 카드 */
   .ckcard{margin-top:10px;background:var(--paper);border:1px solid var(--line);
           border-radius:var(--rad-lg);padding:12px 13px}
-  .ckq{font-size:13.5px;font-weight:700;line-height:1.55}
-  .cka{margin-top:5px;font-size:12.5px;color:var(--gray);line-height:1.55}
+  .ckq{font-size:calc(13.5*var(--fu));font-weight:700;line-height:1.55}
+  .cka{margin-top:5px;font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.55}
   .ckbtns{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 
   /* 예시 표시 — 미리 넣어둔 데이터로 보여주는 화면에만 붙는다 */
   .store .demo{display:inline-block;margin-left:7px;vertical-align:middle;
                background:var(--panel);color:var(--gray);border:1px solid var(--line);
-               border-radius:var(--rad-pill);padding:1px 8px;font-size:11px;font-weight:600}
-  .demonote{margin-top:6px;font-size:12px;color:var(--gray)}
+               border-radius:var(--rad-pill);padding:1px 8px;font-size:calc(11*var(--fu));font-weight:600}
+  .demonote{margin-top:6px;font-size:calc(12*var(--fu));color:var(--gray)}
 
   /* 결과 */
   /* 줄 1 은 보는 달과 보기 방식, 줄 2 는 누르는 것들.
      한 줄에 다 넣으면 「거래처 더 정하기 (149곳 남음)」에서 줄이 저절로 바뀐다 */
-  .rsel{padding:12px 0}
+  /* ★ 89차 ③. 달 고르는 줄. .rselrow 가 아니라 여기서 받는다 —
+     .rselrow 는 손익 카드 안(.resmanage)에서도 쓰여서, 거기까지 밀면 안 된다 */
+  .rsel{padding:12px 0;margin:0 30px}
   .rselrow{display:flex;align-items:center;gap:8px}
   .rselrow+.rselrow{margin-top:9px}
   /* 줄 2 는 셋이 안 들어가면 셋째 줄로 내린다.
      억지로 욱여넣어 글자가 잘리는 것보다 낫다 */
   .rselrow.acts{flex-wrap:wrap}
   .rsel select{height:34px;border:1px solid var(--edge);border-radius:var(--rad);
-               background:var(--paper);padding:0 8px;font-size:14px;
+               background:var(--paper);padding:0 8px;font-size:calc(14*var(--fu));
                font-family:inherit;color:var(--ink);cursor:pointer;
                max-width:100%;min-width:0}
   /* 툴바 버튼은 조금 크게 — 손가락으로 누르는 자리다 */
-  .rselrow .upbtn{padding:7px 13px;font-size:12.5px}
+  .rselrow .upbtn{padding:7px 13px;font-size:calc(12.5*var(--fu))}
   /* ★ 74차. 결과보다 앞서 있던 관리 기능은 하나로 접는다. */
   .resmanage{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
   .resmanage .rselrow{margin-top:9px}
@@ -1403,28 +1460,28 @@
   .resultnew{display:block;width:100%;margin-top:10px;padding:10px 14px;
              border:1px solid var(--estline);border-radius:var(--rad);
              background:var(--estbg);color:var(--ink);font-family:inherit;
-             font-size:13.5px;font-weight:800;cursor:pointer}
+             font-size:calc(13.5*var(--fu));font-weight:800;cursor:pointer}
   /* ★ 64-6. 예전에는 1년치에서 왼쪽으로 당겼다 —
      같은 물건이 화면마다 자리를 옮기면 안 된다 (49차).
      늘 오른쪽 같은 자리다. 아래 margin-left:auto 가 그 일을 한다 */
-  .rwarn{font-size:12.5px;color:var(--warn);font-weight:600}
+  .rwarn{font-size:calc(12.5*var(--fu));color:var(--warn);font-weight:600}
   .rmode{margin-left:auto;display:flex;gap:0;border:1px solid var(--edge);
          border-radius:var(--rad);overflow:hidden;flex:none}
   .rmode button{border:none;background:var(--paper);font-family:inherit;
-                font-size:13px;padding:7px 12px;cursor:pointer;color:var(--gray)}
+                font-size:calc(13*var(--fu));padding:7px 12px;cursor:pointer;color:var(--gray)}
   .rmode button.on{background:var(--ink);color:var(--paper);font-weight:700}
 
   /* 못정한가 많으면 순이익을 계산하지 않는다 */
   .noprofit{margin:12px 0 0;border:1px solid var(--warnline);background:var(--warnbg);
             border-radius:var(--rad-lg);padding:14px 15px}
-  .noprofit .npt{font-size:14px;font-weight:700;line-height:1.6;color:var(--ink)}
+  .noprofit .npt{font-size:calc(14*var(--fu));font-weight:700;line-height:1.6;color:var(--ink)}
   .noprofit .npt b{color:var(--warn);font-weight:800}
   .noprofit .npa{margin-top:11px;display:flex;flex-wrap:wrap;gap:10px;
                  align-items:center}
   .npbtn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-         border-radius:var(--rad);padding:8px 16px;font-family:inherit;font-size:13.5px;
+         border-radius:var(--rad);padding:8px 16px;font-family:inherit;font-size:calc(13.5*var(--fu));
          font-weight:700;cursor:pointer}
-  .npmore{font-size:12.5px;color:var(--gray)}
+  .npmore{font-size:calc(12.5*var(--fu));color:var(--gray)}
 
   /* 항목 펼치기 */
   /* 38차 1·12번 — 손가락으로 누르는 자리를 줄 전체로, 높이도 넉넉히.
@@ -1433,10 +1490,10 @@
              -webkit-tap-highlight-color:rgba(0,0,0,.06)}
   .orow.tapx:active{background:var(--panel)}
   .orow.tapx:hover .lab{text-decoration:underline;text-decoration-color:var(--line)}
-  .orow .lab .chev{font-size:12px;color:var(--gray);margin-left:5px}
+  .orow .lab .chev{font-size:calc(12*var(--fu));color:var(--gray);margin-left:5px}
   .dtl{border-left:2px solid var(--line);margin:2px 0 8px 14px;padding-left:12px}
   .dtl .drow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;
-             font-size:13.5px;border-bottom:1px dashed var(--line)}
+             font-size:calc(13.5*var(--fu));border-bottom:1px dashed var(--line)}
   .dtl .drow:last-child{border-bottom:none}
   .dtl .drow{flex-wrap:wrap}
   /* ★ 69차 ③. 여기서도 단추는 이름 오른쪽이다 (정하기 화면과 같은 원칙).
@@ -1449,21 +1506,21 @@
        숫자가 줄마다 들쭉날쭉한 것보다 이 편이 낫다 */
   .dtl .dnm{flex:1 1 auto;min-width:120px;max-width:calc(100% - 94px);word-break:break-all;
             display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px}
-  .dtl .dnm .oblink{flex:none;padding:3px 9px;font-size:11.5px}
+  .dtl .dnm .oblink{flex:none;padding:3px 9px;font-size:calc(11.5*var(--fu))}
   .dtl .dv{width:auto;min-width:84px;text-align:right;flex:none;font-weight:600}
   .dtl .dch{flex:none;margin-left:auto}
   .unk{color:var(--warn);font-weight:800;margin-right:5px}
-  .autotag{margin-left:5px;color:var(--est);font-weight:700;font-size:11.5px;
+  .autotag{margin-left:5px;color:var(--est);font-weight:700;font-size:calc(11.5*var(--fu));
            white-space:nowrap}
   .chbtn{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad);
-         padding:4px 10px;font-family:inherit;font-size:12px;color:var(--gray);
+         padding:4px 10px;font-family:inherit;font-size:calc(12*var(--fu));color:var(--gray);
          cursor:pointer;white-space:nowrap}
   .chbtn:hover{border-color:var(--ink);color:var(--ink)}
-  .dmore{margin-top:8px;font-size:12.5px}
+  .dmore{margin-top:8px;font-size:calc(12.5*var(--fu))}
 
   /* 1년치 */
   .ywrap{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
-  .ytab{border-collapse:collapse;font-size:13px;white-space:nowrap;min-width:100%}
+  .ytab{border-collapse:collapse;font-size:calc(13*var(--fu));white-space:nowrap;min-width:100%}
   .ytab th,.ytab td{padding:9px 10px;border-bottom:1px solid var(--line);
                     text-align:right}
   .ytab th.rh,.ytab td.rh{text-align:left;position:sticky;left:0;
@@ -1489,13 +1546,13 @@
   .ytab tr.yrout .num,.ytab tr.yrout .rh{color:var(--warn)}
   .ytab tr.yrprof .rh{color:var(--now)}
   /* 각 칸 아래 작은 전월 대비 한 줄 — 밴드 위에서도 조용하게 */
-  .ydelta{display:block;margin-top:1px;font-size:10.5px;font-weight:600;color:var(--gray)}
+  .ydelta{display:block;margin-top:1px;font-size:calc(10.5*var(--fu));font-weight:600;color:var(--gray)}
   /* ★ 69차 ②. opacity 로 연하게 했더니 칸 바탕까지 반투명해져서
      가로로 밀 때 지나가는 숫자가 고정된 이름 칸에 비쳐 보였다 (「7,73월세」).
      연하게 하는 것은 글자색만이어야 한다 — 칸은 불투명하게 둔다.
      ★ 새 토큰은 안 만든다. 있는 --gray 를 바탕색 쪽으로 조금 섞는다 */
-  .ytab tr.yrsub .rh{padding-left:18px;font-size:12px;color:var(--gray)}
-  .ytab tr.yrsub .num{font-size:12px;color:var(--gray)}
+  .ytab tr.yrsub .rh{padding-left:18px;font-size:calc(12*var(--fu));color:var(--gray)}
+  .ytab tr.yrsub .num{font-size:calc(12*var(--fu));color:var(--gray)}
   .ytab tr.yrsub .rh,.ytab tr.yrsub .num{
     color:color-mix(in srgb, var(--gray) 78%, var(--paper))}
   /* ★ 69차 ②. 밴드가 없는 흰 행의 이름 칸은 위 .ytab td.rh 가 이미
@@ -1513,7 +1570,7 @@
   .ytab td.gomonth .ypill{text-decoration:none}
   /* 마지막 줄은 굵은 선 위에. 이름도 숫자와 같은 파랑으로 (68차 ⑥) */
   .ytab tr.balrow td,.ytab tr.balrow th{border-top:2px solid var(--edge)}
-  .ytab thead th{font-size:12.5px;color:var(--gray);font-weight:600}
+  .ytab thead th{font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
   .ytab thead th.live{color:var(--ink);font-weight:800}
   /* 평균 칸은 달들과 갈라 보이게 */
   /* ★ 68차 ⑥. 밴드보다 자릿수를 높인다 — 평균 칸은 밴드가 아니라 제 흰 바탕이다.
@@ -1533,7 +1590,7 @@
   .ytab tr.keeprow td.avgcol{background:var(--panel)}
   .ytab tr.unsetrow2 td.avgcol{background:var(--estbg)}
   /* 기간은 아래 각주에 있고, 머리칸에는 몇 달인지만 */
-  .avgn{display:block;font-size:10.5px;font-weight:600;color:var(--gray)}
+  .avgn{display:block;font-size:calc(10.5*var(--fu));font-weight:600;color:var(--gray)}
   /* 뺄셈에 안 들어가는 줄이라는 걸 선으로 보인다 */
   .ytab tr.keeprow td{border-top:3px double var(--ink);color:var(--gray)}
   .ytab tr.keeprow td.rh{color:var(--ink)}
@@ -1563,9 +1620,9 @@
   .ytab tr td.livec{background:var(--nowbg)}
   .ytab tr th.livecol{background:var(--nowbg)}
   .ylink{border:none;background:none;padding:0;font-family:inherit;
-         font-size:12.5px;color:var(--now);text-decoration:underline;cursor:pointer}
+         font-size:calc(12.5*var(--fu));color:var(--now);text-decoration:underline;cursor:pointer}
   /* ★ 66차 ③-1 · 1년치 한눈에 보기 — 구역 머리와 카드 줄 */
-  .yhead{margin-top:18px;font-size:16px;font-weight:800;color:var(--ink)}
+  .yhead{margin-top:18px;font-size:calc(16*var(--fu));font-weight:800;color:var(--ink)}
   /* ★ 77차. 모바일에서도 세 값을 한눈에 읽는 세로 계산식.
      이름·금액은 모두 같은 크기와 같은 열이며 최종값만 진한 초록 상자로 강조한다. */
   .ycards{margin-top:10px;border-top:1px solid var(--line);display:grid}
@@ -1573,10 +1630,10 @@
          grid-template-columns:22px minmax(0,1fr) minmax(132px,auto);
          align-items:center;gap:8px;padding:0 8px;background:var(--paper)}
   .ycard+.ycard{border-top:1px solid var(--line)}
-  .ysign{font-size:14px;font-weight:800;color:var(--gray);text-align:center}
-  .ycname,.ycval{font-size:14px;font-weight:800}
+  .ysign{font-size:calc(14*var(--fu));font-weight:800;color:var(--gray);text-align:center}
+  .ycname,.ycval{font-size:calc(14*var(--fu));font-weight:800}
   .ycval{text-align:right;letter-spacing:-.03em;white-space:nowrap;font-variant-numeric:tabular-nums}
-  .yperiod{margin-top:3px;font-size:12.5px;color:var(--gray)}
+  .yperiod{margin-top:3px;font-size:calc(12.5*var(--fu));color:var(--gray)}
   .ycard.yin,.ycard.yout{background:var(--paper)}
   .ycard.yin .ycname,.ycard.yin .ycval{color:var(--good)}
   .ycard.yout .ycname,.ycard.yout .ycval{color:var(--warn)}
@@ -1588,60 +1645,72 @@
        높이·색·둥근 모서리·강조 느낌은 한 값도 안 바꾼다. 색칠된 폭만 부모에 맞춘다 */
   .ycard.yprof{min-height:52px;margin:4px 0 0;padding:0 8px;border:0!important;
                border-radius:var(--rad);background:var(--brand);color:var(--paper)}
-  .ycard.yprof .ysign,.ycard.yprof .ycname,.ycard.yprof .ycval{color:var(--paper);font-size:14px}
+  .ycard.yprof .ysign,.ycard.yprof .ycname,.ycard.yprof .ycval{color:var(--paper);font-size:calc(14*var(--fu))}
   .ycard.ybal .ycval{color:var(--ink)}
   /* ★ 66-2차 ②. 막힌 달의 「—」는 표의 같은 칸과 같은 색이다 (.ytab td.none) */
   .ycard .ycval.ycdash{color:var(--est)}
-  .ycnote{margin-top:7px;font-size:11.5px;color:var(--gray);line-height:1.5}
-  .yfoot{margin-top:12px;font-size:12.5px;color:var(--gray);line-height:1.7}
+  .ycnote{margin-top:7px;font-size:calc(11.5*var(--fu));color:var(--gray);line-height:1.5}
+  .yfoot{margin-top:12px;font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.7}
 
   /* ★ 77-1차. 한 달도 1년 합계와 같은 세로 계산식으로 읽는다.
      펼침·도움말·계산값은 그대로 두고 표시 열과 색만 맞춘다. */
+  /* ★ 88차 ③. 숫자의 오른쪽 끝을 하나로 맞춘다.
+     390px 에서 재보니 네 자리가 제각각이었다 —
+       375 모자랄 가능성 카드 · 374 잔액과 사업 외 용도 ·
+       366 이 세 줄 · 320 매출과 그 밖의 입금.
+     맞추는 자리는 손익 카드(.pnl)의 글자 끝인 374 다. 여기 오른쪽 여백만 걷는다 —
+     왼쪽 8px(글자가 시작하는 자리)과 높이·색·상자 모양은 한 값도 안 바꾼다 */
   .orow.mcalc,.res.mcalc{min-height:52px;display:grid;
     grid-template-columns:22px minmax(0,1fr) minmax(132px,auto);
-    align-items:center;gap:8px;padding:0 8px;background:var(--paper)}
+    align-items:center;gap:8px;padding:0 0 0 8px;background:var(--paper)}
   .orow.mcalc+.orow.mcalc{border-top:1px solid var(--line)}
-  .mcalc .msign{font-size:14px;font-weight:800;color:var(--gray);text-align:center}
+  .mcalc .msign{font-size:calc(14*var(--fu));font-weight:800;color:var(--gray);text-align:center}
   .orow.mcalc .lab,.orow.mcalc .v,.res.mcalc .lab,.res.mcalc .v{
-    width:auto;min-width:0;font-size:14px;font-weight:800;line-height:1.4}
+    width:auto;min-width:0;font-size:calc(14*var(--fu));font-weight:800;line-height:1.4}
   .orow.mcalc .lab,.res.mcalc .lab{display:flex;align-items:center;gap:2px}
   .orow.mcalc .v,.res.mcalc .v{text-align:right;letter-spacing:-.03em;white-space:nowrap}
   .mcalc.minearn .lab,.mcalc.minearn .v{color:var(--good)}
   .mcalc.mspend .lab,.mcalc.mspend .v{color:var(--warn)}
-  .res.mcalc.mprofit{min-height:52px;margin:4px -8px 0;padding:0 16px;border:0;
+  /* ★ 88차 ③. 이 초록 상자만 좌우 여백이 16px 이라 숫자 끝이 8px 어긋나 있었다.
+     상자 모양(크기·색·둥근 모서리·음수 여백)은 그대로 두고 오른쪽 여백만 8px 로 맞춘다 —
+     움직이는 것은 숫자 끝뿐이다 */
+  .res.mcalc.mprofit{min-height:52px;margin:4px -8px 0;padding:0 8px 0 16px;border:0;
     border-radius:var(--rad);background:var(--brand);color:var(--paper)}
   .res.mcalc.mprofit .msign,.res.mcalc.mprofit .lab,.res.mcalc.mprofit .v{
-    color:var(--paper);font-size:14px}
+    color:var(--paper);font-size:calc(14*var(--fu))}
   /* ★ 85차 ①. 「조금만 더 정하면 나옵니다」에 갈 곳을 준다.
      문장일 뿐 갈 곳이 없었다. 바로 아래에 「아직 안 정한 곳 N곳」 단추가 있지만
-     초록 띠가 훨씬 크고 눈에 먼저 들어와서, 대표님은 띠를 누르셨다 (요한 실기기).
+     초록 띠가 훨씬 크고 눈에 먼저 들어와서, 대표님은 띠를 누르셨다 (개발자 실기기).
      ★ 띠 자체의 크기·색은 그대로다 — 흰 상자만 그 안에 들어간다.
      ★ 새 색은 안 만든다. 흰색(--paper)·초록(--brand)과
        그림자에 쓰는 --brand2 뿐이고 셋 다 이미 있는 색이다.
      ★ 「달이 끝나면 나옵니다」에는 안 씌운다 — 그건 대표님이 하실 일이 없다 */
   .res.mcalc.mprofit .v.waitgo{justify-self:end;border:0;font-family:inherit;
     background:var(--paper);color:var(--brand);border-radius:var(--rad-pill);
-    padding:8px 14px;font-size:14px;font-weight:800;line-height:1.2;
+    padding:8px 14px;font-size:calc(14*var(--fu));font-weight:800;line-height:1.2;
     white-space:nowrap;cursor:pointer;box-shadow:0 1px 2px var(--brand2)}
   .res.mcalc.mprofit .v.waitgo:active{background:var(--panel)}
 
   /* 검산이 안 맞으면 숫자를 하나도 보여주지 않는다 (인수인계 §10-3) */
   body.failed > *:not(.err){display:none}
   .err{padding:44px 30px}
-  .errt{font-size:19px;font-weight:800;color:var(--warn);margin-bottom:11px}
-  .errb{font-size:14.5px;line-height:1.65}
-  .errc{margin-top:15px;font-size:12.5px;color:var(--ink);background:var(--panel);
+  .errt{font-size:calc(19*var(--fu));font-weight:800;color:var(--warn);margin-bottom:11px}
+  .errb{font-size:calc(14.5*var(--fu));line-height:1.65}
+  .errc{margin-top:15px;font-size:calc(12.5*var(--fu));color:var(--ink);background:var(--panel);
         border-radius:var(--rad);padding:13px 14px;line-height:1.6;word-break:break-all}
-  .errn{margin-top:15px;font-size:12.5px;color:var(--gray);line-height:1.6}
+  .errn{margin-top:15px;font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.6}
 
   /* ── 폰 ── 고정폭 숫자 칸이 좁은 화면에서 밀려나지 않게 */
   @media (max-width:520px){
     header,.hero,.ask,footer,.bizlab{padding-left:18px;padding-right:18px}
+    /* ★ 89차 ③. 폰 여백은 이 블록 한 자리에 모여 있다. 새 값을 만들지 않고
+       이름만 더한다 — 이 셋은 바탕이 없어 margin 으로 받는다 (위 .rstore 주석) */
+    .rstore,.hbadge,.rsel{margin-left:18px;margin-right:18px}
     .row,.biz .row{padding-left:18px;padding-right:18px}
     .det-pad,.det.open .det-pad{padding-left:18px;padding-right:18px}
     .adjzone{padding-left:18px;padding-right:18px}
     .res{padding-left:18px;padding-right:18px}
-    .hnum{font-size:28px}
+    .hnum{font-size:calc(28*var(--fu))}
     .hrv{width:130px}
     .row .v,.res .v{width:132px}
     .orow .v,.orow .vwrap{width:118px}
@@ -1650,6 +1719,94 @@
     .item.static .iamt{width:118px}
     .ifix{width:38px}
   }
+
+  /* ── 88차 ② · 접을 수 있다는 걸 글자로 알린다 ─────────────────────
+     파일럿 1호 대표가 접히는 줄 모르셨다. 작은 화살표(▾) 하나뿐이었기 때문이다.
+     화살표만 있던 자리에 글자가 든 상자를 붙인다 —
+       펼쳐져 있을 때 「접기 ▴」 · 접혀 있을 때 「자세히 ▾」.
+     ★ 상자를 눌러도 되고 줄 아무 데나 눌러도 된다. 지금 되는 것을 없애지 않는다 —
+       상자는 button 이 아니라 span 이라 부모 줄의 누름이 그대로 산다.
+     ★ 새 색은 안 만든다. 흰 바탕(--paper)에 그 카드의 글자색(currentColor)이고
+       테두리도 이미 쓰던 --edge 다. 모서리는 이미 있는 --rad-pill 이다.
+     ★ 「자세히」가 이미 글자로 있는 자리(oblink)는 손대지 않는다 */
+  .foldchip{flex:none;display:inline-block;background:var(--paper);color:inherit;
+            border:1px solid var(--edge);border-radius:var(--rad-pill);
+            padding:1px 9px;margin-left:6px;font-size:calc(11.5*var(--fu));
+            font-weight:700;line-height:1.5;white-space:nowrap}
+
+  /* ══ 88차 ① · 글씨 크기 세 단 ══════════════════════════════════════
+       1단  지금 그대로 (기본)   ·   2단  약 115%   ·   3단  약 130%
+     ★ 글씨만 키우면 깨진다. 검증방이 87차 화면에 글씨만 키워 재봤다 —
+       115% 에서 가로 26px, 130% 에서 127px 넘쳤다.
+       이름 칸 폭이 그대로인데 글씨만 커져서 「사업으로 번 돈」이 한 글자씩
+       세로로 쪼개지고 숫자는 화면 밖으로 나갔다.
+     ★ 그래서 큰 단에서는 줄 모양을 바꾼다 — 이름을 위, 숫자를 아래로 쌓는다.
+       390px·320px 둘 다 넘침 0px 이다.
+     ★ 숫자가 오히려 더 커진다. 숫자를 보러 오신 분들이라 이름보다 숫자가 커야 맞다.
+     ★ 색과 초록 상자는 그대로다. 새 색은 안 만든다.
+     ★ 단 이름을 body 로 짚지 않고 클래스로만 짚는다 —
+       「전체보기」 그림은 body 밖(SVG 안)에서 그려져서, body 로 짚으면 그림에서만
+       글씨가 커지고 줄은 안 쌓여 그림이 넘친다. 그림 쪽은 늘 1단으로 둔다 */
+  .fs2{--fu:1.15px}
+  .fs3{--fu:1.3px}
+
+  /* ── 큰 단에서만 · 손익 카드 머리줄 ──
+     「9월 1일 ~ 4일 (거래 231건)」은 white-space:nowrap 이라 안 줄어든다.
+     그래서 그 옆 「아직 N일 남았습니다」가 화면 밖으로 밀렸다 —
+     실측 320px 에서 42px(2단)·85px(3단), 390px 에서 15px(3단).
+     큰 단에서는 두 줄로 내린다. 1단은 지금 모습 그대로다 */
+  .fs2 .pnlhead,.fs3 .pnlhead{flex-wrap:wrap;row-gap:2px}
+  .fs2 .pnlhead .ph1,.fs3 .pnlhead .ph1{white-space:normal}
+
+  /* ── 쌓는 자리 ① · 세 숫자 줄 (사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익) ──
+     세 칸(부호·이름·숫자) 가로 배열을 한 칸으로 접는다. 그러면 이름이 윗줄,
+     숫자가 아랫줄로 저절로 내려온다. 색·초록 상자·여백은 그대로다 */
+  .fs2 .orow.mcalc,.fs2 .res.mcalc,
+  .fs3 .orow.mcalc,.fs3 .res.mcalc{grid-template-columns:minmax(0,1fr);
+    gap:2px;padding-top:11px;padding-bottom:11px}
+  /* ★ 88차 ④. 「−」는 한 줄 안에서 왼쪽에 붙는 부호다. 줄을 쌓으면 혼자 가운데 떠서
+     무슨 뜻인지 알 수 없게 된다. 큰 단에서는 안 보이게 한다 —
+     「사업에 쓴 돈」이 빨간 글씨라 뺀다는 것이 이미 보인다.
+     「=」도 같은 자리·같은 까닭이라 같이 감춘다. 1단에서는 지금처럼 보인다 */
+  .fs2 .mcalc .msign,.fs3 .mcalc .msign{display:none}
+  .fs2 .orow.mcalc .v,.fs2 .res.mcalc .v,.fs2 .res.mcalc.mprofit .v,
+  .fs3 .orow.mcalc .v,.fs3 .res.mcalc .v,.fs3 .res.mcalc.mprofit .v{
+    font-size:calc(19*var(--fu));text-align:right}
+
+  /* ── 쌓는 자리 ② · 항목별 줄 · 직접 넣은 항목 줄 (손익 카드 안) ──
+     이름이 한 줄을 다 쓰고, % 와 숫자가 그 아래 오른쪽 끝에 선다.
+     ★ 폭을 auto 로 푼다 — 118px 에 묶어 두면 큰 글씨에서 숫자가 그 칸을 넘는다 */
+  .fs2 .pnl .orow:not(.mcalc),.fs3 .pnl .orow:not(.mcalc){flex-wrap:wrap;justify-content:flex-end;
+    align-items:baseline;row-gap:3px}
+  .fs2 .pnl .orow:not(.mcalc) .lab,.fs3 .pnl .orow:not(.mcalc) .lab{flex:1 0 100%}
+  .fs2 .pnl .orow:not(.mcalc) .v,.fs3 .pnl .orow:not(.mcalc) .v{width:auto;max-width:100%;
+    font-size:calc(17.5*var(--fu));font-weight:700}
+  .fs2 .pnl .orow:not(.mcalc) .p,.fs3 .pnl .orow:not(.mcalc) .p{width:auto}
+
+  /* ── 쌓는 자리 ①-2 · 1년 화면의 같은 세 줄 ──
+     한 달 화면과 1년 화면이 같은 계산식을 같은 모양으로 보여준다 (49차).
+     한쪽만 쌓으면 화면을 옮길 때마다 모양이 달라진다. 부호도 같은 까닭으로 감춘다 (④) */
+  .fs2 .ycard,.fs3 .ycard{grid-template-columns:minmax(0,1fr);
+    gap:2px;padding-top:11px;padding-bottom:11px}
+  .fs2 .ysign,.fs3 .ysign{display:none}
+  .fs2 .ycard .ycval,.fs2 .ycard.yprof .ycval,
+  .fs3 .ycard .ycval,.fs3 .ycard.yprof .ycval{font-size:calc(19*var(--fu))}
+
+  /* ── 쌓는 자리 ③ · 그날 거래 줄 ──
+     날짜와 이름이 윗줄, 금액이 아랫줄 오른쪽 끝이다.
+     이름은 큰 글씨에서 …로 잘리지 말고 줄을 넘겨야 읽힌다 */
+  .fs2 .dcday .rawrow,.fs3 .dcday .rawrow{flex-wrap:wrap;row-gap:2px}
+  .fs2 .dcday .rawnm,.fs3 .dcday .rawnm{overflow:visible;white-space:normal;
+    text-overflow:clip}
+  .fs2 .dcday .dcnm .dcnmt,.fs3 .dcday .dcnm .dcnmt,
+  .fs2 .dcday .dcsub,.fs3 .dcday .dcsub{overflow:visible;white-space:normal;
+    text-overflow:clip}
+  .fs2 .dcday .rawamt,.fs3 .dcday .rawamt{flex:1 0 100%;text-align:right;
+    font-size:calc(15*var(--fu));font-weight:700}
+  /* 그날 화면의 갈래 머리줄(번 돈·쓴 돈·여기 안 든 것)도 같이 쌓는다 */
+  .fs2 .dcgh,.fs3 .dcgh{flex-wrap:wrap;row-gap:2px}
+  .fs2 .dcgh .dcga,.fs3 .dcgh .dcga{flex:1 0 100%;text-align:right;
+    font-size:calc(15*var(--fu))}
 </style></head>
 <body>
 
@@ -1662,6 +1819,12 @@
   <div class="hleft">
     
     <img class="brandlogo" id="brandlogo" alt="남는돈" width="114" height="30" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOQAAAA8CAYAAAB2OhbPAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAB7DSURBVHhe7V0JeBTl+aettmrV1tYDkv2+b44NJJnZQHpqW0RrPRDl2pndAIqtSlsPqtUqciQzuwlBQU4vlHpVa9WqVau2KCrqv1IVBBW55L5vAoRcJLz/5/1mJ26+7JFjN9m2+3ue37NhM8c3YX7zft97TY8eWaQNHo/nG+J3XQFJ6pWnymyWKtP3VUYXqRJ5VmGeEnG79kJhbKAq0emKzKYqjA0Vf59FFhmHnj17fleR6CSvxN5TJbraK9PnVUq/J26XLjDGqCrR3X1UGfIUibM3UpVBpfRGcfu2QmFkNj+W6lIGhZG54naZCq08OMBXEajUbOPvmm2+rdvGW11NPK8vZL6ih4P3+sIl/h6TenxFHGe7kTfByNFCgct8YfNmzTbu1mxjrm4Z83TbfCjtdM5zr2b5J2vhwDVaefCc/DLjm+IYETOXvJD/wLr5V8/++LXTxd+lC6rHo3glugpvVrx5vTJzhCCT/Wi1xO3TAXwY8HNKtAVxPIpE1+Tn5x8v7pMMKqVXiMfEa8NjSoT8TNw+k+ArNyS9PPBOUeVI6Dv1Cuh75yjoO2Vk9xHPP/UK6Hf3laDZxgvFY8YcJ445KbTxl52phYO/40+WkFlVNGWEc3F3jepW+sqDoIcCG3zlwcf0cGCgO96P4KPjZi59fu0zNR/DjKXPT255NemDwujTaJlEMUSsyYPi9umAwuhLKBRxDBE2Mdarr7hPMigSWRzrmGh5M91KarbxYvHMq/A+Ad02M4fhAPSdOgp068v7Nin0Wy88SQuZ433lwe3O02VkRAQxTtAdDAXAV1EChZODUFCOFxl8v0/pkItw7HM+fXH1ozvegRlLX3hRvK50QO3VK1dhpBoth3jj4neKRLfmf/vbMa15KqEwujCWeJB5OA6Wc4m4TyKoaq9cldHDsa6LW11GFon7ZAoKLZPotlnL71nx3skAoqY027DFccdE74n+c/SK4Cf9pl0BRRUlrQ6WKSws88MFc66DC++7EbTJJeCrCEL+pGH3T1vy7PuPbF2IguySG0b1eM6NddO6glQl2ijLubq4X6qhMPJ2PEHiOCSJ/ELcJxEIIQUKI/Wxro1/x8jO3r17nyzulwnApVVR5YjMMSACUVu6bdwhjrsVdMsc5ZscrEGLKB4kk9hn0lD4+Zzr4N7lL8M9n70M58/+LfQpHQb5IT/c+MqMpnnrXoeZS5/fZC1+6UTxGlMNVSKXxxNC881L6TnifqmGIpG34o3DEVDOAHGfRGCM5SuM1MUTpMLIwTyPJ0fcLxOgW+ZvcM0m3jfdzpDpzDbDgTrdGt5HHHcLaJOMK/GpUjQ5c62iyz6ThsGAmb+G2Z/8DR5c9Q8Y++pMyJs4BPImDIZf/bUCHlzzT1xDVt/34d884nWmGskFSTNDkDTnPHGfRGiDIOso7Zn4puomFFrmmIRGxTL5fV7EnS1dxCkjAfXlm1yyIb/USBw6KrCGX+CrKDmayVPUaGoRK3nL/Hth7srXYPrHz8E5034J8rhBYDw+Hh5Y9RrMXv4S3PfZyz8QrzXVUCUyOJ4QXFKa82Nxv1SjKwXpUsrNTfvftyPw2eZoFIF437gsqixBUb6h28bIQtu8VreMGwpt//XpohYyrtPCgaAWMs5lNw35ljjeFiiwzLP0UGBb3ykjWg08FdQsg08n1QmDQR5/GUjjB/FP78QhkF82nItL3KctRIs4cO5NfNqKorzqmXIgf7gELp17M9y/4hV4aMMbcPVfK+eJ15tqqIyY8YTgUpY9PxT3SzVSLUhJ6tVblUhNPEF25JhdBZ9lXpVIkOip10KB4eJ+GQG9zP9Yv2lXthp0Z4giUycOBjpuIORNGgLn3PlLGHrfLfCrx2wY80Q5XPHwRLh41g1QXD4CpPGXAb3jUi5a8TiJqFl+/ln27qNckBX/fhJ8IRN+dOdouHvJX7koL553M/S6ccAF4jWnEjKlo+IJwaUkpd+SJBOk7PH8VNwnETC2qko0pvcYieeSZXKZuF8mIKEgQ2ghR0BByD9Y3K/boYfN76Fr2BdOXawGLSG7YxAMnDMWZi54Et5Zsxg27N0Gh+qqofZoHdQ11kNtQy3sq66Cz7evhZeWLYTbnpsJP6gYBZ5xl3Cr6Ytx3Fj0ThgMJU9OggdWvsoFiNNVdfzlcO6MMTBg1q/5GkGzjLR6W72UXh1PCC4zwUJ6mae/uE8iMMYYOm4SCpJ6rhH3ywQkFmQAiiaPAK10eOY9TDTb+BPGRFoNugPEMAQZNxAunnU9PLN4PlTVHAJE07FGLsTDdUe4KJGH66qhur4G6hsbAOAY5xe7N0P4lYe4GNFqisePxYLS4fD9ylEwbfEz8Pj6t+Ca5yohb8IQDH9wxw9uwxfS1vC0WUmZkd/GE4LL7hYkJyMbVUaWqYx+oEjkTVUiT6gyucETx1Mqyz2JwkhVIkEqjP5F3C8TkFSQmWghtcnBM3XbqOps8NRnB6D3pKGgTLgcrL/Phf1HqrgQj9TXwMHawy14qNYR5CHhe6QjToCPN6+EofffwsWt2Uar84lE4Q168GbuXUVx4oMh+vd8vWCZT4jXnyrIzHNdQiFIFBjL/ZG4X6qRTJAorDzFSXtDNue5SnSHSkiBeDzGetJEFjLCRkUiL6iM2CojE1JFRSK3qxK90SsTv5ybq/Xo0b7cz8SCdEIPGbeGLLT9JX3vijPoNhLFmDdpKBSUDYdnF7/OBYXWMFpoaBmR+POBmkOwv+Ygt56OpcTfVbfY/hgc4583PTMNPLdfwp1C4nlFosfVO35wKzEi0XOsWcaO3rddnpYgdjILyUMEhPxE3C/VSCbIeMSUP5kRSzyeLH/3TFUi+5MI0hF3c+J56ug+ODDtT5XpEpWQK8UxxkNCQeJ9i/eEbSzWbaOsK+mzzeuLwv5+4ng5dMt4kOfUxRhwW5lfOhx6lw6Fl5a9zcUYLa7qiAh3HNwDa3dvhuXb18Kn276AT7augc+2fQErdqyHjfu2wZ7qA83TWdy+qvYQX2c2NDbAzc9M45ZSPG+7yNPsglBome1yarQVCiO/SSSErvJGdlSQfB9GHxWPV9yjx3GqRNYlE2RX0LXouF4XxxkLhbbxS4z7tboXXEbikJgx05VEvfkqgo16yHyqVXGEbhvvJnqKJCNaLjruUnjo3ee5GHE6ioLCTxQYCvHzHevgo02fw4cbl8OSzStg2ZZV8MnW1bB0yypYHPkep6hf7NkM+45UNVvSqtrDUHe0nos6+NA47iRqq6MnFp1pq3Fdiz9AiqBSzzWJhIC/kyRyobhfqtFRQfKkeEZmicdDKIw8LlZ7dBdRkDKj74pjjIXCkGGgQy8TU+fQgYpJ75plTGkxaM0213Y0KwfFgWK87s+V0HissdkaOmKshg37tnHBfbTxcy7Kzft3wO7D+7no9h85CPuqD8DOg3th3d4tsGzrai5MFOquQ3ubj4WWEo+9Ysc6+F75SOhTOrTVONpKFKRuGXe1+AOkCAojVyUSAv5OJrl+cb9UI5kguac1iriejIitNl7dJoZrvDJryhQrqTLynjjGWMC0NC1k1uvhzvlH0kV0Kmm2sbK/1f9rzYPWbGMXTuXEjdtCnKpiDHHljg1wtOloi/Xi+r1bmy3flv07nelrvbNWdL2s7voRv0cn0Jrdm7h40XKiKF1LiUTc+9bTnZq64lQB6zdb/K+lCMnikPg7hdGx4n6pRjJBKhKtVhk5oEh0N/e4SvRjryw9JUmJ6xpVSq/Pk1kTnzJ2gzCdhweuK7HQOvd6cXwxManHV7Qy49OE09ZuZESQq1oK0jL2ddTDiuIoe/kBLpbmNWP9EdhyYCefoqKwdqK1q6+J6VGNJgoVuX7PVi5KXGM601dnClzbUMePdd7dY7gDSRxLW8jLXSzz4Rb/aSmCzDwjEgmBO3UYXZTuROxEgnSsYo5BCOkly/IZsnzqKeL+iSDT3PNVib2sSnSvaGnTTUzfUyXu1LlWHFciFFrGDf2mjwas4eVx9kyZvoYCUDxjdOvyK9029nZEkOjJLLT8fErqWke0eCgiFCKuFbdV7YbaxjouWO55barnnlVRjI08Bgn8E63iml0buXVFiylaycrXHu6wlUynILFnTTwhRAsCb2Ys+FUk8i+V0XdVRhYoEnlNYfRFhZFnZYk8qUr0ESz8xbYZ2MNGlmglhhS8Er2NsZwi8dzRSCZIhfTstKeXUnqWLJPvq8xzkUzpIJnSS9PEQVguxs/l8SjiONoKzCP1lQeXu9k5zYned42Cfljny9m6AJ6vP2PcR820HE+tuB8nHq8Fr+Dncs7nbKPZ5guestEt+y51VJAYbxz+wB+49XNFg9Zs7Z7N8MHG5fwTQx9VRw7BX555Cu6fex9s3LYJ6poavhRj3WGoh6Pwzr/ehRmzpsO/PngfGqCJh0U+2baGizp66opryX+tXcbT6/BhII4pGdMryNxgPCGIooiOA8Yijw1GhxFaxgsPehmLW/WfTJBd4enNROQbxvF9wyWFesgYqtnGFVhiqNvGrzXLuEmzjQm6bYY126jUbWOqbpszNNuYhS02fNhpII5V5aE021jmtJUxH+C0jTmaZU7TbaNCs4xQoe0PIzXLP163zLG6HbjRFzbHaOXB2A6+jgoSrVTFa/Oap6toHQ/UHORTzY+3rOSW8uixRhh3x21wykknwCknfgMuvugC2LlvF9REYpSNx5rg1X++Cp6eZ8K3vnkisNwceOOtN6AJjvFQCFrJtXu2NDt4jjTUwK5D++CCGb/hubHimJIxnYLEJ3o8IaSSKEqZkrjXkBVk6pA/yd/Phw6hOO0/+vICY3OGuF+n0BFBYqgDKzWeW/IGT3dzrKMT4sAp7Mqd6/lUddeBPdCvSIecs87ANQCc8Z1vw4K3UXCOiBFjx14P3z75JH6znHLiCXDb7bfy7/cc3g9LNq/kcUv0tLrZPRiXvPZP4Tan1UUzrYLsyVPMEpYppYJcbIx+JJ7fRVaQqUNBqf9nCQWJXvuQ0Sp22yl0RJCFlgG9S4fBwtWL+TTSFSQ6c9Cqrd+7BY401ELt0XoYNbIETjjua3DqSSeATyuAdZvXQ21k2oorx0cffwROPuHr8J1TT+bb/PnpP/Pvcdr66bY1PByCHlg31e4YNMGEv93boXVkOgWJUBh5KN3xuoggPxDP7SJZC4+OCDInJ+cESZJOVRTldHRK8YTz3FyVUtoH6yWjid/Jcq4X13yEEEmWZYL7EEJ6ppC9CnJyTqOUfl0cayqRX2qcnUyQKU/H7Jgg/VBQ5oclm1Y0O3TQu+pOMzft284Fipk2q9athrG/uwGuGj0K5i+YD0fBETAXMea51hyG6TOmwYgSE2bfM5NPTw/XO1NUrALB6e/e6gPNGTyIya/9kafTieNKxnQLEm9aldEP+3hl14GTUuIx+3gV/Hm6eG4XiQSJpDQndsqWANzOK7OpqkTfVSS6RWVkhyLRPTxkwsghVaJHFEZqcVYgsBZ/hyVbikQPYR4s7qNKZF8KuV+RyC6VkQ2qROcrEvm1OP5oYFih2LrsRP3WUSdxTht1UpE15Fs8j9samossqjByiqxhZ8jWyFPc7fJLjV8kE6Rum881Hzfq2H3H+0/PrxjW0z2+S6w7LrCM0zBDh469uPUDpWOCNLggP9q4/EtB1h3hQkRBojBRkLimbIx4WBFHoYln37iCxKkois/xsTqobkCROp5YnK4ujSHIilfnZaQgEcpZZ52OXlJVortE131nqUq0SpXok2gdxPO6QO8sOoBEIeL+CqO7JemUU8V9RMiM3OGVWaObSyqOI5PInWB8VuJ5RLwOrXT4eXpF4EktZK7QLXObbhvbXWqWsUuzjX2abVS5RC1otrHzy+3MPeI91IJcqEZN9HHdYzvHMvdHHz/C/bpt7NZDxnZMyvGVB1/RJwduUcb7nf7BHREkriExFvjmqg9aTFm3HtjFBbluzxb+b5y2btm5FRYsfBNqj9VzDyuK0BWkSxTkpu2bYeH/LeQCRboOIszcwaweZ8paDU3HmuD252fxYmZxXMnYFYJ0kYcdzBk7W6G5F0dCAx0mb+HP2ABsySieRwT27cF2j3izRgsSU+MURu4RtxehkrMKXAGLos5UusL0RlXT6GHTxBAH5o5i3SOGJ1oyyFuatmL0Nm3RRaQVaZuO3XwO5zyYIYdNuLBpsh4OrOMNrzokSNvkeaWPL/o7t1iOIKth1+F9PFSBaXIoyIZjjXDttb+CE4/7GvzhD7+HA9UH+fYY6qhpqm+OPy5eugQG9P8p98S++MqL/Fv0pi7etIKnzLnC5cXNDXUw6uGJ3KkkjisZu1KQ3QlFordhqhtaDtfKqRJZwBhL3MfF6Q10ZbrXwekgz3GNJJ3L1iWnaLaxMVMzdGIRkwSwM3+HBIlEp8r4v93T7GVFhwtOR7GCA4WEOasY1rDsUi409KRecP4AePyJx2HN+i9gy65t8NHSxVBWNgl6e2X45jeOx5sG3nv/XW4F0cqitcUuA27YA+Oa6Dj62dSreXWJOKZk/F8RJAJrL1WZjUdxyjJtc2G2QunFidagmUp88OBMAq+hwDJUbrlS2AEj3XTaVRpvdViQ2Cvn0jm/495QTA5w15EbI+tIDH3wbgBNDTB7zkygub3gxOO/xr2phX3yeDhEph7uYf3mCV+Hn/3kbFj04SJuMVHMmAOLGT/R60f0sL6x8t/83G0pWhb5vyTIjgI9lxg6QceUM/Wl4MVpYabRXUNyR5cMikRed72umP2iWeYSPhWMcR9kIotnXIX39KwOCxLXkSgMFIhbTIxrPEyNw3pHdPhs2LsVahvrucje/3ARXP2rq6BPngKnnXoyTwQ487unwdk/+gFMnlIBO/bu4tuhwNGZ44RPtkZVkKBD5xjvu4MVJuJ42sKsINsGWZZPURkJeSX6iYJVIFgcLNHGTCJ2U0cnl1emK70SLe3Zs2eLZth62OjNO+/ffaWTyob9ULuy/2pb6KbYYYJBeWAJvvqgw4JEsjsuhd88WcH75bhWDNeOWFKFQX2cuqLFdD2puGb8fPUKeOGlF+DJvzwB8998HXbs3cmF2ACNPN64Yud6LkZcOzoJAc76saHpKKzauYFXl2CViTiWtrCrBFlcjEW90rleidyO+agKI/MwRtmFxPM9qDJylyrT65180LPOEMfZBnyVv2uS0n6MsaIMYl+VkMLehPRK9DYv7A6hh4LjfBUlz2m2sUC3jfc0y5ivWfhKOuOVbiaO4U9ayJysTzZNDMvwQaObFj0+4s3bFmL4A1PY0NuKcD2oKMCtVbu4g+ejTcth9a6NsOfwAf59I8/T+RJubuv2qt3csqIYl29by8Xp5rCi5UWMe352hxICXEbKr+4X/+NSCaz6UGW2HKdT6GiIzlHtDkaVS+1VJfowJoaLY84ig6BZxsqOFigj5QmXwaB7cC15kFf3ux5RnGpiKh2GLty6SLRwmw/s4N9jKRWKEIuYcYqK5VpI3AaP5YoRHUWIN1Ys4k2RY/XLaSt5ILfMDIt/g1QBO3i7LnjR6dDdxHFhUoHC6Hxx3FlkELQyYwHOZ8Wbtz3EIP3tz8/ma8noLnMoKowh4loQU+DcNh74idNZ/BmJP6MoMY7pFi47YjzEHTlYI4meVez12tkWHtj4SPwbpAoqo1MyOWTQHFskpFAce1uAaXGKRCd6JVqRx9iwHj16fFlYm+HAZm6+8uDTejjwmq+i5L6CCWbcipluBb4FGddW4s3bHrp9de7656Pc8YKxQnf66nYFQGGiRURxYp3jqp0bedMrzO7BEit3quuKGYnHwprKy++9ia9XsbudeO62Esto0A2uWf7vi3+DVEGVyKuZaB2jieNTGBktjj0ZsN7TK7NDX3aEw0QD+nZXvPOys9As/63YlZ/XIt45kgfifRXBQ9ggXNy226FZ/kGpCKDiVBJFWfrS/TzcgZYtWlzR7Trws9W/o7bF7xAY0xw4+0aeldMZMSJxWq6VGevp7Bj5gymC86bhzM5wcZpEtW73mAjcsSOTGvHaIq0j2/bC0W5C8Z3GqZjKxt8TGXU/YAZPoWW82QNA3KV7gcmwepmxtTPrSJfo5PGMGwjBh+7gMUQE5rq6U9BkxOkud/QcrYenPvgHfK9iJC+z6sw01SU+HXXLmClef6rgeFbJingpZ9zJIxYci4XInWVLJ05M4nYKI1PF8ScCTlNjTcUxBigzujqTp644I+JRBCFBHL/TbKOehxoyDVgpjU8M8SbuKNn4Qfxz4ov38VxUtxt5Y9NRLjac0tbw8qw6/ju0pgiMQb762XtQMm88fzsWdkLvrGVE8oyNcPBon7CRtjcYo/tdZXR1LDHw7xjZqTI6E8WAMT6nMzctxXUnVm+kgng8hZE5iV6OExHkbHH8iYAhlAQJ64fS3SeoMyiwhvfnTdzEio1In158NZy4T7ejn1XSSw+ZVal6LyRaNHxZDoYo8OfRj5bCvPdegEXrPuEhEFw3ogMHEwfQmfP65+9Dxat/hIFzbuStQdAqdiQTJx7ROhZa/rS+fyKRIPnNzOgD4j7pgkLpbfHWsnzKKtH7xH0SAeOaKGTxWI4gST3WQYr7ZAoKLeOHsSxk88t2QoHMe9kOosAyb02llXSJZVr8VXPjnFfN4TS0/9Rr4Py7x/DX0xWFguCdOJiLFz/b8sqA9pDHWMOBam1isMNNktqC5IIkaekHGwuYuxprHO5YFInMEfdJBEw2iCXIZhJSLO6TKdAmBYqcbnMxBJmJL9txMeyZYV/VLPNtvtaKcWOngrjGRMuJieE4HUWBomBTLcJmhgLQD1+TUGYkLGBNBYqLi49TGVkZSwhcBIy1a93WGWDDrVhTTD4WnLJSMk3cJxESCdKZjnsuwqyeHsU9jousJ7/a3hfjpAtxBdlc8W+0+V0hXY68CUaOHg5u7GxcMiMYMrl7O12NkWPgKyqjy9DREfumpasj68bJuJZUJTqj08Tj4BqUkd+rEgmgEFXGblElsiTWg4EL0rHW7fKMJhIkEjsKKBL5XJHIisjnckWin6mMfqoy+gn+XVRGlioS+ViRyBL0RqsS/dClwui/FYm8z1tjSuQ9bI+pMLoQux9EXpm3QGXkdUxqUBh5HYu0vYz9Fjs0iGMVkUiQToNwY7lmGfdgf1TsPteKlt/SLGM6Jn6jUzBV1ELmbL08UK6P9/vEMbdAgWX29VUEt0faE/xHEv8DMO6k2cazPYYNw6d1l0Bl9J14a7eEXtbOMHK8GKlyMYnbyIzcLI49EZIJEs+HD6K45G0vk7e/bA8jXt8vZEISxpUTCZK/bCfSV5X3TI3xYpzmPqppoBMPLTmCoUdx3C2QP8lf6CsPLMOb+j+ppgzJq7Cdh8m94nWlGwqjL+HNIt6wmUQcn0zISHHsiZBMkN1FnpwgkTfF8UaDG5h4gswAOg2TjXU/vtt/gjj2FpDGGafq5YG5zTd4hl6QS/SkcadURWBroW22OxMlFVAk8gRaKPHGySSiNZM9nna9kk+h5I+ZKMhIOGmHx+Np2f07CpkuSGyipVnGUd0aLotjjwktFDjPVxH4J863narm1gftUmIXad5NOsBFyOvK0BEVDuwrKg/M7G0N7iVeQ1cBY4yZLMhImKJKluUzxbEngiqTcKzEgO4mTocVRr/o3z/qZTUC8sP+fjHDHhlCPjbLrMWOdOLYE6Kw3PypbpuPORfX+sAtThIOcPG2KshMAbHIFK125I98QA8FF/rCJTe3+4LSAJnS83FKmGgN1510Gl3Rt8VxJwNPnZPo4UyajuPfON5bn6PhtGI0avFlO+J9mgl0llfGxy3egNVW8AVyrKyHKLpi0azAlMIyczRWV6SShWXGSAzmFlWW/Ah7aYpj7G7IkqfSK0s1eMPw9hecrdsXdpQddZh4JXxIsC/woSGOuS1gzHORV2afNY8hxjm6jM4DD3vCzk1UoOxCs4xrfJUlVfztxViljw/37u4eMGUkX2L5Jpc0aKHhGDZqPzTLCPInTSwLiR6rSt5ur67QNtrlNPhvA3b1Vin9scJ6nc1JyE9w3YbvYGTM01+VPOeqLGcAikMh5OcypRdgVb9XIhdiTA8bTSmMXYJNm3grSJlcpkrkclUig1WWO0RhOcNkSofLhPi9MjVURkw37IFVGTJjI7yUjlIpvQIrO7BoWvZ4fii2uWgvsGeN89ar3CHusbFLXVeSX49MBylKriqOLxFwjaZXmGP1cOBRzTLf0EPmQs02uo16OLjQV1HylDbRf4441jZDt41b4iUOoOp9FSV79dJhvxD3yyKLLNIA3TKmx6qd5PPg8uDa/AnDMjaFKoss/uug2cbToqeVd8wKBxdnZBlLFln8N0O3jf9rfqss5olOwxbo5j8Kfm/EfddEFllkkQbklxnHa7axir8nAcMa2FIxHHy4eEwxJhRnkUUWXQl8VZduGXvQyxpJ96kUt8kiiyy6CPokozfGIFGQ+F528fdZZJFFFyK/1Li0qHJEQ6E1fIT4uyyyyKKLURDyX1JoGZeL32eRRRapw/8Db9iaT+/jfhUAAAAASUVORK5CYII=">
+    <!-- ★ 88차 ①. 글씨 크기 단추 둘. 로고 바로 오른쪽 · 어느 화면에서나 같은 자리다.
+         가장 작은 단에서는 가⁻ 가, 가장 큰 단에서는 가⁺ 가 흐려지고 안 눌린다 -->
+    <div class="fsbtns">
+      <button type="button" class="fsbtn" id="fsdown" aria-label="글씨 작게">가⁻</button>
+      <button type="button" class="fsbtn" id="fsup" aria-label="글씨 크게">가⁺</button>
+    </div>
   </div>
   
   <div class="hright">
@@ -5060,7 +5223,7 @@ var INSURANCE_WORDS = ['사회보험', '4대보험', '사대보험',
                        '국민연금공단', '건강보험공단', '근로복지공단',
                        '화재보험', '삼성화재', 'db손해', 'kb손해',
                        '현대해상', '메리츠화재', '삼성화'];
-/* ★ 81차 ④. 단독 「세무」를 더한다 (요한 확정) — 세무회계·세무기장·세무사·세무법인이 다 걸린다.
+/* ★ 81차 ④. 단독 「세무」를 더한다 (개발자 확정) — 세무회계·세무기장·세무사·세무법인이 다 걸린다.
    ★ 이 목록은 taxLike 도 본다. 그래서 이 한 줄이 집계를 움직인다 —
      「○○세무회계」처럼 작은 곳이 36차 F 규칙에 걸려 묻지도 않고
      「내가 가져간 돈」으로 넘어가던 것이 이제 큐에 남아 여쭙는다.
@@ -5823,6 +5986,16 @@ function el(tag, cls, txt) {
   if (txt != null) e.textContent = txt;
   return e;
 }
+/* ── 88차 ② · 접힌다는 것을 글자로 알리는 상자 ─────────────────────
+   파일럿 1호 대표가 접히는 줄 모르셨다. 작은 화살표(▾) 하나뿐이었기 때문이다.
+   ★ button 이 아니라 span 이다 — 부모 줄이 이미 눌리는 자리라, button 을 넣으면
+     누름이 두 겹이 된다. span 이면 상자를 눌러도 줄을 눌러도 같은 한 번이다.
+     지금 되는 것(줄 아무 데나 누르기)을 하나도 없애지 않는다.
+   ★ 새 모양을 여기 하나만 둔다 — 붙이는 자리가 여럿이라 흩어 놓으면
+     또 자리마다 다른 말이 된다 (49차 — 같은 것은 한 모양으로) */
+function foldChip(open) {
+  return el('span', 'foldchip', open ? '접기 ▴' : '자세히 ▾');
+}
 function upShow(which) {
   ['up-trade', 'up-pick', 'up-files', 'up-name', 'up-owner', 'up-cats', 'up-onboard', 'up-done'].forEach(function (id) {
     document.getElementById(id).hidden = (id !== which);
@@ -6198,6 +6371,50 @@ document.getElementById('upopen').addEventListener('click', function () {
   lg.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); 집(); }
   });
+})();
+
+/* ── 88차 ① · 글씨 크기 세 단 ──────────────────────────────────────
+   파일럿 1호 ○○ 대표: 「핸드폰으로 보면 텍스트가 너무 작다」.
+   ★ 지금 화면이 가장 작은 단이다. 위로만 키운다 (개발자 확정) —
+     1단 지금 그대로 · 2단 약 115% · 3단 약 130%.
+   ★ 크기는 그 휴대폰에 남긴다. 매번 다시 키우게 하면 안 쓰신다.
+   ★ 거래처 분류(fc.picks)와 통을 나눈다 —
+     그쪽은 금액이 섞이면 안 되는 통이라 hasNumber 검사가 걸려 있는데,
+     이건 금액이 아니라 설정값이다. 통을 나누면 그 검사도 옛 저장분도 안 건드린다
+     (fc.a2hs.later · fc.breaks 와 같은 방식이다) */
+var FONT_KEY = 'fc.font';
+var FONT_MIN = 1, FONT_MAX = 3;
+var 글씨단 = FONT_MIN;
+
+function 글씨단읽기() {
+  var v = +lsGet(FONT_KEY);
+  return (v >= FONT_MIN && v <= FONT_MAX) ? v : FONT_MIN;
+}
+/* 화면에 단을 입히고, 더 갈 데가 없는 단추를 흐리게 한다 */
+function 글씨단그리기() {
+  var b = document.body;
+  b.classList.remove('fs2');
+  b.classList.remove('fs3');
+  if (글씨단 > FONT_MIN) b.classList.add('fs' + 글씨단);
+  var 작게 = document.getElementById('fsdown');
+  var 크게 = document.getElementById('fsup');
+  if (작게) 작게.disabled = (글씨단 <= FONT_MIN);
+  if (크게) 크게.disabled = (글씨단 >= FONT_MAX);
+}
+function 글씨단옮기기(걸음) {
+  var n = Math.min(FONT_MAX, Math.max(FONT_MIN, 글씨단 + 걸음));
+  if (n === 글씨단) return;
+  글씨단 = n;
+  lsSet(FONT_KEY, String(n));
+  글씨단그리기();
+}
+(function () {
+  글씨단 = 글씨단읽기();
+  글씨단그리기();
+  var 작게 = document.getElementById('fsdown');
+  var 크게 = document.getElementById('fsup');
+  if (작게) 작게.addEventListener('click', function () { 글씨단옮기기(-1); });
+  if (크게) 크게.addEventListener('click', function () { 글씨단옮기기(1); });
 })();
 
 /* ── 63-9 · 저장되고 있다는 안심 ────────────────────────────────
@@ -6773,7 +6990,7 @@ function drawBankHelp(host) {
   var open = !!UP_HELP.open;
   var box = el('div', 'bhelp');
   var head = el('div', 'bh1 tapx', '거래내역 파일 어떻게 받나요?');
-  head.appendChild(el('span', 'chev', open ? ' ▴' : ' ▾'));
+  head.appendChild(foldChip(open));
   head.addEventListener('click', function () {
     UP_HELP.open = !UP_HELP.open;
     if (!UP_HELP.open) UP_HELP.bank = null;
@@ -9345,7 +9562,7 @@ function memoHints(g, isIn) {
   return out;
 }
 
-/* ── 81차 ④ · 이름이나 적요에 「세무」가 있으면 세무기장료가 첫 추천 (요한 확정) ──
+/* ── 81차 ④ · 이름이나 적요에 「세무」가 있으면 세무기장료가 첫 추천 (개발자 확정) ──
    세무사·세무법인·세무회계·세무기장이 모두 걸린다.
    지금은 「○○세무사-H」가 미분류로 떨어지고 「○○세무회계」는
    「내가 가져간 돈」으로 간다. 세무기장료는 사업 지출인데 「내가 가져간 돈」은
@@ -9419,7 +9636,7 @@ var EASY_FIRST = 0;   /* 38차 11번. 안 쓴다 — 차례는 금액 큰 순 �
 
 /* ── 36차 F · 작은 거래는 묻지 않는다 ──────────────────────────
    ★ 금액만 보고 넘기면 안 된다. 작은 거래처가 두 종류다.
-     실측(준헌 대표님 두 계좌 12개월) — 20곳 찍고 남는 166곳 중
+     실측(어느 대표님 두 계좌 12개월) — 20곳 찍고 남는 166곳 중
        한두 번 나가고 만 곳  120곳 ·   7,995만원  → 안 묻는다
        매달 나가는 곳         46곳 · 1억 5,713만원 → 계속 묻는다  ★ 남는 금액의 66%
      매달 20일에 70만원씩 나가는 곳 같은 것들이라 월세·정기 거래일 수 있다.
@@ -10385,7 +10602,7 @@ function drawOnboard() {
     /* ★ 81차 ②. 이유를 완성된 문장이 아니라 조각으로 모은다.
        별표를 달았는지(spark) 정해진 뒤에야 어떤 문장으로 말할지 갈리기 때문이다 */
     var front = [], bits = [];
-    /* ★ 81차 ④. 이름이나 적요에 「세무」가 있으면 세무기장료가 첫 추천이다 (요한 확정).
+    /* ★ 81차 ④. 이름이나 적요에 「세무」가 있으면 세무기장료가 첫 추천이다 (개발자 확정).
        ★ 다른 규칙보다 먼저 본다. 대표자 성함 규칙에 밀리면
          「○○세무회계」가 「사업 외 용도」로 추천되어, 사업 지출인 기장료가
          손익에서 통째로 빠진다 — 고치려는 것이 바로 그 길이다.
@@ -11275,7 +11492,7 @@ function cmpLine(now, before, beforeLabel, upIsGood) {
                      : ' (' + mv.txt + ' ' + (up ? '증가' : '감소') + ')'),
            cls: good ? 'up' : 'down' };
 }
-/* ── 비율 판정 ── 요한님 6개 매장 12개월 실측에서 나온 보통 범위 */
+/* ── 비율 판정 ── 직영 6개 매장 12개월 실측에서 나온 보통 범위 */
 function baseName(orig) {
   var i = UP_CATS.indexOf(orig);
   return (UP && UP.baseCats && UP.baseCats[i]) || orig;
@@ -12698,7 +12915,10 @@ function saveImage(btn, ready) {
   var W = 760;
   var wrap = document.createElement('div');
   wrap.setAttribute('style',
-    'width:' + W + 'px;background:var(--paper);padding:28px 30px 24px;' +
+    /* ★ 88차 ①. 저장 그림은 늘 1단으로 그린다 — 종이 폭이 760px 이라 줄을 쌓을 까닭이 없고,
+       그림은 body 밖(SVG 안)에서 그려져서 :root 의 「글씨 한 칸」이 안 닿는다.
+       여기서 한 번 못 박아 두면 어느 단에서 저장하셔도 그림은 같다 */
+    '--fu:1px;width:' + W + 'px;background:var(--paper);padding:28px 30px 24px;' +
     'font-family:inherit;color:var(--ink);box-sizing:border-box');
 
   var head = document.createElement('div');
@@ -12739,7 +12959,8 @@ function saveImage(btn, ready) {
    '.menu', '.dmore', '.dsc'].forEach(function (sel) {
     [].slice.call(body.querySelectorAll(sel)).forEach(function (e) { e.remove(); });
   });
-  [].slice.call(body.querySelectorAll('.chev')).forEach(function (e) { e.remove(); });
+  /* ★ 88차 ②. 「자세히 ▾」 상자도 눌러야 뜻이 있는 것이라 그림에서는 뺀다 */
+  [].slice.call(body.querySelectorAll('.chev, .foldchip')).forEach(function (e) { e.remove(); });
   var sel = body.querySelector('.rsel');
   if (sel) sel.remove();
   body.hidden = false;
@@ -12764,6 +12985,12 @@ function saveImage(btn, ready) {
   stage.setAttribute('style', 'position:fixed;left:-10000px;top:0;width:' + W + 'px');
   stage.appendChild(wrap);
   document.body.appendChild(stage);
+  /* ★ 88차 ①. 재는 동안만 큰 단을 벗긴다 — 종이는 늘 1단이다.
+     안 벗기면 재는 자리(body 안)에서는 줄이 쌓이고 그려지는 자리(SVG 안)에서는 안 쌓여,
+     잰 높이와 그린 높이가 어긋나 그림 아래에 빈 자리가 남는다.
+     그림을 다 뜬 뒤 그대로 되돌린다 (아래 removeChild 자리) */
+  var 벗긴단 = (글씨단 > FONT_MIN) ? ('fs' + 글씨단) : '';
+  if (벗긴단) document.body.classList.remove(벗긴단);
 
   /* 표가 화면 폭보다 넓으면 그만큼 종이를 넓힌다 */
   var wide = 0;
@@ -12787,6 +13014,7 @@ function saveImage(btn, ready) {
             '<style>' + css + '</style>' + html + '</div>' +
             '</foreignObject></svg>';
   document.body.removeChild(stage);
+  if (벗긴단) document.body.classList.add(벗긴단);
 
   var img = new Image();
   img.onload = function () {
@@ -12967,7 +13195,7 @@ function drawInDetail(host, d) {
    여섯 달 안팎이 적당하다는 요청서 판단을 그대로 쓴다 */
 var SHORT_SPAN_MONTHS = 6;
 /* ★ 82차 ⑤. 나눠 올려도 합쳐진다 — 71차 ②로 기능은 이미 있는데 화면에 안 적혀 있었다.
-   승우 약사가 파일 용량 때문에 5개월치만 넣으셨다.
+   ○○ 약사가 파일 용량 때문에 5개월치만 넣으셨다.
    ★ 두 가지를 다 말해야 한다. 「합쳐진다」만 있으면
      「그럼 처음부터 다시 분류해야 하나」 싶어 안 하시게 된다 */
 var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
@@ -13006,7 +13234,7 @@ var WHY = {
            '{{주인}}이 가져가신 돈이나 개인 지출은 여기 안 들어갑니다.'],
   profit: ['사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.',
            '회계상 계산하는 순이익과는 다를 수 있습니다.',
-           /* ★ 82차 ③. 승우 약사 지적 — 약국은 매입한 의약품을 반품할 수 있고
+           /* ★ 82차 ③. ○○ 약사 지적 — 약국은 매입한 의약품을 반품할 수 있고
               재고로도 남는다. 식당처럼 그달에 다 소모되는 업종이 아니다.
               ★ 업종으로 가르지 않는다. 물음표 안에만 두고 기본 화면에는 안 보인다 —
                 DISCLAIMER_2 는 안 건드린다 (그쪽이 기본 화면에 나가는 줄이다) */
@@ -13338,12 +13566,12 @@ function dueSpread() {
    ★ 화면 금지어(예측·전망·추정)는 그대로 지킨다 — 여기 한 글자도 안 쓴다 */
 /* ── 86차 ① · 82차 ②를 철회한다 ──────────────────────────────────
    82차 ②는 「모자랄 가능성이 20% 아래면 여유로 보고 카드를 아래로 내린다」였다.
-   근거는 「약국은 돈이 모자랄 일이 거의 없고요」(승우 약사)였고, 고장이 아니라
-   일부러 넣은 것이었다. 그런데 요한 화면이 0%라 카드가 내려갔다 — 설계대로였지만
+   근거는 「약국은 돈이 모자랄 일이 거의 없고요」(○○ 약사)였고, 고장이 아니라
+   일부러 넣은 것이었다. 그런데 개발자 화면이 0%라 카드가 내려갔다 — 설계대로였지만
    맨 위에 있어야 할 것이 안 보였다.
    ★ 이제 어느 대표님이든 늘 맨 위에 두고 늘 펼친 채로 시작한다.
      접는 것은 대표님이 정하신다 — 앱이 미리 접어 두지 않는다.
-     승우 약사의 말은 「접을 수 있게 된 것」으로 갈음한다.
+     ○○ 약사의 말은 「접을 수 있게 된 것」으로 갈음한다.
    ★ dueIsEasy() 와 DUE_EASY_PCT 를 없앤다. 자리를 가르는 길 자체를 없애야
      다음에 또 「왜 안 보이지」가 안 생긴다.
    ★ 펼침 열쇠를 __due(열림) 에서 __dueShut(접힘) 으로 뒤집는다 —
@@ -13390,30 +13618,36 @@ function drawDueCard(host, months) {
   top.appendChild(lab);
   if (c.비율 !== null) top.appendChild(el('div', 'duepct' + 색, c.비율 + '%'));
   /* ★ 60차 ④. 눌리는 자리인데 눈에 보이는 표시가 없어서 펼쳐지는 줄 몰랐다.
-     표의 다른 줄이 쓰는 ▾ 와 같은 모양으로 붙인다 (49차 — 같은 것은 한 모양으로) */
-  top.appendChild(el('span', 'chev', open ? '▴' : '▾'));
+     ★ 88차 ②. 그런데 화살표 하나로는 여전히 모르셨다 (파일럿 1호 대표).
+     글자가 든 상자로 바꾼다 — 접혀 있으면 「자세히 ▾」, 펴져 있으면 「접기 ▴」.
+     줄 아무 데나 누르는 것은 그대로 산다 (상자는 span 이다) */
+  top.appendChild(foldChip(open));
   box.appendChild(top);
 
   /* ★ 60차 ④. 접힌 자리에는 바로 알아듣는 문장 하나만 둔다.
      「지금과 가장 비슷했던 20일 중…」과 「1.82배」는 안 읽힌다는 지적을 받았다 —
      못 알아들으면 빼는 게 낫다. 펼친 자리로 내렸다.
      이 줄은 바로 읽히고, 왜 목표일이 그날인지도 같이 설명한다 */
-  var sp0 = null;
-  try { sp0 = dueSpread(); } catch (e) { }
-  if (c.비율 === null) {
-    box.appendChild(el('div', 'duewhy',
-      '아직 말씀드릴 수 없습니다 — 비슷했던 날이 ' + won(c.표본) + '일뿐입니다'));
-  } else if (sp0) {
-    box.appendChild(el('div', 'duewhy',
-      '이 ' + BIZ.곳 + neun(BIZ.곳) + ' ' + sp0.이름 + '에 나가는 돈이 ' +
-      sp0.비율[sp0.제일] + '%로 가장 많았습니다'));
-  }
+  /* ★ 87차 ①. 접으면 첫 줄 하나만 남는다. 근거 줄도 같이 접는다 —
+     접었는데 95px 이면 접은 뜻이 없다. 펼친 모습은 하나도 안 바뀐다.
+     ★ ⚠ 아이콘과 색은 접혀도 그대로 둔다. 무슨 카드인지는 알아야 한다 */
+  if (!open) box.classList.add('shut');
 
   top.addEventListener('click', function () {
     UP.open.__dueShut = !UP.open.__dueShut;
     drawResult(months);
   });
   if (open) {
+    var sp0 = null;
+    try { sp0 = dueSpread(); } catch (e) { }
+    if (c.비율 === null) {
+      box.appendChild(el('div', 'duewhy',
+        '아직 말씀드릴 수 없습니다 — 비슷했던 날이 ' + won(c.표본) + '일뿐입니다'));
+    } else if (sp0) {
+      box.appendChild(el('div', 'duewhy',
+        '이 ' + BIZ.곳 + neun(BIZ.곳) + ' ' + sp0.이름 + '에 나가는 돈이 ' +
+        sp0.비율[sp0.제일] + '%로 가장 많았습니다'));
+    }
     /* ★ 60차 ④. 접힌 자리에서 내려온 두 줄. 여기서는 자리가 넉넉하다 */
     if (c.비율 !== null) {
       box.appendChild(el('div', 'duewhy', c.바닥 === 0
@@ -13540,7 +13774,7 @@ function drawResultInner(months) {
     host.appendChild(el('div', 'shortnote',
       '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.'));
   }
-  /* ★ 82차 ④. 승우 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
+  /* ★ 82차 ④. ○○ 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
      개업 초기라 매입이 몰린 시기였다. 사실만 적는다 —
      「나중엔 좋아집니다」 같은 앞일은 단정하지 않는다.
      ★ 여섯 달 미만일 때만이다. 자료가 넉넉하면 이 줄은 아예 안 나온다 */
@@ -13980,6 +14214,33 @@ function drawResultInner(months) {
     if (open) draw();
   }
   /* ── 38차 1·6번 ── 펼치면 나오는 것 */
+  /* ── 87차 ② · 회색 글씨는 「자세히」 안으로 다 넣는다 ─────────────────
+     86차 ②에서는 설명 한 줄만 접고 견주는 줄은 「사실이라 안 접는다」고 했다.
+     개발자가 그것을 뒤집었다 — 회색 글씨는 다 접는다.
+     ★ 두 자리(사업으로 번 돈 · 사업에 쓴 돈)의 모양을 맞춘다.
+     ★ 안 접는 것 둘 —
+       ① 붉은 줄(subnote warn)은 회색이 아니라 짚어드리는 말이다
+       ② 나간 쪽 「아래 %는 매출 …원 기준입니다」는 바로 아래 줄들의 % 를
+          읽는 자라, 그 줄들보다 먼저 보여야 뜻이 선다 */
+  var 회색모음 = null;
+  function 회색줄(node) {
+    if (회색모음) 회색모음.push(node); else host.appendChild(node);
+  }
+  function 회색펴기(side) {
+    var 줄들 = 회색모음 || [];
+    회색모음 = null;
+    if (!줄들.length) return;
+    var 열쇠 = 'manwhy:' + side;
+    var 열림 = !!UP.open[열쇠];
+    var b = el('button', 'oblink dtlbtn', '자세히 ' + (열림 ? '▴' : '▾'));
+    b.type = 'button';
+    b.addEventListener('click', function () {
+      UP.open[열쇠] = !열림;
+      drawResult(months);
+    });
+    host.appendChild(b);
+    if (열림) 줄들.forEach(function (n) { host.appendChild(n); });
+  }
   function drawSideParts(side) {
     if (d.blocked) return;                    /* 안 정한 게 많으면 숫자를 안 보여준다 */
     if (side === 'in') {
@@ -14000,36 +14261,23 @@ function drawResultInner(months) {
         subRow('그 밖의 입금', '__otherin', won(d.otherIn), null, function () {
           drawInDetail(host, d);
         });
-        /* ★ 86차 ②. 줄을 펴면 설명이 늘 통째로 나와 자리를 먹었다.
-           설명은 「자세히」 뒤로 접고 숫자 줄만 남긴다.
-           ★ 견주는 줄(「7월 같은 기간 대비」)은 접지 않는다 —
-             그건 설명이 아니라 사실이다.
-           ★ 새 모양을 만들지 않는다. 앱이 쓰던 oblink 와 ▾ 그대로다 */
-        var 왜열림 = !!UP.open.__otherinwhy;
-        var 왜 = el('button', 'oblink', '자세히 ' + (왜열림 ? '▴' : '▾'));
-        왜.type = 'button';
-        왜.addEventListener('click', function () {
-          UP.open.__otherinwhy = !왜열림;
-          drawResult(months);
-        });
-        host.appendChild(왜);
-        if (왜열림) {
-          host.appendChild(el('div', 'subnote',
-            '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'));
-        }
-        /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다 */
+        /* ★ 87차 ②. 회색 줄은 모아서 「자세히」 뒤로 넣는다 (회색펴기가 낸다) */
+        회색줄(el('div', 'subnote',
+          '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'));
+        /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다.
+           ★ 붉은 줄은 안 접는다. 짚어드리는 말이라 접으면 뜻이 없다 */
         if (d.sales > 0 && d.otherIn / d.sales > 0.10) {
           host.appendChild(el('div', 'subnote warn',
             '매출로 정하지 않으신 입금이 큽니다. 확인해보세요'));
         }
       }
       if (d.salesOut) {
-        host.appendChild(el('div', 'subnote',
+        회색줄(el('div', 'subnote',
           '매출 환불 ' + won(d.salesOut) + '원은 이미 매출에서 뺐습니다'));
       }
       if (pd) {
         var ci = cmpLine(d.sales + d.otherIn, pd.sales + pd.otherIn, pLab, true);
-        if (ci) host.appendChild(el('div', 'subnote', ci.full));
+        if (ci) 회색줄(el('div', 'subnote', ci.full));
       }
       /* ★ 51차 ①. 무조건 부르던 것을 지운다. 이제 subRow 가 열렸을 때만 부른다 */
       return;
@@ -14056,13 +14304,14 @@ function drawResultInner(months) {
       /* ★ 62차 ②. 업종마다 이름도 재료도 다르다. 1년치 표와 같은 이름을 쓴다 (49차) */
       var 재료이름 = baseName('식자재') +
         (isHidden(baseName('주류·음료')) ? '' : '·' + baseName('주류·음료'));
-      host.appendChild(el('div', 'subnote',
+      /* ★ 87차 ②. 나간 쪽 회색 줄도 「자세히」 안으로 — 두 자리의 모양을 맞춘다 */
+      회색줄(el('div', 'subnote',
         tradeInfo().비율이름 + ' ' + pctStr(food / d.sales) + ' ' +
         '(' + 재료이름 + ' ' + won(food) + '원 ÷ 매출 ' + won(d.sales) + '원)'));
     }
     if (pd) {
       var co = cmpLine(d.cost, pd.cost, pLab, false);
-      if (co) host.appendChild(el('div', 'subnote', co.full));
+      if (co) 회색줄(el('div', 'subnote', co.full));
     }
   }
   /* ── 86차 ④⑤⑨ · 직접 넣는 칸을 하나로 ────────────────────────────
@@ -14286,7 +14535,7 @@ function drawResultInner(months) {
 
   /* ── 86차 ⑨ · 「사업에 쓴 돈」에 직접 넣기 — 항목명·금액·날짜 ──────────
      ⑧에서 들어온 쪽 단추를 없애면 나간 쪽까지 직접 넣을 길이 막힌다.
-     그래서 나간 쪽은 없애지 않고 제대로 다시 만든다 (요한 지시).
+     그래서 나간 쪽은 없애지 않고 제대로 다시 만든다 (개발자 지시).
      ★ 들어온 쪽은 「현금매출」 하나로 충분하지만 나간 쪽은 무엇을 적을지
        미리 알 수 없다 — 그래서 항목 이름도 대표님이 적으신다.
      ★ 계산은 새로 만들 것이 없다. 여기 적은 금액은 manualSum('out') 으로
@@ -14299,18 +14548,34 @@ function drawResultInner(months) {
     var 진행 = !isFull;
     var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
     var 고침 = UP.open.__outEdit || '';
+    /* ★ 87차 ③. 방금 「넣기」를 누른 항목은 이 판에서만 펼친 채로 둔다 —
+       넣자마자 접혀 사라지면 「들어갔나?」 하게 된다.
+       다음에 화면을 다시 그릴 때는 접힌다 (여기서 한 번 쓰고 지운다) */
+    var 방금 = UP.open.__manJust || '';
+    UP.open.__manJust = '';
     manualItems('out').forEach(function (it) {
       var 날들 = manualDays(m, it.id);
       var 달합 = manualAmt(m, it.id);
-      var head = el('div', 'orow manrow manitem');
+      /* ★ 87차 ③. 오른쪽에 그 항목의 합계. 세는 자는 현금매출과 한 글자도 같다 */
+      var 합 = (진행 ? 0 : 달합) + 날들.reduce(function (s, x) {
+        return s + ((진행 && x.day > 끝날) ? 0 : (+x.amt || 0));
+      }, 0);
+      /* ★ 87차 ③. 위 항목들(인건비·월세·…)과 같은 줄 모양이다 —
+         혼자만 늘 펼쳐져 있어서 눈에 걸렸다. 처음에는 접혀 있다 */
+      var 열쇠 = 'manopen:' + it.id;
+      var 폄 = !!UP.open[열쇠] || 방금 === it.id;
+      var head = el('div', 'orow manrow manitem tapx');
       var l = el('div', 'lab', '　' + it.name);
       l.appendChild(el('span', 'manmark', ' ✎'));
+      l.appendChild(el('span', 'chev', 폄 ? '▴' : '▾'));
       head.appendChild(l);
-      var rm = el('button', 'chbtn', '지우기');
-      rm.type = 'button';
-      rm.addEventListener('click', function () { manualRemove(it.id); drawResult(months); });
-      head.appendChild(rm);
+      head.appendChild(el('div', 'v num', 합 ? won(합) : ''));
+      head.addEventListener('click', function () {
+        UP.open[열쇠] = !폄;
+        drawResult(months);
+      });
       host.appendChild(head);
+      if (!폄) return;                   /* 접으면 날짜 줄도 수정·지우기도 안 보인다 */
       날들.forEach(function (x) {
         var 열쇠 = it.id + '|' + x.day + '|' + x.amt;
         if (고침 === 열쇠) {
@@ -14326,11 +14591,21 @@ function drawResultInner(months) {
           return;
         }
         날줄(m, it.id, x, 열쇠, function (k) {
+          /* 고치는 동안 그 항목이 접혀 사라지면 고칠 칸도 같이 사라진다 */
+          UP.open['manopen:' + it.id] = true;
           UP.open.__outEdit = k; UP.open.__outAdd = false;
         });
       });
       /* 옛 저장분 — 날짜 없이 달로만 적으신 것. 있을 때만 보인다 (규칙 7) */
       if (달합) 달전체줄(m, it.id, 달합, 진행);
+      /* ★ 87차 ③. 항목을 통째로 지우는 단추는 펼친 안쪽에 둔다.
+         건 하나를 지우는 「지우기」와 헷갈리지 않게 이름을 갈라 둔다 */
+      var del = el('div', 'manitemdel');
+      var rm = el('button', 'chbtn', '항목 지우기');
+      rm.type = 'button';
+      rm.addEventListener('click', function () { manualRemove(it.id); drawResult(months); });
+      del.appendChild(rm);
+      host.appendChild(del);
     });
     if (고침) return;                    /* 고치는 중에는 새로 넣는 칸을 안 연다 */
     if (UP.open.__outAdd) {
@@ -14340,6 +14615,7 @@ function drawResultInner(months) {
           /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 */
           var id = manualFind(nm, 'out') || manualAdd(nm, 'out');
           넣어두기(m, id, v, 날, null);
+          UP.open.__manJust = id;        /* ★ 87차 ③. 방금 넣은 것은 펼쳐서 보여드린다 */
         },
         닫기: function () { UP.open.__outAdd = false; }
       });
@@ -14374,11 +14650,14 @@ function drawResultInner(months) {
     if (whyOpen(side)) host.appendChild(whyBox(side));
     if (!open) return;
     /* ★ 38차 1번. 펼치면 먼저 항목별이 나온다. 그다음이 직접 넣기 칸이다 */
+    /* ★ 87차 ②. 여기서부터 나오는 회색 줄은 모았다가 「자세히」 뒤로 넣는다 */
+    회색모음 = [];
     drawSideParts(side);
     /* 규칙 6 — 얼마가 직접 넣으신 것인지 늘 밝힌다 */
     if (mine) {
-      host.appendChild(el('div', 'subnote', '직접 넣으신 ' + won(mine) + '원 포함'));
+      회색줄(el('div', 'subnote', '직접 넣으신 ' + won(mine) + '원 포함'));
     }
+    회색펴기(side);
     /* ★ 83차 ①③. 매출 쪽에는 「현금매출」이 처음부터 한 줄로 있다.
        만들라고 시키지 않는다 — 이미 있는 상태로 보인다.
        이름은 고정이고 대표님이 바꾸거나 지울 수 없다 */
@@ -14609,7 +14888,7 @@ function drawResultInner(months) {
       if (d.uIn)  host.appendChild(calcRow('　들어온 돈', won(d.uIn)));
       host.appendChild(el('div', 'subnote', '이 돈은 매출에도 지출에도 넣지 않았습니다'));
       /* ★ 82차 ⑥. 펼친 자리에서는 왜 여기 두는 편이 나은지까지 말한다.
-         승우 약사가 「사업·개인이 섞인 카드」를 억지로 의약품 매입으로 찍으셨다 —
+         ○○ 약사가 「사업·개인이 섞인 카드」를 억지로 의약품 매입으로 찍으셨다 —
          개인이 쓴 돈이 지출로 들어가 순이익이 실제보다 나쁘게 나왔다 */
       host.appendChild(el('div', 'subnote',
         '사업과 개인이 섞인 카드처럼 한쪽으로 정할 수 없는 것은 여기 두는 것이 맞습니다.'));
@@ -14617,7 +14896,7 @@ function drawResultInner(months) {
       drawUnsetDetail(host, d, months);
     }, 'sidebox unsetbox', 'unset');
     /* ★ 82차 ⑥. 이번 통화에서 가장 값어치 있는 발견 —
-       앱은 설계대로 혼용 카드를 안 나누고 여기 뒀는데, 승우 약사가 그것을
+       앱은 설계대로 혼용 카드를 안 나누고 여기 뒀는데, ○○ 약사가 그것을
        「덜 끝난 숙제」로 느껴 하나하나 억지로 채우셨다. 그래서 숫자가 틀어졌다.
        화면이 사용자로 하여금 정확도를 스스로 망가뜨리게 만들고 있었다.
        ★ 0으로 만들라고 재촉하지 않는다는 것을 펼치지 않아도 보이게 둔다 */
@@ -14646,7 +14925,7 @@ function drawResultInner(months) {
     }
     s1.appendChild(document.createTextNode(
       '은 묻지 않고 「' + sayCat(ASK_SKIP_CAT) + '」' + ro(sayCat(ASK_SKIP_CAT)) + ' 두었습니다'));
-    s1.appendChild(el('span', 'chev', skOpen ? ' ▴' : ' ▾'));
+    s1.appendChild(foldChip(skOpen));
     s1.addEventListener('click', function () {
       UP.open.__skip = !UP.open.__skip;
       drawResult(months);
@@ -14717,7 +14996,7 @@ function drawResultInner(months) {
       var xh = el('div', 'xfhead tapx');
       xh.appendChild(document.createTextNode(
         '계좌끼리 옮긴 것으로 보이는 거래가 ' + won(pairs.length) + '건 있습니다'));
-      xh.appendChild(el('span', 'chev', xOpen ? ' ▴' : ' ▾'));
+      xh.appendChild(foldChip(xOpen));
       xh.addEventListener('click', function () {
         UP.open.__xfer = !UP.open.__xfer;
         drawResult(months);
@@ -14983,7 +15262,7 @@ function drawChecks(host, d, months, cards) {
     /* 확인이 끝난 묶음이 시작되는 자리에 제목을 넣는다 */
     if (c === done[0]) {
       var dh = el('div', 'ckhead done2');
-      var chev = el('span', 'chev', UP.doneOpen ? '▴' : '▾');
+      var chev = foldChip(UP.doneOpen);
       dh.textContent = '확인했습니다 · ' + won(done.length) + '건';
       dh.appendChild(chev);
       dh.setAttribute('role', 'button');
@@ -16240,7 +16519,7 @@ function drawDayPanel(host, m, f, months, bal) {
     var 폄 = !(UP.open && UP.open[접힘]);
     var h = el('div', 'dcgh tapx');
     var gn = el('div', 'dcgn', g[1]);
-    gn.appendChild(el('span', 'chev', 폄 ? ' ▴' : ' ▾'));
+    gn.appendChild(foldChip(폄));
     h.appendChild(gn);
     h.appendChild(el('div', 'dcga num', manwon(g[2])));
     h.addEventListener('click', function () {
@@ -16288,7 +16567,7 @@ function drawDayPanel(host, m, f, months, bal) {
     var open3 = !!(UP.open && UP.open[열쇠3]);
     var h3 = el('div', 'dcgh tapx');
     var n3 = el('div', 'dcgn', '여기 안 든 것 ' + won(s.rest.length) + '건');
-    n3.appendChild(el('span', 'chev', open3 ? ' ▴' : ' ▾'));
+    n3.appendChild(foldChip(open3));
     h3.appendChild(n3);
     h3.appendChild(el('div', 'dcga num', manwon(restSum)));
     h3.addEventListener('click', function () {
@@ -16341,7 +16620,7 @@ function drawDayChart(host, m, d, months) {
   if (hi === lo) hi = lo + 1;
 
   /* ── 82차 ⑦ · 날마다의 계좌 잔액 ──────────────────────────────
-     「내가 이 날 돈을 왜 이리 많이 썼지?」를 볼 수 있어야 한다 (요한 요청).
+     「내가 이 날 돈을 왜 이리 많이 썼지?」를 볼 수 있어야 한다 (개발자 요청).
      ★ 새로 계산하지 않는다. balanceAt(m, 날) 이 이미 하는 일이다 —
        계좌마다 그 날까지의 마지막 거래 잔액을 더한 값이다.
      ★ 그래서 거래가 없는 날은 앞 날 잔액이 저절로 이어진다.
@@ -16660,7 +16939,7 @@ function drawYear(host, allMonths) {
        ★ 70차 ①. 「8월(진행 중)」 괄호 글씨는 작아서 눈에 안 띄었다.
          달 이름 밑에 호박 알약 한 줄로 내린다 — 괄호 글씨는 없앤다 (알약이 대신한다).
          ★ 새 색은 안 만든다. 표의 「아직 안 정한 돈」 알약과 같은 호박 계열이다.
-         ★ 열 바탕은 칠하지 않는다 (요한 1안 확정) */
+         ★ 열 바탕은 칠하지 않는다 (개발자 1안 확정) */
     var th = el('th', 'ymtap');
     if (c.m === 진행달) th.appendChild(el('span', 'runpill', '진행 중'));
     else th.appendChild(el('span', 'runspace', ''));
@@ -16755,7 +17034,7 @@ function drawYear(host, allMonths) {
      표가 열두 달을 가로로 늘어놓는 자리라 줄이 늘면 바로 안 읽힌다.
      그래서 세부가 있는 줄은 접어 두고, 궁금한 것만 펼쳐 보게 한다.
      ★ 예전의 「자세히 보기 ▾」 하나로 전부 여닫던 방식은 없앴다 —
-       매출만 보고 싶어도 비율까지 다 딸려 나왔다 (요한 확정).
+       매출만 보고 싶어도 비율까지 다 딸려 나왔다 (개발자 확정).
      ★ 접어도 그룹 합계 숫자는 그대로다. 접히는 것은 세부뿐이다.
      ★ 접고 펴는 것은 보기일 뿐 — 계산에는 닿지 않는다 */
   function 그룹열림(키) {
@@ -16817,7 +17096,7 @@ function drawYear(host, allMonths) {
   var anyOtherIn = cols.some(function (c) { return c.otherIn; });
   /* ★ 61차 ①. 업종마다 이름이 다르다 — 식당은 「월세」, 나머지는 「임차료」.
      ★ 70차 ②. 이 둘은 뜻으로 「사업에 쓴 돈」의 세부다. 그 줄 바로 아래로 옮긴다
-       (요한 확정 — 예전에는 원가율 아래에 있어서 무엇의 세부인지 안 보였다).
+       (개발자 확정 — 예전에는 원가율 아래에 있어서 무엇의 세부인지 안 보였다).
      ★ 64-12. 평균 칸이 0원으로 나오던 것을 원가율과 같은 규칙으로 맞춘다 —
        아직 아무 곳도 그 항목으로 안 정하셨으면 「0원 썼다」가 아니라 「모른다」다.
        「없는 것」과 「아직 안 정한 것」을 구분 못 하니 억지로 0을 안 보여준다 (38차).
@@ -17005,7 +17284,7 @@ function drawYear(host, allMonths) {
   return;
   /* ★ 70차 ②. 여기 있던 「자세히 보기 ▾」 하나로 전부 여닫던 단추는 없앴다 —
      매출 하나 보려고 비율까지 다 딸려 나왔다. 이제는 그룹 줄마다 따로 편다
-     (요한 확정). 아래 각주는 그 단추와 상관없이 늘 나와 있었다 */
+     (개발자 확정). 아래 각주는 그 단추와 상관없이 늘 나와 있었다 */
 
   /* ★ 46차 ⑤. 각주가 일곱 줄이었다. 밖에는 두 줄만 남기고
      나머지는 이미 있는 「자세히 보기 ▾」 안으로 넣는다 (새로 만들지 않는다).
@@ -17118,7 +17397,7 @@ function drawComeBack(k) {
   cbHead.setAttribute('aria-expanded', 'false');
   cbHead.setAttribute('aria-controls', 'comebackbody');
   cbHead.appendChild(el('span', null, '지난번에 올리신 파일이 창을 닫으면서 사라졌습니다.'));
-  var cbArrow = el('span', 'chev', '▾');
+  var cbArrow = foldChip(false);
   cbHead.appendChild(cbArrow);
   box.appendChild(cbHead);
   var cbBody = el('div', 'comebackbody');
@@ -17151,7 +17430,7 @@ function drawComeBack(k) {
   cbHead.addEventListener('click', function () {
     cbBody.hidden = !cbBody.hidden;
     cbHead.setAttribute('aria-expanded', cbBody.hidden ? 'false' : 'true');
-    cbArrow.textContent = cbBody.hidden ? '▾' : '▴';
+    cbArrow.textContent = cbBody.hidden ? '자세히 ▾' : '접기 ▴';
   });
   host.parentNode.insertBefore(box, host.nextSibling);
   return n;
@@ -17168,7 +17447,7 @@ try { drawStart(); } catch (e) { }
 
 <div class="applinks" id="applinks" hidden>
   
-  <a href="https://namneundon-ahv.pages.dev" target="_blank"
+  <a href="https://namneundon.com" target="_blank"
      rel="noopener noreferrer" aria-label="남는돈 소개" title="남는돈 소개">
     <img class="appico" id="applinkmark" alt="" aria-hidden="true">
   </a>
@@ -17200,5 +17479,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.03 · 86차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.06 · 89차</div>
 </body></html>
