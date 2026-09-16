@@ -1870,8 +1870,8 @@
   
   <div class="upnote" id="upnote" hidden>
     <b>파일은 서버로 전송되지 않습니다.</b> 계산은 이 브라우저 안에서만 이뤄집니다.<br>
-    은행에서 받은 거래내역과 금액은 창을 닫으면 사라집니다.<br>
-    {{주인}}이 분류하신 항목만 이 브라우저에 남습니다.
+    은행에서 받은 거래내역은 이 기기 안에만 남습니다. 밖으로 나가지 않습니다.<br>
+    {{주인}}이 분류하신 항목도 이 브라우저에 남습니다.
   </div>
 
   <div id="up-pick">
@@ -6147,8 +6147,11 @@ function drawStart() {
       var yes = el('button', 'b on', '지우기');
       yes.type = 'button';
       yes.addEventListener('click', function () {
-        /* 지우는 것은 이 매장의 분류 하나뿐이다. 다른 매장은 안 건드린다 */
+        /* 지우는 것은 이 매장뿐이다. 다른 매장은 안 건드린다.
+           ★ 91차 ④. 거래내역(fc.data)도 같이 지운다 — 한 번 누르면 깨끗이 사라져야 한다.
+             분류만 지우고 거래내역을 두면 다음에 열 때 그것이 도로 살아난다 */
         lsDel(k.key);
+        delData(k.name);
         drawStart();
       });
       var no = el('button', 'b', '취소');
@@ -6206,6 +6209,9 @@ function goSavedStore(k) {
   var saved = loadPicks(k.name === '(기본)' ? null : k.name);
   if (saved && saved.업종 && TRADES[saved.업종]) setTrade(saved.업종);
   leaveStart();
+  /* ★ 91차 ②. 거래내역이 이 기기에 남아 있으면 파일을 다시 안 올려도 된다.
+     「사라졌습니다」는 정말 사라졌을 때만 할 말이다 — 남아 있으면 바로 보여드린다 */
+  if (openSavedData(k.name)) return;
   try { drawComeBack(k); } catch (e) { }
   openUpPanel();
   openPick();
@@ -6449,8 +6455,10 @@ function 글씨단옮기기(걸음) {
   chip.addEventListener('click', function () {
     if (!why.hidden) { why.hidden = true; return; }
     why.innerHTML = '';
-    why.appendChild(el('div', null, '거래내역은 저장되지 않습니다.'));
-    why.appendChild(el('div', null, BIZ.주인 + '이 분류하신 항목만 이 브라우저에 저장됩니다.'));
+    /* ★ 91차 ①. 이제 거래내역도 이 기기에 남는다. 안 남는다고 말하면 그게 거짓말이다 —
+       안심 고지(upnote)와 같은 말이어야 한다 (49차 · 63-14) */
+    why.appendChild(el('div', null, '거래내역은 이 기기 안에만 저장됩니다.'));
+    why.appendChild(el('div', null, BIZ.주인 + '이 분류하신 항목도 이 브라우저에 저장됩니다.'));
     if (!LS_OK) why.appendChild(el('div', 'lswarn', LS_MSG));
     why.hidden = false;
   });
@@ -7381,6 +7389,9 @@ function drawFileList() {
      저장 열쇠(fc.picks.<매장>)가 매장 이름으로 만들어지므로,
      이것을 잃으면 정해두신 분류를 못 찾는다. 저장 모양은 안 건드린다 */
 var ADD_KEEP = null;
+/* ★ 91차 ②. 저장해둔 거래내역으로 되살리는 중인가 (되살리는 중이면 그 저장분).
+   보태기(ADD_KEEP)와 같은 길을 타되 끝에서 갈 곳만 다르다 — 묻지 않고 결과로 간다 */
+var RESTORING = null;
 function openAddFiles() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
   ADD_KEEP = { store: UP.store, owner: UP.owner, trade: UP.trade,
@@ -7393,6 +7404,40 @@ function openAddFiles() {
   upStat('');
   drawFileList();
   return true;
+}
+/* ── 91차 ② · 파일을 다시 안 올려도 이어보기 ────────────────────────
+   저장해둔 거래내역(fc.data)을 startFromBanks 가 받는 모양으로 되돌려 넘긴다.
+   ★ 합치기·겹침 빼기·정렬·검산 문턱은 전부 startFromBanks 가 하던 그대로다.
+     여기서 새로 계산하는 것은 한 줄도 없다 — 읽어서 넘기기만 한다.
+   ★ 매장 이름·성함·업종은 ADD_KEEP 에 얹어 보낸다. 보태기와 같은 자리라
+     startFromBanks 가 도로 붙여 준다 (71차 ②) */
+function openSavedData(name) {
+  var o = loadData(name);
+  if (!o) return false;
+  var banks = banksFromData(o);
+  if (!banks.length) return false;
+  var 예전 = UP;
+  leaveStart();                     /* 시작 화면을 접고 결과 자리를 되살린다 */
+  ADD_KEEP = { store: o.store || null, owner: o.owner || null,
+               trade: o.trade || null, dueDay: o.dueDay || null, known: null };
+  RESTORING = o;
+  try {
+    startFromBanks(banks, [], []);
+  } catch (e) {
+    /* 되살리다 넘어져도 사장님을 빈 화면에 두지 않는다 — 있던 자리로 돌려놓는다 */
+    RESTORING = null;
+    ADD_KEEP = null;
+    UP = 예전;
+    try { drawStart(); } catch (e2) { }
+    return false;
+  }
+  return true;
+}
+/* 앱을 열 때 — 마지막으로 보시던 매장이 이 기기에 남아 있으면 그 화면부터 연다 */
+function openLastData() {
+  var name = lsGet(LAST_KEY);
+  if (!name) return false;
+  return openSavedData(name);
 }
 function startPending() {
   var banks = PENDING.filter(function (b) { return !b.bad; });
@@ -7498,7 +7543,9 @@ function startFromBanks(banks, dup, overlap) {
   });
   upStat(bits.join('<br>'));
   var ms = monthList();
-  if (ms.length) useUpload(ms[0] + '~' + ms[ms.length - 1]);
+  /* ★ 91차 ②. 되살리는 길에서는 「올렸다」로 세지 않는다 —
+     열 때마다 한 건씩 쌓이면 실제로 파일을 몇 번 올리셨는지 셀 수가 없다 */
+  if (ms.length && !RESTORING) useUpload(ms[0] + '~' + ms[ms.length - 1]);
   /* 검산 문턱은 계좌별로 잰다. 한 계좌라도 넘으면 숫자를 안 보여준다 (원칙 2).
      39차부터 breaksOver() 한 곳에서만 잰다 — applyBreaks 쪽과 잣대가 달랐다 */
   if (UP.breaks.length) showBreaks();
@@ -7513,6 +7560,24 @@ function startFromBanks(banks, dup, overlap) {
    ★ 무슨 일이 있어도 화면 하나는 반드시 연다. 여기서 조용히 멈추면
      사장님 눈에는 예시 사업장만 남는다 — 63-1 이 그렇게 보였다 */
 function afterFiles() {
+  /* ★ 91차 ②. 이 기기에 저장해둔 거래내역으로 되살린 길.
+     매장도 계좌도 이미 아는 것이라 아무것도 안 묻고 곧장 결과로 간다.
+     거래처 묶기·분류 되살리기는 startOnboard 가 하던 그대로 쓴다 —
+     여기서 새로 하는 일은 「물음 화면에서 멈추지 않는 것」 하나뿐이다 */
+  if (RESTORING) {
+    var 저장분 = RESTORING;
+    RESTORING = null;
+    ADD_KEEP = null;
+    /* 확인 카드를 몇 건 손봤는지도 되살린다 — startFromBanks 가 0 으로 세워 두는 값이다.
+       줄마다 붙은 residual·patched·unsure 는 그대로 왔고, 이것은 그 건수다 */
+    UP.patched = +저장분.patched || 0;
+    UP.unsure  = +저장분.unsure  || 0;
+    UP.zeroed  = +저장분.zeroed  || 0;
+    UP.tileTrade = tradeNow();
+    startOnboard();
+    showResult();
+    return;
+  }
   /* ★ 71차 ②. 파일을 보태서 온 길이면 매장을 다시 묻지 않는다 —
      보태기는 「이 매장에 파일을 더한다」는 뜻이지 새 매장을 만드는 일이 아니다.
      매장 이름·성함·업종은 startFromBanks 가 이미 도로 얹어 뒀다.
@@ -7983,6 +8048,126 @@ function storeKey(name) {
   return PICK_KEY + (s || '(기본)');
 }
 
+/* ── 91차 ① · 거래내역 데이터셋 (이 기기 전용) ──────────────────────
+   ★ 이것은 네 번째 저장통이다. 앞의 셋과 섞지 않는다.
+       fc.picks.<매장>   거래처 분류      숫자 0. hasNumber 검사 그대로  ← 내보내기에 들어간다
+       fc.manual.<매장>  직접 적은 금액    사장님이 손수 넣으신 수
+       fc.banks.<매장>   계좌 부르는 이름
+       fc.data.<매장>    거래내역 그 자체  ← 이번에 만든 것. 금액이 들어간다
+   ★ fc.data 는 내보내기(pickPayload·exportPicks)에 들어가지 않는다.
+     「복사하기로 남한테 넘기는 값에는 금액이 없다」는 원칙은 fc.picks 의 것이고,
+     그 hasNumber 검사는 한 글자도 안 건드린다. 둘은 아예 다른 길이다.
+   ★ 서버 약속도 그대로다 — 이 통은 이 기기 안에만 있고, 이 통을 읽어
+     네트워크로 내보내는 코드는 없다.
+   ★ 왜 localStorage 인가 — 1년 약 900건이 대략 200KB다. 통이 약 5MB라
+     몇 해·몇 매장도 들어간다. 무엇보다 이 앱의 저장은 전부 lsGet/lsSet 한 길이고,
+     그 길은 동기라 화면을 그리기 전에 값이 있다. IndexedDB 로 가면 부팅 순서를
+     비동기로 바꿔야 하는데, 얻는 것보다 흔들 자리가 훨씬 많다.
+     넘치면 조용히 접는다 — 저장이 안 돼도 앱은 메모리로 그대로 돌아간다 */
+var DATA_KEY = 'fc.data.';
+var LAST_KEY = 'fc.last';        /* 마지막으로 남긴 매장 — 열 때 어느 것부터 볼지 */
+var DATA_CAP = 2000000;          /* 이 글자 수를 넘으면 안 남긴다 (통이 터지지 않게) */
+var DATA_SIG = null;             /* 마지막으로 남긴 것의 지문 — 안 바뀌었으면 다시 안 쓴다 */
+
+function dataKey(name) {
+  var s = String(name != null ? name : (UP && UP.store) || '').trim();
+  return DATA_KEY + (s || '(기본)');
+}
+/* 저장한 날. 시각은 안 남긴다 — 사장님 생활을 들여다보지 않는다 (fc_use 와 같은 태도) */
+function dataDay() {
+  var d = new Date(), m = d.getMonth() + 1, x = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (x < 10 ? '0' + x : x);
+}
+/* 바뀌었는가만 본다. 200KB 를 찍을 때마다 다시 쓰지 않으려는 것이다 */
+function dataSig() {
+  var n = 0;
+  (UP.banks || []).forEach(function (b) { n += (b.rows || []).length; });
+  return (UP.banks || []).length + '|' + n + '|' + (UP.store || '') + '|' +
+         (UP.owner || '') + '|' + (UP.trade || '') + '|' +
+         (UP.opening || 0) + '|' + (UP.closing || 0) + '|' +
+         (UP.patched || 0) + '|' + (UP.unsure || 0) + '|' + (UP.zeroed || 0);
+}
+/* 넣을 값을 하나하나 손으로 고른다 — 객체를 통째로 복사하면
+   나중에 누가 UP 에 무엇을 붙여도 여기로 따라 들어온다 (fc_use 와 같은 방식) */
+function dataPayload() {
+  var banks = (UP.banks || []).map(function (b) {
+    return {
+      name: b.name || null, file: b.file || null,
+      sheet: b.sheet || null, header: b.header != null ? b.header : 0,
+      balName: b.balName || null, balTried: b.balTried || null,
+      bankHint: b.bankHint || null, bank: b.bank || null,
+      typed: b.typed || null, found: b.found || null,
+      from: b.from || null, to: b.to || null,
+      opening: +b.opening || 0, closing: +b.closing || 0, moved: +b.moved || 0,
+      rows: (b.rows || []).map(function (r) {
+        var o = { at: r.at, payee: r.payee, amount: r.amount, balance: r.balance,
+                  excelRow: r.excelRow || 0, memo: r.memo || '' };
+        /* 부호를 잔액으로 푸는 파일에서만 쓰는 값들. 없으면 안 넣는다 */
+        if (r.mag != null) o.mag = r.mag;
+        if (r.kindDir) o.kindDir = r.kindDir;
+        /* 확인 카드에서 정하신 결과. 이게 빠지면 다시 물어야 한다 */
+        if (r.residual) o.residual = r.residual;
+        if (r.patched) o.patched = true;
+        if (r.unsure) o.unsure = true;
+        return o;
+      })
+    };
+  });
+  return { dv: 1, 저장일: dataDay(),
+           store: UP.store || null, owner: UP.owner || null,
+           trade: UP.trade || null, dueDay: UP.dueDay || null,
+           patched: +UP.patched || 0, unsure: +UP.unsure || 0, zeroed: +UP.zeroed || 0,
+           banks: banks };
+}
+function saveData() {
+  if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
+  var sig = dataSig();
+  if (sig === DATA_SIG) return true;          /* 안 바뀌었다 */
+  var body;
+  try { body = JSON.stringify(dataPayload()); } catch (e) { return false; }
+  /* 통이 감당할 크기를 넘으면 안 남긴다. 낡은 것도 같이 지운다 —
+     그것을 두면 다음에 열 때 「보태기 전의 숫자」가 조용히 살아난다 */
+  if (body.length > DATA_CAP) { lsDel(dataKey()); return false; }
+  if (!lsSet(dataKey(), body)) { lsDel(dataKey()); return false; }
+  lsSet(LAST_KEY, String(UP.store || '(기본)'));
+  DATA_SIG = sig;
+  return true;
+}
+/* 읽기 — 모양이 아니면 아예 없는 것으로 친다 */
+function loadData(name) {
+  var raw = lsGet(dataKey(name));
+  if (!raw) return null;
+  var o = null;
+  try { o = JSON.parse(raw); } catch (e) { return null; }
+  if (!o || o.dv !== 1 || !o.banks || !o.banks.length) return null;
+  var ok = o.banks.every(function (b) {
+    return b && b.rows && b.rows.length &&
+           typeof b.rows[0].at === 'string' && typeof b.rows[0].balance === 'number';
+  });
+  return ok ? o : null;
+}
+function delData(name) {
+  lsDel(dataKey(name));
+  DATA_SIG = null;
+  var s = String(name != null ? name : (UP && UP.store) || '').trim() || '(기본)';
+  if (lsGet(LAST_KEY) === s) lsDel(LAST_KEY);
+}
+/* 저장해둔 것을 startFromBanks 가 받는 모양으로 되돌린다.
+   ★ breaks 는 비운다 — 확인 카드는 이미 끝났고, 그 결과는 줄마다
+     residual·patched·unsure 로 붙어 있다 (amtOf 가 그것을 읽는다) */
+function banksFromData(o) {
+  return (o.banks || []).map(function (b) {
+    return { name: b.name, file: b.file, sheet: b.sheet, header: b.header,
+             balName: b.balName, balTried: b.balTried, bankHint: b.bankHint,
+             bank: b.bank, typed: b.typed || null, found: b.found || null,
+             from: b.from || null, to: b.to || null,
+             opening: +b.opening || 0, closing: +b.closing || 0, moved: +b.moved || 0,
+             breaks: [],
+             kept: true,        /* 이름이 이미 붙은 계좌다 — 번호를 다시 안 붙인다 */
+             rows: (b.rows || []).slice() };
+  });
+}
+
 /* 저장 직전 검사 — 숫자가 하나라도 섞이면 저장하지 않는다 */
 function hasNumber(v) {
   if (typeof v === 'number') return true;
@@ -8066,6 +8251,11 @@ function savePicks() {
   /* ★ 57차 ⑦. 분류가 바뀌면 매출·사업 지출이 바뀌므로 하루 표를 다시 만든다 */
   UP.__due = null;
   if (UP.demo) return false;              /* 예시는 이 브라우저에 남기지 않는다 */
+  /* ★ 91차 ①. 거래내역 데이터셋(fc.data)도 여기서 같이 남긴다 —
+     분류가 남는 자리마다 거래내역도 같이 있어야 다음에 열 때 짝이 맞는다.
+     통은 따로다. 아래 hasNumber 검사는 fc.picks 의 것이고 한 글자도 안 건드린다.
+     바뀐 게 없으면 saveData 가 지문만 보고 바로 돌아 나온다 */
+  try { saveData(); } catch (e) { }
   var body = pickPayload();
   /* ★ 41차. cv 는 저장 모양의 판 번호지 금액이 아니다. 그런데 hasNumber 는
      「숫자면 무조건」이라, 38차에 cv:2 를 붙인 뒤로 이 함수가 늘 false 를 돌려줬다 —
@@ -9033,9 +9223,10 @@ function askName() {
       var yes = el('button', 'b on', '지우기');
       yes.type = 'button';
       yes.addEventListener('click', function () {
-        /* 지우는 것은 이 매장의 분류 하나뿐이다.
-           fc_use·다른 매장은 안 건드린다 */
+        /* 지우는 것은 이 매장뿐이다. fc_use·다른 매장은 안 건드린다.
+           ★ 91차 ④. 거래내역(fc.data)도 같이 지운다 (위 시작 화면의 지우기와 같은 말) */
         lsDel(k.key);
+        delData(k.name);
         askName();
       });
       var no = el('button', 'b', '취소');
@@ -12139,6 +12330,12 @@ function renameStore(oldName, neu) {
   if (b) { lsSet(manualKey(neu), b); try { localStorage.removeItem(manualKey(oldName)); } catch (e) { } }
   var c = lsGet(bankKey(oldName));
   if (c) { lsSet(bankKey(neu), c); try { localStorage.removeItem(bankKey(oldName)); } catch (e) { } }
+  /* ★ 91차 ①. 거래내역(fc.data)도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
+     이 기기에 남겨둔 거래내역을 못 찾아 다시 올리셔야 한다 */
+  var d = lsGet(dataKey(oldName));
+  if (d) { lsSet(dataKey(neu), d); try { localStorage.removeItem(dataKey(oldName)); } catch (e) { } }
+  if (lsGet(LAST_KEY) === String(oldName || '(기본)')) lsSet(LAST_KEY, String(neu || '(기본)'));
+  DATA_SIG = null;                 /* 열쇠가 바뀌었으니 다음 저장은 새 자리에 다시 쓴다 */
   UP.store = neu;
 }
 /* 이 브라우저에 저장된 매장 — 직접 넣기가 몇 달 있는지도 같이 센다 */
@@ -12532,23 +12729,26 @@ function drawCats() {
   box.appendChild(el('div', 'obsub',
     /* ★ 36차 J. 첫 화면(upnote)과 같은 말이어야 한다.
        직접 넣기가 생기면서 금액도 남게 됐는데 여기만 옛 문구였다 */
-    '은행에서 받은 거래내역과 금액은 남지 않습니다. ' + BIZ.주인 +
-    '이 분류하신 항목만 이 브라우저에 남습니다.'));
+    /* ★ 91차 ①. 거래내역이 이 기기에 남게 됐다. 첫 화면(upnote)과 같은 말을 쓴다 */
+    '은행에서 받은 거래내역은 이 기기 안에만 남습니다. ' + BIZ.주인 +
+    '이 분류하신 항목도 함께 남습니다.'));
   if (!LS_OK) box.appendChild(el('div', 'lswarn', LS_MSG));
 
   var srow = el('div', 'obdoneacts');
-  var wipe = el('button', 'b', '저장한 분류 지우기');
+  var wipe = el('button', 'b', '이 기기의 저장 지우기');
   wipe.type = 'button';
   wipe.addEventListener('click', function () {
     /* ★ 36차. 저장통이 둘이다. 하나만 지우면 사용자는 지웠다고 믿는데
        직접 넣으신 금액이 브라우저에 남는다 — A안에서 제일 아픈 자리다 */
-    /* ★ 41차 5번. 통이 셋이 됐다 (fc.picks · fc.manual · fc.banks) */
+    /* ★ 41차 5번. 통이 셋이 됐다 (fc.picks · fc.manual · fc.banks)
+       ★ 91차 ④. 넷이 됐다 — 거래내역(fc.data)도 여기서 같이 지운다 */
     lsDel(storeKey());
     lsDel(manualKey());
     lsDel(bankKey());
+    delData();
     UP.manual = { v: 1, items: [], amounts: {} };
     wipe.textContent = '지웠습니다';
-    setTimeout(function () { wipe.textContent = '저장한 분류 지우기'; }, 1500);
+    setTimeout(function () { wipe.textContent = '이 기기의 저장 지우기'; }, 1500);
   });
   var out = el('button', 'b', '내보내기');
   out.type = 'button';
@@ -13770,6 +13970,22 @@ function drawResultInner(months) {
   mng.type = 'button';
   mng.addEventListener('click', function () { useScreen('항목 관리'); openCats(); });
   nameRow.appendChild(mng);
+  /* ★ 91차 ③. 한 달치를 더 얹는 자리. 예전에는 머리의 「파일 더 올리기」뿐이라
+     결과를 보시던 자리에서는 보탤 길이 안 보였다.
+     ★ 하는 일은 71차 ②의 보태기 그대로다 — 새 합치기를 짜지 않는다.
+       openAddFiles 가 지금 계좌들을 목록에 얹어두고, 고르신 파일이 그 위에 쌓인다.
+       같은 파일·겹치는 기간은 이미 있는 검사(같은 이름·overlapWith·겹친건수)가 거른다 */
+  if (!UP.demo && UP.banks && UP.banks.length) {
+    var more = el('button', 'rstoreedit', '＋ 거래내역 추가');
+    more.type = 'button';
+    more.addEventListener('click', function () {
+      useScreen('거래내역 추가');
+      if (!openAddFiles()) return;
+      var inp = document.getElementById('upinput');
+      if (inp) { inp.value = ''; inp.click(); }
+    });
+    nameRow.appendChild(more);
+  }
   host.appendChild(nameRow);
   /* ★ 66차 ②. 머리 배지 — 「언제까지의 자료인가」와 「최근 마감한 달」.
      ★ 여기 있던 「…까지의 거래내역입니다」 줄을 이 배지가 대신한다.
@@ -17470,6 +17686,11 @@ startDemo();
    savedSummary() 가 저장통을 못 찾고 「이어서 보기」가 안 나온다.
    예시를 다 그린 뒤라 감추는 것도 여기서 해야 확실하다 */
 try { drawStart(); } catch (e) { }
+/* ★ 91차 ②. 지난번에 보시던 거래내역이 이 기기에 남아 있으면 그 화면부터 연다.
+   파일을 다시 안 올려도 된다는 것이 이번 회차의 본론이다.
+   ★ 시작 화면 뒤에 부른다 — 되살리다 넘어져도 시작 화면은 이미 서 있다.
+   ★ 예시는 안 건드린다. 저장이 없으면 지금까지와 똑같이 시작 화면에 머문다 */
+try { openLastData(); } catch (e) { }
 </script>
 
 <div class="applinks" id="applinks" hidden>
