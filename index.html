@@ -1546,7 +1546,19 @@
   .ytab tr.yrout .num,.ytab tr.yrout .rh{color:var(--warn)}
   .ytab tr.yrprof .rh{color:var(--now)}
   /* 각 칸 아래 작은 전월 대비 한 줄 — 밴드 위에서도 조용하게 */
-  .ydelta{display:block;margin-top:1px;font-size:calc(10.5*var(--fu));font-weight:600;color:var(--gray)}
+  /* ★ 90차 ②(A안). 줄 높이를 못 박는다 — 글자에 맡기면 「−12.3%」의 빼기 기호(−)가
+     들어간 칸만 줄 상자가 1px 높아져서, 그 칸의 숫자만 0.5px 위로 떴다 (실측).
+     빈 줄과 채워진 줄이 한 치도 안 어긋나려면 여기가 글자와 무관해야 한다 */
+  .ydelta{display:block;margin-top:1px;font-size:calc(10.5*var(--fu));line-height:1.35;font-weight:600;color:var(--gray)}
+  /* ★ 90차 ②(A안). 초록 줄이 없는 칸도 같은 높이의 빈 줄을 차지한다.
+     ─ 있는 칸은 두 줄, 없는 칸은 한 줄이었다. 칸은 가운데 맞춤(td 기본)이라
+       한 줄짜리 숫자가 반 줄씩 내려앉아 열이 성겨 보였다. 정렬 코드도,
+       계산(deltaTxt·66차 ③-2)도 한 줄 안 바꾼다 — 자리만 잡아둔다.
+     ★ 화면 글자는 늘지 않는다. ::before 의 content 는 DOM 글자(innerText)에
+       안 들어가서 검사도 안 오염시킨다.
+     ★ 「—」는 안 넣는다(B안 기각) — 이 표에서 「—」는 이미
+       「아직 안 온 달」이라는 뜻으로 9~12월 칸에 쓰인다 */
+  .ydelta:empty::before{content:"\00a0"}
   /* ★ 69차 ②. opacity 로 연하게 했더니 칸 바탕까지 반투명해져서
      가로로 밀 때 지나가는 숫자가 고정된 이름 칸에 비쳐 보였다 (「7,73월세」).
      연하게 하는 것은 글자색만이어야 한다 — 칸은 불투명하게 둔다.
@@ -6046,7 +6058,17 @@ function savedStores() {
 }
 /* 예시 화면(대시보드·머리말·올려보기 버튼)을 통째로 감추거나 되돌린다 */
 function showDemoBehind(on) {
-  ['a2hs-top', 'up-result', 'applinks'].forEach(function (id) {
+  /* ★ 90차 ①. 「전체보기」(topimage)도 이 목록에 든다.
+     이 단추는 결과 화면(up-result)에 딸린 것이다 — 결과를 그리는 코드가
+     save.hidden = false 로 풀어 놓는데, 시작 화면(drawStart)이 결과를 도로 감출 때
+     이 단추만 빠져 있었다. 그래서 자료를 하나도 안 올린 첫 화면 오른쪽 위에
+     「전체보기」가 떠 있었고, 누르면 남의 가게 예시 결과가 통째로 열렸다.
+     ★ 새 잣대는 안 만든다 — upShow 의 「결과 화면일 때만 보인다」와 같은 말이다.
+       결과와 같은 자리에서 함께 여닫으면 판단하는 곳이 늘지 않는다.
+     ★ drawStart 에 한 줄만 넣지 않은 이유 — 「예시 먼저 보기」(leaveStart)는
+       결과를 다시 그리지 않고 감춰둔 것을 도로 펼 뿐이라, 감추기만 하면
+       예시 결과 화면에서 이 단추가 영영 안 돌아온다 (요청서 ② 「이건 맞다」) */
+  ['a2hs-top', 'up-result', 'applinks', 'topimage'].forEach(function (id) {
     var e = document.getElementById(id);
     if (e) e.hidden = !on;
   });
@@ -16986,7 +17008,10 @@ function drawYear(host, allMonths) {
            지났는데 자료 없는 달: 빈 칸. 표 아래 한 줄이 채우는 길을 알려준다.
          ★ 새 색은 안 칠한다. 크림·호박은 이미 「아직 안 정한 돈」·「진행 중」의 뜻이다 */
       if (c.없음) {
-        tr.appendChild(el('td', 'num noyet', c.미래 ? '—' : ''));
+        var ntd = el('td', 'num noyet', c.미래 ? '—' : '');
+        /* ★ 90차 ②(A안). 이 칸도 같은 줄 수로 둔다 — 안 그러면 「—」만 반 줄 내려앉는다 */
+        if (get) ntd.appendChild(el('span', 'ydelta', ''));
+        tr.appendChild(ntd);
         return;
       }
       var v = pick(c);
@@ -17000,10 +17025,9 @@ function drawYear(host, allMonths) {
       } else {
         td = el('td', 'num' + (v.cls ? ' ' + v.cls : ''), v.txt);
       }
-      if (get) {
-        var dt = deltaTxt(i, get);
-        if (dt) td.appendChild(el('span', 'ydelta', dt));
-      }
+      /* ★ 90차 ②(A안). 줄을 언제나 붙인다 — 견줄 수 없는 칸이면 빈 줄로 자리만 잡는다.
+         무엇을 견줄지 정하는 것은 그대로 deltaTxt 하나뿐이다 (66차 ③-2) */
+      if (get) td.appendChild(el('span', 'ydelta', deltaTxt(i, get)));
       /* ★ 54차 ⑤. 「아직 안 정한 돈」 줄만 눌린다 — 할 일이 남아 있는 줄이다.
          — 칸(갈 곳 없음)과 0원인 달(다 정함)은 안 눌린다 */
       if (goUnsetRow && v.go) {
@@ -17017,6 +17041,9 @@ function drawYear(host, allMonths) {
       var atd = el('td', 'num avgcol' + (a.cls ? ' ' + a.cls : ''));
       if (a.pill && a.txt) atd.appendChild(el('span', 'ypill', a.txt));
       else atd.textContent = a.txt;
+      /* ★ 90차 ②(A안). 평균 칸에는 전월 대비가 없다. 그래도 줄 수는 같아야
+         한 줄의 숫자가 전부 같은 높이에 앉는다 (textContent 뒤에 붙인다 — 앞에 붙이면 지워진다) */
+      if (get) atd.appendChild(el('span', 'ydelta', ''));
       tr.appendChild(atd);
     }
     tbody.appendChild(tr);
