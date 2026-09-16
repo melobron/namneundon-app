@@ -19,6 +19,15 @@
 /xlsx.full.min.js
   Cache-Control: public, max-age=604800
 
+# 92차 — PDF 읽기 도구. xlsx 와 같다. 판을 올릴 때 파일 이름을 바꾸면 되므로
+# 오래 캐시해도 옛것이 굳지 않는다. 워커도 같은 규칙이어야 한다 —
+# 본체만 새것이고 워커가 옛것이면 그 짝에서 조용히 깨진다.
+/pdf.min.js
+  Cache-Control: public, max-age=604800
+
+/pdf.worker.min.js
+  Cache-Control: public, max-age=604800
+
 /manifest.json
   Cache-Control: no-store
 
