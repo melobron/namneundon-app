@@ -731,10 +731,30 @@
           font-size:calc(13*var(--fu));line-height:1.6}
   .bhelp{margin:10px 0 0;font-size:calc(13*var(--fu));line-height:1.6}
   .bhelp .bh1{font-weight:700;cursor:pointer;padding:8px 0}
-  .bhelp .bh2{color:var(--gray);font-size:calc(12.5*var(--fu))}
-  .bhelp .bh3{color:var(--gray);font-size:calc(12*var(--fu));margin-top:8px}
-  .bhbtns{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}
-  .bhbtns .b{font-size:calc(12.5*var(--fu));padding:7px 10px}
+  .bhelp .bh2{color:var(--gray);font-size:calc(12.5*var(--fu));line-height:1.65}
+  .bhelp .bh3{color:var(--gray);font-size:calc(12*var(--fu));margin-top:10px;line-height:1.65}
+  /* ★ 99차. 칸을 격자로 묶는다. flex-wrap 은 글자 길이대로 폭이 달라져
+     열이 안 맞는다. 여기는 계좌내역을 넣기 직전 화면이라 잘 보여야 한다.
+     ★ 열 수를 화면 폭으로 박지 않고, 칸 하나의 가장 좁은 폭(122*fu)만 정해
+       몇 열이 들어갈지는 브라우저가 세게 한다.
+       폭으로 박으면 글씨 크기를 못 본다 — 실측: 430px·기본 글씨에서 3열로 박았더니
+       「그 밖의 은행」·「카카오뱅크」·「새마을금고」가 …로 잘렸고,
+       430px·130% 에서는 열한 개가 전부 잘렸다. 이름이 잘리면 격자로 맞춘 뜻이 없다.
+     ★ 122*fu 는 제일 긴 「그 밖의 은행」이 안 잘리는 폭이다(실측).
+       fu 를 곱해 두어야 글씨를 키운 분께는 칸도 같이 넓어진다 */
+  .bhbtns{display:grid;gap:8px;margin:13px 0 15px;
+          grid-template-columns:repeat(auto-fit,minmax(calc(122*var(--fu)),1fr))}
+  /* 아주 넓은 화면에서 다섯 열로 벌어지면 마지막 줄에 한 칸만 남는다. 넷에서 멈춘다 */
+  @media (min-width:820px){ .bhbtns{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  .bhbtns .b{display:flex;align-items:center;gap:8px;justify-content:flex-start;
+             width:100%;padding:11px;text-align:left;line-height:1.25;
+             font-size:calc(12.5*var(--fu));white-space:nowrap;overflow:hidden}
+  /* ★ em 으로 둔다 — 글씨 크기 3단에서 마크도 같이 커진다.
+     98차에서 배운 자리다. px 로 박으면 큰 글씨에서 마크만 작게 남는다 */
+  .bhbtns .b .bkm{width:1.75em;height:1.75em;border-radius:7px;flex:0 0 auto;
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:calc(11.5*var(--fu));font-weight:800;letter-spacing:-.02em}
+  .bhbtns .b .bkn{overflow:hidden;text-overflow:ellipsis}
   .bhdet{margin-top:6px;padding:10px 12px;background:var(--panel);border-radius:var(--rad)}
   .bhdet .bhname{font-weight:700;margin-bottom:6px}
   .bhdet .bhsub{color:var(--gray);font-size:calc(12*var(--fu));margin-top:7px}
@@ -7862,6 +7882,24 @@ var BANK_READS = { '기업': true, '카카오': true };
 /* ★ 96차 ③. 되는 은행을 앞에, 안 되는 은행을 뒤에 둔다 */
 var BANK_HELP_LIST = ['국민', '신한', '우리', '카카오', '케이', '토스', '새마을',
                       '하나', '농협', '기업', '그 밖의 은행'];
+/* ★ 99차. 은행마다 마크를 둔다. [글자, 바탕색, 글자색] 순서다.
+   ★ 은행이 쓰는 진짜 로고는 넣지 않는다 — 남의 상표라 그대로 못 쓰고,
+     은행이 로고를 바꾸면 앱을 다시 배포해야 하고, 그림 11개면 파일이 무거워진다.
+     색은 그 은행을 떠올리게 하는 정도로만 쓰고, 글자는 우리가 붙인다.
+     우리가 그린 것이라 탈이 없고, 눈으로 고르는 데는 로고만큼 빠르다 */
+var BANK_MARK = {
+  '국민':   ['국', '#FFBC00', '#2B2B2B'],
+  '신한':   ['신', '#0046FF', '#ffffff'],
+  '우리':   ['우', '#0067AC', '#ffffff'],
+  '카카오': ['카', '#FFE300', '#3C1E1E'],
+  '케이':   ['케', '#2B58F6', '#ffffff'],
+  '토스':   ['토', '#3182F6', '#ffffff'],
+  '새마을': ['새', '#0B4DA2', '#ffffff'],
+  '하나':   ['하', '#008485', '#ffffff'],
+  '농협':   ['농', '#00A64F', '#ffffff'],
+  '기업':   ['기', '#0072BC', '#ffffff'],
+  '그 밖의 은행': ['은', '#9AA0A6', '#ffffff']
+};
 function bankHelpName(k) {
   if (k === '그 밖의 은행') return k;
   if (k === '새마을') return '새마을금고';        /* 은행도 뱅크도 안 붙는다 */
@@ -7887,8 +7925,19 @@ function drawBankHelp(host) {
       '국민·신한·우리·카카오뱅크·케이뱅크·토스뱅크·새마을금고는 폰으로 끝납니다.'));
     var row = el('div', 'bhbtns');
     BANK_HELP_LIST.forEach(function (k) {
-      var b = el('button', 'b' + (UP_HELP.bank === k ? ' on' : ''), bankHelpName(k));
+      var b = el('button', 'b' + (UP_HELP.bank === k ? ' on' : ''));
       b.type = 'button';
+      /* ★ 99차. 마크를 앞에, 이름을 뒤에. 어느 쪽을 눌러도 같은 단추다.
+         ★ 마크에는 색을 그 자리에 직접 입힌다 — 은행이 열한 곳뿐이라
+           규칙을 열한 줄 쓰는 것보다 표 하나가 고치기 쉽다.
+         ★ 골랐을 때(.on) 바탕이 초록으로 바뀌어도 마크 색은 그대로 남는다.
+           어느 은행을 고르셨는지 색으로도 보인다 */
+      var mk = BANK_MARK[k];
+      var dot = el('span', 'bkm', mk ? mk[0] : '은');
+      if (mk) { dot.style.background = mk[1]; dot.style.color = mk[2]; }
+      dot.setAttribute('aria-hidden', 'true');   /* 읽어주는 기계는 이름만 읽으면 된다 */
+      b.appendChild(dot);
+      b.appendChild(el('span', 'bkn', bankHelpName(k)));
       b.addEventListener('click', function () {
         UP_HELP.bank = (UP_HELP.bank === k) ? null : k;
         redrawBankHelp();
@@ -18718,5 +18767,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 98차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 99차</div>
 </body></html>
