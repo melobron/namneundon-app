@@ -730,6 +730,8 @@
   .bhdet .bhname{font-weight:700;margin-bottom:6px}
   .bhdet .bhsub{color:var(--gray);font-size:calc(12*var(--fu));margin-top:7px}
   .bhdet .bhstep{margin-top:3px}
+  .bhdet .bhno{font-weight:700;margin-top:3px}
+  .bhdet .bhmemo{color:var(--gray);font-size:calc(12*var(--fu));margin-top:5px}
   .comeback{margin:8px 30px 0;padding:10px 12px;background:var(--estbg);
             border:1px solid var(--estline);border-radius:var(--rad);font-size:calc(13*var(--fu));line-height:1.55}
   .comeback .cb1{font-weight:700}
@@ -4612,7 +4614,7 @@ var COLSPEC = {
   inAmt:   ['입금', '입금액', '입금액(원)', '맡기신금액', '입금금액', '입금(원)', '받은금액',
             '입금금액(원)', '받으신금액', '입금액(₩)', '입금(₩)', '맡기신금액(원)'],
   outAmt:  ['출금', '출금액', '출금액(원)', '찾으신금액', '출금금액', '출금(원)', '보낸금액',
-            '출금금액(원)', '보내신금액', '지급', '지급액', '출금액(₩)', '찾으신금액(원)'],
+            '출금금액(원)', '보내신금액', '지급', '지급액', '지급금액', '출금액(₩)', '찾으신금액(원)'],
   balance: ['거래후잔액', '잔액', '잔액(원)', '거래후 잔액', '남은잔액', '잔액원'],
   note:    ['출금계좌메모', '메모', '메모내용'],
   /* 카카오·토스처럼 한 열에 부호로 들어오는 형식 */
@@ -4651,6 +4653,14 @@ function colLooks(grid, h, c, kind) {
   for (var r = h + 1; r < grid.length && seen < 20; r++) {
     var v = (grid[r] || [])[c];
     if (v === '' || v == null) continue;
+    /* ★ 95차 ②. 「-」는 「이 줄엔 이 금액이 없다」는 빈칸 표시다 (우리은행).
+       이걸 「숫자가 아닌 값」으로 세면, 출금이 드문 계좌에서 출금 열이
+       숫자 열로 안 보여 통째로 버려진다 — 실측 24건짜리에서 출금 6건
+       (22,000,000원 포함)이 전부 0 이 됐다.
+       ★ 우리은행만의 문제가 아니다. 한쪽 방향이 드문 계좌면 어느 은행이든
+         터진다. 거래가 활발한 계좌는 우연히 잘 읽혀서 조용한 계좌에서만
+         터지는 종류다 */
+    if (/^[-‒–—―−]$/.test(String(v).trim())) continue;
     seen++;
     if (kind === 'date') {
       /* 엑셀은 날짜도 숫자로 들고 있어서, 일련번호 1·2·3 도 날짜로 읽힌다
@@ -5025,7 +5035,13 @@ function buildRows(grid, h, map, balCol) {
     if (split) {
       var inA = map.inAmt != null ? toNum(row[map.inAmt]) : null;
       var outA = map.outAmt != null ? toNum(row[map.outAmt]) : null;
-      amt = inA ? inA : (outA ? -outA : null);
+      /* ★ 95차 ③. 입금·출금이 칸으로 갈려 있으면 방향은 칸이 말해준다.
+         값에 붙은 부호는 방향을 한 번 더 말하는 것일 뿐이다
+         (케이뱅크는 출금액 칸에 「- 220,008」로 준다).
+         그대로 뒤집으면 부호가 두 번 뒤집혀 출금이 입금이 된다 —
+         실측 128건에서 43건이 그랬다.
+         그래서 크기만 취하고 방향은 칸으로만 정한다 */
+      amt = inA ? Math.abs(inA) : (outA ? -Math.abs(outA) : null);
     } else {
       /* 한 열에 부호로 들어오는 형식 */
       var v = toNum(row[map.amount]);
@@ -5324,13 +5340,32 @@ function pdfColumnsByGap(lines) {
 function pdfColumnsByHeader(line) {
   var its = (line && line.items) || [];
   if (its.length < 3) return null;
-  var cols = [], i;
+  /* ★ 95차 ④. 금액 칸은 오른쪽으로 더 넓다 (케이뱅크 실측).
+     머리글은 칸 왼쪽에 붙어 찍히는데 금액은 칸 오른쪽에 맞춰 찍힌다.
+     그래서 두 머리글의 가운데로 자르면, 「잔액」처럼 이름이 짧고 다음 머리글이
+     가까운 칸에서 금액이 경계를 넘어 옆 칸(받는사람)으로 넘어간다 —
+     128건짜리에서 잔액이 통째로 밀려 78건만 읽히고 검산이 45건 깨졌다.
+     금액 이름을 단 머리글 뒤에서는 가운데가 아니라 「다음 머리글 바로 앞」에서
+     자른다. 금액은 오른쪽 맞춤이라 왼쪽이 넉넉한 것은 해가 없다 */
+  var 돈이름 = COLSPEC.inAmt.concat(COLSPEC.outAmt, COLSPEC.amount, COLSPEC.balance).map(nz);
+  function 돈칸인가(a) {
+    var n = nz(a.s);
+    return 돈이름.indexOf(n) !== -1 || 돈이름.indexOf(nzOuter(a.s)) !== -1;
+  }
+  /* 머리글 사이의 자를 자리를 먼저 다 정한다. 그래야 양쪽 칸이 딱 맞물린다 */
+  var cut = [], i;
+  for (i = 0; i + 1 < its.length; i++) {
+    var a = its[i], 뒤 = its[i + 1];
+    var 가운데 = ((a.x + (a.w || 0)) + 뒤.x) / 2;
+    cut.push(돈칸인가(a) ? Math.max(가운데, 뒤.x - 2) : 가운데);
+  }
+  var cols = [];
   for (i = 0; i < its.length; i++) {
-    var a = its[i], 앞 = its[i - 1], 뒤 = its[i + 1];
-    var x1 = 앞 ? ((앞.x + (앞.w || 0)) + a.x) / 2 : a.x - 2;
-    var x2 = 뒤 ? ((a.x + (a.w || 0)) + 뒤.x) / 2 : a.x + (a.w || 0) + 2;
+    var b = its[i];
+    var x1 = i > 0 ? cut[i - 1] : b.x - 2;
+    var x2 = i + 1 < its.length ? cut[i] : b.x + (b.w || 0) + 2;
     if (!(x2 > x1)) return null;          /* 머리글이 서로 겹쳐 있으면 못 쓴다 */
-    cols.push({ x1: x1, x2: x2, name: a.s });
+    cols.push({ x1: x1, x2: x2, name: b.s });
   }
   return cols;
 }
@@ -7598,14 +7633,76 @@ function pdfOpen(bytes, name, 남은) {
     });
   });
 }
+/* ── 94차 ① · PDF 에서 은행 이름을 찾는다 ──────────────────────────────
+   첫 쪽 위 25% 안에서만 본다. 은행 이름은 명세서 머리글에 찍히기 때문이다.
+   아래까지 뒤지면 거래처명의 「국민은행 이체」 같은 글자가 잡혀
+   엉뚱한 은행 이름을 화면에 쓰게 된다 — 그건 아무 말도 안 하느니만 못하다.
+   ★ 확실하지 않으면 null 이다. 못 알아본 것은 못 알아봤다고 둔다 */
+var BANK_MARKS = [
+  ['국민', ['KB국민은행', 'KB국민', '국민은행']],
+  ['신한', ['신한은행', 'Shinhan']],
+  ['우리', ['우리은행']],
+  ['새마을금고', ['MG새마을금고', '새마을금고', 'MG더뱅킹']],
+  ['하나', ['하나은행', 'KEB하나']],
+  ['농협', ['NH농협', '농협은행', '농협중앙회']],
+  ['기업', ['IBK기업', '기업은행', 'IBK']],
+  ['JT친애', ['JT친애', '제이티친애']],
+  ['예가람', ['예가람']]
+];
+/* 사전 차례대로 본다 — 앞에 있는 것이 먼저 잡히면 그걸로 끝낸다.
+   ★ 띄어쓰기는 지우고 본다. PDF 는 「KB」 「국민은행」 처럼 한 낱말을
+     조각으로 흘려주는 일이 잦아서, 그대로 두면 아무것도 안 잡힌다 */
+function bankMarkOf(글) {
+  var t = String(글 || '').replace(/\s+/g, '');
+  for (var i = 0; i < BANK_MARKS.length; i++) {
+    for (var k = 0; k < BANK_MARKS[i][1].length; k++) {
+      if (t.indexOf(BANK_MARKS[i][1][k]) !== -1) return BANK_MARKS[i][0];
+    }
+  }
+  return null;
+}
+function pdfBankName(doc) {
+  /* ★ 여기서 무슨 일이 나도 파일 읽기를 막으면 안 된다. 은행 이름은 안내를
+     거들 뿐이고, 못 찾으면 null 로 두면 그만이다 — 그래서 통째로 감싼다 */
+  return Promise.resolve().then(function () { return doc.getPage(1); }).then(function (page) {
+    var 쪽높이 = 0;
+    try { 쪽높이 = page.getViewport({ scale: 1 }).height || 0; } catch (e) { 쪽높이 = 0; }
+    return page.getTextContent().then(function (tc) {
+      var 조각 = [];
+      (tc.items || []).forEach(function (it) {
+        var s = String(it.str == null ? '' : it.str).trim();
+        if (!s) return;
+        조각.push({ s: s, y: +(it.transform || [])[5] || 0 });
+      });
+      if (!조각.length) return null;
+      /* 좌표는 쪽 아래가 0 이다. 위 25% 란 높이의 75% 보다 위쪽이다.
+         쪽 크기를 못 읽으면 글자가 놓인 범위로 대신 잰다 */
+      var 한계;
+      if (쪽높이) {
+        한계 = 쪽높이 * 0.75;
+      } else {
+        var 위 = 조각[0].y, 아래 = 조각[0].y;
+        조각.forEach(function (c) { if (c.y > 위) 위 = c.y; if (c.y < 아래) 아래 = c.y; });
+        한계 = 위 - (위 - 아래) * 0.25;
+      }
+      var 윗글 = [];
+      조각.forEach(function (c) { if (c.y >= 한계) 윗글.push(c.s); });
+      return bankMarkOf(윗글.join(' '));
+    });
+  }).catch(function () { return null; });
+}
 function readOnePdf(file) {
+  var 은행 = null;      /* 못 읽었을 때 은행에 맞는 안내를 하려고 먼저 봐둔다 */
   return fileBytes(file).then(function (bytes) {
     return pdfOpen(bytes, file.name, 3);
   }).then(function (doc) {
     if (!doc) return { fail: 'pdf_locked', found: [], name: file.name };
-    return pdfGrid(doc).then(function (g) {
+    return pdfBankName(doc).then(function (b) {
+      은행 = b;
+      return pdfGrid(doc);
+    }).then(function (g) {
       /* 글자가 거의 없으면 표가 아니라 사진이다. 좌표로 할 수 있는 일이 없다 */
-      if (g.chars < PDF_MIN_CHARS) return { fail: 'pdf_image', found: [], name: file.name };
+      if (g.chars < PDF_MIN_CHARS) return { fail: 'pdf_image', found: [], name: file.name, pdfBank: 은행 };
       /* ★ 92-1차 ①. 칸을 가른 방법이 여럿이다. 다 읽어보고 가장 나은 것을 고른다 —
          extractRows 가 잔액 열 후보를 고르는 방법 그대로다.
          차례대로 먼저 되는 것을 쓰면 안 된다: 읽히기는 하는데 금액이 옆 칸으로
@@ -7625,7 +7722,7 @@ function readOnePdf(file) {
       if (!후보.length) {
         return { fail: (last && last.why === 'empty' ? 'empty' : 'pdf_no_header'),
                  found: (last && last.found) || [], name: file.name,
-                 why: last && last.why };
+                 why: last && last.why, pdfBank: 은행 };
       }
       var 최다 = 0;
       후보.forEach(function (c) { if (c.건 > 최다) 최다 = c.건; });
@@ -7640,7 +7737,7 @@ function readOnePdf(file) {
          사장님께 틀린 숫자를 맞다고 보여주느니 「아직 못 읽는다」가 낫다.
          총액이 아예 없는 파일은 여기 안 걸린다 (맞음 === null) */
       if (best.맞음 === false) {
-        return { fail: 'pdf_total', found: [], name: file.name };
+        return { fail: 'pdf_total', found: [], name: file.name, pdfBank: 은행 };
       }
       var got = best.got;
       var res = best.res;
@@ -7652,7 +7749,7 @@ function readOnePdf(file) {
     });
   }).catch(function () {
     /* 여기서 멈추면 사장님 눈에는 아무 일도 안 일어난다. 목록에 한 줄로 남긴다 (⑤) */
-    return { fail: 'pdf_open', found: [], name: file.name };
+    return { fail: 'pdf_open', found: [], name: file.name, pdfBank: 은행 };
   });
 }
 /* 은행 이름만 쓴다. 파일 이름을 그대로 쓰면 사장님 이름·계좌번호가 화면에 나온다 */
@@ -7672,24 +7769,88 @@ var BANK_NAMES = ['신한', '국민', 'KB', '하나', '우리', '농협', 'NH', 
    ★ 92차 ①. PDF 를 읽게 됐다 — 국민·신한 두 양식만 직접 확인했다.
      그 둘만 「읽습니다」라고 적는다. 안 해본 은행을 「됩니다」라고 쓰지 않는다.
      못 읽으면 멈추지 않고 카카오채널로 그 양식을 받는다 (⑤).
-   ★ 지금 확인된 것은 국민은행 하나뿐이다. 늘어나면 여기에만 더한다 */
+   ★ 96차 ①②. 오늘 실사용자가 국민은행 앱에서 파일을 못 찾아 전화를 주셨다.
+     파일을 못 꺼내면 앱은 없는 것과 같다 — 여기가 아직도 제일 큰 벽이다.
+     2026-09-17~18 고객센터 12곳 통화와 실제 화면으로 경로를 확보해 넣는다.
+     추측은 한 줄도 없다. 확인 못 한 은행은 지금까지처럼 비워둔다.
+   ★ 폰을 앞에, PC 를 뒤에 둔다. 우리 앱은 폰으로 끝내는 것이 목표다 */
 var BANK_HELP = {
   '국민': {
     확인함: true,
-    pc: ['KB스타뱅킹 홈페이지 → 조회 → 거래내역조회',
-         '기간을 1년으로 하고 엑셀로 내려받기'],
+    폰: ['전체 메뉴 → 전체계좌조회',
+         '계좌를 고르고, 오른쪽 위 톱니바퀴',
+         '「거래내역서 발급」',
+         '기간과 순서를 정하고 발급',
+         '「공유하기」로 저장한 PDF 를 올려주세요'],
     /* ★ 92차 ①. PDF 를 읽게 됐다. 못 읽는다고 적어두면 그게 거짓말이다 —
        암호가 걸린 것은 그대로라 「생년월일 6자리」를 여기서도 미리 말해둔다 */
-    폰: '거래내역을 PDF 로만 받으실 수 있고 암호가 걸립니다. 그대로 올려주시면 비밀번호(생년월일 6자리)를 여쭙고 읽어드립니다.'
-  }
+    폰메모: '암호가 걸립니다. 그대로 올려주시면 생년월일 6자리를 여쭙고 읽어드립니다. 한 번에 1000건까지라, 넘으면 기간을 나눠 두 번 올려주세요.',
+    pc: ['KB스타뱅킹 홈페이지 → 조회 → 거래내역조회',
+         '기간을 1년으로 하고 엑셀로 내려받기']
+  },
+  '신한': {
+    확인함: true,
+    폰: ['전체계좌조회 → 계좌 고르기',
+         '기간을 정하고 「계좌 관리」',
+         '「거래내역 이메일/팩스 보내기」',
+         '메일로 온 PDF 를 내려받아 올려주세요'],
+    폰메모: '신한은 앱에서 바로 저장되지 않고 메일로 옵니다. 암호가 걸리니 생년월일 6자리를 여쭙고 읽어드립니다.'
+  },
+  '우리': {
+    확인함: true,
+    폰: ['「거래명세서 발급」을 찾으세요',
+         '기간을 정하고, 거래구분은 「전체」',
+         '조회하기 → 「이대로 발급하기」',
+         '「저장하기」로 저장한 PDF 를 올려주세요'],
+    폰메모: '거래구분을 「입금」이나 「출금」만 고르면 반쪽 파일이 나와 읽을 수 없습니다. 꼭 「전체」로 해주세요. 「거래내역」 쪽으로 들어가면 메일 발송만 됩니다.'
+  },
+  '카카오': {
+    확인함: true,
+    폰: ['아래쪽 「⋯」(더보기)',
+         '「증명서 발급」',
+         '입출금 계좌 → 「거래내역서」 국문',
+         '계좌와 기간을 정하고 발급'],
+    폰메모: '한 번에 3년까지 됩니다. 더 오래된 것은 3년씩 나눠서 받아주세요.'
+  },
+  '케이': {
+    확인함: true,
+    폰: ['전체 메뉴 → 「고객센터」',
+         '「증명서 발급」 → 「거래내역증명서」',
+         '계좌를 고르고 발급방식·기간을 정하기'],
+    폰메모: '거래내역인데 「고객센터」 안에 들어 있습니다. 거기부터 찾으세요.'
+  },
+  '새마을': {
+    확인함: true,
+    폰: ['MG더뱅킹 → 전체메뉴 → 전체계좌조회',
+         '계좌를 고르고, 오른쪽 위 「관리」',
+         '맨 아래 「거래내역 내보내기」'],
+    폰메모: '앱에서는 PDF 만 됩니다. 인터넷뱅킹에서는 엑셀도 고를 수 있습니다.',
+    pc: ['인터넷뱅킹 → 조회 → 전체계좌조회',
+         '계좌번호 옆 「거래내역」 → 기간 설정 → 조회하기 → 다운로드']
+  },
+  '토스': {
+    확인함: true,
+    폰: ['토스 앱 → 토스뱅크',
+         '오른쪽 위 「설정」',
+         '「은행 증명서 발급하기」'],
+    폰메모: '거래내역은 10만 건까지 한 번에 됩니다.'
+  },
+  /* ★ 2026-09-18 고객센터 통화로 폰 앱에서 파일이 안 나오는 것이 확인됐다.
+     개인계좌·법인계좌 둘 다 안 된다. PC 경로는 아직 확인 못 했으므로
+     단계를 쓰지 않는다 — 여기서 추측을 적으면 없는 메뉴를 찾아 헤매신다 */
+  '하나': { 폰없음: true },
+  '농협': { 폰없음: true },
+  '기업': { 폰없음: true }
 };
 /* 화면에 보여줄 은행 차례. BANK_NAMES 와 같은 말을 쓴다 */
 /* 파일 양식을 직접 받아 읽어본 은행. 받는 경로와는 다른 이야기다 (50차 ⑤) */
 var BANK_READS = { '기업': true, '카카오': true };
-var BANK_HELP_LIST = ['국민', '신한', '하나', '우리', '농협', '기업',
-                      '카카오', '토스', '케이', '그 밖의 은행'];
+/* ★ 96차 ③. 되는 은행을 앞에, 안 되는 은행을 뒤에 둔다 */
+var BANK_HELP_LIST = ['국민', '신한', '우리', '카카오', '케이', '토스', '새마을',
+                      '하나', '농협', '기업', '그 밖의 은행'];
 function bankHelpName(k) {
   if (k === '그 밖의 은행') return k;
+  if (k === '새마을') return '새마을금고';        /* 은행도 뱅크도 안 붙는다 */
   if (k === '카카오' || k === '토스' || k === '케이') return k + '뱅크';
   return k + '은행';
 }
@@ -7705,10 +7866,11 @@ function drawBankHelp(host) {
   });
   box.appendChild(head);
   if (open) {
+    /* ★ 96차 ④(나). PC 이야기를 먼저 꺼내면 폰만 있는 분이 거기서 멈추신다 */
     box.appendChild(el('div', 'bh2',
-      '엑셀 파일은 대부분 PC 인터넷뱅킹에서만 받으실 수 있습니다.'));
+      '쓰시는 은행을 눌러보세요. 폰에서 받는 길부터 알려드립니다.'));
     box.appendChild(el('div', 'bh2',
-      '폰 앱에서는 PDF 만 나오는 은행이 많습니다.'));
+      '국민·신한·우리·카카오뱅크·케이뱅크·토스뱅크·새마을금고는 폰으로 끝납니다.'));
     var row = el('div', 'bhbtns');
     BANK_HELP_LIST.forEach(function (k) {
       var b = el('button', 'b' + (UP_HELP.bank === k ? ' on' : ''), bankHelpName(k));
@@ -7725,12 +7887,26 @@ function drawBankHelp(host) {
       var d = BANK_HELP[k2];
       var det = el('div', 'bhdet');
       det.appendChild(el('div', 'bhname', bankHelpName(k2)));
-      if (d && d.확인함) {
-        det.appendChild(el('div', 'bhsub', 'PC 로 받기 — 이 방법만 확인했습니다'));
-        d.pc.forEach(function (s) { det.appendChild(el('div', 'bhstep', s)); });
+      /* ★ 96차 ④(다). 폰에서 아예 안 나오는 은행께는 폰 단계를 보여드릴 것이 없다.
+         할 수 있는 길 하나를 정확히 말하고, 언제 확인한 것인지도 같이 적는다 */
+      if (d && d.폰없음) {
+        det.appendChild(el('div', 'bhno', '이 은행은 폰 앱에서 거래내역 파일이 나오지 않습니다.'));
+        det.appendChild(el('div', 'bhstep', 'PC 인터넷뱅킹에서 엑셀(.xlsx)로 받아주세요.'));
+        det.appendChild(el('div', 'bhmemo', '2026년 9월 은행 고객센터에 확인한 내용입니다.'));
+      } else if (d && d.확인함) {
+        /* 폰이 먼저다. 번호를 붙여 단계라는 것이 눈에 보이게 한다 */
         if (d.폰) {
-          det.appendChild(el('div', 'bhsub', '폰 앱'));
-          det.appendChild(el('div', 'bhstep', d.폰));
+          det.appendChild(el('div', 'bhsub', '폰으로 받기'));
+          d.폰.forEach(function (s, n) {
+            det.appendChild(el('div', 'bhstep', (n + 1) + '. ' + s));
+          });
+          if (d.폰메모) det.appendChild(el('div', 'bhmemo', d.폰메모));
+        }
+        if (d.pc) {
+          det.appendChild(el('div', 'bhsub', 'PC 로 받기'));
+          d.pc.forEach(function (s, n) {
+            det.appendChild(el('div', 'bhstep', (n + 1) + '. ' + s));
+          });
         }
       } else {
         /* ★ 확인 안 한 은행은 단계를 안 쓴다. 여기에 한 줄이라도 추측을 적으면
@@ -7745,14 +7921,20 @@ function drawBankHelp(host) {
       }
       box.appendChild(det);
     }
-    box.appendChild(el('div', 'bh3',
-      '폰만 있으시면, PC 가 있는 분께 한 번만 부탁해 받아두시면 됩니다.'));
+    /* ★ 96차 ④(라). 여기까지 읽고도 못 찾으시는 분이 실제로 계셨다.
+       그때 갈 곳이 없으면 거기서 끝난다 — 사람에게 닿는 자리를 둔다 */
+    var 물음 = el('div', 'bh3',
+      '못 찾으시면 카카오채널로 물어봐주세요. 쓰시는 은행 화면 보고 알려드리겠습니다. ');
+    물음.appendChild(kakaoAsk('카카오채널로 물어보기'));
+    box.appendChild(물음);
     box.appendChild(el('div', 'bh3',
       '파일은 저희 서버로 가지 않으니 카톡으로 받으셔도 됩니다.'));
   }
   host.appendChild(box);
 }
-var UP_HELP = { open: false, bank: null };
+/* ★ 96차 ④(가). 처음부터 펴둔다. 오늘 확인된 대로 여기가 제일 큰 벽인데,
+   접어두면 있는 줄도 모르신다. 접는 것은 그대로 된다 */
+var UP_HELP = { open: true, bank: null };
 function redrawBankHelp() {
   var host = document.getElementById('bankhelp');
   if (!host) return;
@@ -7868,8 +8050,8 @@ function handleFiles(fileList) {
       if (one.fail) {
         /* ★ 50차 ②. 열 이름을 목록 화면까지 들고 간다 —
            그게 있어야 「왜 못 읽었나」를 그 자리에서 펼 수 있다 */
-        PENDING.push({ name: one.name, bad: failWhy(one.fail),
-                       why: one.fail, found: one.found });
+        PENDING.push({ name: one.name, bad: failWhy(one.fail, one.pdfBank),
+                       why: one.fail, found: one.found, pdfBank: one.pdfBank || null });
         /* ★ 92차 ⑤. PDF 는 왜 못 읽었는지를 기록에 남긴다 —
            어느 은행 양식을 먼저 넣어야 하는지 알 길이 이것뿐이다.
            파일 이름은 안 남긴다 (지금까지의 원칙 그대로) */
@@ -7924,7 +8106,7 @@ function handleFiles(fileList) {
    은행이 확장자만 .xls 로 붙여 CSV·HTML 을 주는 일이 흔하다 —
    파일 고르기의 accept 는 확장자만 보므로 그대로 통과한다 */
 var FIX_TIP = '은행 앱에서 엑셀(.xlsx)로 다시 받아주세요';
-function failWhy(w) {
+function failWhy(w, bank) {
   if (w === 'notxlsx') return '엑셀 파일이 아닙니다 — ' + FIX_TIP;
   /* ★ 50차 ③. 머리글은 다 맞는데 줄이 0건인 파일이 있다.
      조회를 안 하고 「내려받기」만 누르면 그렇게 나온다.
@@ -7937,12 +8119,59 @@ function failWhy(w) {
      할 수 있는 것(엑셀)과, 우리가 이 양식을 받을 길(카카오채널)을 같이 말한다 */
   if (w === 'pdf_locked') return '비밀번호를 안 넣으셔서 못 열었습니다 — 다시 올려주시면 한 번 더 여쭙겠습니다';
   if (w === 'pdf_image') return '이 PDF 는 글자가 없는 사진이라 읽을 수 없어요 — 엑셀(.xlsx)로 올려주시거나, 카카오채널로 문의해주시면 도와드리겠습니다';
-  if (w === 'pdf_no_header') return '이 은행 PDF 는 아직 안 읽혀요 — 카카오채널로 이 파일 보내주시면 바로 맞춰서 읽어드리겠습니다';
-  if (w === 'pdf_open') return '이 PDF 를 여는 데 실패했습니다 — 카카오채널로 이 파일 보내주시면 바로 확인해서 읽어드리겠습니다';
+  /* ★ 94차 ③. 나머지 셋은 은행을 알아봤는지, 그 은행이 폰에서 되는지에 따라
+     해야 할 말이 다르다. 한 문장으로 뭉뚱그리면 절반은 틀린 말이 된다 */
+  if (w === 'pdf_no_header' || w === 'pdf_open' || w === 'pdf_total') return pdfAskWhy(w, bank);
+  return '읽지 못했습니다 — ' + FIX_TIP;
+}
+/* ── 94차 ② · 폰 앱에서 거래내역 파일이 나오는 은행과 안 나오는 은행 ──────
+   2026-09-18 은행 고객센터에 직접 전화해서 확인한 것이다. 추측으로 늘리지 않는다.
+   나중에 통화로 바뀌면 이 두 줄만 고치면 안내가 전부 따라 바뀐다.
+   ★ 개인사업자 통장도 개인계좌와 같은 앱을 쓴다 — 따로 가르지 않는다 */
+var PHONE_OK   = ['국민', '신한', '우리', '새마을금고'];      /* 폰 앱에서 파일이 나온다 */
+var PHONE_NONE = ['하나', '농협', '기업', 'JT친애', '예가람']; /* PC 인터넷뱅킹에서만 나온다 */
+/* 화면에는 사람이 부르는 이름을 쓴다. 'JT친애' 라고 적으면 무슨 말인지 모르신다 */
+var BANK_FULL = {
+  '국민': '국민은행', '신한': '신한은행', '우리': '우리은행', '새마을금고': '새마을금고',
+  '하나': '하나은행', '농협': '농협은행', '기업': '기업은행',
+  'JT친애': 'JT친애저축은행', '예가람': '예가람저축은행'
+};
+/* 받침이 있으면 「은」, 없으면 「는」. 「하나은행은」 / 「새마을금고는」 */
+function 은는(s) {
+  var c = String(s || '').charCodeAt(String(s).length - 1) - 0xac00;
+  if (!(c >= 0 && c <= 11171)) return '는';
+  return (c % 28) ? '은' : '는';
+}
+/* ★ 94차 ③. 사장님은 자기 은행이 폰에서 되는지 모르신다.
+   그걸 알려드리는 것 자체가 값이다 — 되는 은행께는 「알려주시면 맞춰드린다」,
+   안 되는 은행께는 「PC 에서 엑셀로 받으시라」가 맞는 말이다.
+   은행을 못 알아봤으면 둘 다 말하지 않는다 */
+function pdfAskWhy(w, bank) {
+  var 이름 = bank ? (BANK_FULL[bank] || bank) : null;
+  if (이름 && PHONE_NONE.indexOf(bank) !== -1) {
+    /* 우리가 이 양식을 넣어드려도 이분들껜 소용이 없다 — 폰에서 파일 자체가 안 나온다.
+       그래서 세 경우 모두 할 수 있는 길 하나만 정확히 알려드린다 */
+    return 이름 + 은는(이름) + ' 폰 앱에서 거래내역 파일이 안 나옵니다 — PC 인터넷뱅킹에서 엑셀(.xlsx)로 받으시면 바로 읽어드립니다';
+  }
+  if (이름 && PHONE_OK.indexOf(bank) !== -1) {
+    /* 폰으로 받으실 수 있는데 우리가 못 읽는 것뿐이다. 엑셀로 가시라고 하면 안 된다 */
+    if (w === 'pdf_no_header') return 이름 + ' PDF 는 아직 안 읽혀요 — 카카오채널로 알려주시면 바로 맞춰서 읽어드리겠습니다';
+    if (w === 'pdf_open') return '이 ' + 이름 + ' PDF 를 여는 데 실패했습니다 — 카카오채널로 알려주시면 바로 확인해서 읽어드리겠습니다';
+    return '이 ' + 이름 + ' PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 카카오채널로 알려주시면 바로 맞춰드리겠습니다';
+  }
+  /* 은행을 못 알아봤다. 어느 쪽인지 모르니 둘 다 열어두고 은행 이름을 여쭌다 */
+  if (w === 'pdf_no_header') return '이 은행 PDF 는 아직 안 읽혀요 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 이 은행도 준비하겠습니다';
+  if (w === 'pdf_open') return '이 PDF 를 여는 데 실패했습니다 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 확인하겠습니다';
   /* ★ 92-2차 ③. 못 읽은 것이 아니라 「읽었는데 은행이 적은 합계와 안 맞는다」는 뜻이다.
      그대로 보여드리면 틀린 숫자가 되므로 여기서 멈춘다 */
-  if (w === 'pdf_total') return '이 PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 카카오채널로 이 파일 보내주시면 바로 맞춰드리겠습니다';
-  return '읽지 못했습니다 — ' + FIX_TIP;
+  return '이 PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 맞춰두겠습니다';
+}
+/* ★ 94차 ④. 카카오 링크 문구도 무리에 맞춘다.
+   「이 파일 보내기」는 뺀다 — 사장님 거래내역을 우리가 받을 이유가 없다 */
+function kakaoLabel(bank) {
+  if (bank && PHONE_OK.indexOf(bank) !== -1) return '카카오채널로 알려주기';
+  if (bank && PHONE_NONE.indexOf(bank) !== -1) return '카카오채널로 문의하기';
+  return '카카오채널로 은행 이름 알려주기';
 }
 /* ★ 92차 ⑥. 카카오채널로 가는 한 자리. 말은 늘리지 않고 링크만 둔다 —
    못 읽은 양식은 사장님이 보내주셔야 넣을 수 있다 */
@@ -7982,10 +8211,12 @@ function drawFileList() {
           '은행에서 조회 기간을 정하고 「조회」를 누른 뒤에 내려받아주세요. 기간은 1년으로 잡으시면 됩니다.'));
       } else if (String(b.why).indexOf('pdf_') === 0) {
         /* ★ 92차 ⑤. PDF 는 「왜 못 읽었나」(열 이름)를 펼 것이 없다 —
-           대신 이 양식을 우리에게 보내주실 자리를 둔다. 보내주시면 넣어드린다 */
+           대신 우리에게 말을 거실 자리를 둔다.
+           ★ 94차 ④. 문구는 은행 무리에 맞춘다 (kakaoLabel).
+             비밀번호 문제는 다시 올리시면 되는 일이라 링크를 안 붙인다 */
         if (b.why !== 'pdf_locked') {
           var pk = el('div', 'fmeta');
-          pk.appendChild(kakaoAsk('카카오채널로 이 파일 보내기'));
+          pk.appendChild(kakaoAsk(kakaoLabel(b.pdfBank)));
           nm.appendChild(pk);
         }
       } else {
