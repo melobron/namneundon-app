@@ -1276,6 +1276,11 @@
                   width:38px;padding:5px 0;font-family:inherit;font-size:calc(12.5*var(--fu));
                   color:var(--ink);cursor:pointer}
   .duedays button.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:700}
+  /* ★ 101차 ①. 결과 직전 한 질문. 카드 안 1~28 격자와 같은 모양을 쓴다 (49차) */
+  .ddwrap{max-width:560px;margin:0 auto}
+  .ddq{font-size:calc(17*var(--fu));font-weight:700;line-height:1.5;margin:18px 0 6px}
+  .ddsub{color:var(--gray);font-size:calc(13*var(--fu));line-height:1.6;margin-bottom:14px}
+  .ddgo{margin-top:20px}
   .orow.sidebox .lab,.orow.sidebox .v{color:var(--gray)}
   /* ★ 54차 ④. 1년치 표에서는 이 줄이 빨강이다. 한 화면 안에서 이름과 숫자가,
      두 화면 사이에서 같은 줄이 서로 다른 색이면 안 된다 */
@@ -1988,6 +1993,9 @@
   <div id="up-cats" hidden></div>
   <input type="file" id="pickfile" accept=".json,application/json" hidden>
   <div id="up-onboard" hidden></div>
+  <div id="up-duedate" hidden>
+    <div class="ddwrap"></div>
+  </div>
   <div id="up-done" hidden></div>
 </div></div>
 
@@ -6637,7 +6645,10 @@ function foldChip(open) {
   return el('span', 'foldchip', open ? '접기 ▴' : '자세히 ▾');
 }
 function upShow(which) {
-  ['up-trade', 'up-pick', 'up-files', 'up-name', 'up-owner', 'up-cats', 'up-onboard', 'up-done'].forEach(function (id) {
+  /* ★ 101차 ①. up-duedate 를 이 목록에 같이 넣는다 — 여기 없으면
+     upShow('up-duedate') 가 다른 화면만 감추고 정작 이 화면은 안 켠다 */
+  ['up-trade', 'up-pick', 'up-files', 'up-name', 'up-owner', 'up-cats', 'up-onboard',
+   'up-duedate', 'up-done'].forEach(function (id) {
     document.getElementById(id).hidden = (id !== which);
   });
   var topImage = document.getElementById('topimage');
@@ -13325,11 +13336,93 @@ function viewableMonth(months, notThis) {
   return null;
 }
 
+/* ★ 101차 ①. 지난 3달에 일자별로 제일 큰 돈이 나간 날.
+   기본값을 여기서 잡아 대표님은 확인만 하시면 되게 한다.
+   ★ domOutflow 는 이미 있는 함수다. 새로 세지 않는다 */
+function bigOutDay(months, m) {
+  var dom = null;
+  try { dom = domOutflow(months, m, FC_MIN_MONTHS); } catch (e) { return null; }
+  if (!dom || dom.n < FC_MIN_MONTHS) return null;
+  var best = null, bestV = 0;
+  for (var d = 1; d <= 28; d++) {                 /* 29~31 은 없는 달이 있어 뺀다 */
+    var v = dom.avg[d] || 0;
+    if (v > bestV) { bestV = v; best = d; }
+  }
+  return best;
+}
+/* ★ 101차 ①. 이 매장에 한 번만 묻는다. 한 번 답하시면 다시 안 묻는다 —
+   카드를 펼치면 언제든 바꾸실 수 있다 */
+function needDueAsk() {
+  if (!UP || UP.demo) return false;
+  if (UP.dueAsked) return false;
+  var o = null;
+  try { o = loadPicks(UP.store); } catch (e) { }
+  if (o && o.목표일) return false;                /* 저장통에 이미 답이 있다 */
+  return true;
+}
+function drawDueAsk(months) {
+  var host = document.querySelector('#up-duedate .ddwrap');
+  if (!host) return;
+  host.innerHTML = '';
+  var m = UP.month && months.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(months);
+  var 권함 = bigOutDay(months, m);
+  var 고른날 = 권함 || dueDay();
+  document.getElementById('uptitle').textContent = '한 가지만 여쭙겠습니다';
+
+  host.appendChild(el('div', 'ddq', '제일 큰 돈이 며칠에 나가시나요?'));
+  /* ★ 왜 묻는지 한 줄. 이유를 안 적으면 그냥 절차가 된다 */
+  host.appendChild(el('div', 'ddsub',
+    '그날까지 잔액이 어떻게 흐르는지 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'));
+  /* ★ 지어내지 않는다. 자료로 찾은 것이 있을 때만 근거를 적는다 */
+  if (권함) {
+    host.appendChild(el('div', 'ddsub',
+      '지난 3달에는 ' + 권함 + '일에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'));
+  }
+  var days = el('div', 'duedays');
+  for (var i = 1; i <= 28; i++) {
+    (function (n) {
+      var b = el('button', n === 고른날 ? 'on' : '', n + '');
+      b.type = 'button';
+      b.addEventListener('click', function () { 고른날 = n; drawDueAsk2(host, days, n); });
+      days.appendChild(b);
+    })(i);
+  }
+  host.appendChild(days);
+
+  var row = el('div', 'ddgo');
+  var go = el('button', 'b on big', '이대로 보기');
+  go.type = 'button';
+  go.addEventListener('click', function () {
+    setDueDay(고른날);
+    UP.dueAsked = true;
+    savePicks();
+    showResult();
+  });
+  row.appendChild(go);
+  host.appendChild(row);
+  upShow('up-duedate');
+}
+/* 눌린 날만 바꿔 그린다 — 화면을 통째로 다시 그리면 스크롤이 튄다 */
+function drawDueAsk2(host, days, n) {
+  var bs = days.querySelectorAll('button'), i;
+  for (i = 0; i < bs.length; i++) bs[i].className = (i + 1 === n) ? 'on' : '';
+}
+
 function showResult() {
   utStop();                      /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
   PAGE_DEMO = !!(UP && UP.demo);
   syncCloseLabel();
   syncUpOpen();
+  /* ★ 101차 ①. 이 매장에 아직 안 물어봤으면 한 가지만 먼저 여쭙는다.
+     ★ 한 번만이다. 답하시면 UP.dueAsked 와 저장통(목표일)이 둘 다 남는다.
+     ★ 예시 화면에서는 안 묻는다 — 남의 가게 자료에 목표일을 정하는 것이 된다.
+     ★ 되살린 매장(저장통에 목표일이 있는 곳)도 안 묻는다 */
+  if (needDueAsk()) {
+    var ms0 = monthList();
+    UP.month = UP.month && ms0.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(ms0);
+    drawDueAsk(ms0);
+    return;
+  }
   document.getElementById('uptitle').textContent = '남는돈';
   upShow('up-done');
   closeUpPanel();
@@ -14920,6 +15013,57 @@ function dueCard() {
   }
   return now;
 }
+/* ★ 101차 ②. 오늘부터 목표일까지 하루씩 잔액을 그려보고 제일 낮은 날을 찾는다.
+   ★ 총액은 카드와 한 원도 안 다르게 맞춘다. 카드가 「들어올 4,473만 · 나갈 6,157만」인데
+     곡선 끝이 다른 수면 한 화면에서 두 숫자가 싸운다. 그래서 새로 세지 않고,
+     카드가 낸 총액을 과거의 「모양」대로 날마다 나누기만 한다.
+       하루 입금 = dowInflow[그 요일] × (카드의 들어올 ÷ 요일합)
+       하루 출금 = domOutflow[그 날짜] × (카드의 나갈 ÷ 날짜합)
+     이러면 곡선을 다 더하면 반드시 카드의 총액이고, 끝값은 카드의 예상 잔액이다.
+   ★ 「바닥」의 뜻은 58차 ⑦-1 그대로 쓴다 — 잔액이 그날 하루치 지출보다 적어진 것.
+     앱 안에 「바닥」의 정의가 둘이면 안 된다.
+   ★ 자료가 모자라면 아무것도 안 내놓는다 (null). 지어내지 않는다 */
+function dueCurve(months, c) {
+  if (!c || c.잔액 === null) return null;
+  var t = dueTable();
+  if (!t || !t.n) return null;
+  var 시작 = dayNum(c.오늘), 끝 = dayNum(c.목표);
+  if (끝 - 시작 <= 1) return null;                 /* 하루짜리는 곡선이 뜻이 없다 */
+  var m0 = c.오늘.slice(0, 7);
+  var dom = null;
+  try { dom = domOutflow(months, m0, FC_MIN_MONTHS); } catch (e) { return null; }
+  if (!dom || dom.n < FC_MIN_MONTHS) return null;
+  var dow = dowInflow(dayMs(c.오늘));
+
+  /* 하루씩 돌며 모양의 합을 먼저 구한다 */
+  var 날 = [], 요일몫 = [], 날짜몫 = [], 요일합 = 0, 날짜합 = 0;
+  for (var d = 시작 + 1; d <= 끝; d++) {
+    var dt = new Date(d * 86400000);
+    var wi = dt.getUTCDay(), dd = dt.getUTCDate();
+    var a = dow[wi] || 0, b = dom.avg[dd] || 0;
+    날.push(d); 요일몫.push(a); 날짜몫.push(b);
+    요일합 += a; 날짜합 += b;
+  }
+  if (!날.length) return null;
+
+  /* 하루치 지출 — 「바닥」의 잣대. 오늘 자리의 것을 그대로 쓴다 (58차 ⑦-1) */
+  var 하루치 = t.daily[t.n - 1] || 0;
+  var bal = c.잔액, 최저 = null, 최저날 = null, 점 = [];
+  for (var i = 0; i < 날.length; i++) {
+    var 입 = 요일합 > 0 ? 요일몫[i] / 요일합 * c.들어올 : c.들어올 / 날.length;
+    var 출 = 날짜합 > 0 ? 날짜몫[i] / 날짜합 * c.나갈 : c.나갈 / 날.length;
+    bal = bal + 입 - 출;
+    점.push({ 날: 날[i], 잔액: bal });
+    if (최저 === null || bal < 최저) { 최저 = bal; 최저날 = 날[i]; }
+  }
+  var at = new Date(최저날 * 86400000);
+  var 날글 = (at.getUTCMonth() + 1) + '월 ' + at.getUTCDate() + '일';
+  return { 점: 점, 최저: Math.round(최저), 최저날: 날글,
+           하루치: Math.round(하루치),
+           바닥: 최저 < 하루치,
+           모자람: 최저 < 0 ? Math.round(-최저) : 0,
+           끝: Math.round(점[점.length - 1].잔액) };
+}
 /* 이 매장은 달의 어느 구간에 돈이 제일 많이 나갔나 — 목표일을 고르는 자리에 같이 놓는다 */
 function dueSpread() {
   var t = dueTable();
@@ -14943,8 +15087,12 @@ function dueSpread() {
 /* ── 57차 ⑦ · 화면 ──────────────────────────────────────────
    접히면 「9월 10일까지 모자랄 가능성 53%」와 근거 한 줄,
    펼치면 잔액·들어올 돈·나갈 돈·예상 잔액 네 줄.
-   ★ 「모자랍니다」라고 단정하지 않는다. 늘 「가능성 ○%」다.
-   ★ 화면 금지어(예측·전망·추정)는 그대로 지킨다 — 여기 한 글자도 안 쓴다 */
+   ★ 「모자랍니다」라고 단정하지 않는다. 늘 「가능성 ○%」나 「~할 수 있습니다」다.
+   ★ 2026-09-19 요한 확정. 「예측·전망·추정」이라는 낱말 금지는 푼다 —
+     마스터 ■2 에 있는 것은 「앞일 단정 금지」지 낱말 금지가 아니었고,
+     금지어 목록(mask.ps1)에도 이 셋은 없었다. 코드 주석만 더 빡빡했다.
+     막는 것은 단정형이다 — 「모자랍니다」·「안전합니다」·「보장」·「확실히」.
+     「모자랄 수 있습니다」·「가능성 12%입니다」는 쓴다 */
 /* ── 86차 ① · 82차 ②를 철회한다 ──────────────────────────────────
    82차 ②는 「모자랄 가능성이 20% 아래면 여유로 보고 카드를 아래로 내린다」였다.
    근거는 「약국은 돈이 모자랄 일이 거의 없고요」(○○ 약사)였고, 고장이 아니라
@@ -15062,12 +15210,35 @@ function drawDueCard(host, months) {
     /* ★ 61차 ②. 「나갈 돈의 N배」를 지웠다. 60차에 접힌 자리의 배수를 없앴는데
        여기 하나가 남아 있었다. 이로써 화면에 「배」 표기는 0건이다 */
     줄(까지 + ' 예상 잔액', c.예상, null, c.예상 < 0 ? '− ' : '');
+    /* ★ 101차 ②. 목표일 한 점만 보면 그 사이에 바닥나는 날을 못 본다.
+       ★ 총액은 위 세 줄과 같다. 어느 날에 몰리는지만 과거 모양으로 나눈 것이다 */
+    var cv = null;
+    try { cv = dueCurve(months, c); } catch (e) { cv = null; }
+    if (cv) {
+      t.appendChild(el('div', 'pnlthin'));
+      줄('제일 낮아지는 날 (' + cv.최저날 + ')', cv.최저, null, cv.최저 < 0 ? '− ' : '');
+    }
     box.appendChild(t);
+    /* ★ 101차 ③. 「0원」보다 「며칠에 얼마가 모자랄 수 있습니다」가 행동이 된다.
+       ★ 단정하지 않는다 — 「모자랍니다」가 아니라 「모자랄 수 있습니다」 */
+    if (cv && cv.모자람 > 0) {
+      box.appendChild(el('div', 'duewhy',
+        cv.최저날 + '에 ' + won(cv.모자람) + '원이 모자랄 수 있습니다'));
+    } else if (cv && cv.바닥) {
+      box.appendChild(el('div', 'duewhy',
+        cv.최저날 + '에 하루치 나가는 돈(' + won(cv.하루치) + '원)보다 적어질 수 있습니다'));
+    }
+    if (cv) {
+      box.appendChild(el('div', 'duewhy',
+        '총액은 위와 같습니다. 지난 3달에 어느 날 몰려 나갔는지로 날마다 나눈 것입니다.'));
+    }
 
     /* 목표일 바꾸기 — 매장마다 돈이 몰려 나가는 자리가 다르다 */
     var pick = el('div', 'duepick');
     var head = el('div', 'duewhy');
-    head.appendChild(document.createTextNode('며칠까지 보시겠습니까 — 지금은 '));
+    /* ★ 101차 ①. 한 앱이 같은 값을 두 이름으로 부르면 안 된다 (47차 ①).
+       묻는 곳(drawDueAsk)과 고치는 곳의 말을 맞춘다 */
+    head.appendChild(document.createTextNode('제일 큰 돈이 나가는 날 — 지금은 '));
     var db = el('button', 'duebtn', day + '일');
     db.type = 'button';
     head.appendChild(db);
@@ -18896,5 +19067,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 100차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 101차</div>
 </body></html>
