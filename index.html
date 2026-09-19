@@ -15212,14 +15212,46 @@ function duePast(t, day, upto) {
   }
   return out;
 }
+/* ★ 102차. 계좌마다 마지막 거래일이 다르면, 제일 이른 쪽에 맞춘다.
+   dueCard 는 「오늘」을 t.n-1(어느 계좌든 거래가 있었던 마지막 날)로 잡았다.
+   계좌가 둘인데 A는 8월 22일까지, B는 7월 15일까지 올리셨다면 오늘이 8월 22일이 되고,
+   B의 잔액은 7월 15일 것이 「지금 계좌 잔액」에 그대로 들어간다.
+   그 사이 B에서 오간 돈은 화면에 아예 없다. 금액이 커질수록 위험한 자리다 —
+   「지금 쓸 수 있는 돈」의 바닥이 되는 숫자다.
+   ★ 「제일 늦은 날」이 아니라 「제일 이른 날」이다 — 모든 계좌가 그날까지는 사실이다.
+   ★ balanceSum 은 한 줄도 안 건드린다. 그쪽은 계좌마다 그 시점까지의 마지막 잔액을
+     따로 잡아 더하는 자리고(36차 4단계) 월별 결과와 검산이 거기 걸려 있다.
+     이번에 바꾸는 것은 dueCard 가 서는 자리 하나뿐이다 */
+function commonAsOf(t) {
+  var n = accCount();
+  if (n <= 1) return t.n - 1;
+  var last = [], a;                     /* 계좌마다 마지막 거래일(dayNum) */
+  for (a = 0; a < n; a++) last[a] = null;
+  UP.rows.forEach(function (r) {
+    var d = dayNum(r.at.slice(0, 10)), i = accOf(r);
+    if (last[i] === null || d > last[i]) last[i] = d;
+  });
+  var 공통 = null;
+  for (a = 0; a < n; a++) {
+    if (last[a] === null) continue;     /* 거래가 한 건도 없는 계좌는 안 센다 */
+    if (공통 === null || last[a] < 공통) 공통 = last[a];
+  }
+  if (공통 === null) return t.n - 1;
+  /* 그 날 이하인 표의 마지막 자리를 찾는다 */
+  for (var i = t.n - 1; i >= 0; i--) if (t.num[i] <= 공통) return i;
+  return 0;
+}
 /* 오늘 자리에서 본 한 장 */
 function dueCard() {
   var t = dueTable();
   if (!t || !t.n) return null;
   var day = dueDay();
-  var i = t.n - 1;                                  /* 오늘 = 자료의 마지막 날 */
+  /* ★ 102차. 오늘 = 모든 계좌가 자료를 가진 마지막 날 (계좌 하나면 예전과 같다) */
+  var i = commonAsOf(t);
   var now = dueProject(t, i, day);
   if (!now || now.배 === null) return null;
+  /* ★ 102차. 기준일이 당겨졌으면 화면에 그 사실을 적는다 */
+  now.공통기준 = (i !== t.n - 1);
   /* ★ 58차 ⑦-3. 구간을 자르지 않는다. 지금 배수와 가장 가까웠던 과거 스무 날을 뽑는다 */
   var past = duePast(t, day, i);
   past.sort(function (a, b) {
@@ -15462,6 +15494,15 @@ function drawDueCard(host, months) {
   box.appendChild(el('div', 'duewhy dueas',
     (기준글 ? '자료 기준일 ' + 기준글.replace(/^\d+년\s*/, '') + ' · ' : '') +
     '분석 종료일 ' + 까지));
+  /* ★ 102차. 계좌마다 마지막 거래일이 다르면 그 사실을 말한다. 같으면 안 나온다.
+     ★ 「○○은행이 오래됐습니다」처럼 계좌를 지목하지 않는다 —
+       계좌 이름이 「계좌 2」인 경우가 있어 지목해도 뜻이 없다.
+     ★ 단정하지 않는다. 사실만 적는다 */
+  if (c.공통기준) {
+    box.appendChild(el('div', 'duewhy dueas',
+      '계좌마다 마지막 거래일이 달라, 모든 계좌에 자료가 있는 ' +
+      (+c.오늘.slice(5, 7)) + '월 ' + (+c.오늘.slice(8, 10)) + '일을 기준으로 계산했습니다.'));
+  }
   box.appendChild(top);
 
   /* ★ 60차 ④. 접힌 자리에는 바로 알아듣는 문장 하나만 둔다.
@@ -19402,5 +19443,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 101차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 102차</div>
 </body></html>
