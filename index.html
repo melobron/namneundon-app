@@ -1289,8 +1289,12 @@
   /* ★ 110차 ①. 23px·800 은 앱에서 제일 큰 글씨였다 (화면 제목 17px, 계좌 순이익 14px).
      18px·700 으로 낮춘다. 구분은 여백과 배경으로 낸다 — 더 키우지 않는다.
      ★ 폭이 360px 이든 1024px 이든 18px 그대로다 */
-  .dueres{flex:1 1 auto;min-width:0;padding:9px 12px;background:var(--paper);
-          border:1px solid var(--line);border-radius:var(--rad)}
+  /* ★ 111차 ⑥. PC 에서 상자가 폭을 다 써 금액이 왼쪽에 외따로 붙었다.
+     420px 은 시안값이다 — 폰에서는 부모 폭이 좁으면 좁은 쪽을 따른다 */
+  .dueres{flex:1 1 auto;min-width:0;max-width:420px;padding:9px 12px;
+          background:var(--paper);border:1px solid var(--line);border-radius:var(--rad)}
+  /* ★ 111차 ⑤. 아이콘이 없으면 왼쪽 자리도 비우지 않는다 */
+  .duecard.noicon{padding-left:15px}
   .duereslab{font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
   .duresnum{margin-top:2px;font-size:calc(18*var(--fu));font-weight:700;
             letter-spacing:-.01em;line-height:1.25;color:var(--ink);
@@ -6890,7 +6894,12 @@ function drawStart() {
            날짜와 날수는 사실이라 언제 보여줘도 거짓이 아니다. 1일만 지나도 같은 모양이다.
            재촉이 되지 않게 하는 것은 경계가 아니라 문장이 한다.
          ★ 경고색도 팝업도 안 쓴다. 금액도 안 쓴다 (마스터 ■2-1 #4) */
-      var 분석날 = lastRunDay(k.name) || k.day || '';
+      /* ★ 111차 ⑦. nd_lastrun 이 없으면 이 줄을 아예 안 그린다.
+         105차 이전에 저장된 매장은 분석 완료일이 없어 저장일이 대신 나왔다 —
+         이름은 「마지막 분석」인데 값은 저장한 날이라 틀린 말이었다.
+         저장일을 보여줄 다른 까닭이 없으므로 새 설명을 만들지 않는다.
+         다시 분석하시면 그때부터 실제 분석 완료일이 나온다 */
+      var 분석날 = lastRunDay(k.name) || '';
       if (분석날) {
         var 지난 = daysSince(분석날);
         var run = el('div', 'gsrun');
@@ -7317,12 +7326,30 @@ function openUpPanel() {
      62-2차 ⑤에서 시작 화면에 한 것과 같은 방법으로 아예 감춘다 */
   showDemoBehind(false);
 }
+/* ★ 111차 ③. 「분석이 끝난 내 결과」가 있는가 — 단추 이름과 목적지가 같이 본다.
+   파일을 올린 것만으로는 아니다. 거래처 확인까지 끝나 결과가 그려진 판이어야 한다 */
+function 내결과있나() {
+  return !!(UP && !UP.demo && UP.payees && UP.rows && UP.rows.length);
+}
 function closeUpPanel() {
   document.getElementById('up').classList.remove('on');
   document.body.style.overflow = '';
+  /* ★ 111차 ③. 나가는 곳을 이름과 맞춘다.
+     예전에는 늘 showDemoBehind(true) 라, 「← 첫 화면으로」가 남의 가게 예시 숫자가
+     뜨는 화면으로 갔다 — 내 자료가 사라진 줄 아신다.
+     ★ 예시 사업장은 일부러 「예시 보기」를 누를 때만 연다 */
+  if (내결과있나()) {
+    var w0 = document.getElementById('welcome');
+    if (w0) w0.hidden = true;
+    showDemoBehind(true);           /* 내 결과 화면을 되살린다 */
+    var r0 = document.getElementById('up-result');
+    if (r0) r0.hidden = false;
+    syncUpOpen();
+    return;
+  }
   /* 시작 화면을 보고 계신 중이면 그대로 둔다 — 거기서도 예시는 안 보여야 한다 */
   var w = document.getElementById('welcome');
-  if (!w || w.hidden) showDemoBehind(true);
+  if (!w || w.hidden) { try { drawStart(); } catch (e) { } }
   syncUpOpen();
 }
 /* ★ 64-8. 이미 내 거래내역을 보고 있는데 오른쪽 위에 「내 거래내역 올려보기」가
@@ -11839,7 +11866,7 @@ function goalRestText() {
      「하나에」가 어디에 걸리는지 읽히지 않는다. 먼저 결론을 말하고 근거를 뒤에 붙인다.
      만원 단위로 올려 말한다 — 넘겨도 된다는 말이라 올림이 안전한 쪽이다 */
   var man = Math.ceil(biggest / 10000) * 10000;
-  return '남은 곳들은 다 자잘합니다 — 가장 큰 곳도 ' + manwon(man) + '이 안 됩니다';
+  return '남은 곳들은 다 자잘합니다 — 가장 큰 곳도 ' + won(man) + '원이 안 됩니다';
 }
 
 function goalLine() {
@@ -13658,11 +13685,14 @@ function grownPayees(d, m, months) {
 var PAGE_DEMO = true;
 function syncCloseLabel() {
   var b = document.getElementById('upclose');
-  /* ★ 109차 ⑤. 「예시 화면으로」는 처음 오신 분께 「예시를 보러 간다」로 읽힌다.
-     어디로 나가는지를 적는다. 화살표는 글자로 넣는다 — 새 아이콘을 안 만든다.
-     ★ 하는 일은 지금과 같다. 화면 이력을 새로 만들지 않는다 —
+  /* ★ 111차 ③. 이름과 목적지를 맞춘다.
+     109차에 이름만 고쳤더니 「← 첫 화면으로」가 예시 사업장 화면으로 갔다 —
+     closeUpPanel() 이 showDemoBehind(true) 를 부르기 때문이다.
+     ★ 분석이 끝난 내 결과가 있을 때만 「내 결과로 돌아가기」다.
+       파일을 올렸다는 이유만으로는 아니다 — 아직 거래처를 고르는 중이면 시작 화면이다.
+     ★ 하는 일은 closeUpPanel 이 정한다. 화면 이력을 새로 만들지 않는다 —
        읽어둔 파일(PENDING)과 이미 정하신 분류는 그대로 남는다 (7177줄 옛 버그) */
-  if (b) b.textContent = PAGE_DEMO ? '← 첫 화면으로' : '← 결과 화면으로';
+  if (b) b.textContent = 내결과있나() ? '내 결과로 돌아가기' : '← 첫 화면으로';
 }
 
 /* ── 41차 1번 (가) · 결과를 처음 열 때 어느 달을 보여드리는가 ──
@@ -13829,6 +13859,9 @@ function manwon(v) {
   return (m < 0 ? '−' : '') + won(Math.abs(m)) + '만원';
 }
 /* + 는 파랑, − 는 빨강. 이 앱 어디서나 같다 */
+/* ★ 111차 ④. 화면 금액은 원 단위다. 색 규칙은 manwonB 와 같다 —
+   + 는 파랑, − 는 빨강. manwon()·manwonB() 는 안 지운다 */
+function wonB(v) { return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', won(v) + '원'); }
 function manwonB(v) {
   return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', manwon(v));
 }
@@ -15753,7 +15786,17 @@ function drawDueCard(host, months) {
   아이콘.appendChild(svgEl('rect', { x: 17.9, y: 16, width: 4.2, height: 11, rx: 2.1,
     fill: 'currentColor' }));
   아이콘.appendChild(svgEl('circle', { cx: 20, cy: 32, r: 2.4, fill: 'currentColor' }));
-  box.appendChild(아이콘);
+  /* ★ 111차 ⑤. 구체적인 주의 사유가 있을 때만 붙인다.
+     예전에는 조건 없이 늘 붙어서, 여유가 넉넉한 매장에도 경고 표시가 섰다 —
+     늘 켜져 있는 경고는 아무 말도 안 하는 것과 같다.
+     ★ 「그냥 예상값이라서」는 사유가 아니다.
+     ★ 카드 테두리 색 규칙(c.비율)은 그대로다. 아이콘의 유무만 바꾼다.
+     ★ 아이콘을 뺀 자리는 왼쪽 여백도 같이 줄인다 (.duecard.noicon) */
+  var 주의 = !!(cv && (cv.모자람 > 0 || cv.바닥)) ||
+             !!c.공통기준 || !!잘림줄 ||
+             !!(표본줄 && cv && cv.최저날수 >= c.셈줄수);
+  if (주의) box.appendChild(아이콘);
+  else box.classList.add('noicon');
 
   /* ★ 100차 ③. 86차 ①의 「늘 펼친 채로」를 뒤집는다 (2026-09-19 요한).
      자리는 맨 위 그대로다 — 무슨 카드인지는 접혀도 아이콘과 색과 % 로 보인다.
@@ -15795,17 +15838,29 @@ function drawDueCard(host, months) {
      ★ 날짜가 같아도 금액이 다르면 반드시 갈라 적는다.
        하나는 「입금 전」 최저이고 하나는 그날 끝 잔액이다. 뜻이 다르다 */
   var 겹침 = !!(cv && cv.최저날수 === dayNum(c.목표) && cv.최저 === c.예상);
+  /* ★ 111차 ①. 자료 기준일 잔액은 예상이 아니라 자료에 적힌 실제 값이다.
+     「최저 예상 잔액」이라고 부르지 않는다. 이름과 금액을 윗줄에, 뜻을 아랫줄에 둔다.
+     ★ 111차 ④㉮. 금액을 원 단위로 적는다. 폰에서 두 줄이 되는 것을 허용한다 —
+       한 줄에 맞추려고 글씨를 줄이거나 뜻을 생략하지 않는다.
+     ★ 같은 잔액이 이미 결과 상자에 보이면 금액을 두 번 세우지 않고 뜻만 적는다 */
   if (cv && !겹침) {
+    var 같은값 = 기준날인가 && cv.최저 === c.예상;
     var low = el('div', 'duelow');
     var lowlab = el('div', 'duelab');
     lowlab.appendChild(document.createTextNode(
       cv.모자람 > 0 ? cv.최저날 + '에 모자랄 수 있습니다'
-      : 기준날인가 ? '지금보다 잔액이 낮아지는 날은 없을 것으로 예상됩니다'
-                   : cv.최저날 + ' 최저 예상 잔액 (입금 전)'));
+      : 기준날인가 ? '자료 기준일 잔액'
+                   : cv.최저날 + ' 최저 예상 잔액 · 입금 전'));
     low.appendChild(lowlab);
-    low.appendChild(el('div', 'duepct money' + 색,
-      '약 ' + manwon(cv.모자람 > 0 ? cv.모자람 : cv.최저)));
+    if (!같은값) {
+      low.appendChild(el('div', 'duepct money' + 색,
+        won(cv.모자람 > 0 ? cv.모자람 : cv.최저) + '원'));
+    }
     box.appendChild(low);
+    if (기준날인가) {
+      box.appendChild(el('div', 'duewhy dueas',
+        '분석 기간에는 이보다 낮아지지 않을 것으로 예상됩니다'));
+    }
   }
   /* ★ 101차. 자료 기준일과 분석 종료일을 늘 보이게 둔다. 접혀 있을 때도 안 감춘다.
      ★ 「오늘」이라고 쓰지 않는다 — 자료의 기준일이지 오늘이 아니다.
@@ -15929,9 +15984,9 @@ function drawDueCard(host, months) {
            그때는 숫자를 다시 적지 않는다 — 접힌 카드의 최저 줄이 이미 말했고,
            여기서 또 적으면 같은 값이 화면에 두 번 선다 */
       box.appendChild(el('div', 'duewhy', 기준날인가
-        ? '예상한 입금과 지출이 그대로 이뤄질 경우, 분석 종료일까지 잔액이 자료 기준일보다 낮아지는 날은 없을 것으로 예상됩니다.'
-        : '예상한 입금과 지출이 그대로 이뤄질 경우, ' + cv.최저날 +
-          '에는 당일 출금 후 입금 전 잔액이 약 ' + manwon(cv.최저) + '으로 예상됩니다.'));
+        ? '예상한 입출금이 그대로 이뤄질 경우, 분석 종료일까지 잔액이 자료 기준일보다 낮아지지 않을 것으로 예상됩니다.'
+        : '예상한 입출금이 그대로 이뤄질 경우, ' + cv.최저날 +
+          '에는 당일 출금 후 입금 전 잔액이 ' + won(cv.최저) + '원으로 예상됩니다.'));
       /* ★ 110차 ②. 「예비비」를 안 부른다 — 정하는 자리가 아직 앱에 없다.
          대신 이 숫자가 무엇이 아닌지를 한 문장으로 적는다 */
       box.appendChild(el('div', 'duewhy',
@@ -17069,9 +17124,9 @@ function drawResultInner(months) {
        ★ 글자는 한 글자도 안 바꾼다. 마디만 나눈다 */
     var er = el('div', 'errline tapx');
     er.appendChild(document.createTextNode('▾ 아직 안 정한 ' + won(d.unknownN || 0) + '건 '));
-    er.appendChild(el('b', 'errnum', manwon(unsetAmt)));
+    er.appendChild(el('b', 'errnum', won(unsetAmt) + '원'));
     er.appendChild(document.createTextNode(' 때문에 '));
-    er.appendChild(el('b', 'errnum', manwon(d.lo) + '까지'));
+    er.appendChild(el('b', 'errnum', won(d.lo) + '원까지'));
     er.appendChild(document.createTextNode(' 내려갈 수 있습니다'));
     er.addEventListener('click', function () {
       UP.open = UP.open || {};
@@ -17369,12 +17424,12 @@ function drawResultInner(months) {
     var b1 = el('div', 'resnote');
     var l1 = el('div');
     l1.appendChild(document.createTextNode('아직 안 정한 ' + won(d.unknownN) + '건을 전부 사업에 쓴 돈으로 보면 '));
-    l1.appendChild(manwonB(d.lo));
+    l1.appendChild(wonB(d.lo));
     l1.appendChild(document.createTextNode(','));
     b1.appendChild(l1);
     var l2 = el('div');
     l2.appendChild(document.createTextNode('전부 매출로 보면 '));
-    l2.appendChild(manwonB(d.hi));
+    l2.appendChild(wonB(d.hi));
     l2.appendChild(document.createTextNode('입니다.'));
     b1.appendChild(l2);
     b1.appendChild(el('div', null, '한쪽은 흑자, 한쪽은 적자라 아직 말씀드릴 수 없습니다.'));
@@ -17400,9 +17455,9 @@ function drawResultInner(months) {
       /* 이 자리는 원 단위가 필요 없다 */
       var l3 = el('div');
       l3.appendChild(document.createTextNode('금액만 '));
-      l3.appendChild(manwonB(d.lo));
+      l3.appendChild(wonB(d.lo));
       l3.appendChild(document.createTextNode(' ~ '));
-      l3.appendChild(manwonB(d.hi));
+      l3.appendChild(wonB(d.hi));
       l3.appendChild(document.createTextNode(' 사이에서 달라집니다.'));
       b2.appendChild(l3);
       host.appendChild(b2);
@@ -18073,11 +18128,24 @@ function monNum(m) { return (+m.slice(5, 7)) + '월'; }
    지금 쓰는 자는 아래 CH_ONE(높이)·CH_VW(기준 폭) 둘뿐이고,
    나머지 여백은 그리는 자리에서 바로 정한다 */
 
-/* 눈금 글자 — 만원·억으로 줄인다 */
-function axisTxt(v) {
+/* ★ 111차 ④㉰. 눈금은 자리가 좁아 원 단위를 못 넣는다. 그림 하나에 단위 하나를 정하고
+   그 이름을 축 제목에 적는다 — 축 제목이 없으면 「1」이 1원인지 1억인지 알 수 없다.
+   ★ 이건 그림 공간을 위한 표시 단위다. 계산도, 원 단위로 적는 결과도 안 바꾼다.
+   ★ manwon() 은 안 지운다 — 다른 자리에서 계속 쓴다 */
+function axisUnit(hi) {
+  var a = Math.abs(hi || 0);
+  return a >= 100000000 ? { div: 100000000, name: '억원' }
+       : a >= 10000     ? { div: 10000,     name: '만원' }
+       :                  { div: 1,         name: '원' };
+}
+function axisTxt(v, u) {
   var a = Math.abs(v);
   if (a === 0) return '0';
   var s = v < 0 ? '−' : '';
+  if (u) {
+    var n = a / u.div;
+    return s + (n >= 10 ? Math.round(n) : Math.round(n * 10) / 10);
+  }
   if (a >= 100000000) {
     var 억 = a / 100000000;
     return s + (억 >= 10 ? Math.round(억) : Math.round(억 * 10) / 10) + '억';
@@ -18340,8 +18408,11 @@ function drawProfitChart(host, months, cols, 진행달) {
   var marks = [['kgood', '■ 사업으로 번 돈'], ['kwarn', '■ 사업에 쓴 돈'],
                ['kprof', '— 계좌 순이익']];
   if (연한조각) marks.push(['kest', '■ 아직 덜 정함']);
+  /* ★ 111차 ④㉰. 눈금 단위를 그림 제목에 밝힌다 */
+  var U단위 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));
   /* ★ 77차. 그래프 자체와 범례가 말하는 설명은 반복하지 않는다. */
-  box.appendChild(chHead('달마다 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익', marks, null));
+  box.appendChild(chHead('달마다 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익 (' +
+    U단위.name + ')', marks, null));
   var wrap = el('div', 'chone');
   box.appendChild(wrap);
   host.appendChild(box);
@@ -18366,7 +18437,7 @@ function drawProfitChart(host, months, cols, 진행달) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v);
+      t.textContent = axisTxt(v, U단위);
       svg.appendChild(t);
     });
     var y0 = y(0);
@@ -18450,8 +18521,10 @@ function drawProfitChart(host, months, cols, 진행달) {
   var rgB = axisRange(bLo, bHi);
   var blo = rgB.lo, bhi = rgB.hi, stepB = rgB.step;
   var box2 = el('div', 'chbox');
+  var U단위 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));   /* ★ 111차 ④㉰ */
   /* ★ 60차 ③ (용어규칙 10). 진행 중인 달의 잔액은 「월말」이 아니라 그날까지의 값이다 */
-  box2.appendChild(chHead('월말 계좌 잔액', [['know', '— 계좌 잔액']], null));
+  box2.appendChild(chHead('월말 계좌 잔액 (' + U단위.name + ')',
+    [['know', '— 계좌 잔액']], null));
   var wrap2 = el('div', 'chone');
   box2.appendChild(wrap2);
   host.appendChild(box2);
@@ -18471,7 +18544,7 @@ function drawProfitChart(host, months, cols, 진행달) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v);
+      t.textContent = axisTxt(v, U단위);
       svg.appendChild(t);
     });
     /* ★ 71차 ⑤. 자료 없는 달에서 선을 끊는다 — 이어 그으면 0원까지
@@ -18773,8 +18846,12 @@ function drawDayPanel(host, m, f, months, bal) {
   }
 
   /* 요약 두 숫자는 그림의 막대와 같은 값이다 — 아래 첫 두 갈래의 합이다 */
-  box.appendChild(el('div', 'dcsum',
-    '번 돈 ' + manwon(f.earn[day]) + ' · 쓴 돈 ' + manwon(f.spend[day])));
+  /* ★ 111차 ④㉯. 원 단위로 적는다. 길어지면 항목을 줄바꿈한다 —
+     서로 다른 금액을 긴 한 문장으로 잇지 않는다 */
+  var sumbox = el('div', 'dcsum');
+  sumbox.appendChild(el('div', null, '번 돈 ' + won(f.earn[day]) + '원'));
+  sumbox.appendChild(el('div', null, '쓴 돈 ' + won(f.spend[day]) + '원'));
+  box.appendChild(sumbox);
 
   /* 열 건까지 보이고 「외 N건 보기」로 더 본다 — .rawpeek 가 이미 그렇게 한다 */
   function 더보기(pk, 열쇠, 전체, 몇) {
@@ -18809,7 +18886,7 @@ function drawDayPanel(host, m, f, months, bal) {
     var gn = el('div', 'dcgn', g[1]);
     gn.appendChild(foldChip(폄));
     h.appendChild(gn);
-    h.appendChild(el('div', 'dcga num', manwon(g[2])));
+    h.appendChild(el('div', 'dcga num', won(g[2]) + '원'));
     h.addEventListener('click', function () {
       UP.open = UP.open || {};
       UP.open[접힘] = 폄;
@@ -18857,7 +18934,7 @@ function drawDayPanel(host, m, f, months, bal) {
     var n3 = el('div', 'dcgn', '여기 안 든 것 ' + won(s.rest.length) + '건');
     n3.appendChild(foldChip(open3));
     h3.appendChild(n3);
-    h3.appendChild(el('div', 'dcga num', manwon(restSum)));
+    h3.appendChild(el('div', 'dcga num', won(restSum) + '원'));
     h3.addEventListener('click', function () {
       UP.open = UP.open || {};
       UP.open[열쇠3] = !open3;
@@ -18934,7 +19011,8 @@ function drawDayChart(host, m, d, months) {
   var ticksB = axisTicks(blo, bhi, stepB);
   var LEFT공통 = Math.max(axisLeft(ticksD), axisLeft(ticksB));
 
-  host.appendChild(chHead('일별 흐름', [
+  var U단위 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));     /* ★ 111차 ④㉰ */
+  host.appendChild(chHead('일별 흐름 (' + U단위.name + ')', [
     ['kgood', '■ 사업으로 번 돈'], ['kwarn', '■ 사업에 쓴 돈'], ['kprof', '— 계좌 순이익(이번 달 누적)']
   ], monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
 
@@ -18955,7 +19033,7 @@ function drawDayChart(host, m, d, months) {
         stroke: 'var(--line)', 'stroke-width': v === 0 ? 1.2 : 0.7 }));
       var t = svgEl('text', { x: LEFT - 7, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v);
+      t.textContent = axisTxt(v, U단위);
       svg.appendChild(t);
     });
     /* ★ 84차 ①. 고른 날 띠는 막대 아래에 깐다 — 막대 색을 흐리지 않으려는 것이다 */
@@ -18983,8 +19061,8 @@ function drawDayChart(host, m, d, months) {
        마지막 점 옆에 알약 하나 — 「지금까지 +2,240만」.
        ★ 카드 밖으로 나가지 않게 좌우로 밀어 넣고, 위가 좁으면 아래로 붙인다 */
     var 끝값 = cum[cum.length - 1];
-    var 알약글 = '지금까지 ' + (끝값 < 0 ? '−' : '+') +
-                 won(Math.round(Math.abs(끝값) / 10000)) + '만';
+    /* ★ 111차 ④. 눈금이 아니라 값을 말하는 자리라 원 단위로 적는다 */
+    var 알약글 = '지금까지 ' + (끝값 < 0 ? '−' : '+') + won(Math.abs(끝값)) + '원';
     var pw = Math.ceil(textW(알약글, 11)) + 16, ph = 20;
     var px2 = x(f.last) - pw / 2;
     if (px2 < 1) px2 = 1;
@@ -19013,7 +19091,8 @@ function drawDayChart(host, m, d, months) {
      새 모양을 만들지 않는다.
      ★ 위 「일별 흐름」 바로 아래에 둔다. 거래처를 덜 정해 위 그림이 안 나오면
        여기까지 오지도 않는다 — 위쪽 d.blocked·f.last 검사를 그대로 물려받는다 */
-  host.appendChild(chHead('계좌 잔액', [['know', '— 계좌 잔액']],
+  U단위 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));       /* ★ 111차 ④㉰ */
+  host.appendChild(chHead('계좌 잔액 (' + U단위.name + ')', [['know', '— 계좌 잔액']],
     monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
   var box2 = el('div', 'dchart');
   host.appendChild(box2);
@@ -19033,7 +19112,7 @@ function drawDayChart(host, m, d, months) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v);
+      t.textContent = axisTxt(v, U단위);
       svg.appendChild(t);
     });
     /* ★ 84차 ①. 두 그림에 같이 표시한다 — 어느 쪽을 눌러도 같은 날이 열린다 */
@@ -19784,5 +19863,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.20 · 110차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.20 · 111차</div>
 </body></html>
