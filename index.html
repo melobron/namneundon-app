@@ -443,6 +443,12 @@
   #up.on{display:block}
   .upwrap{max-width:720px;margin:0 auto;padding:0 30px 40px}
   .uptop{display:flex;align-items:center;gap:10px;padding:18px 0 12px}
+  /* ★ 100차 ②. 올려보기 창은 머리줄을 덮는다. 그 안에도 집으로 가는 길을 둔다.
+     ★ 그림을 새로 넣지 않는다 — 머리줄 로고를 그대로 복제해 쓴다. 파일이 안 커진다 */
+  .uplogo{border:0;background:none;padding:0;margin:0;cursor:pointer;
+          flex:0 0 auto;line-height:0;display:block}
+  .uplogo img{height:22px;width:auto;display:block}
+  .uplogo:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .uptitle{flex:1;font-size:calc(17*var(--fu));font-weight:700}
   /* ★ 66-9차 ③. 알약 박스로 통일 */
   .upclose{border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad-pill);
@@ -742,10 +748,19 @@
        430px·130% 에서는 열한 개가 전부 잘렸다. 이름이 잘리면 격자로 맞춘 뜻이 없다.
      ★ 122*fu 는 제일 긴 「그 밖의 은행」이 안 잘리는 폭이다(실측).
        fu 를 곱해 두어야 글씨를 키운 분께는 칸도 같이 넓어진다 */
+  /* ★ 100차 ⑥. auto-fit 이 아니라 auto-fill 이다. auto-fit 은 칸이 모자라면
+     빈 열을 접어버려서, 일곱 칸짜리 무리는 4열·세 칸짜리 무리는 3열이 되고
+     무리마다 칸 폭이 달라진다(실측: 700px 에서 154px 와 208px).
+     auto-fill 은 빈 열을 그대로 두므로 무리가 몇이든 칸 폭이 하나다.
+     99차의 「열과 행이 맞는다」를 무리를 갈라도 지키는 한 낱말이다 */
   .bhbtns{display:grid;gap:8px;margin:13px 0 15px;
-          grid-template-columns:repeat(auto-fit,minmax(calc(122*var(--fu)),1fr))}
+          grid-template-columns:repeat(auto-fill,minmax(calc(122*var(--fu)),1fr))}
   /* 아주 넓은 화면에서 다섯 열로 벌어지면 마지막 줄에 한 칸만 남는다. 넷에서 멈춘다 */
   @media (min-width:820px){ .bhbtns{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  /* ★ 100차 ⑥. 무리 머리말. 아래 단추가 곧 그 무리의 명단이라,
+     줄글로 은행 이름을 또 나열하지 않는다 */
+  .bhgrp{font-weight:700;margin:14px 0 2px;font-size:calc(13*var(--fu));line-height:1.5}
+  .bhgrp.next{margin-top:18px}          /* 두 번째 무리부터는 사이를 더 띄운다 */
   .bhbtns .b{display:flex;align-items:center;gap:8px;justify-content:flex-start;
              width:100%;padding:11px;text-align:left;line-height:1.25;
              font-size:calc(12.5*var(--fu));white-space:nowrap;overflow:hidden}
@@ -1907,15 +1922,16 @@
 
   <div id="up-pick">
     <div id="up-tradenote"></div>
+    <div id="up-mine"></div>
     
     <div class="upmust">
-      <b>PC에서 받은 엑셀(.xlsx)과 경남은행 HTML(.html)</b>을 읽습니다.<br>
-      처음에는 <b>최근 1개월</b>만 올려도 됩니다.<br>
-      폰에서 받은 <b>PDF</b>도 읽습니다 (국민·신한 확인). 화면을 찍은 사진은 읽지 못합니다.
+      <b>폰에서 받은 PDF</b>를 읽습니다 (국민·신한·우리·카카오뱅크·케이뱅크 확인).<br>
+      PC에서 받은 <b>엑셀(.xlsx)</b>과 경남은행 <b>HTML(.html)</b>도 읽습니다.<br>
+      처음에는 <b>최근 1개월</b>만 올려도 됩니다. 화면을 찍은 사진은 읽지 못합니다.
     </div>
     <div id="a2hs"></div>
     <div class="updrop" id="updrop">
-      <p><b>거래내역 파일</b>을 올려주세요 (.xlsx · 경남은행 .html)<br>
+      <p><b>거래내역 파일</b>을 올려주세요 (PDF · 엑셀 · 경남은행 HTML)<br>
         <span class="dropsub">1년치를 올리면 월별 흐름도 함께 볼 수 있습니다.<br>
         나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.<br>
 
@@ -6698,7 +6714,9 @@ function drawStart() {
      ★ 열어둔 결과가 있을 때만 나온다. 실수로 누르셔도 한 번에 되돌아온다.
      ★ 올려둔 파일도 계산 결과도 안 버린다 — 버리면 돌아갈 곳이 없다.
        그래서 UP 은 그대로 두고 창만 여닫는다 (지우는 것은 「지우기」뿐이다) */
-  if (UP && !UP.demo && UP.payees) {
+  /* ★ 100차 ②. 거래처 확인 전(매장 이름·성함 화면)에도 돌아올 수 있어야 한다.
+     그때는 UP.payees 가 아직 없고 UP.rows 만 있다 */
+  if (UP && !UP.demo && (UP.payees || (UP.rows && UP.rows.length))) {
     var 되돌 = el('button', 'b on backview', '보던 화면으로 돌아가기');
     되돌.type = 'button';
     되돌.addEventListener('click', function () {
@@ -6966,6 +6984,34 @@ function tradeNotice(host) {
   host.appendChild(box);
 }
 
+/* ★ 100차 ①. 업종을 고르고 여기까지 오신 분께도 자기 매장으로 가는 길을 둔다.
+   시작 화면에만 있어서, 업종부터 누르신 분은 파일을 다시 올려야 하는 줄 아셨다.
+   ★ 새 모양을 만들지 않는다 — 시작 화면의 .gostores/.gostore 를 그대로 쓴다 (49차).
+   ★ 여기에는 「지우기」를 안 붙인다. 지우는 자리는 시작 화면과 매장 이름 화면 둘로 충분하고,
+     파일을 올리기 직전에 지우기 단추가 옆에 있으면 잘못 누르실 수 있다.
+   ★ 저장된 매장이 없으면 이 구역은 아예 안 생긴다 (처음 오신 분께는 없다) */
+function drawUpMine() {
+  var host = document.getElementById('up-mine');
+  if (!host) return;
+  host.innerHTML = '';
+  var mine = [];
+  try { mine = savedStores(); } catch (e) { return; }
+  if (!mine.length) return;
+  host.appendChild(el('div', 'tradehead', '전에 하시던 것'));
+  var back = el('div', 'gostores');
+  mine.forEach(function (k) {
+    var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+    var b = el('button', 'gostore');
+    b.type = 'button';
+    b.appendChild(el('span', 'gsname', '〈' + 이름 + '〉 이어서 보기'));
+    b.appendChild(el('span', 'gssub',
+      k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨'));
+    b.addEventListener('click', function () { goSavedStore(k); });
+    back.appendChild(b);
+  });
+  host.appendChild(back);
+}
+
 /* 창을 열 때마다 파일 고르기로 되돌린다.
    한 번 다음 단계로 넘어가면 up-pick 이 숨겨진 채로 남아,
    창을 닫았다 열어도 아무도 되살리지 않는다 */
@@ -6977,6 +7023,7 @@ function openPick() {
   /* ★ 62차 ②. 업종별 고지 — 예시는 식당 자료다 */
   var tn = document.getElementById('up-tradenote');
   if (tn) { tn.innerHTML = ''; tradeNotice(tn); }
+  drawUpMine();                      /* ★ 100차 ①. 창을 열 때마다 최신 목록으로 */
   upShow('up-pick');
 }
 
@@ -7006,6 +7053,26 @@ document.getElementById('upopen').addEventListener('click', function () {
   lg.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); 집(); }
   });
+})();
+
+/* ★ 100차 ②. 올려보기 창 안에도 같은 길을 둔다.
+   ★ id 는 떼어낸다 — 같은 id 가 둘이면 getElementById 가 어느 것을 줄지 모른다.
+   ★ 누르셔도 올려둔 파일과 결과는 안 버린다. 창만 닫는다 (71차 ③과 같은 규칙) */
+(function () {
+  var top = document.querySelector('#up .uptop');
+  var src = document.getElementById('brandlogo');
+  if (!top || !src) return;
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'uplogo';
+  b.title = '첫 화면으로';
+  b.setAttribute('aria-label', '첫 화면으로');
+  var img = src.cloneNode(true);
+  img.removeAttribute('id');
+  img.alt = '';
+  b.appendChild(img);
+  b.addEventListener('click', function () { closeUpPanel(); drawStart(); });
+  top.insertBefore(b, top.firstChild);
 })();
 
 /* ── 88차 ① · 글씨 크기 세 단 ──────────────────────────────────────
@@ -7918,13 +7985,29 @@ function drawBankHelp(host) {
   });
   box.appendChild(head);
   if (open) {
-    /* ★ 96차 ④(나). PC 이야기를 먼저 꺼내면 폰만 있는 분이 거기서 멈추신다 */
-    box.appendChild(el('div', 'bh2',
-      '쓰시는 은행을 눌러보세요. 폰에서 받는 길부터 알려드립니다.'));
-    box.appendChild(el('div', 'bh2',
-      '국민·신한·우리·카카오뱅크·케이뱅크·토스뱅크·새마을금고는 폰으로 끝납니다.'));
-    var row = el('div', 'bhbtns');
-    BANK_HELP_LIST.forEach(function (k) {
+    /* ★ 100차 ⑥. 머리말 두 줄을 뺀다 (2026-09-19 요한).
+       둘째 줄은 은행 이름을 줄글로 나열한 것인데, 바로 아래 단추가 같은 명단이었다.
+       같은 말을 두 번 하면서 폰에서는 두 줄로 접혀 글자만 빽빽해졌다.
+       ★ 96차 ④(나)의 뜻(「폰 이야기를 먼저」)은 버리지 않는다 —
+         폰 무리를 맨 위에 두는 것으로 그대로 지킨다 */
+
+    /* ★ 한 은행이 어느 무리인지는 BANK_HELP 하나만 보고 정한다.
+       명단을 따로 만들면 BANK_HELP 를 고칠 때 반드시 어긋난다 —
+       나중에 하나은행 PC 경로를 확인해 넣으면 무리가 저절로 따라 옮겨간다 */
+    var bankGroup = function (k) {
+      var d = BANK_HELP[k];
+      if (d && d.폰없음) return 1;                 /* 폰에서 안 나온다 (확인함) */
+      if (d && d.확인함 && d.폰) return 0;          /* 폰으로 끝난다 */
+      return 2;                                    /* 아직 확인 못 함 */
+    };
+    var 무리 = [
+      { 제목: '폰에서 바로 받으실 수 있어요', 메모: null },
+      { 제목: 'PC 인터넷뱅킹에서 받으셔야 해요',
+        메모: '2026년 9월 은행 고객센터에 확인했습니다' },
+      { 제목: '아직 확인하지 못한 은행', 메모: null }
+    ];
+    /* 만드는 몸통은 하나로 둔다 — 단추 모양이 무리마다 갈라지면 안 된다 */
+    var bankBtn = function (k) {
       var b = el('button', 'b' + (UP_HELP.bank === k ? ' on' : ''));
       b.type = 'button';
       /* ★ 99차. 마크를 앞에, 이름을 뒤에. 어느 쪽을 눌러도 같은 단추다.
@@ -7942,9 +8025,20 @@ function drawBankHelp(host) {
         UP_HELP.bank = (UP_HELP.bank === k) ? null : k;
         redrawBankHelp();
       });
-      row.appendChild(b);
+      return b;
+    };
+    /* ★ BANK_HELP_LIST 순서를 그대로 쓴다 — filter 라 차례가 안 바뀐다 */
+    var 첫무리 = true;
+    무리.forEach(function (g, gi) {
+      var ks = BANK_HELP_LIST.filter(function (k) { return bankGroup(k) === gi; });
+      if (!ks.length) return;              /* 빈 무리는 머리말도 안 만든다 */
+      box.appendChild(el('div', 'bhgrp' + (첫무리 ? '' : ' next'), g.제목));
+      if (g.메모) box.appendChild(el('div', 'bh2', g.메모));
+      첫무리 = false;
+      var row = el('div', 'bhbtns');
+      ks.forEach(function (k) { row.appendChild(bankBtn(k)); });
+      box.appendChild(row);
     });
-    box.appendChild(row);
     if (UP_HELP.bank) {
       var k2 = UP_HELP.bank;
       var d = BANK_HELP[k2];
@@ -14869,7 +14963,13 @@ function drawDueCard(host, months) {
   아이콘.appendChild(svgEl('circle', { cx: 20, cy: 32, r: 2.4, fill: 'currentColor' }));
   box.appendChild(아이콘);
 
-  var open = !UP.open.__dueShut;
+  /* ★ 100차 ③. 86차 ①의 「늘 펼친 채로」를 뒤집는다 (2026-09-19 요한).
+     자리는 맨 위 그대로다 — 무슨 카드인지는 접혀도 아이콘과 색과 % 로 보인다.
+     ★ 열쇠를 __dueShut(접힘) 에서 __dueOpen(열림) 으로 도로 뒤집는다.
+       UP.open 은 달을 옮길 때 비워지는 통이라, 비워졌을 때 어느 쪽이 되는지가
+       곧 기본값이다. 86차가 「늘 펼침」을 지키려고 접힘으로 뒀던 것과 같은 이치를
+       반대로 쓴다 — 열림으로 둬야 비워질 때마다 접힌 채로 돌아온다 */
+  var open = !!UP.open.__dueOpen;
   var top = el('div', 'duetop tapx');
   var lab = el('div', 'duelab');
   lab.appendChild(document.createTextNode(까지 + '까지 모자랄 가능성'));
@@ -14892,7 +14992,7 @@ function drawDueCard(host, months) {
   if (!open) box.classList.add('shut');
 
   top.addEventListener('click', function () {
-    UP.open.__dueShut = !UP.open.__dueShut;
+    UP.open.__dueOpen = !UP.open.__dueOpen;
     drawResult(months);
   });
   if (open) {
@@ -18767,5 +18867,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 99차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.19 · 100차</div>
 </body></html>
