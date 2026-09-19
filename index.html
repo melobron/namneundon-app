@@ -8329,8 +8329,12 @@ function handleFiles(fileList) {
     var box = el('div', 'upbad');
     box.appendChild(el('h4', null, '읽지 못했습니다'));
     /* ★ 102차 추가 ②. 아는 실패는 우리말로 바꿔 말한다.
-       모르는 실패일 때만 원문을 남긴다 — 카카오채널로 물어보실 때 그게 단서가 된다 */
-    if (!잠김) box.appendChild(el('div', 'upbadrow', e.message));
+       ★ 정정. 「모르는 실패」일 때만 원문을 남긴다.
+       엑셀이 아닌 파일은 「엑셀 파일이 아닙니다 — 은행 앱에서 엑셀(.xlsx)로
+       다시 받아주세요」로 이미 정확히 안내된다. 영어 원문은 대표님이 읽을 것이 아니고,
+       마스터 ■2-1 #5(쉬운 말)에도 걸린다.
+       단서가 필요하면 화면에 있는 카카오채널로 파일을 받아보면 된다 */
+    if (왜 === 'unknown') box.appendChild(el('div', 'upbadrow', e.message));
     /* 'unknown' 은 failWhy 도 '읽지 못했습니다 — …' 라 위 h4 와 같은 말이 두 번 된다.
        그때만 지금까지처럼 FIX_TIP 한 줄로 둔다 */
     box.appendChild(el('div', 'upbadrow',
