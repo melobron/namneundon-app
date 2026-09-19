@@ -8310,12 +8310,31 @@ function handleFiles(fileList) {
     drawFileList();
   }).catch(function (e) {
     pdfForget();
-    useFail(/XLSX|zip|Unsupported|Corrupt|password/i.test(String(e && e.message)) ? 'notxlsx' : 'unknown');
+    /* ★ 102차 추가 ②. 「암호 걸린 엑셀」을 「엑셀이 아님」과 갈라놓는다 (2026-09-19 실물 확인).
+       케이뱅크 「입출금내역 내보내기」가 이 파일을 준다. 진짜 xlsx 인데 암호가 걸려 있어서,
+       notxlsx 로 묶으면 「엑셀로 다시 받으세요」라고 말하게 되고 —
+       사장님이 그대로 하면 똑같은 파일이 또 나온다 (50차 ③과 같은 자리다).
+       ★ SheetJS 0.20.3 은 암호를 넣어줘도 못 연다(실측). 이번에 푸는 것이 아니라,
+         막다른 길에서 갈 길을 알려주는 것이 하는 일의 전부다 */
+    var 말 = String(e && e.message || '');
+    var 잠김 = /password|encrypt/i.test(말);
+    var 왜 = 잠김 ? 'xlsx_locked'
+                  : (/XLSX|zip|Unsupported|Corrupt/i.test(말) ? 'notxlsx' : 'unknown');
+    useFail(왜);
+    /* 어느 은행인지 — 은행 안내에서 고르신 것이 먼저고, 없으면 파일 이름에서 찾는다.
+       둘 다 없으면 은행 이름 없이 일반 안내로 간다. 아는 만큼만 말한다 */
+    var 은행 = UP_HELP.bank;
+    for (var fi = 0; fi < files.length && !은행; fi++) 은행 = bankOf(files[fi].name, null, null);
     upStat('');
     var box = el('div', 'upbad');
     box.appendChild(el('h4', null, '읽지 못했습니다'));
-    box.appendChild(el('div', 'upbadrow', e.message));
-    box.appendChild(el('div', 'upbadrow', FIX_TIP + '.'));
+    /* ★ 102차 추가 ②. 아는 실패는 우리말로 바꿔 말한다.
+       모르는 실패일 때만 원문을 남긴다 — 카카오채널로 물어보실 때 그게 단서가 된다 */
+    if (!잠김) box.appendChild(el('div', 'upbadrow', e.message));
+    /* 'unknown' 은 failWhy 도 '읽지 못했습니다 — …' 라 위 h4 와 같은 말이 두 번 된다.
+       그때만 지금까지처럼 FIX_TIP 한 줄로 둔다 */
+    box.appendChild(el('div', 'upbadrow',
+      (왜 === 'unknown' ? FIX_TIP : failWhy(왜, 은행)) + '.'));
     document.getElementById('upbad').innerHTML = '';
     document.getElementById('upbad').appendChild(box);
   });
@@ -8325,6 +8344,17 @@ function handleFiles(fileList) {
    파일 고르기의 accept 는 확장자만 보므로 그대로 통과한다 */
 var FIX_TIP = '은행 앱에서 엑셀(.xlsx)로 다시 받아주세요';
 function failWhy(w, bank) {
+  /* ★ 102차 추가 ②. 암호 걸린 엑셀.
+     「엑셀로 다시 받으세요」는 이 파일에 대해 거짓말이다 — 이미 엑셀이다.
+     실제로 읽히는 길(증명서 발급 PDF)로 보내드린다.
+     ★ 은행 이름은 짧은 열쇠('케이')로 올 때도, 보이는 이름('케이뱅크')으로 올 때도 있다.
+       bankOf 는 보이는 이름을 주고 UP_HELP.bank 는 짧은 열쇠를 준다. 둘 다 받는다 */
+  if (w === 'xlsx_locked') {
+    return '암호가 걸린 엑셀이라 아직 못 읽습니다 — '
+         + ((bank === '케이' || bank === '케이뱅크')
+            ? '케이뱅크 앱에서 전체 메뉴 → 「고객센터」 → 「증명서 발급」 → 「거래내역증명서」로 받아주세요'
+            : '같은 은행 앱에서 거래내역증명서(PDF)로 받아주시면 읽어드리겠습니다');
+  }
   if (w === 'notxlsx') return '엑셀 파일이 아닙니다 — ' + FIX_TIP;
   /* ★ 50차 ③. 머리글은 다 맞는데 줄이 0건인 파일이 있다.
      조회를 안 하고 「내려받기」만 누르면 그렇게 나온다.
@@ -9477,6 +9507,9 @@ var USE_FAIL_MAX = 10;     /* 못 읽은 파일은 최근 10개까지 */
 var USE_FAIL_WHY = {
   notxlsx: '엑셀 아님', nodate: '거래일시 열 못 찾음', noamt: '금액 열 못 찾음',
   norows: '줄 없음', balance: '잔액 검산 안 맞음', unknown: '읽다가 멈춤',
+  /* ★ 102차 추가 ②. 이 줄이 없으면 새 열쇠가 '읽다가 멈춤'으로 기록돼
+     「엑셀이 암호 걸려 되돌아간 건이 몇 건인가」를 셀 수가 없다 — 가른 뜻이 없어진다 */
+  xlsx_locked: '엑셀 암호 걸림',
   /* ★ 92차 ⑤. PDF 사유. 어느 은행 양식을 먼저 넣어야 하는지 알 길이 이것뿐이다.
      여기에도 파일 이름은 안 들어간다 — 왜 못 읽었는지 한 마디뿐이다 */
   pdf_no_header: 'PDF 양식 모름', pdf_image: 'PDF 가 사진',
