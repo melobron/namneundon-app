@@ -1284,6 +1284,17 @@
      「최저 예상 잔액」이 한 글자씩 일곱 줄로 섰다 (실측 320~390px 전부).
      줄을 바꿀 수 있게만 해준다. 넓으면 지금처럼 한 줄이고(700px 21px 그대로),
      좁으면 제목 한 줄 · 금액 한 줄이다. 글자도 색도 자리도 한 값도 안 바뀐다 */
+  /* ★ 109차 ⑥㉮. 결과 상자 — 카드에서 제일 먼저 읽히는 자리.
+     ★ 색을 안 입힌다. 양수라고 초록이면 「안전하다」는 뜻이 된다 (무채색) */
+  .dueres{margin:2px 0 0;padding:12px 14px;background:var(--paper);
+          border:1px solid var(--line);border-radius:var(--rad)}
+  .duereslab{font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
+  .duresnum{margin-top:3px;font-size:calc(23*var(--fu));font-weight:800;
+            letter-spacing:-.02em;line-height:1.2;color:var(--ink);
+            font-variant-numeric:tabular-nums;word-break:break-all}
+  .duresnote{margin-top:5px;font-size:calc(11.5*var(--fu));color:var(--gray);line-height:1.5}
+  /* 최저 줄 — 제목줄과 같은 자로 서되 누르는 자리가 아니다 */
+  .duelow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-top:11px}
   .duetop{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;cursor:pointer}
   .duelab{flex:1 1 auto;min-width:0;font-size:calc(13.5*var(--fu));font-weight:700}
   .duepct{flex:none;font-size:calc(20*var(--fu));font-weight:800;letter-spacing:-.02em}
@@ -6693,8 +6704,9 @@ function el(tag, cls, txt) {
      지금 되는 것(줄 아무 데나 누르기)을 하나도 없애지 않는다.
    ★ 새 모양을 여기 하나만 둔다 — 붙이는 자리가 여럿이라 흩어 놓으면
      또 자리마다 다른 말이 된다 (49차 — 같은 것은 한 모양으로) */
-function foldChip(open) {
-  return el('span', 'foldchip', open ? '접기 ▴' : '자세히 ▾');
+function foldChip(open, 무엇) {
+  return el('span', 'foldchip',
+    (무엇 ? 무엇 + ' ' : '') + (open ? '접기 ▴' : '자세히 ▾'));
 }
 function upShow(which) {
   /* ★ 101차 ①. up-duedate 를 이 목록에 같이 넣는다 — 여기 없으면
@@ -15742,6 +15754,38 @@ function drawDueCard(host, months) {
        곧 기본값이다. 86차가 「늘 펼침」을 지키려고 접힘으로 뒀던 것과 같은 이치를
        반대로 쓴다 — 열림으로 둬야 비워질 때마다 접힌 채로 돌아온다 */
   var open = !!UP.open.__dueOpen;
+  /* ★ 109차 ⑥㉮. 결과를 접힌 카드로 올린다.
+     예전에는 「○월 ○일 예상 잔액」이 들어올 돈·나갈 돈과 똑같은 .orow 모양으로
+     펼친 표 안에 서 있어서, 932px 짜리 카드를 펴야 찾을 수 있었다.
+     기본 화면에 결과와 할 일을 먼저 두고, 「자세히」는 계산 근거 전용으로 만든다.
+     ★ 펼침은 지금처럼 하나뿐이다. 새 펼침도 새 열쇠도 안 만든다.
+     ★ 이 상자에는 색을 안 입힌다 — 양수라고 초록으로 두면 「안전하다」는 뜻이 된다.
+       카드 바깥 테두리와 아이콘 색은 c.비율 을 따르는 지금 규칙 그대로다.
+     ★ 이름은 「○월 ○일 예상 잔액」 그대로다. 「선택한 날짜의…」로 바꾸면
+       앱 다른 자리의 「분석 종료일」과 이름이 갈린다 (47차 ①) */
+  var res = el('div', 'dueres');
+  res.appendChild(el('div', 'duereslab', 까지 + ' 예상 잔액'));
+  res.appendChild(el('div', 'duresnum', won(c.예상) + '원'));
+  box.appendChild(res);
+  box.appendChild(el('div', 'duresnote', '예비비는 아직 반영하지 않았습니다'));
+
+  /* ★ 109차 ⑥㉮㉯. 최저 줄. 결과 상자와 뜻이 다른 값이라 합치지 않는다.
+     ★ ㉯ 최저날이 자료 기준일이면 그 값은 예상이 아니라 자료에 적힌 실제 잔액이다.
+       「8월 21일 잔액이 가장 적습니다」는 이미 지난 날을 앞날처럼 말하는 것이고,
+       「예상」이라 부르면 아예 틀린 말이 된다. 그 경우만 갈라 적고 「입금 전」도 안 붙인다 */
+  var 기준날인가 = !!(cv && cv.최저날수 === dayNum(c.오늘));
+  if (cv) {
+    var low = el('div', 'duelow');
+    var lowlab = el('div', 'duelab');
+    lowlab.appendChild(document.createTextNode(
+      cv.모자람 > 0 ? cv.최저날 + '에 모자랄 수 있습니다'
+      : 기준날인가 ? '지금보다 잔액이 낮아지는 날은 없을 것으로 예상됩니다'
+                   : cv.최저날 + ' 최저 예상 잔액 (입금 전)'));
+    low.appendChild(lowlab);
+    low.appendChild(el('div', 'duepct money' + 색,
+      '약 ' + manwon(cv.모자람 > 0 ? cv.모자람 : cv.최저)));
+    box.appendChild(low);
+  }
   var top = el('div', 'duetop tapx');
   var lab = el('div', 'duelab');
   /* ★ 101차. % 를 뺀다 (2026-09-19 요한 확정).
@@ -15753,33 +15797,11 @@ function drawDueCard(host, months) {
        목표일 잔액이 아니다 — 최저일과 종료일은 다를 수 있다.
      ★ 「○일까지 남을 돈」이라고 쓰지 않는다. 종료일 잔액이나
        쓸 수 있는 돈으로 오해된다 */
-  if (cv) {
-    /* ★ 106차 ②. 라벨과 값이 한 문장으로 읽히게 한다.
-       「최저 예상 잔액 / 9월 10일 약 2,061만원」은 두 조각으로 읽혔다 —
-       날짜를 왼쪽 문장으로 옮기고 값은 금액만 남긴다.
-         9월 10일 잔액이 가장 적습니다      약 2,061만원
-         9월 10일에 모자랄 수 있습니다      약 3,800만원
-       ★ 「얇아집니다」·「빠듯합니다」는 쓰지 않는다 (마스터 ■2-1 #2) */
-    lab.appendChild(document.createTextNode(cv.모자람 > 0
-      ? cv.최저날 + '에 모자랄 수 있습니다'
-      : cv.최저날 + '에 잔액이 가장 적을 것으로 예상됩니다'));
-    top.appendChild(lab);
-    top.appendChild(el('div', 'duepct money' + 색,
-      '약 ' + manwon(cv.모자람 > 0 ? cv.모자람 : cv.최저)));
-  } else {
-    /* 곡선을 못 그리는 자료(3달 미만 등)에서는 목표일 한 점만 말한다.
-       그때는 이름도 정확히 「예상 잔액」이다 */
-    lab.appendChild(document.createTextNode(까지 + ' 예상 잔액'));
-    top.appendChild(lab);
-    if (c.예상 !== null) {
-      top.appendChild(el('div', 'duepct money' + 색, '약 ' + manwon(c.예상)));
-    }
-  }
-  /* ★ 60차 ④. 눌리는 자리인데 눈에 보이는 표시가 없어서 펼쳐지는 줄 몰랐다.
-     ★ 88차 ②. 그런데 화살표 하나로는 여전히 모르셨다 (파일럿 1호 대표).
-     글자가 든 상자로 바꾼다 — 접혀 있으면 「자세히 ▾」, 펴져 있으면 「접기 ▴」.
-     줄 아무 데나 누르는 것은 그대로 산다 (상자는 span 이다) */
-  top.appendChild(foldChip(open));
+  /* ★ 109차 ⑥㉰. 펼침 단추는 이제 계산 근거 전용이라 이름에 그렇게 적는다.
+     ★ 60차 ④ · 88차 ②. 글자가 든 상자라야 눌리는 줄 아신다. 그 방식은 그대로다 */
+  /* 이름은 단추 하나가 다 짊어진다 — 왼쪽에 또 적으면 같은 말이 두 번 선다 */
+  top.appendChild(lab);
+  top.appendChild(foldChip(open, '계산 근거'));
   /* ★ 101차. 자료 기준일과 분석 종료일을 늘 보이게 둔다. 접혀 있을 때도 안 감춘다.
      ★ 「오늘」이라고 쓰지 않는다 — 자료의 기준일이지 오늘이 아니다.
      ★ 최저일과 종료일은 다를 수 있어 한 낱말로 섞지 않는다 */
@@ -15805,8 +15827,6 @@ function drawDueCard(host, months) {
       (+c.오늘.slice(5, 7)) + '월 ' + (+c.오늘.slice(8, 10)) +
       '일 기준으로 합산했습니다. 계좌별 자료 기간을 확인해주세요.'));
   }
-  box.appendChild(top);
-
   /* ★ 60차 ④. 접힌 자리에는 바로 알아듣는 문장 하나만 둔다.
      「지금과 가장 비슷했던 20일 중…」과 「1.82배」는 안 읽힌다는 지적을 받았다 —
      못 알아들으면 빼는 게 낫다. 펼친 자리로 내렸다.
@@ -15822,6 +15842,34 @@ function drawDueCard(host, months) {
   if (!open && 표본줄 && cv && cv.최저날수 >= c.셈줄수) {
     box.appendChild(el('div', 'duewhy dueas', 표본줄));
   }
+
+  /* ★ 109차 ⑥㉮. 목표일 고르기는 「할 일」이라 접혀 있어도 보인다.
+     예전에는 계산 근거와 같이 접혀 있어서, 날을 바꾸려면 근거를 펴야 했다 */
+  var pick = el('div', 'duepick');
+  var head = el('div', 'duewhy');
+  /* ★ 101차 ①. 한 앱이 같은 값을 두 이름으로 부르면 안 된다 (47차 ①).
+     묻는 곳(drawDueAsk)과 고치는 곳의 말을 맞춘다 */
+  head.appendChild(document.createTextNode('매달 지출이 가장 많은 날 — 지금은 '));
+  var db = el('button', 'duebtn', dueDayText(day));
+  db.type = 'button';
+  head.appendChild(db);
+  pick.appendChild(head);
+  var days = el('div', 'duedays');
+  for (var i = 1; i <= 31; i++) {                /* ★ 103차 ③. 29·30·말일까지 */
+    (function (n) {
+      var b = el('button', n === day ? 'on' : '', dueDayShort(n));
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        setDueDay(n);
+        savePicks();
+        drawResult(months);
+      });
+      days.appendChild(b);
+    })(i);
+  }
+  pick.appendChild(days);
+  box.appendChild(pick);
+  box.appendChild(top);
 
   top.addEventListener('click', function () {
     UP.open.__dueOpen = !UP.open.__dueOpen;
@@ -15857,19 +15905,9 @@ function drawDueCard(host, months) {
     줄(까지 + '까지 나갈 돈', c.나갈,
        (c.셈최소 < 3 ? '지난 3달 · 뒷부분은 과거 구간 ' + c.셈최소 + '개 기준'
                      : '지난 3달 같은 구간 기준'), '− ');
-    t.appendChild(el('div', 'pnlthin'));
-    /* ★ 61차 ②. 「나갈 돈의 N배」를 지웠다. 60차에 접힌 자리의 배수를 없앴는데
-       여기 하나가 남아 있었다. 이로써 화면에 「배」 표기는 0건이다 */
-    줄(까지 + ' 예상 잔액', c.예상, null, c.예상 < 0 ? '− ' : '');
-    /* ★ 101차. 목표일 한 점만 보면 그 사이에 바닥나는 날을 못 본다.
-       ★ 「빠듯한」은 잔고가 넉넉해도 늘 빠듯하다고 부르게 된다. 사실만 말하는 이름으로 둔다 */
-    if (cv) {
-      t.appendChild(el('div', 'pnlthin'));
-      /* ★ 103차 추가 ①. 최저는 「출금 뒤·입금 전」 값이라 일말 잔액과 다르다.
-         최저날이 종료일과 같으면 한 화면에 같은 날짜로 두 금액이 서니 갈라 적는다.
-         ★ 「입금 전」은 늘 붙인다. 최저날이 종료일이 아닐 때도 같은 뜻이라 조건을 안 건다 */
-      줄('잔액이 가장 적을 날 (' + cv.최저날 + ', 입금 전)', cv.최저, null, cv.최저 < 0 ? '− ' : '');
-    }
+    /* ★ 109차 ⑥㉰. 「○월 ○일 예상 잔액」과 「잔액이 가장 적을 날」 두 줄을 뺀다 —
+       접힌 카드의 결과 상자와 최저 줄이 그 자리를 대신한다.
+       같은 값을 화면에 두 번 세우지 않는다 */
     box.appendChild(t);
     /* ★ 단정하지 않는다 — 「모자랍니다」가 아니라 「모자랄 수 있습니다」 (마스터 ■2) */
     if (cv && cv.모자람 > 0) {
@@ -15883,24 +15921,15 @@ function drawDueCard(host, months) {
       /* ★ 무엇을 전제로 한 숫자인지 밝힌다.
          ★ 103차 ⑤. 「추가 지출이 없다면」은 입금이 줄거나 늦어지는 경우를 빼놓는다.
            둘 다 잔액을 깎는다. 입금과 지출 양쪽을 다 말한다 */
-      /* ★ 109차 ⑥㉯. cv.최저 는 그날 「출금 뒤·입금 전」 값이지 그날 끝 잔액이 아니다.
-         바로 위 표에는 「입금 전」이라고 갈라 적혀 있는데 이 문장만 그 구분을 잃었다 */
-      box.appendChild(el('div', 'duewhy',
-        '예상한 입금과 지출이 그대로 이뤄질 경우, ' + cv.최저날 +
-        '에는 당일 출금 후 입금 전 잔액이 약 ' + manwon(cv.최저) + '으로 예상됩니다.'));
-      /* ★ 109차 ⑥㉰. 그날 끝 잔액은 이미 곡선이 들고 있다 — 꺼내 보이기만 한다.
-         ★ 두 경우에는 안 적는다. 같은 숫자가 두 번 서거나 없는 값을 지어내게 된다 —
-           최저날이 분석 종료일이면 위 표의 「○월 ○일 예상 잔액」이 이미 그 값이고,
-           최저날이 자료 기준일이면 그날의 점이 아예 없다.
-         ★ 「쓸 수 있는 돈」·「여유자금」이라고 부르지 않는다. 예비비를 아직 안 뺐다 */
-      var 끝점 = null;
-      if (cv.최저날수 !== dayNum(c.오늘) && cv.최저날수 !== dayNum(c.목표)) {
-        cv.점.forEach(function (p) { if (p.날 === cv.최저날수) 끝점 = p; });
-      }
-      if (끝점) {
-        box.appendChild(el('div', 'duewhy',
-          '같은 날 입금까지 반영하면 끝 잔액은 약 ' + manwon(끝점.잔액) + '으로 예상됩니다.'));
-      }
+      /* ★ 109차 ⑥㉰. cv.최저 는 그날 「출금 뒤·입금 전」 값이지 그날 끝 잔액이 아니다.
+         이 문장만 그 구분을 잃고 있었다.
+         ★ ㉯ 최저날이 자료 기준일이면 그 값은 예상이 아니라 자료에 적힌 실제 잔액이다.
+           그때는 숫자를 다시 적지 않는다 — 접힌 카드의 최저 줄이 이미 말했고,
+           여기서 또 적으면 같은 값이 화면에 두 번 선다 */
+      box.appendChild(el('div', 'duewhy', 기준날인가
+        ? '예상한 입금과 지출이 그대로 이뤄질 경우, 분석 종료일까지 잔액이 자료 기준일보다 낮아지는 날은 없을 것으로 예상됩니다.'
+        : '예상한 입금과 지출이 그대로 이뤄질 경우, ' + cv.최저날 +
+          '에는 당일 출금 후 입금 전 잔액이 약 ' + manwon(cv.최저) + '으로 예상됩니다.'));
       /* ★ 예비비를 아직 안 뺀 숫자다. 「여유자금」과 헷갈리지 않게 밝혀둔다 */
       box.appendChild(el('div', 'duewhy',
         '예상 입출금만 반영한 금액이며, 예비비는 아직 반영하지 않았습니다.'));
@@ -15921,32 +15950,6 @@ function drawDueCard(host, months) {
         '같은 날에는 출금이 입금보다 먼저 이뤄지는 것으로 가정했습니다.'));
     }
 
-    /* 목표일 바꾸기 — 매장마다 돈이 몰려 나가는 자리가 다르다 */
-    var pick = el('div', 'duepick');
-    var head = el('div', 'duewhy');
-    /* ★ 101차 ①. 한 앱이 같은 값을 두 이름으로 부르면 안 된다 (47차 ①).
-       묻는 곳(drawDueAsk)과 고치는 곳의 말을 맞춘다 */
-    head.appendChild(document.createTextNode('매달 지출이 가장 많은 날 — 지금은 '));
-    var db = el('button', 'duebtn', dueDayText(day));
-    db.type = 'button';
-    head.appendChild(db);
-    pick.appendChild(head);
-    /* ★ 60차 ④. 「이 매장은 …」 줄은 접힌 자리로 올라갔다. 여기서 두 번 쓰지 않는다 */
-    var days = el('div', 'duedays');
-    for (var i = 1; i <= 31; i++) {                /* ★ 103차 ③. 29·30·말일까지 */
-      (function (n) {
-        var b = el('button', n === day ? 'on' : '', dueDayShort(n));
-        b.type = 'button';
-        b.addEventListener('click', function () {
-          setDueDay(n);
-          savePicks();
-          drawResult(months);
-        });
-        days.appendChild(b);
-      })(i);
-    }
-    pick.appendChild(days);
-    box.appendChild(pick);
   }
   host.appendChild(box);
 }
