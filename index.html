@@ -6941,9 +6941,28 @@ function goSavedStore(k) {
   /* ★ 91차 ②. 거래내역이 이 기기에 남아 있으면 파일을 다시 안 올려도 된다.
      「사라졌습니다」는 정말 사라졌을 때만 할 말이다 — 남아 있으면 바로 보여드린다 */
   if (openSavedData(k.name)) return;
-  try { drawComeBack(k); } catch (e) { }
+  /* ★ 106차 ①. 저장된 거래내역이 없으면 그 사실을 「보이는 화면」에 적는다.
+     drawComeBack 은 #demotop(시작 화면)에 쓰는데 바로 다음 줄에서 업로드 화면으로 넘어간다 —
+     안내가 감춰진 자리에 남고, 사장님께는 아무 일도 안 일어난 것으로 보였다.
+     업로드 화면에서 누르신 경우에는 같은 화면이 다시 그려질 뿐이라 「안 눌린다」로 보인다.
+     ★ upStat 은 openPick() 이 비운다. 반드시 openPick() 뒤에 쓴다 (전에는 거꾸로였다).
+     ★ 「사라졌습니다」로 시작하지 않는다 — 거래처 분류는 살아 있다.
+       잃은 것은 거래내역 파일 하나뿐이고, 그 사실만 적는다 (91차 ②의 원칙 그대로).
+     ★ 이 매장으로 업종·이름이 이미 세팅돼 있다. 파일만 올리면 바로 이어진다.
+     ★ 글자는 DOM 으로 붙인다 — 매장 이름이 그대로 innerHTML 에 들어가지 않게 한다 */
   openUpPanel();
   openPick();
+  var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+  var st = document.getElementById('upstat');
+  if (st) {
+    st.innerHTML = '';
+    st.appendChild(el('b', null, k.n
+      ? '「' + 이름 + '」에 정해두신 거래처 ' + won(k.n) + '곳은 그대로 있습니다.'
+      : '「' + 이름 + '」에 정해두신 것은 그대로 있습니다.'));
+    st.appendChild(document.createElement('br'));
+    st.appendChild(document.createTextNode(
+      '거래내역 파일만 다시 올려주시면 이어서 보실 수 있습니다. 거래처는 다시 안 여쭙습니다.'));
+  }
   drawA2HS();
   loadSheetJS().catch(function (e) { upStat('<b>' + e.message + '</b>'); });
 }
@@ -15551,11 +15570,18 @@ function drawDueCard(host, months) {
      ★ 「○일까지 남을 돈」이라고 쓰지 않는다. 종료일 잔액이나
        쓸 수 있는 돈으로 오해된다 */
   if (cv) {
-    lab.appendChild(document.createTextNode(
-      cv.모자람 > 0 ? '예상 부족액' : '최저 예상 잔액'));
+    /* ★ 106차 ②. 라벨과 값이 한 문장으로 읽히게 한다.
+       「최저 예상 잔액 / 9월 10일 약 2,061만원」은 두 조각으로 읽혔다 —
+       날짜를 왼쪽 문장으로 옮기고 값은 금액만 남긴다.
+         9월 10일 잔액이 가장 적습니다      약 2,061만원
+         9월 10일에 모자랄 수 있습니다      약 3,800만원
+       ★ 「얇아집니다」·「빠듯합니다」는 쓰지 않는다 (마스터 ■2-1 #2) */
+    lab.appendChild(document.createTextNode(cv.모자람 > 0
+      ? cv.최저날 + '에 모자랄 수 있습니다'
+      : cv.최저날 + ' 잔액이 가장 적습니다'));
     top.appendChild(lab);
     top.appendChild(el('div', 'duepct money' + 색,
-      cv.최저날 + ' 약 ' + manwon(cv.모자람 > 0 ? cv.모자람 : cv.최저)));
+      '약 ' + manwon(cv.모자람 > 0 ? cv.모자람 : cv.최저)));
   } else {
     /* 곡선을 못 그리는 자료(3달 미만 등)에서는 목표일 한 점만 말한다.
        그때는 이름도 정확히 「예상 잔액」이다 */
