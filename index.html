@@ -695,7 +695,10 @@
        askName 의 「전에 쓰시던 매장」 단추(.osb)와 같은 모양이다. 새 색은 안 만든다 (49차) */
   .gostores{display:flex;flex-direction:column;gap:8px;margin-top:10px;margin-bottom:22px}
   /* ★ 64-1. askName 의 .osline 과 같은 모양이다 */
-  .gsline{display:flex;align-items:center;gap:8px}
+  /* ★ 105차 ④. 「마지막 분석」 칸이 아래로 붙는다. 가로 한 줄이 아니라
+     「이어서 보기 + 지우기」 한 줄과 그 아래 칸으로 나뉜다 */
+  .gsline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .gsline .gsrun{flex:1 0 100%}
   .gsline .gostore{flex:1;min-width:0}
   .gostore{display:block;width:100%;text-align:left;padding:12px 14px;
            border:1px solid var(--edge);background:var(--paper);
@@ -704,6 +707,12 @@
   .gostore:active{background:var(--panel)}
   .gostore .gsname{display:block;font-size:calc(14.5*var(--fu));font-weight:700}
   .gostore .gssub{display:block;margin-top:2px;font-size:calc(12*var(--fu));color:var(--gray)}
+  /* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
+     재촉하는 색을 쓰지 않는다 — 회색 글씨와 이미 있는 알약 단추(oslink)뿐이다 */
+  .gsrun{margin:6px 0 2px 2px}
+  .gsrun .gsrunday{font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:600}
+  .gsrun .gsrunsub{margin-top:2px;font-size:calc(12*var(--fu));color:var(--gray);line-height:1.5}
+  .gsrun .gsrunbtn{margin-top:7px}
   /* ★ 63-12 · 홈 화면에 추가. 한 줄로 접어 두고 눌러야 펼쳐진다 */
   /* ★ 64-2차 2. 접힌 한 줄이던 것을 눈에 띄는 상자로 올린다.
      타일보다 위에 있어야 「정하기 전에 설치」라는 순서가 읽힌다.
@@ -1964,7 +1973,7 @@
   <div class="upnote" id="upnote" hidden>
     <b>파일은 서버로 전송되지 않습니다.</b> 계산은 이 브라우저 안에서만 이뤄집니다.<br>
     은행에서 받은 거래내역은 이 기기 안에만 남습니다. 밖으로 나가지 않습니다.<br>
-    {{주인}}이 분류하신 항목도 이 브라우저에 남습니다.
+    {{주인}}이 분류하신 항목과 마지막으로 분석한 날짜가 이 브라우저에 남습니다.
   </div>
 
   <div id="up-pick">
@@ -6816,6 +6825,34 @@ function drawStart() {
       b.appendChild(el('span', 'gssub', k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨'));
       b.addEventListener('click', function () { goSavedStore(k); });
       line.appendChild(b);
+      /* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
+         ★ 윗줄은 상태고, 아랫줄과 단추는 고르실 수 있는 행동이다. 요구가 아니다 —
+           그래서 상태와 행동을 한 문장에 섞지 않는다.
+         ★ 「최신 거래내역을 올려보시겠어요?」는 안 쓴다. 어제 분석하신 대표님께 그 문장이
+           뜨면 「어제 올린 걸로는 부족한가?」로 읽힌다. 날짜가 사실인 것과
+           재업로드가 필요한 것은 다르다.
+         ★ 날수에 경계를 두지 않는다. 7일이든 14일이든 근거가 없는 숫자였다 —
+           날짜와 날수는 사실이라 언제 보여줘도 거짓이 아니다. 1일만 지나도 같은 모양이다.
+           재촉이 되지 않게 하는 것은 경계가 아니라 문장이 한다.
+         ★ 경고색도 팝업도 안 쓴다. 금액도 안 쓴다 (마스터 ■2-1 #4) */
+      var 분석날 = lastRunDay(k.name) || k.day || '';
+      if (분석날) {
+        var 지난 = daysSince(분석날);
+        var run = el('div', 'gsrun');
+        run.appendChild(el('div', 'gsrunday', '마지막 분석: ' + (지난 === 0
+          ? '오늘'
+          : (+분석날.slice(5, 7)) + '월 ' + (+분석날.slice(8, 10)) + '일 · ' +
+            won(지난) + '일 경과')));
+        run.appendChild(el('div', 'gsrunsub', '새로운 거래내역이 있으면 추가할 수 있습니다.'));
+        var 추가 = el('button', 'oslink gsrunbtn', '거래내역 추가');
+        추가.type = 'button';
+        추가.addEventListener('click', function () {
+          goSavedStore(k);
+          try { openAddFiles(); } catch (e) { }
+        });
+        run.appendChild(추가);
+        line.appendChild(run);
+      }
       var del = el('button', 'oslink', '지우기');
       del.type = 'button';
       var ask = el('div', 'saveask');
@@ -7190,7 +7227,10 @@ function 글씨단옮기기(걸음) {
     /* ★ 91차 ①. 이제 거래내역도 이 기기에 남는다. 안 남는다고 말하면 그게 거짓말이다 —
        안심 고지(upnote)와 같은 말이어야 한다 (49차 · 63-14) */
     why.appendChild(el('div', null, '거래내역은 이 기기 안에만 저장됩니다.'));
-    why.appendChild(el('div', null, BIZ.주인 + '이 분류하신 항목도 이 브라우저에 저장됩니다.'));
+    /* ★ 105차 ④. 브라우저에 남는 것이 하나 늘었다 — 마지막으로 분석한 날짜다.
+       서버로 가는 것은 여전히 없다 (앞 줄은 한 글자도 안 바뀐다) */
+    why.appendChild(el('div', null, BIZ.주인 +
+      '이 분류하신 항목과 마지막으로 분석한 날짜가 이 브라우저에 저장됩니다.'));
     if (!LS_OK) why.appendChild(el('div', 'lswarn', LS_MSG));
     why.hidden = false;
   });
@@ -8683,6 +8723,9 @@ function startPending() {
 /* 읽은 계좌들을 UP 으로 만든다.
    ★ 검산은 계좌별로 이미 끝났다. 여기서는 합치기만 한다 */
 function startFromBanks(banks, dup, overlap) {
+  /* ★ 105차 ④. 이 판에서 거래가 실제로 늘었는가 — 아래 겹치기 거르기의 결과로 판단한다.
+     예시(demo)는 안 센다. 되살린 판(RESTORING)은 올린 것이 아니다 */
+  var 이전줄수 = (UP && !UP.demo && UP.rows) ? UP.rows.length : 0;
   var rows = [];
   /* ★ 71차 ②-5. 같은 거래는 한 번만 센다.
      파일을 보태다 보면 기간이 겹친다 — 1~8월 파일에 6~12월 파일을 얹으면
@@ -8718,8 +8761,10 @@ function startFromBanks(banks, dup, overlap) {
   banks.forEach(function (b) {
     b.breaks.forEach(function (x) { x.bank = b.bank; allBreaks.push(x); });
   });
+  var 올림 = !RESTORING;
   UP = { file: banks.map(function (b) { return b.file; }).join(' · '),
          demo: false,
+         __새거래: 올림 && rows.length > 이전줄수,
          banks: banks,
          sheet: banks[0].sheet, header: banks[0].header,
          balName: banks[0].balName, balTried: banks[0].balTried,
@@ -9283,12 +9328,44 @@ function storeKey(name) {
      넘치면 조용히 접는다 — 저장이 안 돼도 앱은 메모리로 그대로 돌아간다 */
 var DATA_KEY = 'fc.data.';
 var LAST_KEY = 'fc.last';        /* 마지막으로 남긴 매장 — 열 때 어느 것부터 볼지 */
+/* ★ 105차 ④. 분석이 끝난 날짜 하나만 남긴다 (2026-09-19 요한 결정).
+   ★ 파일을 고른 시각이 아니다 — 거래가 실제로 반영되고 결과 화면까지 간 날이다.
+   ★ 「올리신 날」이 아니라 「분석한 날」이다. 같은 파일을 다시 분석할 수도 있다.
+   ★ 「자료 기준일」과 다른 값이다 — 오늘 분석했어도 자료는 한 달 전 것일 수 있다.
+   ★ 거래내역·금액·잔액은 저장하지 않는다. ■36 은 한 글자도 안 바뀐다.
+     들어가는 값은 'YYYY-MM-DD' 열 글자뿐이고 서버로 가는 것은 없다.
+   ★ 사업자등록이 나오면 이 날짜를 그대로 올리면 된다. 보내는 기준은 30일 이상 하나뿐이고,
+     그건 화면 줄(늘 보인다)과 다른 것이다. 섞지 않는다 */
+var LAST_RUN_KEY = 'nd_lastrun.';
+function lastRunKey(name) {
+  var s = String(name != null ? name : (UP && UP.store) || '').trim();
+  return LAST_RUN_KEY + (s || '(기본)');
+}
+function lastRunDay(name) {
+  var v = lsGet(lastRunKey(name));
+  return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null;
+}
+/* 결과 화면이 실제로 그려진 뒤에만 찍는다. 그리고 「새 거래가 는 판」에만 찍는다 —
+   통에서 되살린 판이나, 같은 파일을 또 올려 겹친 거래를 걸러내고 나니
+   한 건도 안 는 판은 「자료를 갱신한 것」이 아니다 (startFromBanks 의 __새거래) */
+function markLastRun() {
+  if (!UP || UP.demo || !UP.__새거래) return;
+  lsSet(lastRunKey(), dataDay());
+  UP.__새거래 = false;            /* 다시 그려도 두 번 찍지 않는다 */
+}
 var DATA_CAP = 2000000;          /* 이 글자 수를 넘으면 안 남긴다 (통이 터지지 않게) */
 var DATA_SIG = null;             /* 마지막으로 남긴 것의 지문 — 안 바뀌었으면 다시 안 쓴다 */
 
 function dataKey(name) {
   var s = String(name != null ? name : (UP && UP.store) || '').trim();
   return DATA_KEY + (s || '(기본)');
+}
+/* 그날부터 오늘까지 며칠 — 날짜만 센다. 시각은 안 본다 */
+function daysSince(day) {
+  if (!day) return 0;
+  var a = dayMs(day), b = dayMs(dataDay());
+  var n = Math.round((b - a) / 86400000);
+  return n > 0 ? n : 0;
 }
 /* 저장한 날. 시각은 안 남긴다 — 사장님 생활을 들여다보지 않는다 (fc_use 와 같은 태도) */
 function dataDay() {
@@ -14041,7 +14118,7 @@ function drawCats() {
        직접 넣기가 생기면서 금액도 남게 됐는데 여기만 옛 문구였다 */
     /* ★ 91차 ①. 거래내역이 이 기기에 남게 됐다. 첫 화면(upnote)과 같은 말을 쓴다 */
     '은행에서 받은 거래내역은 이 기기 안에만 남습니다. ' + BIZ.주인 +
-    '이 분류하신 항목도 함께 남습니다.'));
+    '이 분류하신 항목과 마지막으로 분석한 날짜가 함께 남습니다.'));
   if (!LS_OK) box.appendChild(el('div', 'lswarn', LS_MSG));
 
   var srow = el('div', 'obdoneacts');
@@ -14933,6 +15010,14 @@ function dueCostMap(t) {
    ★ 이 고침은 「최저일 예측이 정확해진 것」이 아니다. 일관성과 표본 정직성이다 */
 function dueDaily(t, i) {
   var 오늘 = t.days[i];
+  /* ★ 105차 ⑤. 현재 자료 범위는 최초·최종 거래일로 판단한다.
+     조회 기간 안의 무거래일을 일부 제외할 수 있으며,
+     예측값에 미치는 영향은 아직 검증하지 않았다.
+     조회 기간 파싱은 별도 회차에서 개선한다.
+     ── 까닭: dueTable 은 거래가 있는 날만 표에 넣고, 앱은 파일의 조회 기간을
+     값으로 읽는 곳이 없다 (안내 문구에만 나온다). 그래서 마지막 거래일 이후가
+     거래가 없던 기간인지 파일에 안 담긴 기간인지 구분할 수 없다 —
+     오차의 방향도 단정하지 않는다. 은행마다 표기가 달라 회차를 따로 잡아야 한다 */
   var 첫 = t.num[0], 마지막 = t.num[t.n - 1];
   var cost = dueCostMap(t);
   var 몫 = [], 셈 = [], k, x;
@@ -14964,6 +15049,11 @@ function dueDay() {
      29·30 도 같은 규칙이다 — 그 달에 그 날이 없으면 그 달 마지막 날로 본다.
    ★ 단추만 늘리면 안 된다는 것이 이 자리의 요점이었다. 없는 날의 처리 규칙이
      이미 코드에 있었고(그 둘), 이제 그 규칙 위로 열어준 것이다 */
+/* 날수 하나 → 「9월 23일」. 카드가 여러 군데서 쓴다 */
+function 날짜글(n) {
+  var d = new Date(n * 86400000);
+  return (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일';
+}
 function dueDayShort(n) { return n === 31 ? '말일' : String(n); }
 function dueDayText(n)  { return n === 31 ? '말일' : n + '일'; }
 /* ★ 60차 ①. 목표일을 건드리는 자리를 하나로 모은다.
@@ -15050,7 +15140,11 @@ function dueProject(t, i, day) {
      「그 뒤에는 지출이 없다」는 뜻이 아니라 「여기까지가 말할 수 있는 데까지」다 */
   var dd = dueDaily(t, i);
   if (!dd.한계) return null;
+  var 잘림 = null;
   if (남은날수 > dd.한계) {
+    /* ★ 105차 ③. 계산 못 한 데까지 계산한 척하지 않는다.
+       종료일을 여기로 당기고, 「어디까지 계산했는지」를 화면에 그대로 적는다 */
+    잘림 = 목표;
     남은날수 = dd.한계;
     t1 = t0 + 남은날수;
     목표 = new Date(t1 * 86400000).toISOString().slice(0, 10);
@@ -15076,19 +15170,24 @@ function dueProject(t, i, day) {
      ★ 104차 정정 ㉱. 분모가 날마다 다르다. 몫[j]/셈[j] 를 더한다 —
        나중 날은 비교할 과거가 둘뿐일 수 있고, 그때 셋으로 나누면 그만큼 적게 나온다.
        가장 적은 표본 수(셈최소)는 화면에 그대로 적는다 (㉲) */
-  var 합 = 0, 셈최소 = 3;
+  var 합 = 0, 셈최소 = dd.셈[0], 줄자리 = -1;
   for (j = 0; j < 남은날수; j++) {
     합 += dd.몫[j] / dd.셈[j];
     if (dd.셈[j] < 셈최소) 셈최소 = dd.셈[j];
+    /* ★ 105차 ①. 표본이 처음 줄어드는 자리. 여러 번 줄어도 첫 자리 하나만 쓴다 */
+    if (줄자리 < 0 && dd.셈[j] < dd.셈[0]) 줄자리 = j;
   }
   var 나갈 = Math.round(합);
+  var 셈줄수 = 줄자리 < 0 ? null : (t0 + 1 + 줄자리);
   var 지금 = t.bal[i];
   if (지금 === null) return null;
   var 예상 = 지금 + 들어올 - 나갈;
   /* ★ 58차 ⑦-2. 규모가 달라도 같은 잣대가 되게 나갈 돈으로 나눈다 */
   var 배 = 나갈 > 0 ? 예상 / 나갈 : null;
   return { i: i, 오늘: 오늘, 목표: 목표, 남은날수: 남은날수, 잔액: 지금,
-           들어올: 들어올, 나갈: 나갈, 예상: 예상, 배: 배, 셈최소: 셈최소 };
+           들어올: 들어올, 나갈: 나갈, 예상: 예상, 배: 배, 셈최소: 셈최소,
+           /* ★ 105차 ①③. 표본이 줄어드는 자리(날수)와, 종료일이 당겨졌으면 원래 날짜 */
+           셈줄수: 셈줄수, 셈줄값: 줄자리 < 0 ? null : dd.셈[줄자리], 잘림: 잘림 };
 }
 /* ★ 58차 ⑦-1. 그 기간에 잔액이 하루치 지출보다 적어진 날이 있었는가.
    「0원 밑」은 통장에서 일어나지 않는 일이라 세어도 늘 0이었다 */
@@ -15218,7 +15317,7 @@ function dueCurve(months, c) {
   }
   var at = new Date(최저날 * 86400000);
   var 날글 = (at.getUTCMonth() + 1) + '월 ' + at.getUTCDate() + '일';
-  return { 점: 점, 최저: Math.round(최저), 최저날: 날글,
+  return { 점: 점, 최저: Math.round(최저), 최저날: 날글, 최저날수: 최저날,
            하루치: Math.round(하루치),
            바닥: 최저 < 하루치,
            모자람: 최저 < 0 ? Math.round(-최저) : 0,
@@ -15276,6 +15375,20 @@ function drawDueCard(host, months) {
   var day = dueDay();
   var mm = +c.목표.slice(5, 7), dd = +c.목표.slice(8, 10);
   var 까지 = mm + '월 ' + dd + '일';
+  /* ★ 105차 ①. 「지난 2개월」이 아니라 「비교 가능한 과거 구간 2개」다 —
+     경과일 대응 구간은 달력 한 달과 일치하지 않는다.
+     그리고 어느 날부터인지 적는다. 「뒷부분」만으로는 어디부터인지 모르신다 */
+  var 표본줄 = null;
+  if (c.셈줄수 && c.셈줄값) {
+    var 줄날 = 날짜글(c.셈줄수);
+    표본줄 = c.셈줄값 >= 2
+      ? (줄날 + ' 이후 예상 지출은 비교 가능한 과거 구간 ' + c.셈줄값 + '개를 기준으로 계산했습니다.')
+      : (줄날 + ' 이후 예상 지출은 과거 한 구간의 내역을 기준으로 계산했습니다.');
+  }
+  /* ★ 105차 ③. 표본이 아예 없어 종료일이 당겨졌을 때 */
+  var 잘림줄 = c.잘림
+    ? (까지 + '까지 계산했습니다. 이후 예상 지출을 계산할 비교 자료가 부족합니다.')
+    : null;
   /* ★ 59차 ③. 상자 전체가 그 색이다. 표본이 모자랄 때는 색을 안 입힌다 */
   var 색 = c.비율 === null ? '' :
            (c.비율 >= 60 ? ' warn' : (c.비율 >= 20 ? ' est' : ' good'));
@@ -15359,6 +15472,13 @@ function drawDueCard(host, months) {
      접었는데 95px 이면 접은 뜻이 없다. 펼친 모습은 하나도 안 바뀐다.
      ★ ⚠ 아이콘과 색은 접혀도 그대로 둔다. 무슨 카드인지는 알아야 한다 */
   if (!open) box.classList.add('shut');
+  /* ★ 105차 ①. 최저 예상 잔액이 표본이 줄어든 구간에서 나오면 접힌 카드에도 보인다.
+     접힌 채로 「최저 11,595만원」만 보고 나가시면 그 수가 무엇으로 계산된 것인지 모르신다.
+     ★ 잘림 줄은 늘 보인다 — 어디까지 계산했는지는 접든 펴든 같은 무게다 */
+  if (!open && 잘림줄) box.appendChild(el('div', 'duewhy dueas', 잘림줄));
+  if (!open && 표본줄 && cv && cv.최저날수 >= c.셈줄수) {
+    box.appendChild(el('div', 'duewhy dueas', 표본줄));
+  }
 
   top.addEventListener('click', function () {
     UP.open.__dueOpen = !UP.open.__dueOpen;
@@ -15390,7 +15510,10 @@ function drawDueCard(host, months) {
     /* ★ 103차 ⑤. 「현재」는 자료 기준일의 잔액이지 지금 잔액이 아니다 */
     줄('자료 기준일 계좌 잔액', c.잔액, null, c.잔액 < 0 ? '− ' : '');
     줄(까지 + '까지 들어올 돈', c.들어올, '직전 30일 매출 기준', '+ ');
-    줄(까지 + '까지 나갈 돈', c.나갈, '지난 3달 같은 구간 기준', '− ');
+    /* ★ 105차 ②. 창 안에서 표본이 줄면 「지난 3달」이 사실이 아니다 */
+    줄(까지 + '까지 나갈 돈', c.나갈,
+       (c.셈최소 < 3 ? '지난 3달 · 뒷부분은 과거 구간 ' + c.셈최소 + '개 기준'
+                     : '지난 3달 같은 구간 기준'), '− ');
     t.appendChild(el('div', 'pnlthin'));
     /* ★ 61차 ②. 「나갈 돈의 N배」를 지웠다. 60차에 접힌 자리의 배수를 없앴는데
        여기 하나가 남아 있었다. 이로써 화면에 「배」 표기는 0건이다 */
@@ -15429,12 +15552,10 @@ function drawDueCard(host, months) {
       box.appendChild(el('div', 'duewhy',
         '입금은 직전 30일 매출 평균을 매일 같은 금액으로 놓고, ' +
         '지출은 지난 3개월 같은 구간의 날짜별 평균을 반영했습니다.'));
-      /* ★ 104차 정정 ㉲. 날짜마다 비교한 과거 달 수가 다를 수 있다.
+      /* ★ 104차 정정 ㉲ · 105차 ①. 날짜마다 비교한 과거 구간 수가 다를 수 있다.
          그때 「모든 날짜가 지난 3개월 평균」은 더는 사실이 아니라 한 줄 더 적는다 */
-      if (c.셈최소 && c.셈최소 < 3) {
-        box.appendChild(el('div', 'duewhy',
-          '뒷부분은 비교할 과거 자료가 적어 지난 ' + c.셈최소 + '개월만 비교했습니다.'));
-      }
+      if (표본줄) box.appendChild(el('div', 'duewhy', 표본줄));
+      if (잘림줄) box.appendChild(el('div', 'duewhy', 잘림줄));
       /* ★ 103차 ②. 최저점은 「출금 뒤, 입금 전」 값이지 일말 잔액이 아니다.
          이건 가정이지 실제 거래 순서가 아니다. 가정이면 가정이라고 적는다 —
          「실제로 아침에 급여가 나갑니다」처럼 사실인 양 쓰지 않는다 */
@@ -15481,6 +15602,8 @@ function drawResult(months) {
   ws = document.querySelectorAll('#up-result .ywrap');
   for (i = 0; i < ws.length && i < xs.length; i++) ws[i].scrollLeft = xs[i];
   if (window.pageYOffset !== y) window.scrollTo(0, y);
+  /* ★ 105차 ④. 결과가 실제로 그려진 뒤다. 여기가 「분석이 끝난 날」이다 */
+  try { markLastRun(); } catch (e) { }
 }
 /* ★ 77차. 진행 안내와 행동 단추를 한 문장으로 합친다.
    새 파일에서 생긴 곳으로 오해하지 않도록 「아직 안 정한 곳」이라고 부른다. */
@@ -19199,7 +19322,10 @@ function drawComeBack(k) {
     '손수 정하신 거래처 ' + won(n) + '곳은 그대로 있습니다. ' +
     '같은 파일을 다시 올리시면 이어서 하실 수 있습니다.'));
   cbBody.appendChild(el('div', 'cb3',
-    '이 앱은 거래내역 파일을 저장하지 않습니다. ' + BIZ.주인 + '이 분류하신 항목만 이 브라우저에 남습니다.'));
+    /* ★ 105차 ④. 「항목만」이 거짓이 됐다 — 마지막으로 분석한 날짜도 남는다.
+       앞 문장(파일은 저장하지 않는다)은 그대로 산다 */
+    '이 앱은 거래내역 파일을 저장하지 않습니다. ' + BIZ.주인 +
+    '이 분류하신 항목과 마지막으로 분석한 날짜가 이 브라우저에 남습니다.'));
   /* ★ 64-7. 「다시 올리시면 이어서 하실 수 있습니다」라고 말만 하고
      올릴 곳을 안 줬다 — 「어디서 올려야 할지를 모르겠습니다」.
      그 자리에 단추를 둔다. 가는 곳은 지금의 파일 고르기와 같다 */
