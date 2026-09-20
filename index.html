@@ -1244,6 +1244,18 @@
                font-weight:700;color:var(--gray);white-space:nowrap}
   .reseq{margin-left:8px;font-size:calc(12.5*var(--fu));color:var(--gray);font-weight:400}
   .ressub{font-size:calc(12.5*var(--fu));color:var(--gray);padding:4px 0 0}
+  /* ── 115차 ②-1②-2 · 카드 밖 설명 줄 ──────────────────────────────
+     ★ ②-1. .cmprow 는 카드 안에서도 쓴다. 거기서는 -4px 이 맞다 —
+       윗줄에 붙어야 하는 자리다. 카드 밖은 상관없는 문장 밑에 붙어서 4px 겹쳤다.
+       그래서 카드 밖 쓰임에만 이름을 하나 더 준다. .cmprow 자체는 안 건드린다.
+     ★ ②-2. 이 줄들만 좌우 여백이 0이라 화면 끝에 붙어 있었다.
+       화면의 다른 글줄은 전부 왼 16 ~ 오른 (폭−16)이다. 거기에 맞춘다.
+       ★ #up-result 전체에 여백을 주지 않는다 — 안여백을 가진 카드까지 두 번 밀린다.
+       ★ 넓은 화면에서 가운데로 모으는 규칙은 이미 body{max-width:720px;margin:0 auto}
+         가 하고 있다. 새 규칙을 안 만든다 */
+  .cmprow.cmpfree{margin:8px 0 6px}
+  .ressub, .cmprow.cmpfree, .resnote, .nowpct, .manleft,
+  .dsc{padding-left:16px;padding-right:16px}
   /* 금액 옆 기간 — 줄이 길어지니 이름 아래로 접어 내린다 */
   .dspan{margin-top:2px;font-size:calc(11.5*var(--fu));line-height:1.5;color:var(--gray);font-weight:400}
   .namecut{margin-top:2px;font-size:calc(11*var(--fu));line-height:1.5;color:var(--gray);font-weight:400}
@@ -18463,7 +18475,12 @@ function drawResultInner(months) {
   }
 
   /* ── 카드 아래 ── 순이익을 어떻게 읽어야 하는지 */
-  host.appendChild(el('div', 'ressub', '계좌에서 나간 돈을 모두 뺀 금액'));
+  /* ★ 115차 ②-3. 여기 있던 「계좌에서 나간 돈을 모두 뺀 금액」을 지웠다.
+     되풀이라서가 아니라 틀린 말이라서다 — 앱은 계좌 간 이체와 대표 입출금을
+     사업 지출에서 뺀다. 「계좌에서 나간 돈을 모두」가 아니다.
+     ★ 물음표(WHY.profit)의 첫 줄이 이미 정확하다 —
+       「사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.」 거기는 안 건드린다.
+     ★ 「회계상 계산하는 순이익과는 다를 수 있습니다」 안내도 그대로 둔다 */
   if (d.blocked) {
     var b1 = el('div', 'resnote');
     var l1 = el('div');
@@ -18488,22 +18505,46 @@ function drawResultInner(months) {
   } else {
     if (pd && !pd.blocked) {
       var pc = cmpLine(d.profit, pd.profit, pLab, true);
-      if (pc) host.appendChild(cmpRow(pc, 'profit'));
+      /* ★ 115차 ②-1. 카드 밖에 서는 비교 줄에만 다른 이름을 준다.
+         .cmprow 는 카드 안에서도 쓰는데 거기서는 -4px 이 맞다 (윗줄에 붙어야 한다).
+         카드 밖에서는 상관없는 문장 밑에 붙어서 4px 겹쳤다.
+         ★ cmpRow 함수 자체는 안 고친다 — 고치면 카드 안 쓰임이 같이 움직인다 */
+      if (pc) {
+        var pr = cmpRow(pc, 'profit');
+        pr.classList.add('cmpfree');
+        host.appendChild(pr);
+      }
     }
     if (d.unknownN) {
       var b2 = el('div', 'resnote');
       /* ★ 46차 ④. 예전에는 세 줄이었고 둘째 줄이 첫째 줄과 같은 말이었다 —
          「…흑자입니다」 다음에 「그래서 흑자인 건 확실합니다」. 지운다 */
+      /* ★ 115차 ②-5. 「어떻게 정해도 이번 달은 흑자입니다」를 고친다.
+         확인한 것보다 넓게 말하고 있었다 — 확인한 것은
+         「지금 자료에서 안 정한 거래를 어느 쪽으로 정해도 계좌 순이익의 부호가
+         안 바뀐다」까지다. 이번 달 남은 기간도, 회계상 흑자도 아니다.
+         ★ 「흑자」·「적자」·「이번 달」을 안 쓴다.
+         ★ 「미분류 거래」 대신 「아직 안 정한 거래」로 적는다 —
+           화면 전체가 그 이름으로 통일돼 있다 (49차 이름 통일). 뜻은 같다 */
       b2.appendChild(el('div', null,
-        '어떻게 정해도 이번 달은 ' + (d.lo >= 0 ? '흑자입니다.' : '적자입니다.')));
-      /* 이 자리는 원 단위가 필요 없다 */
-      var l3 = el('div');
-      l3.appendChild(document.createTextNode('금액만 '));
-      l3.appendChild(wonB(d.lo));
-      l3.appendChild(document.createTextNode(' ~ '));
-      l3.appendChild(wonB(d.hi));
-      l3.appendChild(document.createTextNode(' 사이에서 달라집니다.'));
-      b2.appendChild(l3);
+        '지금 자료에서는 아직 안 정한 거래를 어느 쪽으로 정해도 계좌 순이익이 0원보다 ' +
+        (d.lo >= 0 ? '큽니다.' : '작습니다.')));
+      /* ★ 115차 ②-4. 「금액만 … 사이에서 달라집니다」를 갈래를 따져 뺀다.
+         일괄로 지우면 안 된다 — 갈래마다 카드가 말해주는 것이 다르다.
+           uOut>0 · uIn=0   카드에 순이익(=hi)과 errline 의 lo 가 다 있다 → 완전한 중복. 뺀다
+           uOut>0 · uIn>0   errline 이 lo 만 말한다. hi 가 화면 어디에도 없다 → 남긴다
+           uOut=0 · uIn>0   errline 이 없다. 카드에 순이익(=lo)만 있다 → 남긴다
+         ★ 글자는 한 글자도 안 바꾼다. 나오는 조건만 좁힌다 */
+      if (!(d.uOut > 0 && d.uIn === 0)) {
+        /* 이 자리는 원 단위가 필요 없다 */
+        var l3 = el('div');
+        l3.appendChild(document.createTextNode('금액만 '));
+        l3.appendChild(wonB(d.lo));
+        l3.appendChild(document.createTextNode(' ~ '));
+        l3.appendChild(wonB(d.hi));
+        l3.appendChild(document.createTextNode(' 사이에서 달라집니다.'));
+        b2.appendChild(l3);
+      }
       host.appendChild(b2);
     }
   }
