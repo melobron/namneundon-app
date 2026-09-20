@@ -8538,9 +8538,10 @@ var BANK_FULL = {
   'JT친애': 'JT친애저축은행', '예가람': '예가람저축은행'
 };
 /* 받침이 있으면 「은」, 없으면 「는」. 「하나은행은」 / 「새마을금고는」 */
-/* ★ 109차 ②. 단추 이름이 상황마다 달라져 조사도 같이 달라진다.
-   「확인 필요로 분류」는 받침이 없어 「를」, 「나중에 확인」은 받침이 있어 「을」이다.
-   은는() 과 같은 방식이다 — 마지막 글자의 받침만 본다 */
+/* ★ 109차 ②. 단추 이름이 상황마다 달라지면 조사도 같이 달라진다.
+   은는() 과 같은 방식이다 — 마지막 글자의 받침만 본다.
+   ★ 112차 ②㉯ 뒤로 확인 카드의 빼는 단추는 이름이 하나뿐이라(「확인 필요로 분류」)
+     그 자리에서는 안 쓴다. 이름을 끼워 넣는 다음 문장을 위해 남겨 둔다 */
 function 을를(s) {
   var c = String(s || '').charCodeAt(String(s).length - 1) - 0xac00;
   if (!(c >= 0 && c <= 11171)) return '를';
@@ -8953,10 +8954,11 @@ function afterFiles() {
     RESTORING = null;
     ADD_KEEP = null;
     /* 확인 카드를 몇 건 손봤는지도 되살린다 — startFromBanks 가 0 으로 세워 두는 값이다.
-       줄마다 붙은 residual·patched·unsure 는 그대로 왔고, 이것은 그 건수다 */
-    UP.patched = +저장분.patched || 0;
-    UP.unsure  = +저장분.unsure  || 0;
+       ★ 112차 ②. 줄마다 붙은 residual·patched·unsure·byStated·picked 가 그대로 왔으니
+         건수는 그 줄에서 다시 센다. 저장된 건수를 믿고 쓰면 옛 저장본에서 어긋난다.
+         ★ zeroed 만은 줄에서 못 세는 옛 저장본이 있어 저장된 값을 먼저 깔고 간다 */
     UP.zeroed  = +저장분.zeroed  || 0;
+    recountBreaks();
     UP.tileTrade = tradeNow();
     startOnboard();
     showResult();
@@ -9074,8 +9076,12 @@ function autoZeroBreaks() {
       r.amount = 0;
       r.residual = 0;
       r.patched = true;
+      r.stated = null;                         /* 파일에 금액이 없던 줄이다 */
       /* ★ 40차 3번. 안 묻는 것과 안 알리는 것은 다르다.
-         손댔으면 남긴다. 「잔액으로 채워 넣은 것」과는 뜻이 달라 따로 센다 */
+         손댔으면 남긴다. 「잔액으로 채워 넣은 것」과는 뜻이 달라 따로 센다.
+         ★ 112차 ②. 줄에도 표시를 남긴다 — recountBreaks 와 되살린 카드가
+           이 줄을 「금액 확인이 필요한 거래」로 두 번 세지 않게 한다 */
+      r.zeroed = true;
       UP.zeroed = (UP.zeroed || 0) + 1;
       n++;
       return;                                  /* 카드를 안 만든다 */
@@ -9271,37 +9277,131 @@ function ckCardBody(card, r, 본문, 숫자들, 꼬리) {
   if (꼬리) card.appendChild(el('div', 'cknote', 꼬리));
 }
 /* 방향과 금액을 한 덩이로 — 두 카드가 같은 말로 쓴다 */
-function 금액글(v) { return (v > 0 ? '입금 ' : '출금 ') + won(Math.abs(v)) + '원'; }
+/* ★ 112차 ②. 0원에는 방향이 없다. 「출금 0원」은 없는 말이다 */
+function 금액글(v) {
+  return (v === 0 ? '' : (v > 0 ? '입금 ' : '출금 ')) + won(Math.abs(v)) + '원';
+}
+/* ★ 112차 ②㉮. 단추 이름은 「맞음」이 아니라 「반영」이다 —
+   고르는 일이 무엇인지 이름에 적는다. 입금·출금 방향도 실제값으로 함께 적는다 */
+function 반영글(앞, v) {
+  var a = Math.abs(v);
+  return 앞 + ' ' + won(a) + '원' + (a ? (v > 0 ? ' 입금' : ' 출금') : '') + ' 반영';
+}
+/* ★ 112차 ②㉯. 「확인 필요로 분류」는 두 카드에서 같은 이름·같은 뜻·같은 동작이다.
+   이름과 설명을 한 군데 둔다 — 한 곳만 고치면 또 서로 다른 말을 하게 된다 (108차 ⑤) */
+var CK_빼는이름 = '확인 필요로 분류';
+var CK_빼는설명 = '확인 필요로 분류하면 이 거래는 매출·지출 계산에서 제외됩니다.';
+/* 갈래마다 고를 수 있는 것. stated 가 null 이면 파일에 적힌 금액이 아예 없다.
+   ★ 셋(또는 둘)의 결과가 서로 달라야 한다 — applyPick 이 그것을 지킨다 */
+function ckPickList(stated, delta) {
+  var out = [];
+  if (stated !== null && stated !== undefined) {
+    out.push(['stated', 반영글('파일 금액', stated)]);
+    out.push(['gap', 반영글('잔액 차이', delta)]);
+  } else {
+    /* 금액 없음 카드 — 고를 금액이 하나뿐이다. 바로 위에 굵게 선 금액을
+       단추에 되풀이하지 않는다 (390px 에서 두 줄이 된다) */
+    out.push(['gap', '이 금액으로 반영']);
+  }
+  out.push(['unknown', CK_빼는이름]);
+  return out;
+}
+/* 단추를 한 군데서 만든다. 세 화면(올릴 때·되살릴 때·첫 거래)이 같은 모양을 쓴다 */
+function ckBtns(card, picks, cur, onPick) {
+  var btns = el('div', 'ckbtns');
+  picks.forEach(function (p) {
+    var btn = el('button', 'b' + (cur === p[0] ? ' on' : ''), p[1]);
+    btn.type = 'button';
+    btn.addEventListener('click', function () { onPick(p[0]); });
+    btns.appendChild(btn);
+  });
+  card.appendChild(btns);
+  if (picks.some(function (p) { return p[0] === 'unknown'; })) {
+    card.appendChild(el('div', 'cknote', CK_빼는설명));
+  }
+}
 function gapCardBody(card, r, delta) {
   ckCardBody(card, r, '파일에 거래 금액이 없습니다.',
     [['잔액 차이로 추정한 금액', 금액글(delta)]]);
   return delta > 0;
 }
-/* 단추 두 개도 같은 말이어야 한다. 무엇이 일어나는지 단추에 적는다 */
-function gapCardBtns(card, 입, delta, yes, no, yesOn) {
-  var btns = el('div', 'ckbtns');
-  /* ★ 금액은 바로 위에 크게 서 있다. 단추에 또 넣으면 390px 에서 두 줄이 된다 —
-     방향과 금액이 위에 보이므로 단추는 짧게 둔다 (요청서 ②의 단서 그대로) */
-  var y = el('button', 'b' + (yesOn ? ' on' : ''), '이 금액으로 반영');
-  y.type = 'button';
-  y.addEventListener('click', yes);
-  var n = el('button', 'b', '확인 필요로 분류');
-  n.type = 'button';
-  n.addEventListener('click', no);
-  btns.appendChild(y);
-  btns.appendChild(n);
-  card.appendChild(btns);
-  card.appendChild(el('div', 'cknote', '확인 필요로 분류하면 매출·지출 계산에서 제외됩니다.'));
+/* ★ 112차 ②. 어긋남 카드의 몸통. 올릴 때와 되살릴 때가 같은 말을 해야 한다 */
+function diffCardBody(card, r, stated, delta, prev) {
+  ckCardBody(card, r, '거래 금액과 잔액 변화가 일치하지 않습니다.',
+    [['거래내역에 적힌 금액', 금액글(stated)],
+     ['잔액이 움직인 금액', 금액글(delta)]],
+    prev === null ? null
+      : '계좌 잔액은 ' + won(prev) + '원에서 ' + won(r.balance) + '원으로 바뀌었습니다.');
 }
-/* ★ 107차 ②. 잔액으로 채워 넣은 거래를 다시 열어 본다.
+/* ── 112차 ② · 확인 카드가 만드는 네 상태 ──────────────────────────
+   예전에는 「900,000원이 맞음」과 「나중에 확인」이 applyBreaks 의 같은 가지로 떨어져
+   결과가 한 글자도 다르지 않았고, 「나중에 확인」이 화면 설명과 달리
+   그 금액을 매출·지출에 그대로 넣고 있었다.
+   이제 고른 것마다 상태가 다르다. 잔액 사슬(amtOf = amount + residual)은 넷 다 선다.
+
+     고른 것            amount   residual      딱지        계산에
+     잔액 차이 반영     delta    0             추정        들어감
+     (미응답)           delta    0             추정        들어감 · picked=false
+     파일 금액 반영     stated   delta−stated  없음        들어감 (차액만 뺀다)
+     확인 필요로 분류   0        delta         없음        안 들어감 (거래 전체)
+
+   ★ 원본을 잃지 않는다 — 파일에 적혀 있던 금액은 r.stated 에 그대로 둔다.
+     계산에서 뺐다는 이유로 r.balance 를 건드리지 않는다.
+   ★ 「고르셨는가(picked)」와 「금액의 출처(patched)」는 다른 것이다 (㉱).
+     고르셨다고 해서 「추정」 딱지가 「원본」으로 바뀌지 않는다.
+   ★ delta 는 언제나 amtOf(r) 로 되찾을 수 있다 — 네 상태 모두 amount+residual = delta 다.
+     그래서 몇 번을 바꿔 눌러도 값이 겹쳐 쌓이지 않는다 (완료 기준 10). */
+function applyPick(r, pick, delta, picked) {
+  /* 파일에 적혀 있던 금액을 한 번만 잡아 둔다. 그 뒤로는 절대 안 덮는다.
+     ★ 옛 저장본에는 이 칸이 없다. 그때는 residual 이 남아 있던 줄만
+       amount 가 곧 파일 금액이었다 — patched 였던 줄은 알 길이 없으니 없는 것으로 둔다 */
+  if (r.stated === undefined) r.stated = r.patched ? null : r.amount;
+  var st = (r.stated === null || r.stated === undefined) ? null : r.stated;
+  if (pick === 'stated' && st !== null) {
+    r.amount = st;
+    r.residual = delta - st;               /* 설명 안 되는 차액만 따로 뺀다 */
+    r.patched = false; r.byStated = true; r.unsure = false;
+  } else if (pick === 'unknown') {
+    /* ★ ㉯. 거래 전체를 계산에서 뺀다. 잔액이 움직인 만큼이 통째로 차액이 된다 */
+    r.amount = 0;
+    r.residual = delta;
+    r.patched = false; r.byStated = false; r.unsure = true;
+  } else {
+    r.amount = delta;                      /* 잔액이 움직인 금액을 반영한다 */
+    r.residual = 0;
+    r.patched = true; r.byStated = false; r.unsure = false;
+  }
+  r.picked = !!picked;
+}
+/* 잔액이 1원도 안 움직여 아예 안 물은 줄 (autoZeroBreaks). UP.zeroed 로 따로 센다.
+   ★ 112차 ② 이전 저장본에는 r.zeroed 가 없다 — 그 줄은 모양으로 가른다.
+     patched 이면서 금액도 차액도 0인 줄은 이 갈래뿐이다 */
+function zeroRow(r) {
+  return !!r.zeroed || (!!r.patched && !r.amount && !r.residual);
+}
+/* 건수는 줄에서 다시 센다. 예전처럼 ++ 로 쌓으면 다시 고르실 때 두 번 세어진다 */
+function recountBreaks() {
+  var p = 0, u = 0, s = 0, a = 0;
+  ((UP && UP.rows) || []).forEach(function (r) {
+    if (zeroRow(r)) return;
+    if (r.unsure) u++;
+    else if (r.byStated) s++;
+    else if (r.patched) { p++; if (!r.picked) a++; }
+  });
+  UP.patched = p; UP.unsure = u; UP.byStated = s; UP.autoPatched = a;
+}
+/* 확인 카드를 거쳐 온 줄인가 — 되살린 카드에 세울 목록이다 */
+function ckRow(r) { return !zeroRow(r) && (r.patched || r.unsure || r.byStated); }
+/* ★ 107차 ②. 확인 카드를 거쳐 온 거래를 다시 열어 본다.
    한 번 넘어가면 「아닙니다」를 고를 길이 아예 없었다 — 결과 화면의 그 줄은 알림뿐이었다.
-   ★ applyBreaks 가 끝나면 UP.breaks 는 비어 있다. 채운 금액이 잔액과 맞아
-     깨진 거래가 없어지기 때문이다. 그래서 줄에 남은 자국(r.patched)에서 카드를 다시 짓는다.
-   ★ 채울 때 쓴 값이 곧 r.amount 다. 그래서 그 금액을 그대로 보여드리면 된다 —
-     prev 를 되살릴 필요도 없다 */
+   ★ applyBreaks 가 끝나면 UP.breaks 는 비어 있다. 정한 금액이 잔액과 맞아
+     깨진 거래가 없어지기 때문이다. 그래서 줄에 남은 자국(ckRow)에서 카드를 다시 짓는다.
+   ★ 112차 ②. 예전에는 「금액 없음」 카드 한 갈래만 되살아났고 무를 길도 하나뿐이었다.
+     이제 어느 상태에서 와도 셋(또는 둘)을 그대로 다시 고르실 수 있다.
+   ★ b.prev 를 되살릴 필요가 없다 — 잔액이 움직인 금액은 amtOf(r) 가 그대로 돌려준다 */
 function showPatchedCards() {
   if (!UP || !UP.rows) return false;
-  var list = UP.rows.filter(function (r) { return r.patched; });
+  var list = UP.rows.filter(ckRow);
   if (!list.length) return false;
   upShow('up-pick');
   var host = document.getElementById('upbad');
@@ -9311,13 +9411,16 @@ function showPatchedCards() {
      제목은 사장님이 할 일로 적는다 */
   box.appendChild(el('h4', null, '금액 확인이 필요한 거래 ' + won(list.length) + '건'));
   box.appendChild(el('div', 'errb',
-    '파일에 거래 금액이 없어, 거래 전후 잔액 차이로 금액을 추정했습니다.'));
+    '거래내역에서 금액이 빠졌거나 계좌 잔액과 안 맞는 거래입니다. 다시 고르실 수 있습니다.'));
   list.forEach(function (r) {
     var card = el('div', 'ckcard');
-    var 입 = gapCardBody(card, r, r.amount);
-    gapCardBtns(card, 입, r.amount,
-      function () { showResult(); },        /* 이미 반영된 상태다 — 그대로 결과로 */
-      function () { unpatchRow(r); }, true);
+    /* ★ amount + residual 은 어느 상태에서도 잔액이 움직인 금액 그대로다 */
+    var delta = amtOf(r) || 0;
+    var st = (r.stated === null || r.stated === undefined) ? null : r.stated;
+    if (st === null) gapCardBody(card, r, delta);
+    else diffCardBody(card, r, st, delta, null);
+    var cur = r.unsure ? 'unknown' : (r.byStated ? 'stated' : 'gap');
+    ckBtns(card, ckPickList(st, delta), cur, function (pick) { repickRow(r, pick); });
     box.appendChild(card);
   });
   var acts = el('div', 'upacts');
@@ -9330,19 +9433,13 @@ function showPatchedCards() {
   upFocus('upbad');
   return true;
 }
-/* ★ 107차 ②. 채운 것을 도로 무른다. applyBreaks 의 「아닙니다」 가지와 같은 셈이다 —
-   적힌 금액이 없었으니 0 이고, 잔액이 움직인 만큼은 설명 안 되는 차액(residual)이 된다.
+/* 결과 화면까지 온 뒤에 다시 고르신 것을 반영한다.
    ★ 검산은 다시 안 돌려도 된다. amtOf 가 amount + residual 이라 잔액 사슬은 그대로 선다.
    ★ 답은 저장통에도 남긴다 (64차 ⑨) — 같은 파일을 다시 올려도 이 답이 따라온다 */
-function unpatchRow(r) {
-  var delta = r.amount;
-  r.amount = 0;
-  r.residual = delta;
-  r.patched = false;
-  r.unsure = true;
-  UP.patched = Math.max(0, (+UP.patched || 0) - 1);
-  UP.unsure = (+UP.unsure || 0) + 1;
-  try { breakSave(r, 'unknown'); } catch (e) { }
+function repickRow(r, pick) {
+  applyPick(r, pick, amtOf(r) || 0, true);
+  try { breakSave(r, pick); } catch (e) { }
+  recountBreaks();
   UP.__due = null;
   try { savePicks(); } catch (e) { }
   if (!showPatchedCards()) showResult();
@@ -9355,9 +9452,9 @@ function breakKind(b) {
   if (r.amount === null) return 'gap';                    /* 금액 칸이 비었다 */
   return 'diff';                                          /* 금액과 잔액이 어긋난다 */
 }
-function 빼는단추(b) {
-  return breakKind(b) === 'gap' ? '확인 필요로 분류' : '나중에 확인';
-}
+/* ★ 112차 ②㉯. 갈래마다 다른 이름을 부르지 않는다 — 셋 다 「확인 필요로 분류」 하나다.
+   109차 ②가 만든 「그 화면에 있는 단추만 부른다」 규칙은 그대로 산다 */
+function 빼는단추(b) { return CK_빼는이름; }
 /* 몇 건 안 되면 사장님께 물어본다 — 자동으로 고치지 않는다 */
 function showBreakCards() {
   /* ★ 38차 8번. upbad 는 up-pick 안에 있다. 화면을 안 바꾸면
@@ -9383,19 +9480,14 @@ function showBreakCards() {
        화면에 없는 단추 이름을 적고 있었다 (47차 ①).
        갈래를 가르는 잣대는 카드를 그릴 때 쓰는 것과 같은 함수 하나를 쓴다 —
        두 곳이 따로 판단하면 또 어긋난다 (108차 ⑤와 같은 이치) */
+  /* ★ 112차 ②㉳. 무슨 일이 일어나는지는 카드 안(㉯의 한 줄)과 아래 안내에 적는다.
+     여기서 또 되풀이하면 같은 말이 화면에 셋이 된다 */
   var 뺄이름 = [];
   UP.breaks.forEach(function (b) {
     if (b.pick) return;
     var nm = 빼는단추(b);
     if (뺄이름.indexOf(nm) === -1) 뺄이름.push(nm);
   });
-  if (뺄이름.length) {
-    box.appendChild(el('div', 'errn',
-      '고르신 금액은 매출·지출에 넣습니다. ' +
-      뺄이름.map(function (n) { return '「' + n + '」'; }).join('·') +
-      을를(뺄이름[뺄이름.length - 1]) +
-      ' 고르시면 매출·지출에서 빼고 「확인 필요」로 따로 둡니다.'));
-  }
 
   if (UP.breakBack) {
     box.appendChild(el('div', 'errn',
@@ -9404,8 +9496,6 @@ function showBreakCards() {
   UP.breaks.forEach(function (b) {
     if (b.pick) return;                    /* ★ 64-9. 이미 답하신 건은 안 묻는다 */
     var r = b.row, delta = r.balance - b.prev;
-    var day = (+r.at.slice(5, 7)) + '월 ' + (+r.at.slice(8, 10)) + '일 ';
-    var inn = delta > 0;
     var card = el('div', 'ckcard');
     var picks;
 
@@ -9414,39 +9504,23 @@ function showBreakCards() {
          ★ 109차 ③. 머리는 다른 카드와 같다. 판단할 숫자가 없는 갈래라 숫자 줄은 없다 */
       ckCardBody(card, r, '거래 금액이 없고, 앞 잔액도 없어 방향을 정할 수 없습니다.', null,
         '이 거래를 0원으로 두면 ' + won(r.balance) + '원부터 계산합니다.');
-      picks = [['gap', '0원으로 두고 계속'], ['unknown', '나중에 확인']];
+      /* ★ 112차 ②㉯. 빼는 쪽 이름은 세 갈래가 다 같다 */
+      picks = [['gap', '0원으로 두고 계속'], ['unknown', CK_빼는이름]];
     } else if (r.amount === null) {
       /* ① 금액 칸이 비어 있다 — 되살린 카드(showPatchedCards)와 같은 몸통을 쓴다 (108차 ⑤) */
       gapCardBody(card, r, delta);
-      picks = null;                          /* 단추는 아래에서 따로 단다 */
-      gapCardBtns(card, delta > 0, delta,
-        function () { 답하기(b, 'gap'); },
-        function () { 답하기(b, 'unknown'); }, b.pick === 'gap');
+      picks = ckPickList(null, delta);
     } else {
       /* ② 금액은 적혀 있는데 잔액과 다르다 — 금액 없음 카드와 같은 뼈대다 (109차 ③).
-         ★ 사장님이 답할 질문은 「둘 중 어느 금액이 맞는가」 하나다.
-           계산 설명(얼마에서 얼마로)은 본문에서 빼고 작은 글씨로 내린다.
-         ★ 109차 ④. 「모르겠음」은 누른 뒤 무엇이 되는지가 이름에 없었다 —
-           실제로는 매출·지출에서 빠지고 「확인 필요」로 간다 */
-      ckCardBody(card, r, '거래 금액과 잔액 변화가 일치하지 않습니다.',
-        [['거래내역에 적힌 금액', 금액글(r.amount)],
-         ['잔액이 움직인 금액', 금액글(delta)]],
-        '계좌 잔액은 ' + won(b.prev) + '원에서 ' + won(r.balance) + '원으로 바뀌었습니다.');
-      picks = [['gap', won(Math.abs(delta)) + '원이 맞음'],
-               ['stated', won(Math.abs(r.amount)) + '원이 맞음'],
-               ['unknown', '나중에 확인']];
+         ★ 112차 ②㉮. 단추가 셋이고 셋의 결과가 서로 다르다.
+           예전에는 「900,000원이 맞음」과 「나중에 확인」이 한 글자도 다르지 않았다.
+           「맞음」이 아니라 「반영」으로 적는다 — 고르는 일이 무엇인지 이름에 있어야 한다.
+           세 번째는 금액을 판단할 수 없는 분께 필요하고, 앞의 둘과 동작이 다르다 */
+      diffCardBody(card, r, r.amount, delta, b.prev);
+      picks = ckPickList(r.amount, delta);
     }
 
-    if (picks) {
-      var btns = el('div', 'ckbtns');
-      picks.forEach(function (p) {
-        var btn = el('button', 'b' + (b.pick === p[0] ? ' on' : ''), p[1]);
-        btn.type = 'button';
-        btn.addEventListener('click', function () { 답하기(b, p[0]); });
-        btns.appendChild(btn);
-      });
-      card.appendChild(btns);
-    }
+    ckBtns(card, picks, b.pick, function (pick) { 답하기(b, pick); });
     box.appendChild(card);
   });
 
@@ -9460,29 +9534,31 @@ function showBreakCards() {
   var later = el('button', 'b', '나중에 하고 결과 보기');
   later.type = 'button';
   later.addEventListener('click', function () {
-    /* 안 고른 것은 잔액이 움직인 대로 넣는다. 결과 화면에 몇 건인지 남는다 */
-    UP.breaks.forEach(function (b) { if (!b.pick) b.pick = 'gap'; });
+    /* 안 고른 것은 추정 금액으로 임시 반영한다. 결과 화면에 몇 건인지 남는다.
+       ★ 112차 ②㉲. 이것은 「사용자 확인 완료」가 아니다 — b.auto 로 표시해 둔다.
+         applyPick 이 picked=false 로 적고, 저장통(breakSave)에도 안 남긴다.
+         한 번 답한 것으로 남으면 다음에 올릴 때 여쭙지도 않게 된다 */
+    UP.breaks.forEach(function (b) { if (!b.pick) { b.pick = 'gap'; b.auto = true; } });
     applyBreaks();
   });
   acts.appendChild(later);
   box.appendChild(acts);
   /* ★ 107차 ①. 「나중에」가 무엇을 하는지 적는다.
      「계좌 잔액이 움직인 대로 넣어둡니다」만으로는 넣었다는 건지 아닌지가 남는다.
-     실제로는 안 고르신 건에 pick='gap' 을 채워 applyBreaks 로 가므로
-     「확인」을 누르신 것과 글자 그대로 같은 길이다. 그 사실을 그대로 적는다.
-     ★ 한 건이면 금액까지 적는다 — 「이 값이 맞나」를 그 자리에서 판단하실 수 있다.
-       여럿이면 건마다 금액이 다르니 숫자를 안 적는다.
      ★ 「다르면 나중에 고치실 수 있습니다」는 107차 ②가 그 길을 만들어서 하는 말이다.
        ②가 없으면 못 지킬 약속이라 같이 넣었다 */
-  var 남은들 = UP.breaks.filter(function (b) { return !b.pick; });
-  var 한건 = 남은들.length === 1
-    ? Math.abs(남은들[0].row.balance - 남은들[0].prev) : null;
+  /* ★ 112차 ②㉳. 세 줄로 나눈다. 한 줄에 다 붙이면 무엇이 무엇에 대한 말인지 안 읽힌다.
+     ★ 109차의 「지금 그 금액을 고르신 것과 결과가 같습니다」는 뺀다 —
+       금액은 같아도 확인 여부가 다르다. 같다고 적으면 그 차이를 지운다 (㉲).
+     ★ 추정 금액은 카드 안에 이미 굵게 서 있다. 여기서 되풀이하지 않는다.
+     ★ 셋째 줄은 그 화면에 「확인 필요로 분류」 단추가 있을 때만 적는다 (109차 ②의 규칙) */
   if (left > 0) {
     box.appendChild(el('div', 'errn',
-      won(left) + '건이 남았습니다. 나중에 하셔도 계좌 잔액이 움직인 만큼' +
-      (한건 !== null ? '(' + won(한건) + '원)' : '') +
-      '으로 넣어둡니다. 지금 그 금액을 고르신 것과 결과가 같습니다. ' +
-      '다르면 나중에 고치실 수 있습니다.'));
+      '확인할 거래가 ' + won(left) + '건 남았습니다. 나중에 다시 확인할 수 있습니다.'));
+    box.appendChild(el('div', 'errn',
+      '선택하지 않은 거래는 추정 금액으로 임시 반영됩니다.'));
+    if (뺄이름.length) box.appendChild(el('div', 'errn',
+      '확인 필요로 분류한 거래는 매출·지출 계산에서 제외됩니다.'));
   }
   host.appendChild(box);
   /* ★ 106차 ③. 38차 ⑧이 화면은 바꿔놨지만, 카드는 은행 안내 아래에 그려졌다.
@@ -9491,20 +9567,12 @@ function showBreakCards() {
 }
 
 function applyBreaks() {
+  /* ★ 112차 ②. 고른 것마다 상태가 다르다. 셈은 applyPick 한 군데에 있다 —
+     예전에는 여기서 'stated' 와 'unknown' 이 같은 가지로 떨어져 결과가 똑같았다.
+     ★ 건수는 ++ 로 쌓지 않고 나중에 recountBreaks 가 줄에서 다시 센다 (완료 기준 10) */
   UP.breaks.forEach(function (b) {
     var r = b.row, delta = r.balance - b.prev;
-    if (b.pick === 'gap') {
-      r.amount = delta;                       /* 잔액이 맞다 — 금액을 채운다 */
-      r.residual = 0;
-      r.patched = true;
-      UP.patched++;
-    } else {
-      var stated = (r.amount === null ? 0 : r.amount);
-      r.amount = stated;                      /* 적힌 금액을 그대로 둔다 */
-      r.residual = delta - stated;            /* 설명 안 되는 차액은 따로 뺀다 */
-      r.unsure = true;
-      UP.unsure++;
-    }
+    applyPick(r, b.pick, delta, !b.auto);
   });
   /* ★ 39차 1번. 계좌별로 따로 검산하고 다시 합친다.
      예전에는 두 계좌가 섞인 UP.rows 를 통째로 다시 검산했다.
@@ -9532,6 +9600,8 @@ function applyBreaks() {
     UP.rows = res.rows; UP.opening = res.opening; UP.closing = res.closing;
     UP.breaks = res.breaks;
   }
+  /* ★ 112차 ②. 건수는 다시 세운 줄에서 다시 센다 — 몇 번을 고쳐 고르셔도 겹쳐 쌓이지 않는다 */
+  recountBreaks();
   if (UP.breaks.length) { showBreaks(); return; }   /* 그래도 안 맞으면 다시 멈춘다 */
   document.getElementById('upbad').innerHTML = '';
   afterFiles();
@@ -9632,7 +9702,9 @@ function dataSig() {
   return (UP.banks || []).length + '|' + n + '|' + (UP.store || '') + '|' +
          (UP.owner || '') + '|' + (UP.trade || '') + '|' +
          (UP.opening || 0) + '|' + (UP.closing || 0) + '|' +
-         (UP.patched || 0) + '|' + (UP.unsure || 0) + '|' + (UP.zeroed || 0);
+         (UP.patched || 0) + '|' + (UP.unsure || 0) + '|' + (UP.zeroed || 0) + '|' +
+         /* ★ 112차 ②. 다시 고르시면 이 값이 바뀐다 — 안 넣으면 지문이 같아 저장을 건너뛴다 */
+         (UP.byStated || 0) + '|' + (UP.autoPatched || 0);
 }
 /* 넣을 값을 하나하나 손으로 고른다 — 객체를 통째로 복사하면
    나중에 누가 UP 에 무엇을 붙여도 여기로 따라 들어온다 (fc_use 와 같은 방식) */
@@ -9656,6 +9728,13 @@ function dataPayload() {
         if (r.residual) o.residual = r.residual;
         if (r.patched) o.patched = true;
         if (r.unsure) o.unsure = true;
+        /* ★ 112차 ②. 파일에 적혀 있던 금액은 어느 선택에서도 안 잃는다 —
+           화면에 「파일 금액 900,000원」을 다시 보여드려야 하기 때문이다.
+           ★ stated 는 null 도 뜻이 있다 (파일에 금액이 없었다). 그래서 키가 있으면 다 남긴다 */
+        if (r.stated !== undefined) o.stated = r.stated;
+        if (r.byStated) o.byStated = true;
+        if (r.zeroed) o.zeroed = true;
+        if (r.picked) o.picked = true;
         return o;
       })
     };
@@ -11644,6 +11723,10 @@ function drawRawPeek(card, raws, redraw, anchor) {
     row.appendChild(when);
     var rnm = el('span', 'rawnm', r.payee);
     if (r.patched) rnm.appendChild(el('span', 'estmark', '추정'));   /* ★ 108차 ④ */
+    /* ★ 112차 ②㉰. 이 자리는 한 줄이라 긴 말을 못 넣는다. 짧은 딱지로 갈라만 둔다 —
+       무엇이 정해졌고 무엇이 남았는지는 그날 펼친 목록(dayRow)에 다 적는다 */
+    else if (r.byStated) rnm.appendChild(el('span', 'estmark', '차액 확인'));
+    else if (r.unsure) rnm.appendChild(el('span', 'estmark', '계산 제외'));
     row.appendChild(rnm);
     row.appendChild(el('span', 'rawamt num', won(r.amount)));
     box.appendChild(row);
@@ -17489,19 +17572,37 @@ function drawResultInner(months) {
        잔액 차이로 뽑은 값 그대로다 — 그 사실을 이름에 남긴다 */
     lines.push('잔액 차이로 금액을 추정한 거래 ' + UP.patched + '건');
   }
+  /* ★ 112차 ②㉲. 미응답은 「사용자 확인 완료」가 아니다. 다른 말로 적는다 */
+  if (UP.autoPatched) {
+    lines.push('그 가운데 ' + UP.autoPatched + '건은 선택하지 않아 임시로 반영한 것입니다');
+  }
   /* ★ 107차 ②. 알림으로만 두지 않는다 — 눌러서 그 카드로 돌아갈 수 있어야 한다.
      한 번 넘어가면 「아닙니다」를 고를 길이 아예 없었다.
      ★ 예시 화면에서는 안 붙인다. 남의 가게 자료를 고치는 일이 된다 */
-  var 되돌 = (UP.patched && !UP.demo) ? el('button', 'oslink', '다시 보기') : null;
+  /* ★ 112차 ②. 어느 상태에서 와도 그 카드로 돌아갈 수 있어야 한다 —
+     예전에는 patched 한 갈래만 길이 있었다 */
+  var ck있 = (UP.rows || []).some(ckRow);
+  var 되돌 = (ck있 && !UP.demo) ? el('button', 'oslink', '다시 보기') : null;
   if (되돌) {
     되돌.type = 'button';
     되돌.addEventListener('click', function () { showPatchedCards(); });
   }
+  /* ★ 112차 ②㉰. 「파일 금액 반영」은 거래 금액을 고르신 것이다.
+     「거래 금액도 모르는 것」과 한 덩어리로 세지 않는다 — 남은 것은 잔액 차이 하나다 */
+  if (UP.byStated) {
+    lines.push('파일에 적힌 금액으로 반영한 거래 ' + UP.byStated +
+               '건 · 잔액 차이는 확인 필요로 따로 두었습니다');
+  }
+  /* ★ 112차 ②㉯. 거래 전체가 매출·지출에서 빠진 것들이다. 미응답과 다른 말로 적는다 */
+  if (UP.unsure) {
+    lines.push('확인 필요로 분류해 매출·지출 계산에서 뺀 거래 ' + UP.unsure + '건');
+  }
+  /* ★ 112차 ②. 이 줄은 맨 아래로 내린다 — 안 물은 줄이라 「다시 보기」에 안 뜬다.
+     위에 두면 그 단추가 이 줄에 붙어 「눌러도 그 거래가 없다」가 된다 */
   if (UP.zeroed) {
     lines.push('금액 칸이 비어 있지만 잔액도 안 움직인 거래 ' + won(UP.zeroed) +
                '건은 0원으로 두었습니다');
   }
-  if (UP.unsure) lines.push('확인이 안 된 거래 ' + UP.unsure + '건');
   lines.forEach(function (t, i) {
     var row = el('div', null, t);
     if (i === 0 && 되돌) { row.appendChild(document.createTextNode(' ')); row.appendChild(되돌); }
@@ -17532,7 +17633,14 @@ function setWarnOk(m, id, on) {
 function collectChecks(d, months) {
   var m = UP.month, cards = [];
   ratioWarnings(d, m, months).forEach(function (w) { cards.push({ kind: 'ratio', w: w }); });
-  d.rows.forEach(function (r) { if (r.unsure) cards.push({ kind: 'unsure', row: r }); });
+  /* ★ 112차 ②㉰. 두 갈래를 가른다.
+       unsure — 거래 금액을 모른다. 거래 전체가 매출·지출에서 빠졌다
+       resid  — 파일 금액으로 반영했고, 잔액 차이만 아직 설명이 안 됐다
+     한 덩어리로 세면 「거래 금액도 모르는 것」과 같아져 버린다 */
+  d.rows.forEach(function (r) {
+    if (r.unsure) cards.push({ kind: 'unsure', row: r });
+    else if (r.byStated) cards.push({ kind: 'resid', row: r });
+  });
   newPayees(d, m, months).forEach(function (p) { cards.push({ kind: 'new', p: p }); });
   grownPayees(d, m, months).forEach(function (p) { cards.push({ kind: 'grow', p: p }); });
   return cards;
@@ -17624,12 +17732,25 @@ function drawChecks(host, d, months, cards) {
       id = c.w.id; title = c.w.title; body = c.w.body; cat = c.w.cat;
       var top = cat ? topPayee(d, cat) : null;
       if (top) body += '  가장 큰 거래처: ' + showName(top.name) + ' ' + won(Math.abs(top.sum)) + '원';
-    } else if (c.kind === 'unsure') {
-      id = 'unsure:' + c.row.excelRow;
-      title = (+c.row.at.slice(5, 7)) + '월 ' + (+c.row.at.slice(8, 10)) + '일 ' +
-              showName(c.row.payee) + ' 거래가 계좌 잔액과 맞지 않습니다.';
-      body = '적힌 금액 ' + won(c.row.amount) + '원 · 설명 안 되는 차액 ' +
-             won(Math.abs(c.row.residual)) + '원은 매출·지출에 넣지 않았습니다.';
+    } else if (c.kind === 'unsure' || c.kind === 'resid') {
+      /* ★ 112차 ②㉰. 두 갈래가 서로 다른 말을 해야 한다 */
+      id = checkId(c);
+      var 날 = (+c.row.at.slice(5, 7)) + '월 ' + (+c.row.at.slice(8, 10)) + '일 ' +
+               showName(c.row.payee);
+      var 파일금액 = (c.row.stated === null || c.row.stated === undefined)
+        ? null : c.row.stated;
+      if (c.kind === 'unsure') {
+        title = 날 + ' 거래를 확인 필요로 분류하셨습니다.';
+        body = (파일금액 === null
+          ? '파일에 거래 금액이 없습니다. '
+          : '파일 금액 ' + won(Math.abs(파일금액)) + '원. ') +
+          '이 거래는 매출·지출 계산에서 제외했습니다.';
+      } else {
+        title = 날 + ' 거래는 파일에 적힌 금액으로 반영했습니다.';
+        body = '파일 금액 ' + won(Math.abs(파일금액 === null ? c.row.amount : 파일금액)) +
+               '원 · 잔액 차이 ' + won(Math.abs(c.row.residual)) +
+               '원은 아직 설명되지 않았습니다. 매출·지출에는 넣지 않았습니다.';
+      }
     } else if (c.kind === 'new') {
       id = 'new:' + c.p.name;
       /* ★ 44차 2-5. 바로 앞에서 찍었는데도 「내가 안 찍었나?」가 된다.
@@ -17762,10 +17883,11 @@ function drawChecks(host, d, months, cards) {
         openFix(fixDraw);
       });
       btns.appendChild(see);
-    } else if (c.kind === 'unsure') {
+    } else if (c.kind === 'unsure' || c.kind === 'resid') {
       fixDraw = function () {
         panel.appendChild(el('div', 'cka',
           '거래내역 ' + c.row.excelRow + '행 · ' + c.row.at + ' · ' + showName(c.row.payee)));
+        /* ★ amount + residual 은 이 거래가 잔액을 움직인 금액이다 (네 상태 모두) */
         panel.appendChild(el('div', 'cka',
           '계좌 잔액은 ' + won(c.row.balance - (c.row.amount + c.row.residual)) +
           '원에서 ' + won(c.row.balance) + '원이 되었습니다. ' +
@@ -17779,6 +17901,14 @@ function drawChecks(host, d, months, cards) {
         openFix(fixDraw);
       });
       btns.appendChild(see2);
+      /* ★ 112차 ②. 그 자리에서 다시 고르실 수 있어야 한다 — 되살린 카드로 간다.
+         ★ 예시 화면에서는 안 붙인다 (107차 ②와 같은 규칙) */
+      if (!UP.demo) {
+        var again2 = el('button', 'b', '금액 다시 고르기');
+        again2.type = 'button';
+        again2.addEventListener('click', function () { showPatchedCards(); });
+        btns.appendChild(again2);
+      }
     }
     card.appendChild(btns);
     card.appendChild(panel);
@@ -17799,6 +17929,7 @@ function autoTag(g) {
 function checkId(c) {
   if (c.kind === 'ratio')  return c.w.id;
   if (c.kind === 'unsure') return 'unsure:' + c.row.excelRow;
+  if (c.kind === 'resid')  return 'resid:' + c.row.excelRow;   /* ★ 112차 ②㉰ */
   if (c.kind === 'new')    return 'new:' + c.p.name;
   return 'grow:' + c.p.name;
 }
@@ -18788,9 +18919,19 @@ function dayRow(box, r, 계좌여럿, 왜) {
   var nmt = el('div', 'dcnmt', showName(r.payee));
   /* ★ 108차 ④. 반영한 뒤에도 그 줄이 추정값이라는 표시를 남긴다.
      금액은 안 가린다 — 이름 옆에 작은 딱지 하나다 (✎ 를 쓰는 방식 그대로) */
+  /* ★ 112차 ②㉱. 딱지는 잔액 차이로 뽑은 금액에만 붙는다.
+     파일 금액을 고르신 줄·계산에서 뺀 줄은 추정이 아니다 — 아래 밑줄로 적는다 */
   if (r.patched) nmt.appendChild(el('span', 'estmark', '추정'));
   nm.appendChild(nmt);
   var 밑 = [];
+  /* ★ 112차 ②㉰. 「미확인」이라 부르지 않는다. 무엇이 정해졌고 무엇이 남았는지 적는다 */
+  if (r.byStated) {
+    밑.push('파일 금액 반영 · 잔액 차이 ' + won(Math.abs(r.residual)) + '원 확인 필요');
+  } else if (r.unsure) {
+    밑.push((r.stated === null || r.stated === undefined
+      ? '파일에 금액 없음' : '파일 금액 ' + won(Math.abs(r.stated)) + '원') +
+      ' · 확인 필요로 분류 · 매출·지출에서 제외');
+  }
   var mo = String(r.memo == null ? '' : r.memo).trim();
   if (mo && mo !== String(r.payee).trim() && mo !== showName(r.payee)) 밑.push(mo);
   if (계좌여럿) 밑.push(bankName(accOf(r)));
