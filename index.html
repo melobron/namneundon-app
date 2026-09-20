@@ -7200,6 +7200,20 @@ function drawStart() {
       b.appendChild(el('span', 'gssub', k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨'));
       b.addEventListener('click', function () { goSavedStore(k); });
       line.appendChild(b);
+      /* ★ 115차. [지우기]를 「마지막 분석」 칸보다 먼저 붙인다.
+         .gsrun 이 flex:1 0 100% 라 한 줄을 통째로 차지한다 —
+         그 뒤에 붙이면 지우기가 셋째 줄 맨 왼쪽으로 밀렸다
+         (서래마을 실측: 이어서 보기 top 462 · 마지막 분석 top 542 · 지우기 top 622 left 30).
+         ★ 64-1 이 적어둔 뜻(「이어서 보기 + 지우기」 한 줄, 그 아래 마지막 분석 칸)은
+           처음부터 이것이었다. CSS 는 맞았고 붙이는 차례가 반대였다.
+         ★ CSS 에 order 를 주는 길도 있지만, 붙이는 차례를 보이는 차례와 맞추는 쪽이
+           나중에 읽기 쉽다 — 눈에 보이는 순서와 코드 순서가 같아진다 */
+      var del = el('button', 'oslink', '지우기');
+      del.type = 'button';
+      var ask = el('div', 'saveask');
+      ask.hidden = true;
+      del.addEventListener('click', function () { ask.hidden = !ask.hidden; });
+      line.appendChild(del);
       /* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
          ★ 윗줄은 상태고, 아랫줄과 단추는 고르실 수 있는 행동이다. 요구가 아니다 —
            그래서 상태와 행동을 한 문장에 섞지 않는다.
@@ -7231,14 +7245,8 @@ function drawStart() {
           try { openAddFiles(); } catch (e) { }
         });
         run.appendChild(추가);
-        line.appendChild(run);
+        line.appendChild(run);        /* ★ 115차. 지우기 뒤에 붙는다 — 아랫줄로 간다 */
       }
-      var del = el('button', 'oslink', '지우기');
-      del.type = 'button';
-      var ask = el('div', 'saveask');
-      ask.hidden = true;
-      del.addEventListener('click', function () { ask.hidden = !ask.hidden; });
-      line.appendChild(del);
       back.appendChild(line);
       /* ★ 실수로 146곳짜리를 날리면 되돌릴 길이 없다. 먼저 묻는다 */
       ask.appendChild(el('div', 'addq',
