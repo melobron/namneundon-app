@@ -697,6 +697,22 @@
      ★ 처음에는 --now 계열(옅은 파랑)로 두었는데, 바로 위 안심 고지가 같은 파랑이라
        두 상자가 한 덩어리로 보였다. 고지는 파랑 그대로 두고 이쪽을 흰 상자로 돌린다 —
        askName 의 「전에 쓰시던 매장」 단추(.osb)와 같은 모양이다. 새 색은 안 만든다 (49차) */
+  /* ★ 112차 ③ · 고르신 매장 머리. 새 색·새 모양을 만들지 않는다 —
+     .gostore 와 같은 흰 상자에 .tradehead·.tradesub 와 같은 글자 단이다 (49차).
+     ★ 이름과 [매장 변경]이 한 줄이고, 좁으면 단추가 아래로 내려간다.
+       두 줄 안내는 그 아래다. 파일 고르기는 이 상자 바로 다음에 온다 */
+  .upstore{margin-top:10px;margin-bottom:12px;padding:12px 14px;
+           border:1px solid var(--edge);background:var(--paper);border-radius:var(--rad)}
+  .upstorehead{display:flex;align-items:center;justify-content:space-between;
+               gap:10px;flex-wrap:wrap}
+  .upstorename{font-size:calc(15.5*var(--fu));font-weight:800;line-height:1.5;
+               min-width:0;overflow-wrap:anywhere}
+  .upstorechg{flex:none;padding:5px 11px;border:1px solid var(--edge);
+              background:var(--panel);border-radius:var(--rad-pill);
+              font-family:inherit;font-size:calc(12*var(--fu));font-weight:700;
+              color:var(--ink);cursor:pointer}
+  .upstorechg:hover{border-color:var(--ink)}
+  .upstoresub{margin-top:5px;font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.6}
   .gostores{display:flex;flex-direction:column;gap:8px;margin-top:10px;margin-bottom:22px}
   /* ★ 64-1. askName 의 .osline 과 같은 모양이다 */
   /* ★ 105차 ④. 「마지막 분석」 칸이 아래로 붙는다. 가로 한 줄이 아니라
@@ -6831,6 +6847,9 @@ function showDemoBehind(on) {
 function drawStart() {
   var host = document.getElementById('welcome');
   if (!host) return;
+  /* ★ 112차 ③. 매장 고르는 화면으로 돌아왔다 — 붙들어 뒀던 매장을 놓는다.
+     안 놓으면 다음에 올려보기를 열 때 지난 매장 머리가 그대로 서 있다 */
+  PICKED_STORE = null;
   host.innerHTML = '';
   host.hidden = false;
   showDemoBehind(false);          /* 예시 숫자가 한 글자도 안 보이게 */
@@ -6995,7 +7014,11 @@ function goSavedStore(k) {
   leaveStart();
   /* ★ 91차 ②. 거래내역이 이 기기에 남아 있으면 파일을 다시 안 올려도 된다.
      「사라졌습니다」는 정말 사라졌을 때만 할 말이다 — 남아 있으면 바로 보여드린다 */
-  if (openSavedData(k.name)) return;
+  if (openSavedData(k.name)) { PICKED_STORE = null; return; }
+  /* ★ 112차 ③. 여기서부터는 파일을 올려야 이어진다.
+     고르신 매장을 붙들어 둔다 — drawUpMine 이 같은 목록을 또 그리지 않고
+     이 매장 이름·안내·파일 고르기를 맨 위에 세운다 */
+  PICKED_STORE = k;
   /* ★ 106차 ①. 저장된 거래내역이 없으면 그 사실을 「보이는 화면」에 적는다.
      drawComeBack 은 #demotop(시작 화면)에 쓰는데 바로 다음 줄에서 업로드 화면으로 넘어간다 —
      안내가 감춰진 자리에 남고, 사장님께는 아무 일도 안 일어난 것으로 보였다.
@@ -7005,19 +7028,11 @@ function goSavedStore(k) {
        잃은 것은 거래내역 파일 하나뿐이고, 그 사실만 적는다 (91차 ②의 원칙 그대로).
      ★ 이 매장으로 업종·이름이 이미 세팅돼 있다. 파일만 올리면 바로 이어진다.
      ★ 글자는 DOM 으로 붙인다 — 매장 이름이 그대로 innerHTML 에 들어가지 않게 한다 */
+  /* ★ 112차 ③. 안내는 #upstat(파일 고르기 아래)이 아니라 맨 위 매장 머리에 선다.
+     upstat 은 폰에서 화면 하나를 내려야 보이는 자리였다 (106차 ①이 여기로 옮겼지만
+     그때도 같은 목록이 위에 그대로 남아 있어 「안 눌린다」가 남았다) */
   openUpPanel();
   openPick();
-  var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
-  var st = document.getElementById('upstat');
-  if (st) {
-    st.innerHTML = '';
-    st.appendChild(el('b', null, k.n
-      ? '「' + 이름 + '」에 정해두신 거래처 ' + won(k.n) + '곳은 그대로 있습니다.'
-      : '「' + 이름 + '」에 정해두신 것은 그대로 있습니다.'));
-    st.appendChild(document.createElement('br'));
-    st.appendChild(document.createTextNode(
-      '거래내역 파일만 다시 올려주시면 이어서 보실 수 있습니다. 거래처는 다시 안 여쭙습니다.'));
-  }
   drawA2HS();
   loadSheetJS().catch(function (e) { upStat('<b>' + e.message + '</b>'); });
 }
@@ -7106,6 +7121,8 @@ function drawInstallTip() {
    따로 두면 예시 대시보드 위에 얹히는 그 모양이 되살아난다 */
 
 function openTrade() {
+  /* ★ 112차 ③. 업종부터 고르는 길은 「이 매장을 이어서」가 아니다 */
+  PICKED_STORE = null;
   document.getElementById('uptitle').textContent = '어떤 곳인가요';
   var host = document.getElementById('up-trade');
   host.innerHTML = '';
@@ -7168,10 +7185,56 @@ function tradeNotice(host) {
    ★ 여기에는 「지우기」를 안 붙인다. 지우는 자리는 시작 화면과 매장 이름 화면 둘로 충분하고,
      파일을 올리기 직전에 지우기 단추가 옆에 있으면 잘못 누르실 수 있다.
    ★ 저장된 매장이 없으면 이 구역은 아예 안 생긴다 (처음 오신 분께는 없다) */
+/* ── 112차 ③ · 매장을 고르면 그 매장에 집중한다 ──────────────────────
+   「이어서 보기」를 눌러도 같은 매장 목록이 또 그려졌다. 안내는 그 아래
+   955px 지점(폰 높이 844px)이라 화면 밖이었고, 그래서 「아무 일도 안 일어났다」로 보였다.
+   요한이 매장 다섯에서 직접 겪으셨다.
+   ★ 자동 스크롤로 풀지 않는다 — 왜 화면이 움직였는지 알기 어렵다.
+     보여야 할 것을 맨 위로 올리고, 안 볼 것(같은 목록)을 치운다.
+   ★ 목록이 사라지므로 매장이 다섯이든 스물이든 첫 화면 높이가 같다 */
+var PICKED_STORE = null;
+var UPDROP_HOME = null;        /* #updrop 의 제자리. 처음 한 번만 재 둔다 */
+/* 파일 고르는 자리를 고른 매장 바로 아래로 올린다. 안 고르셨으면 제자리로 되돌린다.
+   ★ 자바스크립트는 id 로만 찾으니 차례가 바뀌어도 아무 데도 안 깨진다 (49차·106차 ③) */
+function updropAfter(afterEl) {
+  var drop = document.getElementById('updrop');
+  if (!drop || !drop.parentNode) return;
+  if (!UPDROP_HOME) UPDROP_HOME = { parent: drop.parentNode, next: drop.nextSibling };
+  var 부모 = afterEl ? afterEl.parentNode : UPDROP_HOME.parent;
+  var 앞 = afterEl ? afterEl.nextSibling : UPDROP_HOME.next;
+  if (!부모 || drop.nextSibling === 앞 && drop.parentNode === 부모) return;
+  부모.insertBefore(drop, 앞);
+}
 function drawUpMine() {
   var host = document.getElementById('up-mine');
   if (!host) return;
   host.innerHTML = '';
+  /* 고르신 매장이 있으면 그 매장 이름과 안내만 맨 위에 둔다. 목록은 안 그린다 */
+  if (PICKED_STORE) {
+    var k = PICKED_STORE;
+    var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+    var sbox = el('div', 'upstore');
+    var shead = el('div', 'upstorehead');
+    shead.appendChild(el('div', 'upstorename', 이름));
+    var chg = el('button', 'upstorechg', '매장 변경');
+    chg.type = 'button';
+    chg.addEventListener('click', function () {
+      useScreen('매장 변경');
+      PICKED_STORE = null;
+      closeUpPanel();
+      drawStart();                 /* 매장 고르는 화면으로 돌아간다 */
+    });
+    shead.appendChild(chg);
+    sbox.appendChild(shead);
+    sbox.appendChild(el('div', 'upstoresub', k.n
+      ? '저장된 거래처 분류 ' + won(k.n) + '곳을 이어서 사용합니다.'
+      : '이 매장에 정해두신 것을 이어서 사용합니다.'));
+    sbox.appendChild(el('div', 'upstoresub', '분석할 거래내역 파일을 올려주세요.'));
+    host.appendChild(sbox);
+    updropAfter(host);             /* 파일 고르는 자리를 바로 아래로 */
+    return;
+  }
+  updropAfter(null);               /* 제자리로 */
   var mine = [];
   try { mine = savedStores(); } catch (e) { return; }
   if (!mine.length) return;
@@ -9745,18 +9808,35 @@ function dataPayload() {
            patched: +UP.patched || 0, unsure: +UP.unsure || 0, zeroed: +UP.zeroed || 0,
            banks: banks };
 }
+/* ★ 112차 ③. 저장이 어떻게 됐는지 그 자리에서 알려드리려면 결과를 들고 있어야 한다.
+     'ok'   남겼다
+     'none' 못 남겼고, 이 매장에 예전 저장본도 없다
+     'kept' 못 남겼지만 예전 저장본은 그대로 있다 */
+var SAVE_STATE = 'ok';
+/* ★ 112차 ③. 예전에는 새 저장이 실패하면 lsDel 로 낡은 것까지 지웠다.
+   까닭은 「보태기 전의 숫자가 조용히 살아나지 않게」였는데,
+   그 대가로 잘 저장돼 있던 매장 하나가 통째로 없어졌다 — 있던 것마저 잃는다.
+   이제는 안 지우고, 대신 「이전 저장본은 유지됩니다」라고 화면에 적는다.
+   조용히 살아나는 것이 문제였으므로, 조용하지 않게 하는 쪽으로 푼다 */
+function saveFail() {
+  var 예전있 = false;
+  try { 예전있 = !!lsGet(dataKey()); } catch (e) { 예전있 = false; }
+  SAVE_STATE = 예전있 ? 'kept' : 'none';
+  DATA_SIG = null;                 /* 다음에 또 해본다 — 자리가 나면 남을 수도 있다 */
+  return false;
+}
 function saveData() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
   var sig = dataSig();
   if (sig === DATA_SIG) return true;          /* 안 바뀌었다 */
   var body;
-  try { body = JSON.stringify(dataPayload()); } catch (e) { return false; }
-  /* 통이 감당할 크기를 넘으면 안 남긴다. 낡은 것도 같이 지운다 —
-     그것을 두면 다음에 열 때 「보태기 전의 숫자」가 조용히 살아난다 */
-  if (body.length > DATA_CAP) { lsDel(dataKey()); return false; }
-  if (!lsSet(dataKey(), body)) { lsDel(dataKey()); return false; }
+  try { body = JSON.stringify(dataPayload()); } catch (e) { return saveFail(); }
+  /* 통이 감당할 크기를 넘으면 안 남긴다 */
+  if (body.length > DATA_CAP) return saveFail();
+  if (!lsSet(dataKey(), body)) return saveFail();
   lsSet(LAST_KEY, String(UP.store || '(기본)'));
   DATA_SIG = sig;
+  SAVE_STATE = 'ok';
   return true;
 }
 /* 읽기 — 모양이 아니면 아예 없는 것으로 친다 */
@@ -9901,8 +9981,12 @@ function savePicks() {
   body.목표일 = due;
   body.순번 = seq;
   body.v = 1;
-  return lsSet(storeKey(), JSON.stringify(body));
+  /* ★ 112차 ③. 거래처 분류가 남았는지는 거래내역이 남았는지와 다른 일이다.
+     「분류는 저장됐습니다」를 근거 없이 붙이지 않으려면 이 결과를 들고 있어야 한다 */
+  PICK_SAVED = lsSet(storeKey(), JSON.stringify(body));
+  return PICK_SAVED;
 }
+var PICK_SAVED = true;
 
 
 /* ── 사용 기록 ──────────────────────────────────────────────
@@ -17609,6 +17693,32 @@ function drawResultInner(months) {
     foot.appendChild(row);
   });
   if (lines.length) host.appendChild(foot);
+  /* ★ 112차 ③. 저장이 안 됐으면 그 자리에서 알린다 — 다음에 열었을 때
+     「왜 아무것도 없지」가 되지 않게 한다.
+     ★ 「현재 분석은 계속 볼 수 있다」는 참이다. 올려둔 것은 이 창이 살아 있는 동안
+       메모리에 그대로 있고, 이 화면도 그 값으로 그려져 있다. 창을 닫으면 사라진다.
+     ★ 「분류는 저장됐습니다」를 무조건 붙이지 않는다 — 거래처 분류가 남았는지는
+       PICK_SAVED 로 따로 확인하고, 그것도 실패했으면 그 사실을 적는다.
+     ★ 「매장 몇 개까지 저장됩니다」 같은 약속은 안 적는다. 브라우저마다 다르다 */
+  if (!UP.demo && SAVE_STATE !== 'ok') {
+    var sv = el('div', 'upstat');
+    sv.style.marginTop = '10px';
+    if (SAVE_STATE === 'kept') {
+      sv.appendChild(el('b', null, '새 거래내역을 저장하지 못했습니다.'));
+      sv.appendChild(document.createElement('br'));
+      sv.appendChild(document.createTextNode('이전 저장본은 유지됩니다.'));
+    } else {
+      sv.appendChild(el('b', null, '거래내역을 이 브라우저에 저장하지 못했습니다.'));
+      sv.appendChild(document.createElement('br'));
+      sv.appendChild(document.createTextNode(
+        '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 올려야 합니다.'));
+    }
+    if (!PICK_SAVED) {
+      sv.appendChild(document.createElement('br'));
+      sv.appendChild(document.createTextNode('정하신 거래처 분류도 남기지 못했습니다.'));
+    }
+    host.appendChild(sv);
+  }
 
   if (installCase()) {
     var ib = el('button', 'upbtn instlink', '폰 화면에 아이콘 만들기');
