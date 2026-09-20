@@ -1167,6 +1167,15 @@
   .fckey{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;
          font-size:calc(12*var(--fu));color:var(--gray)}
   .fckey b{font-weight:700;color:var(--ink)}
+  /* ★ 114차 보정 ④. 고른 날의 두 시점. 잔액이 같아 마커가 하나로 보여도
+     여기서는 둘이 따로 선다 */
+  .fcdet{margin-top:10px;padding:10px 12px;background:var(--panel);
+         border-radius:var(--rad);font-size:calc(12.5*var(--fu));line-height:1.65}
+  .fcdethint{color:var(--gray)}
+  .fcdetday{font-weight:800}
+  .fcdetrow{color:var(--ink)}
+  .fcdetsame{margin-top:3px;color:var(--gray);font-size:calc(12*var(--fu))}
+  .fcdet .oslink{margin-top:7px}
   /* 카드에서 그래프를 여는 단추. 경고색을 안 쓴다 (요청서 ①) */
   .fcopen{display:block;width:100%;margin-top:10px;padding:10px 12px;
           border:1px solid var(--edge);background:var(--panel);border-radius:var(--rad);
@@ -16266,10 +16275,14 @@ function dueCurve(months, c) {
    ★ 실측(예시 자료·종료일 31가지): 되살린 최저가 cv.최저 와 0원 차이,
      마지막 점이 카드의 예상과 0원 차이.
 
-   [겹침 — 109차·113차가 정한 기준을 그대로]
-   그날 반영할 입금이 0원이면 두 시점의 잔액이 정확히 같다. 그때는 점을 하나만 둔다.
-   두 시점 자체가 같아진 것이 아니라 잔액이 같을 뿐이다.
-   반올림한 표시값이 아니라 계산값으로 견준다. 1원이라도 다르면 둘 다 찍는다.
+   [겹침 — 자료는 보존하고 표시만 합친다 (114차 보정 ④)]
+   그날 반영할 입금이 0원이면 두 시점의 잔액이 정확히 같다.
+   ★ 그때도 두 시점을 다 들고 있는다. 없애지 않는다 —
+     두 시점 자체가 같아진 것이 아니라 잔액이 같을 뿐이고,
+     고르셨을 때 상세에서 둘을 각각 보여드려야 한다.
+   ★ 합치는 것은 마커와 금액 표시뿐이다 (같음 표시를 보고 그리는 쪽이 정한다).
+   ★ 반올림한 표시값이 아니라 계산값으로 견준다. 1원이라도 다르면 따로 둔다.
+   ★ 날짜가 다르면 금액이 같아도 안 합친다.
 
    [가상의 시각을 안 붙인다]
    「10:00 출금 · 14:00 입금」 같은 시각을 지어내면 자료에 없는 것을 그린 것이 된다.
@@ -16281,6 +16294,9 @@ function dueGraphPts(c, cv) {
   var dd = dueDaily(t, c.i);
   if (!dd) return null;
   var 시작 = dayNum(c.오늘);
+  /* ★ 114차 보정 ①. 자료 기준일의 실제 잔액이 시작점이다.
+     dueCurve 도 이 값을 최저 후보에 넣는다 — 안 넣으면 기준일이 최저인 매장에서
+     카드와 그래프가 어긋난다. 이건 예상이 아니라 자료에 적힌 값이라 갈래를 따로 둔다 */
   var out = [{ 날: 시작, 값: c.잔액, 갈래: '기준' }];
   var bal = c.잔액;
   for (var i = 0; i < cv.점.length; i++) {
@@ -16288,9 +16304,10 @@ function dueGraphPts(c, cv) {
     var 낮은 = bal - 출;                    /* dueCurve 의 「낮은」과 같은 셈 */
     var 끝 = cv.점[i].잔액;                 /* dueCurve 가 낸 일말 잔액 그대로 */
     var 날 = cv.점[i].날;
-    /* 잔액이 정확히 같으면 한 점만 — 그날 반영할 입금이 0원이라는 뜻이다 */
-    if (낮은 !== 끝) out.push({ 날: 날, 값: 낮은, 갈래: '입금전' });
-    out.push({ 날: 날, 값: 끝, 갈래: '일말' });
+    var 같음 = (낮은 === 끝);               /* 그날 반영할 입금이 0원이다 */
+    /* ★ 둘 다 들고 있는다. 같아도 안 없앤다 — 합치는 것은 그리는 쪽의 일이다 */
+    out.push({ 날: 날, 값: 낮은, 갈래: '입금전', 같음: 같음 });
+    out.push({ 날: 날, 값: 끝, 갈래: '일말', 같음: 같음 });
     bal = 끝;
   }
   return { 점: out, 시작: 시작, 끝: dayNum(c.목표) };
@@ -16366,6 +16383,10 @@ var FC_GH = 250;           /* 그래프 높이 (날짜 줄 포함) */
 /* 점과 점을 곧은 선으로 잇는다. 부드러운 곡선 보간을 안 쓴다 —
    계산에 없는 고점·저점이 생긴다 (요청서 ④) */
 function drawDueGraph(host, c, cv, pts) {
+  /* 날을 고르면 이 함수가 제 자리를 다시 그린다. 고른 날은 host 에 붙어 있어
+     innerHTML 을 비워도 살아남는다 */
+  function 그리기다시() { drawDueGraph(host, c, cv, pts); }
+  host.innerHTML = '';
   /* ★ 지나온 쪽을 앞날과 비슷한 길이로 자른다. 30일로 고정했더니
      19일짜리 앞날이 오른쪽 3분의 1에 눌려 톱니가 뭉개졌다 (실측).
      지나온 쪽은 「어디서 오던 길인가」를 보이는 것이 일이라 길 필요가 없다 */
@@ -16496,9 +16517,15 @@ function drawDueGraph(host, c, cv, pts) {
       svg.appendChild(svgEl('circle', { cx: X(최저점.날), cy: Y(최저점.값), r: 3.6,
         fill: 'var(--paper)', stroke: 최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
         'stroke-width': 2 }));
-      /* ★ 알약을 선 아래 빈 자리에 놓는다. 선 위에 얹으면 그림을 가린다 (실측) */
+      /* ★ 114차 보정 ①. 기준일 잔액이 최저일 때는 「최저 예상 잔액」이라 안 부른다.
+         그건 예상이 아니라 자료에 적힌 실제 잔액이다 —
+         카드도 같은 자리에서 「자료 기준일 잔액」이라 부른다 (111차 ①).
+       ★ 알약을 선 아래 빈 자리에 놓는다. 선 위에 얹으면 그림을 가린다 (실측) */
       알약(X(최저점.날), Y(최저점.값),
-           '최저 ' + won(최저값) + '원' + (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
+           최저점.갈래 === '기준'
+             ? '자료 기준일 잔액 ' + won(최저값) + '원'
+             : '최저 ' + won(최저값) + '원' +
+               (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
            최저값 < 0 ? 'var(--warn)' : 'var(--brand)', true);
     }
     /* 끝값 — 최저와 같은 자리면 알약을 겹쳐 놓지 않는다 */
@@ -16516,6 +16543,30 @@ function drawDueGraph(host, c, cv, pts) {
       tx.textContent = 날글(new Date(p[0] * 86400000).toISOString().slice(0, 10));
       svg.appendChild(tx);
     });
+    /* ★ 114차 보정 ④. 날을 고르면 그날 두 시점을 각각 보여드린다.
+       잔액이 같아 마커가 하나로 보이는 날도, 상세에서는 두 값이 따로 선다 —
+       화면에서 겹쳐 보이는 것과 자료가 하나인 것은 다르다.
+       ★ 고른 날을 보이려고 위치나 금액을 벌리지 않는다. 띠만 깐다 */
+    var 고른 = host.__고른날;
+    if (고른 != null && 고른 >= 첫날 && 고른 <= 끝날) {
+      var bw = Math.max(6, (W - LEFT - RIGHT) / Math.max(1, 끝날 - 첫날));
+      svg.appendChild(svgEl('rect', { x: X(고른) - bw / 2, y: PAD - 10,
+        width: bw, height: PH - PAD + 10, fill: 'var(--now)', opacity: '0.10' }));
+    }
+    var hits = svgEl('g', {});
+    for (var hd = 첫날; hd <= 끝날; hd++) {
+      (function (day) {
+        var hw = Math.max(8, (W - LEFT - RIGHT) / Math.max(1, 끝날 - 첫날));
+        var r = svgEl('rect', { x: X(day) - hw / 2, y: 0, width: hw, height: PH,
+          fill: 'transparent', style: 'cursor:pointer' });
+        r.addEventListener('click', function () {
+          host.__고른날 = (host.__고른날 === day) ? null : day;
+          그리기다시();
+        });
+        hits.appendChild(r);
+      })(hd);
+    }
+    svg.appendChild(hits);
   });
   /* 그림 아래 값 — 상세 금액은 원 단위다 (요청서 ③-5) */
   var key = el('div', 'fckey');
@@ -16524,10 +16575,58 @@ function drawDueGraph(host, c, cv, pts) {
   k1.appendChild(el('b', null, won(c.예상) + '원'));
   key.appendChild(k1);
   var k2 = el('div');
-  k2.appendChild(document.createTextNode('기간 중 최저 ' + cv.최저날 + ' '));
+  /* ★ 114차 보정 ①. 기준일 잔액이 최저면 그 이름으로 부른다 */
+  var 기준최저 = cv.최저날수 === pts.시작;
+  k2.appendChild(document.createTextNode(
+    기준최저 ? '자료 기준일 잔액 ' : ('기간 중 최저 ' + cv.최저날 + ' ')));
   k2.appendChild(el('b', null, won(cv.최저) + '원'));
   key.appendChild(k2);
   host.appendChild(key);
+
+  /* ── 114차 보정 ④ · 고른 날의 상세 ────────────────────────────────
+     같은 날의 두 시점을 각각 적는다. 잔액이 같아 마커가 하나로 보여도
+     여기서는 둘이 따로 선다 — 겹쳐 보이는 것과 자료가 하나인 것은 다르다 */
+  var 고른날 = host.__고른날;
+  var det = el('div', 'fcdet');
+  if (고른날 == null) {
+    det.appendChild(el('div', 'fcdethint', '그래프에서 날짜를 누르면 그날 잔액을 봅니다.'));
+  } else {
+    var 날문 = 날글(new Date(고른날 * 86400000).toISOString().slice(0, 10));
+    var 앞것 = pts.점.filter(function (p) { return p.날 === 고른날; });
+    det.appendChild(el('div', 'fcdetday', 날문));
+    if (!앞것.length) {
+      /* 기준일 앞 — 자료에 적힌 실제 잔액이다. 예상이 아니다 */
+      var 지난것 = null;
+      지난.forEach(function (p) { if (p.날 === 고른날) 지난것 = p; });
+      det.appendChild(el('div', 'fcdetrow',
+        지난것 && 지난것.값 !== null
+          ? '계좌 잔액 ' + won(Math.round(지난것.값)) + '원 (자료에 적힌 값)'
+          : '이 날은 잔액을 복원할 수 없어 계산에 안 넣었습니다.'));
+    } else if (앞것.length === 1 && 앞것[0].갈래 === '기준') {
+      det.appendChild(el('div', 'fcdetrow',
+        '자료 기준일 잔액 ' + won(Math.round(앞것[0].값)) + '원 (자료에 적힌 값)'));
+    } else {
+      var 전 = null, 후 = null;
+      앞것.forEach(function (p) {
+        if (p.갈래 === '입금전') 전 = p;
+        if (p.갈래 === '일말') 후 = p;
+        if (p.갈래 === '기준') { 전 = 전 || p; 후 = 후 || p; }
+      });
+      if (전) det.appendChild(el('div', 'fcdetrow',
+        '입금 전 ' + won(Math.round(전.값)) + '원'));
+      if (후) det.appendChild(el('div', 'fcdetrow',
+        '당일 반영 후 ' + won(Math.round(후.값)) + '원'));
+      /* ★ 계산값으로 견준다. 반올림한 표시값이 아니다 */
+      if (전 && 후 && 전.값 === 후.값) {
+        det.appendChild(el('div', 'fcdetsame', '입금 전·당일 반영 후 잔액 동일'));
+      }
+    }
+    var 끄기 = el('button', 'oslink', '선택 해제');
+    끄기.type = 'button';
+    끄기.addEventListener('click', function () { host.__고른날 = null; 그리기다시(); });
+    det.appendChild(끄기);
+  }
+  host.appendChild(det);
 }
 /* 자료에 적힌 실제 잔액 — 지나온 쪽이다. 예측이 아니다.
    ★ 새로 계산하지 않는다. dueTable 이 이미 날마다 들고 있는 값을 잘라 쓴다.
