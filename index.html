@@ -7241,14 +7241,26 @@ function drawStart() {
          이름은 「마지막 분석」인데 값은 저장한 날이라 틀린 말이었다.
          저장일을 보여줄 다른 까닭이 없으므로 새 설명을 만들지 않는다.
          다시 분석하시면 그때부터 실제 분석 완료일이 나온다 */
+      /* ★ 115-1차. 기록 유무를 같은 자리에서 말한다.
+         전에는 기록이 없으면 줄을 아예 안 그려서, 매장이 여럿일 때
+         「왜 하나만 보이지?」로 읽혔다 (요한 제보 2026-09-21).
+         ★ 이름을 「최근 거래내역 추가」로 바꾼다 — 실제로 찍히는 것은
+           새 거래내역이 늘어난 날이지 화면을 본 날이 아니다 (markLastRun 의 __새거래).
+           「이어서 보기」로 열거나 같은 파일을 다시 올려서는 안 찍힌다.
+         ★ 저장 열쇠 nd_lastrun 은 안 바꾼다. 저장값을 새 뜻으로 옮기거나
+           없는 날짜를 지어내지 않는다.
+         ★ 목록에서는 경과 일수를 생략한다 — 짧아야 목록이 읽힌다.
+         ★ 「기록 없음」을 「거래내역이 없다」는 뜻으로 쓰지 않는다.
+           거래처 분류도 거래내역도 살아 있고, 없는 것은 이 기록 하나뿐이다.
+         ★ 경고색·아이콘·덧붙이는 설명을 안 넣는다 */
       var 분석날 = lastRunDay(k.name) || '';
+      var run = el('div', 'gsrun');
+      run.appendChild(el('div', 'gsrunday', '최근 거래내역 추가: ' + (분석날
+        ? (daysSince(분석날) === 0
+            ? '오늘'
+            : (+분석날.slice(5, 7)) + '월 ' + (+분석날.slice(8, 10)) + '일')
+        : '기록 없음')));
       if (분석날) {
-        var 지난 = daysSince(분석날);
-        var run = el('div', 'gsrun');
-        run.appendChild(el('div', 'gsrunday', '마지막 분석: ' + (지난 === 0
-          ? '오늘'
-          : (+분석날.slice(5, 7)) + '월 ' + (+분석날.slice(8, 10)) + '일 · ' +
-            won(지난) + '일 경과')));
         run.appendChild(el('div', 'gsrunsub', '새로운 거래내역이 있으면 추가할 수 있습니다.'));
         var 추가 = el('button', 'oslink gsrunbtn', '거래내역 추가');
         추가.type = 'button';
@@ -7257,8 +7269,8 @@ function drawStart() {
           try { openAddFiles(); } catch (e) { }
         });
         run.appendChild(추가);
-        line.appendChild(run);        /* ★ 115차. 지우기 뒤에 붙는다 — 아랫줄로 간다 */
       }
+      line.appendChild(run);        /* ★ 115차. 지우기 뒤에 붙는다 — 아랫줄로 간다 */
       back.appendChild(line);
       /* ★ 실수로 146곳짜리를 날리면 되돌릴 길이 없다. 먼저 묻는다 */
       ask.appendChild(el('div', 'addq',
@@ -20975,5 +20987,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 115차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 115-1차</div>
 </body></html>
