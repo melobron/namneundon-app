@@ -18409,10 +18409,15 @@ function drawProfitChart(host, months, cols, 진행달) {
                ['kprof', '— 계좌 순이익']];
   if (연한조각) marks.push(['kest', '■ 아직 덜 정함']);
   /* ★ 111차 ④㉰. 눈금 단위를 그림 제목에 밝힌다 */
-  var U단위 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));
+  /* ★ 112차 ①. 단위는 그림마다 따로 둔다. 예전에는 한 함수 안에서 U단위 하나를
+     두 그림이 같이 썼다 — var 는 함수 하나에 하나뿐이라 아래 그림이 위 그림의 값을
+     덮어썼다. 제목은 chHead 로 먼저 그려져 안 바뀌는데, fitChart 가
+     ResizeObserver 로 다시 그릴 때는 덮인 값을 읽는다.
+     그래서 「(만원)」이라 써 놓고 눈금만 억 단위로 찍혔다 */
+  var U순이익 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));
   /* ★ 77차. 그래프 자체와 범례가 말하는 설명은 반복하지 않는다. */
   box.appendChild(chHead('달마다 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익 (' +
-    U단위.name + ')', marks, null));
+    U순이익.name + ')', marks, null));
   var wrap = el('div', 'chone');
   box.appendChild(wrap);
   host.appendChild(box);
@@ -18437,7 +18442,7 @@ function drawProfitChart(host, months, cols, 진행달) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v, U단위);
+      t.textContent = axisTxt(v, U순이익);
       svg.appendChild(t);
     });
     var y0 = y(0);
@@ -18521,9 +18526,11 @@ function drawProfitChart(host, months, cols, 진행달) {
   var rgB = axisRange(bLo, bHi);
   var blo = rgB.lo, bhi = rgB.hi, stepB = rgB.step;
   var box2 = el('div', 'chbox');
-  var U단위 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));   /* ★ 111차 ④㉰ */
+  /* ★ 112차 ①. 위 그림(U순이익)과 다른 변수다. 잔액은 자릿수가 달라 단위도 다르다 —
+     둘을 억지로 맞추지 않는다 */
+  var U월잔액 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));   /* ★ 111차 ④㉰ */
   /* ★ 60차 ③ (용어규칙 10). 진행 중인 달의 잔액은 「월말」이 아니라 그날까지의 값이다 */
-  box2.appendChild(chHead('월말 계좌 잔액 (' + U단위.name + ')',
+  box2.appendChild(chHead('월말 계좌 잔액 (' + U월잔액.name + ')',
     [['know', '— 계좌 잔액']], null));
   var wrap2 = el('div', 'chone');
   box2.appendChild(wrap2);
@@ -18544,7 +18551,7 @@ function drawProfitChart(host, months, cols, 진행달) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v, U단위);
+      t.textContent = axisTxt(v, U월잔액);
       svg.appendChild(t);
     });
     /* ★ 71차 ⑤. 자료 없는 달에서 선을 끊는다 — 이어 그으면 0원까지
@@ -19011,8 +19018,11 @@ function drawDayChart(host, m, d, months) {
   var ticksB = axisTicks(blo, bhi, stepB);
   var LEFT공통 = Math.max(axisLeft(ticksD), axisLeft(ticksB));
 
-  var U단위 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));     /* ★ 111차 ④㉰ */
-  host.appendChild(chHead('일별 흐름 (' + U단위.name + ')', [
+  /* ★ 112차 ①. 이 그림만의 단위다. 아래 「계좌 잔액」은 제 변수를 따로 쓴다 —
+     예전에는 한 변수를 둘이 나눠 써서, 다시 그릴 때 이 그림이 잔액 단위(억원)로
+     눈금을 찍었다. −730만원 막대가 −0.1 자리에 섰다 */
+  var U흐름 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));     /* ★ 111차 ④㉰ */
+  host.appendChild(chHead('일별 흐름 (' + U흐름.name + ')', [
     ['kgood', '■ 사업으로 번 돈'], ['kwarn', '■ 사업에 쓴 돈'], ['kprof', '— 계좌 순이익(이번 달 누적)']
   ], monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
 
@@ -19033,7 +19043,7 @@ function drawDayChart(host, m, d, months) {
         stroke: 'var(--line)', 'stroke-width': v === 0 ? 1.2 : 0.7 }));
       var t = svgEl('text', { x: LEFT - 7, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v, U단위);
+      t.textContent = axisTxt(v, U흐름);
       svg.appendChild(t);
     });
     /* ★ 84차 ①. 고른 날 띠는 막대 아래에 깐다 — 막대 색을 흐리지 않으려는 것이다 */
@@ -19091,8 +19101,9 @@ function drawDayChart(host, m, d, months) {
      새 모양을 만들지 않는다.
      ★ 위 「일별 흐름」 바로 아래에 둔다. 거래처를 덜 정해 위 그림이 안 나오면
        여기까지 오지도 않는다 — 위쪽 d.blocked·f.last 검사를 그대로 물려받는다 */
-  U단위 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));       /* ★ 111차 ④㉰ */
-  host.appendChild(chHead('계좌 잔액 (' + U단위.name + ')', [['know', '— 계좌 잔액']],
+  /* ★ 112차 ①. 위 「일별 흐름」의 U흐름 을 덮어쓰지 않는다 — 이 그림의 제 변수다 */
+  var U잔액 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi)));   /* ★ 111차 ④㉰ */
+  host.appendChild(chHead('계좌 잔액 (' + U잔액.name + ')', [['know', '— 계좌 잔액']],
     monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'));
   var box2 = el('div', 'dchart');
   host.appendChild(box2);
@@ -19112,7 +19123,7 @@ function drawDayChart(host, m, d, months) {
         opacity: v === 0 ? '0.9' : '0.55' }));
       var t = svgEl('text', { x: LEFT - 8, y: y(v) + 3.5, 'text-anchor': 'end',
         'font-size': '11', fill: 'var(--gray)' });
-      t.textContent = axisTxt(v, U단위);
+      t.textContent = axisTxt(v, U잔액);
       svg.appendChild(t);
     });
     /* ★ 84차 ①. 두 그림에 같이 표시한다 — 어느 쪽을 눌러도 같은 날이 열린다 */
@@ -19863,5 +19874,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.20 · 111차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.20 · 112차</div>
 </body></html>
