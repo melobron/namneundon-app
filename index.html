@@ -805,14 +805,6 @@
   .bhdet .bhstep{margin-top:3px}
   .bhdet .bhno{font-weight:700;margin-top:3px}
   .bhdet .bhmemo{color:var(--gray);font-size:calc(12*var(--fu));margin-top:5px}
-  .comeback{margin:8px 30px 0;padding:10px 12px;background:var(--estbg);
-            border:1px solid var(--estline);border-radius:var(--rad);font-size:calc(13*var(--fu));line-height:1.55}
-  .comeback .cb1{font-weight:700}
-  .comebackhead{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;
-                border:0;background:transparent;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
-  .comebackbody{padding-top:7px}
-  .comebackbody[hidden]{display:none}
-  .comeback .cb3{margin-top:5px;color:var(--gray);font-size:calc(12*var(--fu))}
   .demotop{margin:0 30px;padding:9px 12px;background:var(--panel);border-radius:var(--rad);
            font-size:calc(12.5*var(--fu));color:var(--gray);line-height:1.55}
   .upstat{margin-top:16px;font-size:calc(13.5*var(--fu));line-height:1.6;color:var(--gray)}
@@ -6789,8 +6781,9 @@ function upFocus(id) {
    업종 타일은 [내 거래내역 올려보기] 안에 숨어 있었다.
    ★ 이제 저장이 있든 없든 시작 화면부터다. 돌아오신 분께는
      타일 위에 「이어서 보기」 구역을 놓아 자기 매장으로 가는 길을 만든다.
-   ★ 「지난번에 올리신 파일이 사라졌습니다」 안내는 시작 화면이 아니라
-     그 매장을 연 뒤에 나온다 (drawComeBack) */
+   ★ 112차 ④. 「지난번에 올리신 파일이 사라졌습니다」 안내를 그리던 함수는 지웠다 —
+     45차에 만들고 63-13 에 자리를 옮긴 뒤로 부르는 곳이 없는 채 60줄이 남아 있었다.
+     그 말이 필요한 자리는 goSavedStore 하나이고, 거기서는 112차 ③의 매장 머리가 대신한다 */
 /* 이 브라우저에 저장된 매장들 — 최근 저장한 순, 같으면 많이 정해두신 순
    ★ 93차. 분류(fc.picks)만 훑어서, 올려서 결과만 보고 분류를 안 하신 매장은
      「이어서 보기」에 안 떴다 — 거래내역(fc.data)이 남아 있는데도 다시 올리라고 했다.
@@ -7020,10 +7013,7 @@ function goSavedStore(k) {
      이 매장 이름·안내·파일 고르기를 맨 위에 세운다 */
   PICKED_STORE = k;
   /* ★ 106차 ①. 저장된 거래내역이 없으면 그 사실을 「보이는 화면」에 적는다.
-     drawComeBack 은 #demotop(시작 화면)에 쓰는데 바로 다음 줄에서 업로드 화면으로 넘어간다 —
-     안내가 감춰진 자리에 남고, 사장님께는 아무 일도 안 일어난 것으로 보였다.
-     업로드 화면에서 누르신 경우에는 같은 화면이 다시 그려질 뿐이라 「안 눌린다」로 보인다.
-     ★ upStat 은 openPick() 이 비운다. 반드시 openPick() 뒤에 쓴다 (전에는 거꾸로였다).
+     안내가 감춰진 자리에 남으면 사장님께는 아무 일도 안 일어난 것으로 보인다.
      ★ 「사라졌습니다」로 시작하지 않는다 — 거래처 분류는 살아 있다.
        잃은 것은 거래내역 파일 하나뿐이고, 그 사실만 적는다 (91차 ②의 원칙 그대로).
      ★ 이 매장으로 업종·이름이 이미 세팅돼 있다. 파일만 올리면 바로 이어진다.
@@ -19998,79 +19988,6 @@ function drawYear(host, allMonths) {
     DISCLAIMER_2.forEach(function (t) { foot.appendChild(el('div', null, t)); });
   }
   host.appendChild(foot);
-}
-
-/* ── 45차 ② · 창을 닫으면 올리신 파일이 사라진다는 것을 알려준다 ──────
-   A안이라 파일은 어디에도 안 남는다. 그건 맞는 동작인데 아무 안내가 없었다.
-   폰 화면이 잠기거나 카톡 알림을 눌렀다 돌아오면 예시 화면으로 돌아와 있고,
-   사장님은 방금 올린 3,164건이 어디 갔는지 알 길이 없다.
-   ★ 근거가 있을 때만 말한다 — 저장통에 찍어두신 분류가 남아 있을 때.
-     아무것도 안 찍으셨으면 이 말은 안 나온다 (처음 여신 분께 할 말이 아니다).
-   ★ 「파일은 저장하지 않는다」도 같이 말한다. 그게 이 앱의 약속이다 */
-/* ★ 63-13. 이 안내는 이제 첫 화면에 깔리지 않는다 —
-   시작 화면에서 「이어서 보기」를 누르셨을 때만 나온다.
-   첫 화면에 두면 아직 그 매장을 열지도 않은 분께 「사라졌습니다」부터 말하게 된다 */
-function drawComeBack(k) {
-  var host = document.getElementById('demotop');
-  if (!host) return 0;
-  /* ★ 첫 화면에 덧붙이는 안내가 앱을 죽일 수는 없다.
-     file:// 로 열면 localStorage 를 건드리는 순간 브라우저가 예외를 던지는데,
-     그때 이 줄에서 멈추면 화면이 통째로 안 그려진다 (빌드 검사 8이 잡았다) */
-  var old = document.getElementById('comeback');
-  if (old) old.parentNode.removeChild(old);
-  var n = 0;
-  if (k) n = k.n;
-  else {
-    try { n = savedSummary().total; } catch (e) { return 0; }
-  }
-  if (!n) return 0;
-  var box = el('div', 'comeback');
-  box.id = 'comeback';
-  var cbHead = el('button', 'cb1 comebackhead');
-  cbHead.type = 'button';
-  cbHead.setAttribute('aria-expanded', 'false');
-  cbHead.setAttribute('aria-controls', 'comebackbody');
-  cbHead.appendChild(el('span', null, '지난번에 올리신 파일이 창을 닫으면서 사라졌습니다.'));
-  var cbArrow = foldChip(false);
-  cbHead.appendChild(cbArrow);
-  box.appendChild(cbHead);
-  var cbBody = el('div', 'comebackbody');
-  cbBody.id = 'comebackbody';
-  cbBody.hidden = true;
-  /* ★ 46차 ⑥. savedSummary() 는 자동으로 정해진 곳까지 센다.
-     세 곳 찍고 나가신 분께 「99곳」이라고 하면 뭘 99곳이나 했다는 건지 모르신다.
-     저장통에 남는 것은 손수 찍으신 것뿐이므로 그 수가 맞는 수다 —
-     세는 방법이 아니라 부르는 말이 틀렸다 */
-  cbBody.appendChild(el('div', 'cb2',
-    '손수 정하신 거래처 ' + won(n) + '곳은 그대로 있습니다. ' +
-    '같은 파일을 다시 올리시면 이어서 하실 수 있습니다.'));
-  cbBody.appendChild(el('div', 'cb3',
-    /* ★ 105차 ④. 「항목만」이 거짓이 됐다 — 마지막으로 분석한 날짜도 남는다.
-       앞 문장(파일은 저장하지 않는다)은 그대로 산다 */
-    '이 앱은 거래내역 파일을 저장하지 않습니다. ' + BIZ.주인 +
-    '이 분류하신 항목과 마지막으로 분석한 날짜가 이 브라우저에 남습니다.'));
-  /* ★ 64-7. 「다시 올리시면 이어서 하실 수 있습니다」라고 말만 하고
-     올릴 곳을 안 줬다 — 「어디서 올려야 할지를 모르겠습니다」.
-     그 자리에 단추를 둔다. 가는 곳은 지금의 파일 고르기와 같다 */
-  var again = el('button', 'upbtn est', '파일 다시 올리기');
-  again.type = 'button';
-  again.style.marginTop = '10px';
-  again.addEventListener('click', function () {
-    useScreen('파일 다시 올리기');
-    openUpPanel();
-    openPick();
-    drawA2HS();
-    loadSheetJS().catch(function (e) { upStat('<b>' + e.message + '</b>'); });
-  });
-  cbBody.appendChild(again);
-  box.appendChild(cbBody);
-  cbHead.addEventListener('click', function () {
-    cbBody.hidden = !cbBody.hidden;
-    cbHead.setAttribute('aria-expanded', cbBody.hidden ? 'false' : 'true');
-    cbArrow.textContent = cbBody.hidden ? '자세히 ▾' : '접기 ▴';
-  });
-  host.parentNode.insertBefore(box, host.nextSibling);
-  return n;
 }
 
 /* 화면을 열면 예시부터 세워둔다. 파일을 올리면 같은 자리에 그 숫자가 들어간다 */
