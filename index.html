@@ -7246,6 +7246,13 @@ function drawStart() {
       openUpPanel();
     });
     box.appendChild(되돌);
+  } else if (UP && UP.demo && MY_UP) {
+    /* ★ 119차. 예시를 보기 전에 보던 내 자료가 메모리에 있으면 돌아갈 길을 둔다.
+       저장에 실패해 아래 매장 목록에 없는 자료도 여기로는 돌아간다 (새로고침 뒤는 아니다) */
+    var 내결과 = el('button', 'b on backview', '내 결과로 돌아가기');
+    내결과.type = 'button';
+    내결과.addEventListener('click', function () { useScreen('내 결과로 돌아가기'); restoreMyUp(); });
+    box.appendChild(내결과);
   }
   var mine = savedStores();
   /* ★ 64-5차. 📗 대신 브랜드 마크를 둔다. 자리도 크기도 그대로다 (요청서 4·6) */
@@ -7410,6 +7417,17 @@ function drawStart() {
    같은 매장을 「이어서 보기」로 다시 열면 이것을 그대로 되돌린다 — 저장하지 못한 변경도 잃지 않는다.
    다른 매장을 열거나 새 파일을 올리면 비운다 */
 var MY_UP = null;
+/* 맡겨 둔 내 자료를 그대로 되돌린다 — 거래내역·분류·예정 지출·선택 월·종료일이 UP 에 함께 있다.
+   저장통은 읽지도 쓰지도 않는다 (저장 실패를 성공으로 바꾸지 않는다) */
+function restoreMyUp() {
+  if (!MY_UP) return false;
+  UP = MY_UP;
+  MY_UP = null;
+  if (UP.trade && TRADES[UP.trade]) setTrade(UP.trade);
+  leaveStart();
+  showResult();
+  return true;
+}
 /* 시작 화면을 접고 그 뒤(예시·결과)를 되살린다 */
 function leaveStart() {
   var host = document.getElementById('welcome');
@@ -7422,14 +7440,7 @@ function goSavedStore(k) {
   useScreen('이어서 보기');
   /* ★ 119차. 예시 전환 보정 — 예시로 가기 전에 보던 그 매장이면 맡겨 둔 자료를 그대로 되돌린다 */
   var 이름 = k.name === '(기본)' ? null : k.name;
-  if (MY_UP && (MY_UP.store || null) === 이름) {
-    UP = MY_UP;
-    MY_UP = null;
-    if (UP.trade && TRADES[UP.trade]) setTrade(UP.trade);
-    leaveStart();
-    showResult();
-    return;
-  }
+  if (MY_UP && (MY_UP.store || null) === 이름) { restoreMyUp(); return; }
   MY_UP = null;
   var saved = loadPicks(k.name === '(기본)' ? null : k.name);
   if (saved && saved.업종 && TRADES[saved.업종]) setTrade(saved.업종);
