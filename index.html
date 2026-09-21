@@ -1206,6 +1206,25 @@
   /* ★ 119차. 거래내역 올리기 화면의 분류 파일 불러오기 — 파일 고르기보다 한 단계 낮게 */
   .upimport{margin-top:10px}
   .upimportrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+  /* ★ 119차 업로드 안내. 거래내역을 읽은 뒤(확인 카드 단계)에는 처음 올리기 안내를 접는다.
+     파일을 읽었는데 큰 「거래내역 파일을 올려주세요」 상자가 그대로 있어 못 읽은 것으로 보였다.
+     ★ 지우지 않고 감춘다. 새로 파일을 고르는 화면(openPick)에서 다시 펼친다 */
+  #up-pick.upread #up-tradenote, #up-pick.upread #up-mine, #up-pick.upread .upmust,
+  #up-pick.upread #a2hs, #up-pick.upread #updrop, #up-pick.upread #upimport,
+  #up-pick.upread #bankhelp{display:none}
+  .upaddrow{margin-top:8px}
+  /* 확인 카드의 진행 단추 묶음. 카드를 내리는 동안 화면 아래에 붙어 있는다 */
+  .ckgo{position:sticky;bottom:0;z-index:2;margin:0 -14px -14px;padding:2px 14px 12px;
+        background:var(--warnbg);border-top:1px solid var(--warnline);
+        border-radius:0 0 var(--rad) var(--rad)}
+  .ckgo .errn{margin-top:6px}
+  .b.upadd{padding:4px 11px;font-size:calc(12.5*var(--fu))}
+  /* ★ 119차 분류 파일 선택 단계. 색은 요청서가 정한 셋이다 ([분류 파일 다운로드]와 같은 초록) */
+  .imchoose{margin-top:6px;padding:14px;background:#D5E9DF;border:1px solid #9FC5B2;
+            border-radius:var(--rad);color:#185C40}
+  .imchoosehead{font-size:calc(15*var(--fu));font-weight:800;line-height:1.45}
+  .imchoosesub{margin-top:6px;font-size:calc(13*var(--fu));line-height:1.6;word-break:keep-all}
+  .imchooseacts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
   /* ── 116차 · 예정 지출 편집 화면 ────────────────────────────────
      ★ 114차 그래프 화면의 틀(.fcback/.fcpane/.fcbody/.fcnote/.fcopen)을 그대로 쓴다.
        여기 있는 것은 그 안에 들어가는 줄 모양뿐이다.
@@ -7135,6 +7154,47 @@ function upShow(which) {
   window.scrollTo(0, 0);
 }
 function upStat(html) { document.getElementById('upstat').innerHTML = html; }
+/* ── 119차 업로드 안내 · 읽은 뒤에는 처음 올리기 안내를 접는다 ──────────
+   실제 휴대폰에서 거래내역을 읽은 뒤에도 큰 올리기 상자가 남아, 대표님이
+   파일을 못 읽은 것으로 보셨다. 확인 카드 단계(showBreakCards)에서만 켠다.
+   파일을 고르기만 했거나 읽기에 실패한 화면에서는 켜지 않는다.
+   ★ 요약은 startFromBanks 가 쓴 그 줄(#upstat)을 그대로 쓴다. 건수를 새 자리에 또 적지 않는다.
+   ★ 추가 올리기는 요약 안의 작은 [거래내역 추가하기] 하나로 둔다 */
+var ADD_FROM_READ = false;       /* [거래내역 추가하기]로 파일 고르기를 열었는가 */
+function upReadState(on) {
+  var pick = document.getElementById('up-pick');
+  if (pick) pick.classList[on ? 'add' : 'remove']('upread');
+  if (!on) { ADD_FROM_READ = false; return; }
+  var st = document.getElementById('upstat');
+  if (!st) return;
+  var old = st.querySelector('.upaddrow');
+  if (old) st.removeChild(old);
+  /* 읽기 실패로 요약이 지워졌다가 카드로 돌아온 경우 같은 요약을 되살린다 */
+  if (UP && st.innerHTML) UP.__요약 = st.innerHTML;
+  else if (UP && UP.__요약) st.innerHTML = UP.__요약;
+  var row = el('div', 'upaddrow');
+  var add = el('button', 'b upadd', '거래내역 추가하기');
+  add.type = 'button';
+  add.addEventListener('click', function () {
+    useScreen('거래내역 추가하기');
+    ADD_FROM_READ = true;
+    var inp = document.getElementById('upinput');
+    inp.value = '';                 /* 같은 파일을 다시 고를 수 있게 비운다 */
+    inp.click();
+  });
+  row.appendChild(add);
+  st.appendChild(row);
+}
+/* [거래내역 추가하기]로 고른 파일이면 이미 읽은 계좌를 파일 목록에 먼저 올려둔다.
+   startPending 이 PENDING 을 비운 뒤라, 그냥 두면 새 파일만 남고 읽은 거래가 사라진다.
+   ★ 고르기를 취소하면 이 함수까지 오지 않는다. 카드와 읽은 거래는 그대로다 */
+function addFromRead() {
+  var on = ADD_FROM_READ;
+  ADD_FROM_READ = false;
+  if (!on || !UP || UP.demo || !UP.banks || !UP.banks.length || PENDING.length) return false;
+  PENDING = UP.banks.slice();
+  return true;
+}
 /* ★ 106차 ③. 읽은 자리로 화면을 옮긴다. 사장님이 찾아 내려가지 않게 한다.
    ★ 빈 칸에는 안 옮긴다 — 아무것도 안 쓴 자리로 내려가면 더 헷갈린다.
    ★ upShow 가 맨 위로 올린 뒤에 부른다. 순서가 거꾸로면 이 줄이 지워진다.
@@ -7697,6 +7757,7 @@ function openPick() {
   document.getElementById('uptitle').textContent = '내 거래내역 올려보기';
   document.getElementById('upbad').innerHTML = '';   /* 지난 파일의 확인 카드 */
   upStat('');                                        /* 지난 파일의 안내문 */
+  upReadState(false);                /* ★ 119차 업로드 안내. 새로 고르는 화면이라 안내를 펼친다 */
   redrawBankHelp();                                  /* 46차 ① 은행별 안내 */
   /* ★ 62차 ②. 업종별 고지 — 예시는 식당 자료다 */
   var tn = document.getElementById('up-tradenote');
@@ -8962,6 +9023,7 @@ var PENDING = [];      /* 아직 시작 안 한, 읽어둔 계좌들 */
 
 function handleFiles(fileList) {
   var files = [].slice.call(fileList);
+  var 보탬 = addFromRead();        /* ★ 119차 업로드 안내. 읽은 계좌 위에 보탠다 */
   document.getElementById('upbad').innerHTML = '';
   /* ★ 45차 ①. 파일을 받는 순간 창부터 연다.
      예전에는 읽기가 끝나야(SheetJS 를 받아오는 데 500ms쯤) 창이 열렸다.
@@ -9057,6 +9119,15 @@ function handleFiles(fileList) {
        그때만 지금까지처럼 FIX_TIP 한 줄로 둔다 */
     box.appendChild(el('div', 'upbadrow',
       (왜 === 'unknown' ? FIX_TIP : failWhy(왜, 은행)) + '.'));
+    /* ★ 119차 업로드 안내. 추가로 고른 파일만 못 읽었다. 이미 읽은 거래와 확인 카드로
+       돌아가고, 못 읽은 까닭은 카드 위에 적는다 */
+    if (보탬 && UP && UP.breaks && UP.breaks.length) {
+      PENDING = [];
+      showBreakCards();
+      var 카드 = document.getElementById('upbad');
+      카드.insertBefore(box, 카드.firstChild);
+      return;
+    }
     document.getElementById('upbad').innerHTML = '';
     document.getElementById('upbad').appendChild(box);
     upFocus('upbad');            /* ★ 106차 ③. 오류 문구도 못 보고 지나치면 뜻이 없다 */
@@ -9488,8 +9559,9 @@ function startFromBanks(banks, dup, overlap) {
       return '<b>' + b.bank + '</b> ' + won(b.rows.length) + '건';
     }).join(' · '));
   } else {
-    bits.push('<b>' + banks[0].sheet + '</b> 시트 · 헤더 ' + banks[0].header +
-              '행 · 거래 <b>' + won(rows.length) + '건</b>');
+    /* ★ 119차 업로드 안내. 읽은 뒤 맨 위에 서는 요약이라 은행과 건수로 적는다.
+       시트 이름·헤더 행은 대표님이 확인할 값이 아니다 (계좌가 둘 이상일 때와 같은 모양) */
+    bits.push('<b>' + banks[0].bank + '</b> 거래 <b>' + won(rows.length) + '건</b>');
   }
   if (UP.moved) bits.push('순서가 뒤바뀐 <b>' + won(UP.moved) + '건</b>을 잔액에 맞게 다시 놓았습니다');
   dup.forEach(function (t) { bits.push('건너뛴 파일 — ' + t); });
@@ -9572,6 +9644,9 @@ function afterFiles() {
   UP.known = hit;
   /* 타일에서 고르신 업종. 되살릴 때 「다른 병원으로 하기」라고 부르려고 들고 있는다 */
   UP.tileTrade = tradeNow();
+  /* ★ 119차 분류 파일 선택 단계. 새로 올린 거래내역이 이 갈래로 온다.
+     분류 파일을 먼저 불러온 길(위)·이어서 보기로 고른 매장·보태기·되살리기에는 이 표시가 없다 */
+  UP.importAsk = !PICKED_STORE;
   try {
     if (hit) askKnownStore(hit);
     else askName();
@@ -9735,6 +9810,7 @@ function showBreaks() {
      무엇을 하면 되는지(기간을 한 번에 잡아 다시 내려받기)를 적는다 */
 function showBreakError(over) {
   upShow('up-pick');
+  upReadState(false);            /* ★ 119차 업로드 안내. 못 쓰는 파일이라 올리기 안내를 그대로 둔다 */
   useFail('balance');
   var host = document.getElementById('upbad');
   host.innerHTML = '';
@@ -9994,6 +10070,7 @@ function showPatchedCards() {
   var list = UP.rows.filter(ckRow);
   if (!list.length) return false;
   upShow('up-pick');
+  upReadState(false);            /* ★ 119차 업로드 안내. 이 화면은 이번 수정 밖이라 예전 모양 그대로 */
   var host = document.getElementById('upbad');
   host.innerHTML = '';
   var box = el('div', 'upbad');
@@ -10049,6 +10126,7 @@ function showBreakCards() {
      ★ 파일 개수 문제가 아니라 「검산 깨진 거래가 있을 때」다.
        부산 파일 하나만 올려도(검산 1건) 똑같이 막혔다 */
   upShow('up-pick');
+  upReadState(true);             /* ★ 119차 업로드 안내. 읽었으니 처음 올리기 안내를 접는다 */
   /* ★ 64-9. 답도 정하신 내용이다 — 저장통에 남긴다 */
   function 답하기(b, pick) { b.pick = pick; breakSave(b.row, pick); showBreakCards(); }
   var host = document.getElementById('upbad');
@@ -10103,6 +10181,10 @@ function showBreakCards() {
   });
 
   var left = UP.breaks.filter(function (b) { return !b.pick; }).length;
+  /* ★ 119차 업로드 안내. 진행 단추 둘과 임시 반영 안내를 한 묶음으로 화면 아래에 붙여 둔다.
+     카드가 둘만 돼도 폰(390)에서 단추가 화면 밖으로 내려가 찾기 어려웠다.
+     단추·문구·동작은 그대로다. 자리만 따라 내려온다 */
+  var 진행 = el('div', 'ckgo');
   var acts = el('div', 'upacts');
   var go = el('button', 'b on', '지금 확인하기');
   go.type = 'button';
@@ -10120,7 +10202,8 @@ function showBreakCards() {
     applyBreaks();
   });
   acts.appendChild(later);
-  box.appendChild(acts);
+  진행.appendChild(acts);
+  box.appendChild(진행);
   /* ★ 107차 ①. 「나중에」가 무엇을 하는지 적는다.
      「계좌 잔액이 움직인 대로 넣어둡니다」만으로는 넣었다는 건지 아닌지가 남는다.
      ★ 「다르면 나중에 고치실 수 있습니다」는 107차 ②가 그 길을 만들어서 하는 말이다.
@@ -10138,18 +10221,20 @@ function showBreakCards() {
        ★ 위의 두 줄은 뜻이 다른 말이라 그대로 둔다 —
          하나는 「몇 건 남았나」, 하나는 「안 고르면 어떻게 되나」다 */
   if (left > 0) {
-    box.appendChild(el('div', 'errn',
+    진행.appendChild(el('div', 'errn',
       '확인할 거래가 ' + won(left) + '건 남았습니다. 나중에 다시 확인할 수 있습니다.'));
-    box.appendChild(el('div', 'errn',
+    진행.appendChild(el('div', 'errn',
       '선택하지 않은 거래는 추정 금액으로 임시 반영됩니다.'));
   }
   host.appendChild(box);
   /* ★ 106차 ③. 38차 ⑧이 화면은 바꿔놨지만, 카드는 은행 안내 아래에 그려졌다.
      차례를 바꾼 데다(㉮) 그 자리로 옮기기까지 해야 「안 눌린다」가 안 남는다 */
-  upFocus('upbad');
+  /* ★ 119차 업로드 안내. 카드 바로 위의 요약(은행·건수)부터 보이게 한다 */
+  upFocus('upstat');
 }
 
 function applyBreaks() {
+  ADD_FROM_READ = false;         /* ★ 119차 업로드 안내. 카드 단계를 떠난다 */
   /* ★ 112차 ②. 고른 것마다 상태가 다르다. 셈은 applyPick 한 군데에 있다 —
      예전에는 여기서 'stated' 와 'unknown' 이 같은 가지로 떨어져 결과가 똑같았다.
      ★ 건수는 ++ 로 쌓지 않고 나중에 recountBreaks 가 줄에서 다시 센다 (완료 기준 10) */
@@ -11742,7 +11827,46 @@ function startOnboard() {
   document.getElementById('uptitle').textContent = '거래처 확인';
   upShow('up-onboard');
   if (applied) showRestored(applied);
+  else if (importChooseNow()) drawImportChoose();
   else drawOnboard();
+}
+/* ── 119차 · 첫 거래처를 묻기 전 분류 파일 선택 단계 ──────────────────
+   새로 올린 거래내역으로 첫 거래처를 묻기 직전에 한 번만 여쭙는다.
+   ★ 지난 분류가 이 기기에 있어 되살린 매장(applied)·「이어서 하기」로 이은 매장(UP.known)·
+     예시·차례로 정하기에서는 안 낸다. 표시(UP.importAsk)는 afterFiles 가 새 매장 갈래에서만 켠다.
+   ★ 불러오기는 기존 검사·매장 확인·적용(importPicks·importAsk·importApply)을 그대로 쓴다 */
+function importChooseNow() {
+  var on = !!UP.importAsk;
+  UP.importAsk = false;          /* 한 번만 */
+  return on && !UP.demo && !UP.holdAsk && !UP.known && !!UP.store &&
+         UP.queue && UP.queue.length > 0;
+}
+function drawImportChoose() {
+  UP.importChosen = true;
+  var host = document.getElementById('up-onboard');
+  host.innerHTML = '';
+  var box = el('div', 'imchoose');
+  box.appendChild(el('div', 'imchoosehead', '저장해둔 분류가 있나요?'));
+  box.appendChild(el('div', 'imchoosesub',
+    '다른 기기에서 받은 분류 파일을 불러오면 다시 정할 일을 줄일 수 있습니다.'));
+  var acts = el('div', 'imchooseacts');
+  var go = el('button', 'b on', '분류 파일 불러오기');
+  go.type = 'button';
+  go.addEventListener('click', function () {
+    useScreen('분류 파일 선택 단계 불러오기');
+    IMPORT_WHERE = 'choose';
+    var f = document.getElementById('pickfile');
+    if (f) f.click();
+  });
+  var self = el('button', 'b', '파일 없이 직접 정하기');
+  self.type = 'button';
+  self.addEventListener('click', function () {
+    useScreen('파일 없이 직접 정하기');
+    drawOnboard();
+  });
+  acts.appendChild(go); acts.appendChild(self);
+  box.appendChild(acts);
+  host.appendChild(box);
 }
 
 /* 지난번 것을 그대로 적용했다고 알려준다 */
@@ -12916,7 +13040,9 @@ function drawOnboard() {
   /* ★ 119차. 거래내역을 먼저 올린 순서 — 저장해둔 분류 파일을 여기서 불러온다.
      불러오면 정해진 곳은 빼고 아직 안 정한 곳만 이어서 묻는다 (importApply 'onboard').
      예시와 보류 원인·차례로 정하기 길에서는 안 낸다 */
-  if (UP && !UP.demo && !UP.holdAsk && UP.store) {
+  /* ★ 119차 분류 파일 선택 단계. 그 단계를 거친 거래내역에는 이 단추를 또 두지 않는다
+     (같은 안내를 두 화면에 두지 않는다). 항목 관리의 [불러오기]는 그대로다 */
+  if (UP && !UP.demo && !UP.holdAsk && UP.store && !UP.importChosen) {
     var imrow = el('div', 'unsetgo');
     var imb = el('button', 'b', '저장해둔 분류 파일 불러오기');
     imb.type = 'button';
@@ -15434,11 +15560,12 @@ function exportPicks() {
      분류 파일만으로 잔액이나 분석 결과를 만들지 않는다 */
 var IMPORT_WHERE = 'cats';
 function importHost(자리) {
-  return document.getElementById(자리 === 'onboard' ? 'up-onboard'
+  return document.getElementById(자리 === 'onboard' || 자리 === 'choose' ? 'up-onboard'
                                  : 자리 === 'start' ? 'upimport' : 'up-cats');
 }
 function importRedraw(자리) {
   if (자리 === 'onboard') drawOnboard();
+  else if (자리 === 'choose') drawImportChoose();   /* ★ 119차. 취소·실패면 선택 단계에 머문다 */
   else if (자리 === 'start') drawImportStart();
   else drawCats();
 }
@@ -15562,7 +15689,9 @@ function importApply(o, 자리) {
     importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.', false, 자리);
     return;
   }
-  if (자리 === 'onboard') {
+  if (자리 === 'onboard' || 자리 === 'choose') {
+    /* ★ 119차 분류 파일 선택 단계. 불러온 뒤에는 거래처 확인 화면으로 넘어간다 */
+    자리 = 'onboard';
     /* ★ 119차. 거래처 확인 중이었다 — 정해진 곳은 빼고 아직 안 정한 곳만 이어서 묻는다.
        다 정해졌으면 drawOnboard 가 기존 완료 화면([결과 보기])을 낸다 */
     UP.queue = buildQueue();
@@ -18438,7 +18567,7 @@ function drawDueGraph(host, c, cv, pts) {
      단위는 이 그림 하나의 것이다 — 다른 그림과 변수를 나눠 쓰지 않는다 (112차 ①) */
   var U = axisUnit(Math.max(Math.abs(rg.lo), Math.abs(rg.hi)));
   host.appendChild(chHead('예상 잔액 (' + U.name + ')',
-    [['know', '— 지나온 잔액'], ['kprof', '— 예상']], null));
+    [['know', '— 지나온 잔액'], ['kprof', '— 예상 · 0원 미만은 빨강']], null));
 
   var 첫날 = 지난.length ? Math.min(지난[0].날, pts.시작) : pts.시작;
   var 끝날 = pts.끝;
@@ -18495,6 +18624,47 @@ function drawDueGraph(host, c, cv, pts) {
       if (점선) a['stroke-dasharray'] = '5 4';
       svg.appendChild(svgEl('path', a));
     }
+    /* ── 119차 · 예상 선을 0원 경계에서 색으로 가른다 ──────────────────
+       0원 이상은 초록(--brand), 0원 미만은 빨강(--warn). 정확히 0원은 초록이다.
+       ★ 선이 0원을 가로지르면 그 자리(Y(0))에서 잘라 양수 쪽까지 빨갛게 칠하지 않는다.
+         같은 날의 입금 전·당일 반영 후 두 점 사이도 같은 규칙이다 (세로 선이 0원에서 갈린다).
+       ★ 자르는 자리는 그림에만 있다. pts.점(계산 자료)에는 점을 하나도 안 넣는다.
+       ★ 점선 무늬가 조각마다 새로 시작하지 않게 앞 조각까지의 길이만큼 무늬를 민다 */
+    function 잇기0(list) {
+      if (list.length < 2) return;
+      var 조각 = [], 지금 = null, 길이 = 0;
+      function 색(v) { return v < 0 ? 'var(--warn)' : 'var(--brand)'; }
+      function 끊기() {
+        if (지금 && 지금.xy.length >= 2) 조각.push(지금);
+      }
+      var x0 = X(list[0].날), y0 = Y(list[0].값);
+      지금 = { 색: 색(list[0].값), xy: [[x0, y0]], 시작: 0 };
+      for (var k = 1; k < list.length; k++) {
+        var a = list[k - 1], b = list[k];
+        var ax = X(a.날), ay = Y(a.값), bx = X(b.날), by = Y(b.값);
+        if (색(a.값) !== 색(b.값)) {
+          /* 두 점 사이에서 0원이 되는 자리 */
+          var t = (0 - a.값) / (b.값 - a.값);
+          var cx = ax + (bx - ax) * t, cy = Y(0);
+          지금.xy.push([cx, cy]);
+          길이 += Math.sqrt((cx - ax) * (cx - ax) + (cy - ay) * (cy - ay));
+          끊기();
+          지금 = { 색: 색(b.값), xy: [[cx, cy]], 시작: 길이 };
+          길이 += Math.sqrt((bx - cx) * (bx - cx) + (by - cy) * (by - cy));
+        } else {
+          길이 += Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+        }
+        지금.xy.push([bx, by]);
+      }
+      끊기();
+      조각.forEach(function (g) {
+        svg.appendChild(svgEl('path', {
+          d: 'M ' + g.xy.map(function (q) { return q[0] + ' ' + q[1]; }).join(' L '),
+          fill: 'none', stroke: g.색, 'stroke-width': 2,
+          'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+          'stroke-dasharray': '5 4', 'stroke-dashoffset': String(-g.시작) }));
+      });
+    }
     지난.forEach(function (p) {
       if (p.값 === null) { 잇기(seg, 'var(--now)'); seg = []; return; }
       seg.push(p);
@@ -18503,7 +18673,7 @@ function drawDueGraph(host, c, cv, pts) {
     /* 앞날 — 예상. 점과 점을 곧은 선으로 잇는다.
        ★ 114차 보정 둘 ①. 선 자체를 점선으로 둔다. 색만 다르면 「예상」이 안 읽힌다 —
          세로 경계선만 점선으로 두는 것으로는 모자란다 */
-    잇기(앞, 'var(--brand)', true);
+    잇기0(앞);
     /* ★ 요청서 ③-2. 예상이 시작되는 자리를 점선으로 가르고 이름을 적는다 */
     svg.appendChild(svgEl('line', { x1: X(pts.시작), y1: PAD - 8, x2: X(pts.시작), y2: PH,
       stroke: 'var(--gray)', 'stroke-width': 1.2, 'stroke-dasharray': '4 4', opacity: '0.85' }));
@@ -18577,11 +18747,13 @@ function drawDueGraph(host, c, cv, pts) {
     }
     /* 끝값 — 최저와 같은 자리면 알약을 겹쳐 놓지 않는다 */
     var 같자리 = 최저점 && 최저점.날 === 끝점.날 && 최저점.값 === 끝점.값;
+    /* ★ 119차. 끝점과 끝값 금액표도 예상 선과 같은 기준이다 (0원 미만만 빨강) */
+    var 끝색 = 끝점.값 < 0 ? 'var(--warn)' : 'var(--brand)';
     svg.appendChild(svgEl('circle', { cx: X(끝점.날), cy: Y(끝점.값), r: 3.2,
-      fill: 'var(--paper)', stroke: 'var(--brand)', 'stroke-width': 2 }));
+      fill: 'var(--paper)', stroke: 끝색, 'stroke-width': 2 }));
     if (!같자리) {
       알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + won(c.예상) + '원',
-           'var(--brand)', true);
+           끝색, true);
     }
     /* 날짜 줄 — 양 끝과 기준일 */
     [[첫날, 'start'], [pts.시작, 'middle'], [끝날, 'end']].forEach(function (p) {
@@ -23055,5 +23227,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 분류 진입 보정</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 업로드 안내 보정</div>
 </body></html>
