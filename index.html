@@ -1199,6 +1199,8 @@
   .holdrow .lab{color:var(--ink)}
   /* ★ 116차 통합 ④. 보류 카드의 보조 단추. 주 단추(.fcopen)보다 한 단계 낮게 둔다 */
   .dueholdsub{display:block;margin-top:8px;max-width:100%}
+  /* ★ 119차. 차례로 정하기 — 목록 첫 줄 위 오른쪽 */
+  .unsetgo{display:flex;justify-content:flex-end;margin-top:8px}
   /* ── 116차 · 예정 지출 편집 화면 ────────────────────────────────
      ★ 114차 그래프 화면의 틀(.fcback/.fcpane/.fcbody/.fcnote/.fcopen)을 그대로 쓴다.
        여기 있는 것은 그 안에 들어가는 줄 모양뿐이다.
@@ -12590,8 +12592,14 @@ function holdAskStart(hold, months) {
   });
   if (!list.length) return false;
   list.sort(function (a, b) { return 합[b.name] - 합[a.name]; });
+  return askListBegin(list, months, '원인');
+}
+/* ★ 119차. 차례로 정하기 — 원인 경로와 목록 경로가 같은 틀을 쓴다.
+   종류 '원인' = 보류 원인(출금 쪽만 정한다) · '목록' = 「아직 안 정한 돈」 목록 (기존 분류 규칙 그대로).
+   물을 차례만 잠깐 바꾸고 holdAskEnd 가 원래 차례·월·종료일·카드 펼침으로 되돌린다 */
+function askListBegin(list, months, 종류) {
   UP.holdAsk = {
-    queue: list, months: months,
+    queue: list, months: months, 종류: 종류,
     저장: { queue: UP.queue, pos: UP.pos, target: UP.target, more: UP.more,
             hist: UP.hist, ask: UP.ask, said: UP.said },
     복귀: { dueDay: UP.dueDay, open: !!(UP.open && UP.open.__dueOpen),
@@ -12608,6 +12616,22 @@ function holdAskStart(hold, months) {
   upShow('up-onboard');
   drawOnboard();
   return true;
+}
+/* ★ 119차. 차례로 정하기 — 지금 펼친 「아직 안 정한 돈」 목록에 보이는 거래처만, 보이는 차례대로.
+   ★ 이미 정해진 곳·섞인 카드로 답하신 곳은 건너뛴다 (한 항목으로 강제 분류하지 않는다).
+   ★ 목록에 없는 거래처(다른 달에만 있는 곳 등)는 더하지 않는다. 같은 거래처는 한 번만 묻는다 */
+function listAskStart(names, months) {
+  if (!UP) return false;
+  if (UP.holdAsk) holdAskEnd(false);
+  var 본 = {}, list = [];
+  names.forEach(function (nm) {
+    var g = UP.byName[nm];
+    if (!g || 본[g.name] || gDone(g) || g.cardMixed) return;
+    본[g.name] = 1;
+    list.push(g);
+  });
+  if (!list.length) return false;
+  return askListBegin(list, months, '목록');
 }
 /* 원래 물음 차례와 화면 상태로 돌린다. 고르신 분류는 이미 저장됐다 (pickCat → savePicks).
    ★ 결과로 가는 길(showResult)과 일반 동선(moreFromResult)도 먼저 이것을 부른다 —
@@ -12628,10 +12652,14 @@ function holdAskEnd(결과로) {
   UP.month = bk.month; UP.view = bk.view;
   if (!결과로) return;
   showResult();
-  /* 예상 잔액 카드 자리로 돌아간다 */
+  /* 원인 경로는 예상 잔액 카드 자리로, 목록 경로는 그 목록 자리로 돌아간다.
+     ★ 119차. 차례로 정하기 — 목록이 다 비어 없어졌으면 그 달 결과 맨 위다 */
   setTimeout(function () {
-    var cd = document.querySelector('#up-result .duecard');
+    var cd = h.종류 === '목록'
+      ? document.querySelector('#up-result .unsetbox')
+      : document.querySelector('#up-result .duecard');
     if (cd) cd.scrollIntoView({ block: 'start' });
+    else if (h.종류 === '목록') window.scrollTo(0, 0);
   }, 0);
 }
 function moreFromResult() {
@@ -13206,7 +13234,8 @@ function drawOnboard() {
   /* ★ 119차. 보류 원인 경로 — 적용 범위를 한 번 적고, 중간에 돌아갈 길을 둔다.
      분류는 거래처 단위 그대로다. 섞인 거래처는 출금 쪽에만 넣는다 (pickCat) */
   if (UP.holdAsk) {
-    card.appendChild(el('div', 'obsub', g.mixed
+    /* ★ 119차. 차례로 정하기 — 목록 경로는 기존 규칙대로 양쪽에 같이 넣으므로 「거래」 문장이다 */
+    card.appendChild(el('div', 'obsub', (g.mixed && UP.holdAsk.종류 === '원인')
       ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
       : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'));
     var hb = el('button', 'b', '결과로 돌아가기');
@@ -13362,7 +13391,7 @@ function pickCat(g, cat, isIn) {
                  name: g.name, newCat: cat, kind: 'pick' });
   /* ★ 119차. 보류 원인 경로에서는 원인인 출금 쪽만 정한다.
      입금 쪽은 정해져 있든 아니든 건드리지 않는다 */
-  var 원인길 = !!UP.holdAsk;
+  var 원인길 = !!(UP.holdAsk && UP.holdAsk.종류 === '원인');
   if (원인길 && g.mixed) gSetCat(g, false, cat, false);
   else if (g.mixed && isIn === null) {
     /* ★ 63-4. 한 번 묻고 양쪽에 같이 넣는다. 되묻지 않는다 —
@@ -13382,7 +13411,8 @@ function pickCat(g, cat, isIn) {
   savePicks();                     /* 찍을 때마다 바로 남긴다 */
   /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다
      ★ 119차. 보류 원인 경로에서는 원인이 아닌 거래처를 이어서 묻지 않는다 */
-  var sim = (!원인길 && gDone(g)) ? similarPayees(g) : [];
+  /* ★ 119차. 차례로 정하기 — 목록 경로도 목록 밖 거래처를 이어 묻지 않는다 */
+  var sim = (!UP.holdAsk && gDone(g)) ? similarPayees(g) : [];
   UP.ask = sim.length ? { g: sim[0], cat: cat, from: g.name } : null;
   drawOnboard();
 }
@@ -15488,6 +15518,22 @@ function drawUnsetDetail(host, d, months) {
     return { name: nm, sum: d.unkPayees[nm] };
   }).sort(function (a, b) { return b.sum - a.sum; });
   if (!list.length) return;
+  /* ★ 119차. 차례로 정하기 — 첫 거래처 위 오른쪽에 단추 하나.
+     보이는 목록의 거래처를 기존 거래처 확인 화면에서 차례로 묻는다. 물을 곳이 없으면 안 낸다 */
+  var 보이는 = list.slice(0, DTL_STEP).map(function (e) { return e.name; });
+  var 물을 = 보이는.filter(function (nm) { var g = UP.byName[nm]; return g && !gDone(g) && !g.cardMixed; });
+  if (물을.length) {
+    var gorow = el('div', 'unsetgo');
+    var go = el('button', 'b', '차례로 정하기');
+    go.type = 'button';
+    go.addEventListener('click', function (e) {
+      e.stopPropagation();
+      useScreen('차례로 정하기');
+      listAskStart(보이는, months);
+    });
+    gorow.appendChild(go);
+    host.appendChild(gorow);
+  }
   var box = el('div', 'dtl');
   list.slice(0, DTL_STEP).forEach(function (e) {
     var g = UP.byName[e.name];
@@ -21240,6 +21286,13 @@ function drawProfitChart(host, months, cols, 진행달) {
              earn: c.sales + c.otherIn, cost: c.cost,
              profit: c.profit, lo: c.lo, hi: c.hi, close: c.close };
   });
+  /* ★ 119차. 음수인 달 강조 — 기존 월별 값(monthNumbers)으로만 가른다. 계산은 안 바꾼다.
+     ★ 확정된 달만: 자료가 있고, 순이익을 셀 수 있고(blocked 아님), 안 정한 거래가 없는 달.
+       안 정한 거래가 있는 달을 임의로 적자로 칠하지 않는다. 0원은 강조하지 않는다.
+     ★ 진행 중인 달은 기존 「진행 중」 표시를 그대로 둔다 (그 달 순이익은 아직 다 안 쌓였다) */
+  pts.forEach(function (p) {
+    p.적자 = !p.없음 && !p.blocked && !p.unset && p.m !== 진행달 && p.profit < 0;
+  });
   var 연한조각 = pts.some(function (p) {
     return !p.blocked && p.unset && p.hi > p.lo;
   });
@@ -21299,6 +21352,12 @@ function drawProfitChart(host, months, cols, 진행달) {
       svg.appendChild(t);
     });
     var y0 = y(0);
+    /* ★ 119차. 음수인 달 강조 — 그 달 칸에 옅은 빨강을 막대 뒤에 깐다 (기존 --warn 을 옅게) */
+    pts.forEach(function (p, i) {
+      if (!p.적자) return;
+      svg.appendChild(svgEl('rect', { x: LEFT + i * colW, y: 0, width: colW, height: PH,
+        fill: 'var(--warn)', opacity: '0.08', 'class': 'negcol' }));
+    });
     pts.forEach(function (p, i) {
       if (p.없음) return;                 /* ★ 71차 ⑤. 자료 없는 달은 막대도 알약도 없다 */
       var cx = x(i);
@@ -21353,16 +21412,44 @@ function drawProfitChart(host, months, cols, 진행달) {
         stroke: 'var(--brand)', 'stroke-width': 2.2,
         'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
     });
+    /* ★ 119차. 음수인 달의 금액 글 자리 — 금액끼리 겹치면 뒤의 것은 안 쓴다.
+       안 쓴 달도 빨간 칸·점·달 이름은 남고, 누르면 그 달 상세에서 금액을 본다 */
+    var 쓴자리 = [];
     pts.forEach(function (p, i) {
       var cx = x(i);
       if (!p.blocked && !p.없음) {
-        svg.appendChild(svgEl('circle', { cx: cx, cy: y(p.profit), r: 3,
-          fill: 'var(--paper)', stroke: 'var(--brand)', 'stroke-width': 2 }));
+        var 점 = svgEl('circle', { cx: cx, cy: y(p.profit), r: 3,
+          fill: p.적자 ? 'var(--warn)' : 'var(--paper)',
+          stroke: p.적자 ? 'var(--warn)' : 'var(--brand)', 'stroke-width': 2 });
+        if (p.적자) {
+          점.setAttribute('class', 'negdot');
+          var tt = svgEl('title', {});
+          tt.textContent = (+p.m.slice(5, 7)) + '월 계좌 순이익 ' + won(p.profit) + '원';
+          점.appendChild(tt);
+        }
+        svg.appendChild(점);
+      }
+      if (p.적자) {
+        var 글 = won(p.profit) + '원', gw = textW(글, 11);
+        var gx = Math.max(LEFT + 1 + gw / 2, Math.min(W - RIGHT - 1 - gw / 2, cx));
+        var gy = y(p.profit) + 16;
+        if (gy > PH - 3) gy = y(p.profit) - 8;
+        var 겹 = 쓴자리.some(function (b) { return gx - gw / 2 < b.r + 4 && b.l - 4 < gx + gw / 2; });
+        if (!겹) {
+          var nt = svgEl('text', { x: gx, y: gy, 'text-anchor': 'middle', 'font-size': '11',
+            'font-weight': '700', fill: 'var(--warn)', stroke: 'var(--paper)', 'stroke-width': 3,
+            'paint-order': 'stroke', 'class': 'negamt' });
+          nt.textContent = 글;
+          svg.appendChild(nt);
+          쓴자리.push({ l: gx - gw / 2, r: gx + gw / 2 });
+        }
       }
       /* ★ 70차 ③. 진행 중인 달은 호박 굵게 + 밑에 알약 (표 헤더와 같은 말·모양) */
       var 진행c = (p.m === 진행달);
       var t = runLabel(svg, cx, PH + 13, 진행c);
       t.textContent = (+p.m.slice(5, 7)) + '월';
+      /* ★ 119차. 음수인 달 이름은 진한 빨강 */
+      if (p.적자) { t.setAttribute('fill', 'var(--warn)'); t.setAttribute('font-weight', '700'); t.setAttribute('class', 'negmon'); }
       if (진행c) runPill(svg, cx, PH + 13, W);
       if (p.없음) return;                 /* 자료 없는 달은 눌러도 갈 곳이 없다 */
       var r = svgEl('rect', { x: LEFT + i * colW, y: 0, width: colW, height: CH_H1 + 진행덧,
@@ -22673,5 +22760,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 문구 보정</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 분류 진입 보정</div>
 </body></html>
