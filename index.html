@@ -15580,7 +15580,7 @@ function drawUnsetDetail(host, d, months) {
   var 물을 = 보이는.filter(function (nm) { var g = UP.byName[nm]; return g && !gDone(g) && !g.cardMixed; });
   if (물을.length) {
     var gorow = el('div', 'unsetgo');
-    var go = el('button', 'b', '차례로 정하기');
+    var go = el('button', 'b on', '차례로 정하기');   /* ★ 119차. 주요 실행 단추 색 (b on) */
     go.type = 'button';
     go.addEventListener('click', function (e) {
       e.stopPropagation();
