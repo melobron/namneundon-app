@@ -114,6 +114,8 @@
   .headimage{border:1px solid var(--edge);background:var(--paper);color:var(--gray)}
   .savedchip span{font-weight:800}
   .savedchip:active{opacity:.65}
+  /* ★ 119차. 「저장됨」 안의 [분류 파일 다운로드] 전용 색 */
+  .b.dlpick{background:#D5E9DF;color:#185C40;border-color:#9FC5B2}
   .savedwhy{margin:0 30px 6px;padding:10px 13px;background:var(--goodbg);
             border:1px solid var(--goodline);border-radius:var(--rad);
             font-size:calc(12.5*var(--fu));line-height:1.65;color:var(--ink)}
@@ -7822,7 +7824,7 @@ function 글씨단옮기기(걸음) {
     if (UP && !UP.demo && UP.payees && UP.payees.length) {
       why.appendChild(el('div', null,
         '분류 설정을 파일로 내려받습니다. 거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'));
-      var dl = el('button', 'b', '분류 파일 다운로드');
+      var dl = el('button', 'b dlpick', '분류 파일 다운로드');   /* ★ 119차. 전용 색 (.b.dlpick) */
       dl.type = 'button';
       dl.style.marginTop = '8px';
       dl.addEventListener('click', function (e) {
