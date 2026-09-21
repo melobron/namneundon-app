@@ -2116,8 +2116,9 @@
 
 <div id="welcome"></div>
 
+<!-- ★ 119차. 가상 거래를 더해 「일부 거래를 바꾼」을 넣었다 (문장 하나만 바꾼다) -->
 <!-- ★ 117차. 예시 안내를 한 자리로 합친다. 「지난 자료로 만든 예시」와 같은 뜻이라 새 줄을 더하지 않고 이 문장을 바꾼다 -->
-<div class="demotop" id="demotop">이름과 금액을 바꾼 기능 설명용 예시입니다. 거래내역을 올리시면 실제 숫자로 바뀝니다.</div>
+<div class="demotop" id="demotop">기능 설명을 위해 이름·금액·일부 거래를 바꾼 예시입니다. 거래내역을 올리시면 실제 숫자로 바뀝니다.</div>
 
 
 <div id="a2hs-top"></div>
@@ -2704,6 +2705,10 @@ var DEMO_TX = [
 '02-20 10:50:09|현대카드(주)|122966',
 '02-20 11:24:02|한들페이|-144045',
 '02-20 11:29:33|롯데994*******|182300',
+/* ★ 119차. 설명용 가상 거래 — 1년 보기에서 계좌 순이익이 음수인 달이 어떻게 보이는지
+   보여드리려고 2월에 사업 지출 한 건을 더했다. 원본 거래가 아니다.
+   잔액은 demoRows 가 이 줄부터 차례로 다시 이어 셈한다 (가상 입금으로 차액을 메우지 않는다) */
+'02-20 14:00:00|예시 설비공사|-24000000',
 '02-20 17:07:40|문가온|-9603',
 '02-20 22:08:04|자동결제_TOSS|-43681',
 '02-21 05:02:18|신한카드(주)|984166',
@@ -4717,6 +4722,8 @@ var DEMO_PICKS = {
   /* ★ 117차. 예시 전용. 매월 10일에 식자재 대금을 지급한 적이 없다는 요한의 운영 경험을 반영했다.
      원본 거래와 대조한 것은 아니다. 일반 자동분류 규칙이 아니다 */
   '박서연': '인건비',
+  /* ★ 119차. 설명용 가상 거래(2월)의 분류 — 사업 지출 */
+  '예시 설비공사': '기타',
   '배주원': '기타',
   '백나래': '인건비',
   '본도시락 A점': '식자재',
@@ -7383,6 +7390,15 @@ function drawStart() {
   see.type = 'button';
   see.addEventListener('click', function () {
     useScreen('예시 먼저 보기');
+    /* ★ 119차. 예시 전환 보정 — 예시는 앱을 열 때 한 번만 세워 두고 여기서는 뒤를 드러내기만 했다.
+       그래서 내 매장을 본 뒤 누르면 UP 에 남은 내 매장이 그대로 나왔다.
+       내 매장이면 그 자료를 메모리에 맡겨 두고(MY_UP) 예시를 새로 세운다.
+       저장통은 건드리지 않는다 — 예시는 저장하지 않는다 (savePicks·planSave 가 예시면 안 쓴다) */
+    if (UP && !UP.demo) {
+      if (UP.holdAsk) holdAskEnd(false);
+      MY_UP = UP;
+      startDemo();
+    }
     leaveStart();
     window.scrollTo(0, 0);
   });
@@ -7390,6 +7406,10 @@ function drawStart() {
   host.appendChild(box);
   window.scrollTo(0, 0);
 }
+/* ★ 119차. 예시 전환 보정 — 예시로 가기 전에 보던 내 매장 자료 (메모리에만 둔다).
+   같은 매장을 「이어서 보기」로 다시 열면 이것을 그대로 되돌린다 — 저장하지 못한 변경도 잃지 않는다.
+   다른 매장을 열거나 새 파일을 올리면 비운다 */
+var MY_UP = null;
 /* 시작 화면을 접고 그 뒤(예시·결과)를 되살린다 */
 function leaveStart() {
   var host = document.getElementById('welcome');
@@ -7400,6 +7420,17 @@ function leaveStart() {
    같은 계좌 파일을 다시 올리시면 63-1 이 그 매장으로 되살린다 */
 function goSavedStore(k) {
   useScreen('이어서 보기');
+  /* ★ 119차. 예시 전환 보정 — 예시로 가기 전에 보던 그 매장이면 맡겨 둔 자료를 그대로 되돌린다 */
+  var 이름 = k.name === '(기본)' ? null : k.name;
+  if (MY_UP && (MY_UP.store || null) === 이름) {
+    UP = MY_UP;
+    MY_UP = null;
+    if (UP.trade && TRADES[UP.trade]) setTrade(UP.trade);
+    leaveStart();
+    showResult();
+    return;
+  }
+  MY_UP = null;
   var saved = loadPicks(k.name === '(기본)' ? null : k.name);
   if (saved && saved.업종 && TRADES[saved.업종]) setTrade(saved.업종);
   leaveStart();
@@ -7807,6 +7838,16 @@ function closeUpPanel() {
   /* 시작 화면을 보고 계신 중이면 그대로 둔다 — 거기서도 예시는 안 보여야 한다 */
   var w = document.getElementById('welcome');
   if (!w || w.hidden) { try { drawStart(); } catch (e) { } }
+  syncUpOpen();
+}
+/* ★ 119차. 예시 전환 보정 — 올려보기 창만 닫고 결과를 드러낸다. 시작 화면은 비우고 감춘다.
+   (머리의 「← 첫 화면으로」는 지금처럼 closeUpPanel 을 쓴다 — 거기는 시작 화면으로 가는 길이다) */
+function closePanelToResult() {
+  document.getElementById('up').classList.remove('on');
+  document.body.style.overflow = '';
+  var w0 = document.getElementById('welcome');
+  if (w0) { w0.hidden = true; w0.innerHTML = ''; }
+  showDemoBehind(true);
   syncUpOpen();
 }
 /* ★ 64-8. 이미 내 거래내역을 보고 있는데 오른쪽 위에 「내 거래내역 올려보기」가
@@ -9311,6 +9352,7 @@ function openLastData() {
   return openSavedData(name);
 }
 function startPending() {
+  MY_UP = null;                   /* ★ 119차. 새 파일로 가면 맡겨 둔 매장은 놓는다 */
   var banks = PENDING.filter(function (b) { return !b.bad; });
   if (!banks.length) return;
   /* 같은 은행 이름이 둘이면 갈라 부른다.
@@ -14534,7 +14576,10 @@ function showResult() {
   }
   document.getElementById('uptitle').textContent = '남는돈';
   upShow('up-done');
-  closeUpPanel();
+  /* ★ 119차. 예시 전환 보정 — 결과로 가는 길에서는 시작 화면을 다시 그리지 않는다.
+     closeUpPanel 은 예시를 「내 결과 없음」으로 보고 drawStart 를 불러,
+     예시에서 분류하고 돌아오면 결과 위에 시작 화면(매장 목록·업종·예시 단추)이 같이 섰다 */
+  closePanelToResult();
   document.getElementById('up-result').hidden = false;
   document.getElementById('demotop').hidden = !(UP && UP.demo);
   var months = monthList();
