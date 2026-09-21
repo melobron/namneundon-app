@@ -21358,7 +21358,7 @@ function drawProfitChart(host, months, cols, 진행달) {
     pts.forEach(function (p, i) {
       if (!p.적자) return;
       svg.appendChild(svgEl('rect', { x: LEFT + i * colW, y: 0, width: colW, height: PH,
-        fill: 'var(--warn)', opacity: '0.08', 'class': 'negcol' }));
+        fill: 'var(--warn)', opacity: '0.12', 'class': 'negcol' }));   /* ★ 119차. 0.08 → 0.12 (배경만 진하게) */
     });
     pts.forEach(function (p, i) {
       if (p.없음) return;                 /* ★ 71차 ⑤. 자료 없는 달은 막대도 알약도 없다 */
