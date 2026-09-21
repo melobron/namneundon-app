@@ -1187,6 +1187,14 @@
           color:var(--ink);cursor:pointer;text-align:center}
   .fcopen:hover{border-color:var(--ink)}
   .fcopen:active{background:var(--line)}
+  /* ── 116차 앞 · 예상 잔액 표시 보류 ──────────────────────────────
+     ★ 경고색도 세모 느낌표도 안 쓴다. 대표님이 뭘 잘못하신 것이 아니라
+       예상 지출에 안 들어간 거래가 있다는 사실을 알리는 자리다.
+     ★ 폰 390에서 두 줄이 되는 것을 허용한다. 글씨를 줄이지 않는다 */
+  .dueholdlab{font-size:calc(13.5*var(--fu));font-weight:800;color:var(--ink);
+              line-height:1.55;word-break:keep-all}
+  .dueholdn{margin-top:6px;font-size:calc(15*var(--fu));font-weight:800;color:var(--ink)}
+  .holdrow .lab{color:var(--ink)}
   .ckhead.done2{margin-top:16px;cursor:pointer;color:var(--gray)}
   .ckhead.done2 .chev{margin-left:6px;font-size:calc(12*var(--fu))}
   .simstore{margin-top:14px;padding:12px 13px;background:var(--panel);border-radius:var(--rad)}
@@ -15778,8 +15786,11 @@ function dueCostMap(t) {
      이번 회차는 경과일 대응으로 간다. 달력 날짜 대응은 다음에 견주어 본다 —
      103차에 「Σ출이 986만원 어긋난다」로 기각했던 것은 카드 총액을 옛 방식으로
      둔 채 비교해서 나온 차이였다. 이제 카드도 일별 합이라 다시 볼 여지가 있다.
-   ★ 이 고침은 「최저일 예측이 정확해진 것」이 아니다. 일관성과 표본 정직성이다 */
-function dueDaily(t, i) {
+   ★ 이 고침은 「최저일 예측이 정확해진 것」이 아니다. 일관성과 표본 정직성이다.
+   ★ 116차 앞 ③. 상세를 부르면 실제로 채택한 과거 비교 날짜를 같이 들고 나온다.
+     보류 판정이 표본 선택을 따로 추정하지 않게 하려는 것이다 —
+     고르는 고리는 하나 그대로고, 안 부르면 예전과 똑같이 돈다 */
+function dueDaily(t, i, 상세) {
   var 오늘 = t.days[i];
   /* ★ 105차 ⑤. 현재 자료 범위는 최초·최종 거래일로 판단한다.
      조회 기간 안의 무거래일을 일부 제외할 수 있으며,
@@ -15809,6 +15820,7 @@ function dueDaily(t, i) {
   var 시작 = coverStart(cover);
   var cost = dueCostMap(t);
   var 몫 = [], 셈 = [], k, x, 앞부족 = 0;
+  var 채택 = 상세 ? [] : null;
   for (x = 0; x < DUE_MAXSPAN; x++) { 몫.push(0); 셈.push(0); }
   for (k = 1; k <= 3; k++) {
     var a = dayNum(shiftMonth(오늘, -k));
@@ -15822,11 +15834,12 @@ function dueDaily(t, i) {
       }
       몫[x] += (cost[과거날] || 0);                 /* 거래가 없던 날은 그날의 0원이다 */
       셈[x]++;
+      if (상세) (채택[x] || (채택[x] = [])).push(과거날);
     }
   }
   var 한계 = 0;
   while (한계 < DUE_MAXSPAN && 셈[한계] > 0) 한계++;
-  return { 몫: 몫, 셈: 셈, 한계: 한계, 앞부족: 앞부족 };
+  return { 몫: 몫, 셈: 셈, 한계: 한계, 앞부족: 앞부족, 채택: 채택 };
 }
 /* ── 113차 ④ · 「자세히」에 적는 자료 범위 ────────────────────────────
    ★ 기본 화면에는 결과를 둔다. 범위의 출처와 제한은 펼친 자리에만 둔다 (⑤).
@@ -15928,6 +15941,71 @@ function coverStart(cover) {
   }
   return 늦;
 }
+
+/* ── 116차 앞 · 예측 표본에서 빠진 「아직 안 정한 출금」 ────────────────
+   dueTable 은 아직 안 정한 거래(UNSET)를 사업 지출에 안 넣는다. 그래서
+   예상 지출이 그만큼 적게 잡히고, 그 값으로 만든 예상 잔액이 실제보다 넉넉해 보인다.
+   ★ 이번에는 미정 출금을 예상 지출에 더하지 않는다. 예측 공식도 한 줄 안 바꾼다.
+     그런 거래가 예측에 실제로 쓰인 비교 날짜에 있으면 예상 잔액 표시를 보류할 뿐이다.
+   ★ 보류를 0원으로 표시하지 않는다. 안 보여주는 것이지 0원이 아니다.
+   ★ 사업 외 지출로 분류되어 보류가 풀려도 그 지출이 예측에 반영됐다는 뜻은 아니다.
+     계산 범위를 넓히는 일은 뒤 회차로 둔다 */
+
+/* 아직 안 정한 출금을 날짜별로 모아 둔다 — 표를 한 번만 만들고 t 와 함께 사라진다.
+   ★ 조건 ④⑤⑥ 을 여기서 건다. 기존 기준을 그대로 쓴다 —
+     catOf 의 UNSET · 출금(금액 0원 초과) · xferOn 으로 빠지는 계좌 간 이체.
+   ★ 미정 입금은 담지 않는다. 입금으로 출금을 상계하지 않는다 (요청서 ②).
+   ★ 조건 ① 은 따로 거르지 않는다 — dueTable 이 UP.rows 전체를 쓰므로
+     예측이 선 계좌 집합과 여기 담기는 거래의 계좌 집합이 같다.
+     계좌 집합이 갈리는 자료에서는 dueCard 가 dueUnknownAccs 로 이미 카드를 안 낸다 */
+function dueUnknownOut(t) {
+  if (t.__unkOut) return t.__unkOut;
+  var m = {};
+  (UP.rows || []).forEach(function (r) {
+    if (!(r.amount < 0)) return;                 /* ⑤ 출금만 · 0원은 안 센다 */
+    if (xferOn(r)) return;                       /* ⑥ 빼기로 정한 계좌 간 이체 */
+    if (catOf(r) !== UNSET) return;              /* ④ 아직 안 정한 거래만 */
+    var d = dayNum(r.at.slice(0, 10));
+    (m[d] || (m[d] = [])).push({ rid: rowId(r), 날: d, at: r.at.slice(0, 10),
+                                 액: -r.amount, 이름: keyOf(r) });
+  });
+  t.__unkOut = m;
+  return m;
+}
+/* 고르신 종료일까지의 예측에 실제로 쓰인 비교 날짜에서 미정 출금을 찾는다.
+   ★ 비교 날짜를 따로 추정하지 않는다. dueDaily 가 채택한 날을 그대로 받는다 (③).
+   ★ 종료일 밖에서만 쓰이는 표본은 세지 않는다 — 남은날수까지만 본다.
+   ★ 자료 기준일 이후 거래는 애초에 채택되지 않는다 (dueDaily 의 「과거날 > 마지막」) — ②.
+   ★ 같은 원본 거래가 여러 표본에 쓰여도 한 번만 센다 (rid 로 가린다).
+   ★ 비율이나 금액 문턱을 두지 않는다. 한 건이면 한 건이다 */
+function dueHold(t, i, 남은날수, dd) {
+  if (!dd) dd = dueDaily(t, i, true);
+  if (!dd || !dd.채택) return null;
+  var 표 = dueUnknownOut(t), 본 = {}, 목록 = [], 합 = 0, x, k, q;
+  var 끝 = Math.min(남은날수, dd.한계);
+  for (x = 0; x < 끝; x++) {
+    var 날들 = dd.채택[x];
+    if (!날들) continue;
+    for (k = 0; k < 날들.length; k++) {
+      var 줄 = 표[날들[k]];
+      if (!줄) continue;
+      for (q = 0; q < 줄.length; q++) {
+        if (본[줄[q].rid]) continue;
+        본[줄[q].rid] = 1;
+        목록.push(줄[q]);
+        합 += 줄[q].액;
+      }
+    }
+  }
+  if (!목록.length) return null;
+  목록.sort(function (a, b) { return a.날 - b.날; });
+  return { 건수: 목록.length, 합: 합, 목록: 목록, 기준해: t.days[i].slice(0, 4) };
+}
+/* 그래프가 열려 있으면 닫을 수 있게 들고 있는다 —
+   보류로 바뀌었는데 예전 그림이 떠 있으면 안 보여주기로 한 값이 그대로 남는다 */
+var DUE_GRAPH_CLOSE = null;
+/* 카드가 낸 보류를 목록 쪽이 그대로 본다 — 두 자리가 따로 세면 또 어긋난다 */
+var DUE_HOLD_NOW = null;
 
 function dueDay() {
   var d = UP && UP.dueDay;
@@ -16189,6 +16267,12 @@ function dueCard() {
   if (!now || now.배 === null) return null;
   /* ★ 102차. 기준일이 당겨졌으면 화면에 그 사실을 적는다 */
   now.공통기준 = (i !== t.n - 1);
+  /* ★ 116차 앞 ②③. 고르신 종료일까지의 예측에 실제로 쓰인 비교 날짜에
+     아직 안 정한 출금이 있으면 예상 잔액 표시를 보류한다.
+     ★ 예측 공식·표본 선택·금액 계산은 한 줄도 안 바꾼다. 내놓을지 말지만 정한다.
+     ★ 보류면 과거 견주기(duePast)도 하지 않는다 — 안 보여줄 숫자를 만들지 않는다 */
+  now.보류 = dueHold(t, i, now.남은날수);
+  if (now.보류) return now;
   /* ★ 58차 ⑦-3. 구간을 자르지 않는다. 지금 배수와 가장 가까웠던 과거 스무 날을 뽑는다 */
   var past = duePast(t, day, i);
   past.sort(function (a, b) {
@@ -16251,7 +16335,8 @@ function dueCard() {
    ★ 자료가 모자라면 아무것도 안 내놓는다 (null). 지어내지 않는다.
    ★ months 는 이제 안 쓴다 — 뒤 회차의 「종료일 뒤 저점」이 쓸 자리라 남겨 둔다 */
 function dueCurve(months, c) {
-  if (!c || c.잔액 === null) return null;
+  /* ★ 116차 앞 ③. 카드와 같은 보류 상태를 쓴다. 보류면 곡선을 아예 안 만든다 */
+  if (!c || c.보류 || c.잔액 === null) return null;
   var t = dueTable();
   if (!t || !t.n) return null;
   var 시작 = dayNum(c.오늘), 끝 = dayNum(c.목표);
@@ -16324,7 +16409,8 @@ function dueCurve(months, c) {
    「10:00 출금 · 14:00 입금」 같은 시각을 지어내면 자료에 없는 것을 그린 것이 된다.
    같은 날짜 안에 두 상태를 차례로 둘 뿐이다 (2026-09-20 GPT 확정) */
 function dueGraphPts(c, cv) {
-  if (!c || !cv || !cv.점 || !cv.점.length) return null;
+  /* ★ 116차 앞 ③. 카드·곡선과 같은 보류 상태를 쓴다 */
+  if (!c || c.보류 || !cv || !cv.점 || !cv.점.length) return null;
   var t = dueTable();
   if (!t) return null;
   var dd = dueDaily(t, c.i);
@@ -16347,6 +16433,147 @@ function dueGraphPts(c, cv) {
     bal = 끝;
   }
   return { 점: out, 시작: 시작, 끝: dayNum(c.목표) };
+}
+/* ── 116차 앞 · 분석 종료일 고르는 자리 ──────────────────────────────
+   보통 카드와 보류 카드가 같은 것을 쓴다. 두 벌로 만들면 한쪽만 고쳐지는 날이 온다 (49차).
+   ★ 글자·값·동작은 110차 ④ 그대로다. 자리를 함수로 뺀 것뿐이다 */
+function duePickBox(months) {
+  var day = dueDay();
+  var pick = el('div', 'duepick');
+  var prow = el('div', 'duesel');
+  prow.appendChild(el('label', 'dueselab', '분석 종료일'));
+  var sel = el('select', 'duedrop');
+  sel.id = 'duedrop';
+  for (var i = 1; i <= 31; i++) {
+    var op = el('option', null, dueDayText(i));
+    op.value = String(i);
+    if (i === day) op.selected = true;
+    sel.appendChild(op);
+  }
+  sel.addEventListener('change', function () {
+    setDueDay(+sel.value);
+    savePicks();
+    drawResult(months);
+  });
+  prow.appendChild(sel);
+  pick.appendChild(prow);
+  pick.appendChild(el('div', 'duewhy', '매달 지출이 가장 많은 날을 고르시면 됩니다'));
+  var sp0 = null;
+  try { sp0 = dueSpread(); } catch (e) { }
+  if (sp0) {
+    pick.appendChild(el('div', 'duewhy',
+      '올려주신 자료에서 사업 지출의 ' + sp0.비율[sp0.제일] + '%가 ' +
+      sp0.이름 + '에 나갔습니다'));
+  }
+  return pick;
+}
+/* ── 116차 앞 ④ · 보류 카드 ─────────────────────────────────────────
+   ★ 예상 잔액 카드 자리에 안내를 한 번만 둔다.
+   ★ 종료일 예상 잔액·최저 예상 잔액과 그 날짜·그래프와 진입 단추를 안 낸다.
+   ★ 0원으로 적지 않는다. 이전에 계산한 숫자나 열려 있던 그림도 남기지 않는다.
+   ★ 분석 종료일 선택은 그대로 둔다 — 종료일을 바꾸면 같은 규칙으로 다시 판단한다.
+   ★ 색과 세모 느낌표를 안 쓴다. 보여드릴 결과가 없는데 색이 붙으면 뜻이 생긴다 */
+function drawDueHoldCard(host, c, months) {
+  if (DUE_GRAPH_CLOSE) { try { DUE_GRAPH_CLOSE(); } catch (e) { } }
+  var open = !!UP.open.__dueOpen;
+  var box = el('div', 'duecard noicon');
+  var top = el('div', 'duetop tapx');
+  var res = el('div', 'dueres');
+  res.appendChild(el('div', 'dueholdlab',
+    '예상 지출에서 빠진 거래가 있어 분류 확인이 필요합니다.'));
+  res.appendChild(el('div', 'dueholdn',
+    '확인이 필요한 출금 ' + won(c.보류.건수) + '건'));
+  top.appendChild(res);
+  top.appendChild(foldChip(open));
+  box.appendChild(top);
+  /* ★ 이 단추는 카드 머리의 접기·펴기를 건드리지 않는다 */
+  var go = el('button', 'fcopen', '안 정한 거래 보기');
+  go.type = 'button';
+  go.addEventListener('click', function (e) {
+    e.stopPropagation();
+    useScreen('보류 원인 거래 보기');
+    UP.open = UP.open || {};
+    UP.open.__unset = true;
+    UP.open.__hold = true;
+    drawResult(months);
+    /* 폈는데 화면 밖이면 안 누른 것과 같다 (49차 ⑤ 와 같은 셈) */
+    setTimeout(function () {
+      var row = document.querySelector('#up-result .holdrow');
+      if (row) row.scrollIntoView({ block: 'center' });
+    }, 0);
+  });
+  box.appendChild(go);
+  box.appendChild(el('div', 'duewhy dueas',
+    '자료 기준일 ' + (+c.오늘.slice(5, 7)) + '월 ' + (+c.오늘.slice(8, 10)) + '일'));
+  if (c.공통기준) {
+    box.appendChild(el('div', 'duewhy dueas',
+      '계좌별 최종 거래일이 달라 ' +
+      (+c.오늘.slice(5, 7)) + '월 ' + (+c.오늘.slice(8, 10)) +
+      '일 기준으로 합산했습니다. 계좌별 자료 기간을 확인해주세요.'));
+  }
+  /* ★ 어디까지의 비교 날짜를 보고 판단했는지는 접든 펴든 같은 무게다 (105차 ③) */
+  if (c.잘림) {
+    box.appendChild(el('div', 'duewhy dueas',
+      (+c.목표.slice(5, 7)) + '월 ' + (+c.목표.slice(8, 10)) +
+      '일까지 계산했습니다. 이후 예상 지출을 계산할 비교 자료가 부족합니다.'));
+  }
+  if (!open) box.classList.add('shut');
+  top.addEventListener('click', function () {
+    UP.open.__dueOpen = !UP.open.__dueOpen;
+    drawResult(months);
+  });
+  if (open) box.appendChild(duePickBox(months));
+  host.appendChild(box);
+}
+/* ── 116차 앞 ⑤ · 보류 원인 거래 목록 ───────────────────────────────
+   ★ 전체 미정 목록만 열어 대표님이 원인을 다시 찾게 하지 않는다.
+     보류를 만든 거래만 거래처별로 모아 날짜와 출금 금액을 적는다.
+   ★ 이 거래는 지금 보고 계신 달 밖에 있을 수 있다 — 「아직 안 정한 돈」 상자는
+     그 달만 보여주므로, 원인 목록은 달과 상관없이 따로 낸다.
+   ★ 분류는 기존 거래처별 방식 그대로다 (drawChangeMenu).
+     적용 범위를 몰래 넓히거나 좁히지 않는다 */
+function drawHoldDetail(host, hold, months) {
+  var 묶 = {}, list = [];
+  hold.목록.forEach(function (r) {
+    var g = 묶[r.이름];
+    if (!g) { g = 묶[r.이름] = { name: r.이름, sum: 0, 줄: [] }; list.push(g); }
+    g.sum += r.액;
+    g.줄.push(r);
+  });
+  list.sort(function (a, b) { return b.sum - a.sum; });
+  var box = el('div', 'dtl');
+  list.forEach(function (e) {
+    var g = UP.byName[e.name];
+    var row = el('div', 'drow');
+    var nm = el('div', 'dnm');
+    nm.appendChild(el('span', 'mark mine', '?'));
+    nm.appendChild(document.createTextNode(showName(e.name)));
+    var 날적기 = e.줄.slice(0, 6).map(function (r) {
+      return 날글(r.at, r.at.slice(0, 4) !== hold.기준해) + ' ' + won(r.액) + '원';
+    }).join(' · ');
+    if (e.줄.length > 6) 날적기 += ' 외 ' + won(e.줄.length - 6) + '건';
+    nm.appendChild(el('div', 'dspan', 날적기));
+    row.appendChild(nm);
+    row.appendChild(el('div', 'dv num', won(e.sum)));
+    var ch = el('div', 'dch');
+    var btn = el('button', 'chbtn', '정하기');
+    btn.type = 'button';
+    ch.appendChild(btn);
+    row.appendChild(ch);
+    box.appendChild(row);
+    var menu = el('div', 'menu');
+    menu.hidden = true;
+    box.appendChild(menu);
+    if (!g) { btn.disabled = true; return; }
+    btn.addEventListener('click', function () {
+      if (!menu.hidden) { menu.hidden = true; return; }
+      /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 (43차 4단계와 같다) */
+      if (g.askSkip) unskipAsk(g);
+      drawChangeMenu(menu, g, function () { drawResult(months); });
+      menu.hidden = false;
+    });
+  });
+  host.appendChild(box);
 }
 /* ── 114차 · 그래프 화면 ──────────────────────────────────────────
    ★ 카드 안에 펼침을 또 만들지 않는다. 이건 새 화면이지 카드 속 펼침이 아니다.
@@ -16410,6 +16637,9 @@ function openDueGraph(c, cv) {
 
   back.appendChild(pane);
   document.body.appendChild(back);
+  /* ★ 116차 앞 ④. 보류로 바뀌면 이 그림이 남아 있으면 안 된다.
+     닫는 길을 하나 들고 있는다 (닫기 는 함수 선언이라 여기서 이미 잡힌다) */
+  DUE_GRAPH_CLOSE = 닫기;
 
   var 닫힘 = false;
   function 닫기() {
@@ -16418,6 +16648,7 @@ function openDueGraph(c, cv) {
     if (back.parentNode) back.parentNode.removeChild(back);
     document.body.style.overflow = 뒤스크롤;
     document.removeEventListener('keydown', 키);
+    DUE_GRAPH_CLOSE = null;
   }
   function 키(e) { if (e.key === 'Escape') { e.preventDefault(); 닫기(); } }
   x.addEventListener('click', 닫기);
@@ -16755,6 +16986,7 @@ function dueSpread() {
      접힌 채로 돌아간다. 접힘으로 두어야 「늘 펼친 채로」가 지켜진다 */
 function drawDueCard(host, months) {
   var c;
+  DUE_HOLD_NOW = null;
   try { c = dueCard(); } catch (e) { c = null; }
   if (!c) {
     /* ★ 102차 추가 ③. 카드가 안 나오는 까닭이 「그날 잔액을 복원 못 하는 계좌가 있음」
@@ -16780,6 +17012,13 @@ function drawDueCard(host, months) {
         }).join(' · ')));
       host.appendChild(안);
     }
+    return;
+  }
+  /* ★ 116차 앞 ④. 보류면 예상 숫자 대신 안내를 낸다.
+     곡선도 그림도 여기서부터 아예 안 만든다 */
+  if (c.보류) {
+    DUE_HOLD_NOW = c.보류;
+    drawDueHoldCard(host, c, months);
     return;
   }
   /* ★ 101차. 곡선을 여기서 한 번만 구한다 — 제목과 펼친 자리가 같이 쓴다 */
@@ -16974,35 +17213,9 @@ function drawDueCard(host, months) {
          짧은 달 처리(nextDue·shiftMonth)도 한 줄도 안 건드린다.
        ★ 이름은 「분석 종료일」이다. 결과 화면에서 실제로 바꾸는 값이 그것이다.
        ★ 「왜 그 날을 고르는가」를 알려주는 줄은 없애지 않는다. 드롭다운 아래로 내린다 */
-    var pick = el('div', 'duepick');
-    var prow = el('div', 'duesel');
-    prow.appendChild(el('label', 'dueselab', '분석 종료일'));
-    var sel = el('select', 'duedrop');
-    sel.id = 'duedrop';
-    for (var i = 1; i <= 31; i++) {
-      var op = el('option', null, dueDayText(i));
-      op.value = String(i);
-      if (i === day) op.selected = true;
-      sel.appendChild(op);
-    }
-    sel.addEventListener('change', function () {
-      setDueDay(+sel.value);
-      savePicks();
-      drawResult(months);
-    });
-    prow.appendChild(sel);
-    pick.appendChild(prow);
-    pick.appendChild(el('div', 'duewhy', '매달 지출이 가장 많은 날을 고르시면 됩니다'));
-    var sp0 = null;
-    try { sp0 = dueSpread(); } catch (e) { }
-    if (sp0) {
-      /* ★ 103차 ⑤. 기간을 밝힌다. dueSpread 의 분모는 자료 전체 기간이지 지난 3달이 아니다.
-         ★ 110차 ④. 왜 그 날을 고르는지 알려주는 줄이라 드롭다운 아래가 제자리다 */
-      pick.appendChild(el('div', 'duewhy',
-        '올려주신 자료에서 사업 지출의 ' + sp0.비율[sp0.제일] + '%가 ' +
-        sp0.이름 + '에 나갔습니다'));
-    }
-    box.appendChild(pick);
+    /* ★ 116차 앞. 종료일 고르는 자리를 duePickBox 로 뺐다 —
+       보류 카드와 같은 것을 쓰게 하려는 것이다. 글자와 동작은 110차 ④ 그대로다 */
+    box.appendChild(duePickBox(months));
     var t = el('div', 'duepick');
     function 줄(name, v, sub, sign) {
       var r = el('div', 'orow');
@@ -18271,6 +18484,24 @@ function drawResultInner(months) {
      임시로 사업 외 용도에 둔 값이지만, 다시 확인할 돈이라는 사용자 흐름은 같다.
      따라서 아직 안 정한 돈을 펼치면 제일 먼저 보여주되 둘을 합산하지 않는다. */
   var sk = skipTotals();
+  /* ★ 116차 앞 ⑤. 예상 잔액 표시를 보류한 거래.
+     「아직 안 정한 돈」 상자는 보고 계신 달만 담지만, 보류 원인은 과거 비교 구간에
+     있어 그 달 밖일 수 있다. 그래서 달과 상관없이 따로 낸다.
+     ★ 카드가 낸 보류를 그대로 쓴다 — 두 자리가 따로 세면 또 어긋난다 */
+  if (DUE_HOLD_NOW) {
+    var 보류것 = DUE_HOLD_NOW;
+    boxRow('__hold', '예상 잔액 표시를 보류한 거래 (출금 ' + won(보류것.건수) + '건)',
+      won(보류것.합), null, function () {
+        host.appendChild(el('div', 'subnote',
+          '예상 지출을 계산할 때 쓰는 과거 비교 날짜에 있던 거래입니다. ' +
+          '아직 안 정한 거래라 예상 지출에 들어가지 않았습니다.'));
+        host.appendChild(el('div', 'subnote',
+          '분류 후 예상 잔액 표시 여부를 다시 확인합니다.'));
+        host.appendChild(el('div', 'subnote',
+          '자료 부족 같은 다른 조건이 남아 있을 수 있습니다.'));
+        drawHoldDetail(host, 보류것, months);
+      }, 'sidebox unsetbox holdrow', null);
+  }
   if (unsetAmt) {
     var 작은거래표시 = sk.n
       ? ('작은 거래 ' + won(sk.n) + '곳 · ' + won(sk.sum) + '원 별도')
@@ -20987,5 +21218,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 115-1차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 115-2차</div>
 </body></html>
