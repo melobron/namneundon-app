@@ -15850,10 +15850,12 @@ var DUE_DAILY = 60;            /* 하루치 지출을 이만큼의 평균으로 
 var DUE_MAXSPAN = 62;
 /* 날짜 하나 → 그날의 사업 지출. dueDaily 가 날마다 찾아 쓴다.
    표는 한 번만 만들고 UP.__due 가 비워질 때 같이 사라진다 */
+/* ★ 118차 ①. 사업 지출(cc)이 아니라 예측용 출금(fc)을 쓴다 — dueTable 의 설명 참고.
+   cc 는 「사업 지출의 몇 %」(dueSpread)와 「하루치」(daily) 잣대로 그대로 남는다 */
 function dueCostMap(t) {
   if (t.__cost) return t.__cost;
   var m = {};
-  for (var j = 0; j < t.n; j++) m[t.num[j]] = t.cc[j + 1] - t.cc[j];
+  for (var j = 0; j < t.n; j++) m[t.num[j]] = t.fc[j + 1] - t.fc[j];
   t.__cost = m;
   return m;
 }
@@ -16168,7 +16170,29 @@ function dueSig(t, i, dd) {
   for (x = 0; x < ks.length; x++) s += ks[x] + '=' + Math.round(합[ks[x]]) + ';';
   var h = 5381;
   for (x = 0; x < s.length; x++) h = ((h * 33) ^ s.charCodeAt(x)) >>> 0;
-  return 'v1-' + h.toString(36) + '-' + s.length.toString(36);
+  /* ★ 118차 ③. 예측 모델이 바뀌어 판 번호를 올린다 (v1 → v2). 옛 지문과 섞이지 않는다 */
+  return 'v' + DUE_MODEL + '-' + h.toString(36) + '-' + s.length.toString(36);
+}
+/* ── 118차 ③ · 예측 모델 번호 ─────────────────────────────────────
+   1 = 116·117차 (사업 지출만) · 2 = 118차 (계좌 밖으로 나간 분류된 출금 전부).
+   ★ 계획에 이 번호를 같이 적는다. 번호가 다른 계획은 지우지 않고 적용보류로 둔다 —
+     예전에 사업 외 출금을 「추가」로 넣으셨다면 이제 기본 예상에도 들어 있어 두 번 빠질 수 있다.
+   ★ 확인하고 다시 반영하시면 새 번호로 저장된다. 그래서 다시 들어와도 또 보류되지 않는다 */
+var DUE_MODEL = 2;
+/* ★ 118차 ①. 앞 N일 예상 출금을 갈래(사업·사업 외)와 항목별로 가른다.
+   기본 화면에는 안 쓴다 — 계산 근거를 확인하는 자리다. 합은 몫/셈 합과 같다 */
+function dueCostSplit(dd, N) {
+  var out = { 갈래: {}, 항목: {} }, x, q;
+  for (x = 0; x < Math.min(N, dd.한계); x++) {
+    var 줄 = dd.조각 && dd.조각[x];
+    if (!줄 || !dd.셈[x]) continue;
+    for (q = 0; q < 줄.length; q++) {
+      var v = 줄[q].v / dd.셈[x], g = 줄[q].갈래 || '사업', k = 줄[q].항목 || '';
+      out.갈래[g] = (out.갈래[g] || 0) + v;
+      out.항목[k] = (out.항목[k] || 0) + v;
+    }
+  }
+  return out;
 }
 /* ── 116차 ⑦ · 총액을 비중대로 나눈다 ───────────────────────────────
    ★ 나눈 뒤 날짜별 합이 입력 총액과 정확히 같아야 한다.
@@ -16273,7 +16297,10 @@ function dueDailyUseCalc(t, i) {
     /* ★ ⑫ 계획을 세울 때 본 예측 입력과 지금 것이 다르면 적용을 보류한다.
        계획은 그대로 둔다 — 대체 계획은 기본 예상으로 돌아가고,
        추가 계획은 추가 차감을 멈춘다. 대표님이 확인하신 뒤에 다시 반영한다 */
-    if (pl.자료 !== 지문) { out.적용보류++; out.적용보류목록.push(pl); return; }
+    /* ★ 118차 ③. 모델 번호가 다른(예전에 저장한) 계획도 같은 적용보류로 둔다 */
+    if ((pl.모델 || 1) !== DUE_MODEL || pl.자료 !== 지문) {
+      out.적용보류++; out.적용보류목록.push(pl); return;
+    }
     out.적용목록.push(pl);
     if (pl.유형 === '대체') {
       var lo = dayNum(pl.시작), hi = dayNum(pl.종료);
@@ -16445,46 +16472,107 @@ function dueTable() {
   var n = accCount(), last = [], i;
   for (i = 0; i < n; i++) last[i] = null;
   var 매출 = baseName('매출');
-  var days = [], bal = [], sale = [], cost = [];
-  var cur = null, dSale = 0, dCost = 0;
+  var days = [], bal = [], sale = [], cost = [], fcost = [];
+  var cur = null, dSale = 0, dCost = 0, dFc = 0;
   /* ★ 116차 ④. 거래처별 기여분의 재료를 같은 고리에서 모은다 —
-     아래 걸러내기(이체·미정·매출·안 세는 항목)를 그대로 지난 줄만 담긴다.
-     새 잣대를 만들지 않는다 — 합계는 dCost 와 같은 줄에서 나온다 */
+     아래 걸러내기(이체·미정·매출)를 그대로 지난 줄만 담긴다.
+     새 잣대를 만들지 않는다 — 합계는 예측용 출금(dFc)과 같은 줄에서 나온다 (118차) */
   var 지출줄 = [];
   function 닫기() {
     if (cur === null) return;
     var s = 0, any = false;
     for (i = 0; i < n; i++) if (last[i] !== null) { s += last[i]; any = true; }
     days.push(cur); bal.push(any ? s : null);
-    sale.push(dSale); cost.push(dCost);
+    sale.push(dSale); cost.push(dCost); fcost.push(dFc);
   }
   rows.forEach(function (r) {
     var day = r.at.slice(0, 10);
-    if (cur !== day) { 닫기(); cur = day; dSale = 0; dCost = 0; }
+    if (cur !== day) { 닫기(); cur = day; dSale = 0; dCost = 0; dFc = 0; }
     last[accOf(r)] = r.balance;
     var c = catOf(r);
     if (xferOn(r) || c === UNSET) return;
     if (c === 매출) { dSale += r.amount; return; }
-    if (isKeep(c)) return;
+    /* ★ 118차 ①. 잔액 예측용 출금 — 계좌 밖으로 실제 나간, 분류된 출금 전부.
+       사업 지출만이 아니라 사업 외 용도·대표 인출·계산 밖(KEEP) 항목으로 정한 출금,
+       자동으로 넘긴 작은 출금도 넣는다. 잔액은 그 돈이 나가도 줄기 때문이다.
+       ★ 빼는 것은 그대로다 — 계좌 간 이체(xferOn)와 아직 안 정한 거래(UNSET).
+         미정 출금은 평균에 몰래 넣지 않고 보류 규칙(dueHold)이 맡는다.
+       ★ 방향은 실제 금액 부호로만 가른다. 항목 이름(「대출」 등)으로 입금이라 여기지 않는다.
+       ★ 매출로 정한 출금(취소·환불)은 예전처럼 매출 쪽에서 빠진다. 여기서 두 번 세지 않는다.
+       ★ 월별 사업 수입·지출·계좌 순이익의 정의는 안 바뀐다 — 그쪽은 cost(cc)다.
+       ★ 갈래·항목을 줄마다 적어 두어 분류별 기여분을 가를 수 있게 한다 (dueCostSplit) */
     if (r.amount < 0) {
-      dCost += -r.amount;                      /* 사업 지출만 */
-      지출줄.push({ 날: dayNum(day), p: keyOf(r), rid: rowId(r), v: -r.amount });
+      dFc += -r.amount;
+      지출줄.push({ 날: dayNum(day), p: keyOf(r), rid: rowId(r), v: -r.amount,
+                    갈래: isKeep(c) ? '사업 외' : '사업', 항목: c });
     }
+    if (isKeep(c)) return;
+    if (r.amount < 0) dCost += -r.amount;      /* 사업 지출만 (월별·하루치 잣대) */
   });
   닫기();
   var num = days.map(dayNum);
-  var cs = [0], cc = [0];
-  for (i = 0; i < days.length; i++) { cs.push(cs[i] + sale[i]); cc.push(cc[i] + cost[i]); }
+  var cs = [0], cc = [0], fc = [0];
+  for (i = 0; i < days.length; i++) {
+    cs.push(cs[i] + sale[i]); cc.push(cc[i] + cost[i]); fc.push(fc[i] + fcost[i]);
+  }
   /* 하루치 지출 — 그날 직전 60일 사업 지출 ÷ 60. 「바닥났다」의 잣대다 (⑦-1) */
   var daily = [], a = 0;
   for (i = 0; i < days.length; i++) {
     while (a < i && num[a] <= num[i] - DUE_DAILY) a++;
     daily.push((cc[i + 1] - cc[a]) / DUE_DAILY);
   }
-  var t = { days: days, num: num, bal: bal, cs: cs, cc: cc, daily: daily,
+  var t = { days: days, num: num, bal: bal, cs: cs, cc: cc, fc: fc, daily: daily,
             지출줄: 지출줄, n: days.length };
   UP.__due = t;
   return t;
+}
+/* ── 118차 ② · 날짜별 입금 ────────────────────────────────────────
+   카드의 들어올 돈·곡선·그래프가 이 배열 하나를 쓴다. 따로 세면 또 어긋난다.
+   ★ 균등(운영 기본값): 직전 30일 매출 평균을 매일 같은 금액으로 놓는다.
+     기존 결과를 원 단위까지 그대로 지키려고 합계를 먼저 원 단위로 만든 뒤 날수로 나눈다
+     (117차까지의 카드·곡선 셈과 같다).
+   ★ 요일(비교용): 직전 30일 가운데 같은 요일 날들의 매출 입금 평균. 날마다 원 단위로 반올림한다.
+     자료가 없는 날(dueCover 밖)은 0원으로 치지 않고 분모에서 뺀다.
+     그 요일에 쓸 날이 하나도 없으면 균등 값으로 대신하고 대체요일에 적는다.
+     기준일 뒤 자료는 안 쓴다. 종료일 길이에 맞춰 전체를 다시 늘리거나 줄이지 않는다.
+   ★ 요일 방식이 더 낫다는 측정이 나오기 전까지 운영은 균등이다 */
+var DUE_INFLOW = '균등';
+function dueInflow(t, i, 남은날수) {
+  var t0 = t.num[i], 매출30 = 0, j, x;
+  for (j = 0; j < t.n; j++) {
+    if (t.num[j] <= t0 - 30) continue;
+    if (t.num[j] > t0) break;
+    매출30 += (t.cs[j + 1] - t.cs[j]);
+  }
+  var out = { 방식: DUE_INFLOW === '요일' ? '요일' : '균등', 일별: [], 합: 0, 대체요일: [] };
+  if (out.방식 === '균등') {
+    var 합 = Math.round(매출30 / 30 * 남은날수), 하루 = 합 / 남은날수;
+    for (x = 0; x < 남은날수; x++) out.일별.push(하루);
+    out.합 = 합;
+    return out;
+  }
+  var 날매출 = {}, cover = dueCover(t, t0), 요합 = [], 요수 = [], w;
+  for (w = 0; w < 7; w++) { 요합.push(0); 요수.push(0); }
+  for (j = 0; j < t.n; j++) {
+    if (t.num[j] <= t0 - 30 || t.num[j] > t0) continue;
+    날매출[t.num[j]] = t.cs[j + 1] - t.cs[j];
+  }
+  for (var d = t0 - 29; d <= t0; d++) {
+    if (!coveredAll(cover, d)) continue;          /* 자료 밖 날은 0원으로 안 센다 */
+    w = (d + 4) % 7;                               /* 1970-01-01 은 목요일(4) */
+    요합[w] += (날매출[d] || 0);
+    요수[w]++;
+  }
+  for (x = 0; x < 남은날수; x++) {
+    w = (t0 + 1 + x + 4) % 7;
+    var v;
+    if (요수[w]) v = 요합[w] / 요수[w];
+    else { v = 매출30 / 30; if (out.대체요일.indexOf(w) < 0) out.대체요일.push(w); }
+    v = Math.round(v);
+    out.일별.push(v);
+    out.합 += v;
+  }
+  return out;
 }
 /* 그날에 서서 목표일까지를 내다본 뺄셈 하나 */
 function dueProject(t, i, day) {
@@ -16508,14 +16596,11 @@ function dueProject(t, i, day) {
     t1 = t0 + 남은날수;
     목표 = new Date(t1 * 86400000).toISOString().slice(0, 10);
   }
-  /* 들어올 돈 — 직전 30일 매출 평균 × 남은 날수. 전체 입금이 아니라 매출만이다 */
-  var 매출30 = 0, j;
-  for (j = 0; j < t.n; j++) {
-    if (t.num[j] <= t0 - 30) continue;
-    if (t.num[j] > t0) break;
-    매출30 += (t.cs[j + 1] - t.cs[j]);
-  }
-  var 들어올 = Math.round(매출30 / 30 * 남은날수);
+  /* 들어올 돈 — 직전 30일 매출 기준. 전체 입금이 아니라 매출만이다.
+     ★ 118차 ②. 날짜별 입금 배열의 합이다. 곡선·그래프가 같은 배열을 쓴다 (dueInflow).
+       대출·대표 입금은 앞으로 다시 들어올 돈으로 치지 않는다 — 매출만 본다 */
+  var 입금 = dueInflow(t, i, 남은날수), j;
+  var 들어올 = 입금.합;
   /* 나갈 돈 — 지난 3개월 같은 자리 날의 실제 사업 지출 평균.
      ★ 오늘부터 목표일까지 전부다. 「다음 달 1~10일만」이 아니다 —
        이번 달 남은 날에 나갈 돈도 잔액을 깎는다.
@@ -16551,7 +16636,9 @@ function dueProject(t, i, day) {
               이전 내역을 더하면 늘어날 자료인지 아닌지를 여기로 가른다 */
            앞부족: dd.앞부족 || 0,
            /* ★ 116차 ⑫. 적용 보류가 있을 때만 카드가 한 줄로 알린다 */
-           계획수: use.계획, 적용보류수: use.적용보류 };
+           계획수: use.계획, 적용보류수: use.적용보류,
+           /* ★ 118차 ②. 곡선·그래프가 그대로 받아 쓰는 날짜별 입금 */
+           입금: 입금.일별, 입금방식: 입금.방식, 대체요일: 입금.대체요일 };
 }
 /* ★ 58차 ⑦-1. 그 기간에 잔액이 하루치 지출보다 적어진 날이 있었는가.
    「0원 밑」은 통장에서 일어나지 않는 일이라 세어도 늘 0이었다 */
@@ -16749,12 +16836,26 @@ function dueCurve(months, c) {
 
   /* 하루치 지출 — 「바닥」의 잣대. 오늘 자리의 것을 그대로 쓴다 (58차 ⑦-1) */
   var 하루치 = t.daily[t.n - 1] || 0;
-  var 하루입 = c.들어올 / 남은날수;
+  /* ★ 118차 ②. 하루 입금은 카드와 같은 날짜별 입금 배열에서 받는다.
+     균등 방식이면 예전의 「들어올 ÷ 남은날수」와 같은 값이다 */
+  var 입금 = c.입금;
   /* ★ 오늘 잔액도 최저 후보에 넣는다 — 오늘이 이미 제일 낮을 수 있다 */
   var bal = c.잔액, 최저 = c.잔액, 최저날 = 시작, 점 = [], 출합 = 0, 입합 = 0;
+  /* ★ 118차 ④. 하루 출금·입금을 「누적값을 원 단위로 반올림한 차이」로 둔다.
+     카드는 합을 먼저 반올림하고(나갈·들어올) 곡선은 빼고 나서 반올림해서,
+     합이 꼭 ○.5원에 걸리는 날 끝값이 1원 갈렸다 (118차 예시 28일 종료에서 실측).
+     이렇게 하면 앞 N일의 합이 언제나 카드의 반올림 합과 같다 — 끝값이 예상과 같고,
+     누적이 종료일과 상관없어 종료일을 늘려도 앞날 출금이 안 움직인다.
+     ★ 날마다 값은 원래 값과 1원 안쪽으로 다르다. 금액을 새로 만드는 것이 아니다 */
+  var 출일 = [], 입일 = [], 누출 = 0, 누입 = 0, 앞출 = 0, 앞입 = 0;
   for (i = 0; i < 남은날수; i++) {
-    var 출 = use.일별[i];                          /* ★ 116차 ②. 카드와 같은 결과 하나다 */
-    var 입 = 하루입;
+    누출 += use.일별[i]; 누입 += 입금[i];
+    출일.push(Math.round(누출) - 앞출); 앞출 = Math.round(누출);
+    입일.push(Math.round(누입) - 앞입); 앞입 = Math.round(누입);
+  }
+  for (i = 0; i < 남은날수; i++) {
+    var 출 = 출일[i];                              /* ★ 116차 ②. 카드와 같은 결과 하나다 */
+    var 입 = 입일[i];
     출합 += 출; 입합 += 입;
     /* ★ 하루 안에서는 출금 먼저, 입금 나중. 같은 날 아침에 급여가 나가면
        일말 잔고가 플러스여도 장중에 펑크다. 낮은 쪽을 최저 후보로 쓴다.
@@ -16771,7 +16872,9 @@ function dueCurve(months, c) {
            하루치: Math.round(하루치),
            바닥: 최저 < 하루치,
            모자람: 최저 < 0 ? Math.round(-최저) : 0,
-           출합: Math.round(출합), 입합: Math.round(입합) };
+           출합: Math.round(출합), 입합: Math.round(입합),
+           /* ★ 118차 ④. 그래프가 같은 하루 출금을 쓴다 */
+           출일: 출일 };
 }
 
 /* ── 114차 · 예상 잔액 그래프가 그릴 점들 ──────────────────────────────
@@ -16819,7 +16922,8 @@ function dueGraphPts(c, cv) {
   var out = [{ 날: 시작, 값: c.잔액, 갈래: '기준' }];
   var bal = c.잔액;
   for (var i = 0; i < cv.점.length; i++) {
-    var 출 = use.일별[i];
+    /* ★ 118차 ④. 곡선이 쓴 원 단위 하루 출금을 그대로 받는다 */
+    var 출 = cv.출일 ? cv.출일[i] : use.일별[i];
     var 낮은 = bal - 출;                    /* dueCurve 의 「낮은」과 같은 셈 */
     var 끝 = cv.점[i].잔액;                 /* dueCurve 가 낸 일말 잔액 그대로 */
     var 날 = cv.점[i].날;
@@ -17397,7 +17501,7 @@ function openDuePlan(c, months, 첫) {
       }
       var pl = { id: 화면.id || planNewId(), 유형: '대체', 거래처: 화면.p,
                  시작: 날짜값(k.lo), 종료: 날짜값(k.hi), 총액: v,
-                 일정: 방식, 지급: 지급, 확인: true, 자료: base.지문 };
+                 일정: 방식, 지급: 지급, 확인: true, 자료: base.지문, 모델: DUE_MODEL };
       /* ★ ⑩ 같은 계획을 다시 수정하면 기존 계획을 교체한다 — 쌓지 않는다 */
       var items = box.items.filter(function (y) { return y.id !== pl.id; });
       items.push(pl);
@@ -17508,7 +17612,7 @@ function openDuePlan(c, months, 첫) {
       var pl = { id: 화면.id || planNewId(), 유형: '추가', 이름: 이름,
                  총액: v, 일정: '지정',
                  지급: v > 0 ? [{ 날: 날짜값(날), 액: v }] : [],
-                 확인: true, 자료: base.지문 };
+                 확인: true, 자료: base.지문, 모델: DUE_MODEL };
       var items = box.items.filter(function (y) { return y.id !== pl.id; });
       items.push(pl);
       반영끝(planSave({ v: 1, items: items }));
@@ -17523,9 +17627,16 @@ function openDuePlan(c, months, 첫) {
   function 적용보류화면() {
     제목.textContent = '예정 지출 확인';
     var use = dueDailyUse(t, c.i), box = planBox();
-    body.appendChild(el('div', 'fcnote',
+    /* ★ 118차 ③. 보류 까닭이 둘이다 — 예측 모델이 바뀐 것과 자료가 바뀐 것.
+       실제로 해당하는 까닭만 적는다 */
+    var 옛모델 = use.적용보류목록.filter(function (pl) { return (pl.모델 || 1) !== DUE_MODEL; });
+    var 까닭 = [];
+    if (옛모델.length) 까닭.push('예상 지출에 사업 외 출금도 들어가도록 계산 범위가 바뀌었습니다.');
+    if (옛모델.length < use.적용보류목록.length) {
       /* ★ 116차 통합 ⑥. 재업로드만이 아니라 분류를 바꿔도 여기로 온다. 까닭을 하나로 단정하지 않는다 */
-      '거래내역이나 분류가 바뀌어 예측에 쓰는 자료가 달라졌습니다. ' +
+      까닭.push('거래내역이나 분류가 바뀌어 예측에 쓰는 자료가 달라졌습니다.');
+    }
+    body.appendChild(el('div', 'fcnote', 까닭.join(' ') + (까닭.length ? ' ' : '') +
       '이전 차감액을 그대로 쓰지 않고 보류했습니다. 확인 후 다시 반영하실 수 있습니다.'));
     if (!use.적용보류목록.length) {
       body.appendChild(el('div', 'fcnote', '보류된 예정 지출이 없습니다.'));
@@ -17542,6 +17653,31 @@ function openDuePlan(c, months, 첫) {
         wrap.appendChild(el('div', 'plansub',
           '새 기본 예상분 ' + won(Math.round(sp.합)) + '원 (' +
           날글(pl.시작) + ' ~ ' + 날글(pl.종료) + ')'));
+      }
+      /* ★ 118차 ③. 예전 모델에서 「추가」로 넣은 계획은 새 기본 예상과 겹칠 수 있다.
+         이름이 비슷한 기존 예상을 보여드리고 고르시게 한다. 같은 지출이라고 단정하지 않는다 */
+      if (pl.유형 !== '대체' && (pl.모델 || 1) !== DUE_MODEL) {
+        var 닮 = 닮은거래처(base, pl.이름);
+        if (닮.length) {
+          wrap.appendChild(el('div', 'planwarn2',
+            '기본 예상에 이름이 비슷한 지출이 있습니다. 같은 지출이면 다시 반영하지 마시고 계획을 취소하거나 기존 예상을 수정해주세요.'));
+          닮.forEach(function (it) {
+            var r = el('div', 'planrow small');
+            var L = el('div', 'planlab');
+            L.appendChild(el('div', 'planname', it.거래처));
+            L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
+            r.appendChild(L);
+            r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
+            var eb = el('button', 'b', '기존 예상 수정');
+            eb.type = 'button';
+            eb.addEventListener('click', function () { 가기('수정', { p: it.거래처 }); });
+            r.appendChild(eb);
+            wrap.appendChild(r);
+          });
+        } else {
+          wrap.appendChild(el('div', 'plansub',
+            '기본 예상에서 이름이 비슷한 지출을 찾지 못했습니다. 같은 지출이 없는지는 확인하지 못했습니다.'));
+        }
       }
       /* 지난 지급분과 남은 지급분을 가른다. 지난 것을 지급 완료로 단정하지 않는다 */
       var 지난 = [], 남은 = [], 새날 = {};
@@ -17595,7 +17731,7 @@ function openDuePlan(c, months, 첫) {
         var neo = { id: pl.id, 유형: pl.유형, 거래처: pl.거래처, 이름: pl.이름,
                     시작: pl.시작, 종료: pl.종료,
                     총액: 지급.reduce(function (s, g) { return s + g.액; }, 0),
-                    일정: pl.일정, 지급: 지급, 확인: true, 자료: base.지문 };
+                    일정: pl.일정, 지급: 지급, 확인: true, 자료: base.지문, 모델: DUE_MODEL };
         var items = box.items.map(function (y) { return y.id === pl.id ? neo : y; });
         반영끝(planSave({ v: 1, items: items }));
       });
@@ -18350,9 +18486,15 @@ function drawDueCard(host, months) {
       /* ★ 103차 추가 ①. 입금은 균등, 지출만 날짜별이다.
          한 문장으로 뭉치면 거짓말이 된다 — 103차 ①에서 입금을 균등으로 바꿔 놓고
          문구만 옛 것이 남아 있었다 */
+      /* ★ 118차 ①②. 출금 설명을 실제 계산 범위에 맞춘다 — 이제 사업 지출만이 아니다.
+         한 문장에 입금·출금을 같이 두고 따로 줄을 늘리지 않는다 */
       box.appendChild(el('div', 'duewhy',
-        '입금은 직전 30일 매출 평균을 매일 같은 금액으로 놓고, ' +
-        '지출은 지난 3개월 같은 구간의 날짜별 평균을 반영했습니다.'));
+        (c.입금방식 === '요일'
+          ? '입금은 직전 30일 같은 요일의 매출 평균을 날짜마다 놓고, '
+          : '입금은 직전 30일 매출 평균을 매일 같은 금액으로 놓고, ') +
+        '출금은 과거 계좌 출금을 기준으로 지난 3개월 같은 구간의 날짜별 평균을 반영했습니다. ' +
+        '사업 외 출금도 포함합니다.' +
+        (c.대체요일 && c.대체요일.length ? ' 매출 자료가 없는 요일은 30일 평균으로 채웠습니다.' : '')));
       /* ★ 104차 정정 ㉲ · 105차 ①. 날짜마다 비교한 과거 구간 수가 다를 수 있다.
          그때 「모든 날짜가 지난 3개월 평균」은 더는 사실이 아니라 한 줄 더 적는다 */
       if (표본줄) box.appendChild(el('div', 'duewhy', 표본줄));
@@ -19447,15 +19589,28 @@ function drawResultInner(months) {
   }
   host.appendChild(res);
   if (whyOpen('profit')) host.appendChild(whyBox('profit'));
-  if (d.blocked && !runNow) {
+  /* ★ 118차 ⑤. blocked 조건은 그대로 두고, 안 정한 거래 때문에 막힌 경우의 주 문장과
+     범위를 이 자리 한 곳에 모은다. lo·hi 는 기존 계산값을 원 단위로 그대로 쓴다.
+     ★ 범위를 앞날 예측이나 계좌 잔액으로 부르지 않는다 — 이 달 계좌 순이익이
+       분류에 따라 어디서 어디까지 달라지는가다.
+     ★ 아래 「아직 안 정한 곳 N곳」 단추가 바로 뒤에 선다. 카드 아래에서 같은 범위를
+       한 번 더 풀어 쓰던 줄은 지웠다 (같은 말을 두 자리에 두지 않는다) */
+  var 분류탓 = d.blocked && (d.uOut > 0 || d.uIn > 0);
+  if (분류탓) {
+    host.appendChild(el('div', 'resbase', '거래 분류에 따라 계좌 순이익이 달라집니다.'));
+    host.appendChild(el('div', 'resbase',
+      '분류에 따른 범위: ' + won(Math.round(d.lo)) + '원 ~ ' + won(Math.round(d.hi)) + '원'));
+  }
+  if (d.blocked && !runNow && !분류탓) {
     host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'));
   }
   if (d.blocked && runNow) {
     /* ★ 64-3차. 윗줄이 「조금만 더 정하면」이라고 했는데 여기서 「아직 N일치라」라고 하면
        한 화면이 두 까닭을 말한다. 안 정한 돈이 까닭이면 그 말을 그대로 잇는다 */
-    host.appendChild(el('div', 'resbase', (d.uOut > 0 || d.uIn > 0)
-      ? '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'
-      : ((+UP.month.slice(5, 7)) + '월은 아직 ' + lastD + '일치라 흑자인지 적자인지 아직 못 정합니다')));
+    if (!분류탓) {
+      host.appendChild(el('div', 'resbase',
+        (+UP.month.slice(5, 7)) + '월은 아직 ' + lastD + '일치라 흑자인지 적자인지 아직 못 정합니다'));
+    }
     var goM = viewableMonth(months, UP.month);
     if (goM) {
       var gb = el('div', 'resbase');
@@ -19811,19 +19966,8 @@ function drawResultInner(months) {
        「사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.」 거기는 안 건드린다.
      ★ 「회계상 계산하는 순이익과는 다를 수 있습니다」 안내도 그대로 둔다 */
   if (d.blocked) {
-    var b1 = el('div', 'resnote');
-    var l1 = el('div');
-    l1.appendChild(document.createTextNode('아직 안 정한 ' + won(d.unknownN) + '건을 전부 사업에 쓴 돈으로 보면 '));
-    l1.appendChild(wonB(d.lo));
-    l1.appendChild(document.createTextNode(','));
-    b1.appendChild(l1);
-    var l2 = el('div');
-    l2.appendChild(document.createTextNode('전부 매출로 보면 '));
-    l2.appendChild(wonB(d.hi));
-    l2.appendChild(document.createTextNode('입니다.'));
-    b1.appendChild(l2);
-    b1.appendChild(el('div', null, '한쪽은 흑자, 한쪽은 적자라 아직 말씀드릴 수 없습니다.'));
-    host.appendChild(b1);
+    /* ★ 118차 ⑤. 여기 있던 「전부 사업에 쓴 돈으로 보면 … 전부 매출로 보면 …」 세 줄을 지웠다.
+       같은 범위를 카드 안 「분류에 따른 범위」 줄이 이미 말한다 */
     /* ★ 47차 ②. 뒤집힌 달에는 「정확해집니다」라고 쓰지 않는다 —
        거기서는 흑자·적자 자체가 안 정해진다. 「지금 몇 %」라는 사실만 적는다 */
     var np = nowPct(d);
@@ -22304,5 +22448,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 117차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 118차</div>
 </body></html>
