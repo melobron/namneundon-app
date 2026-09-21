@@ -1201,6 +1201,9 @@
   .dueholdsub{display:block;margin-top:8px;max-width:100%}
   /* ★ 119차. 차례로 정하기 — 목록 첫 줄 위 오른쪽 */
   .unsetgo{display:flex;justify-content:flex-end;margin-top:8px}
+  /* ★ 119차. 거래내역 올리기 화면의 분류 파일 불러오기 — 파일 고르기보다 한 단계 낮게 */
+  .upimport{margin-top:10px}
+  .upimportrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
   /* ── 116차 · 예정 지출 편집 화면 ────────────────────────────────
      ★ 114차 그래프 화면의 틀(.fcback/.fcpane/.fcbody/.fcnote/.fcopen)을 그대로 쓴다.
        여기 있는 것은 그 안에 들어가는 줄 모양뿐이다.
@@ -7662,9 +7665,11 @@ function drawUpMine() {
     sbox.appendChild(el('div', 'upstoresub', '분석할 거래내역 파일을 올려주세요.'));
     host.appendChild(sbox);
     updropAfter(host);             /* 파일 고르는 자리를 바로 아래로 */
+    drawImportStart();             /* ★ 119차. 불러오기 자리도 파일 고르는 자리를 따라간다 */
     return;
   }
   updropAfter(null);               /* 제자리로 */
+  drawImportStart();                 /* ★ 119차 */
   var mine = [];
   try { mine = savedStores(); } catch (e) { return; }
   if (!mine.length) return;
@@ -7695,6 +7700,7 @@ function openPick() {
   var tn = document.getElementById('up-tradenote');
   if (tn) { tn.innerHTML = ''; tradeNotice(tn); }
   drawUpMine();                      /* ★ 100차 ①. 창을 열 때마다 최신 목록으로 */
+  drawImportStart();                 /* ★ 119차. 분류 파일 불러오기 */
   upShow('up-pick');
 }
 
@@ -7810,6 +7816,25 @@ function 글씨단옮기기(걸음) {
     why.appendChild(el('div', null, BIZ.주인 +
       '이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 이 브라우저에 저장됩니다.'));
     if (!LS_OK) why.appendChild(el('div', 'lswarn', LS_MSG));
+    /* ★ 119차. 지금 보고 있는 매장의 분류를 여기서도 파일로 받을 수 있게 한다.
+       항목 관리의 [내보내기]와 같은 exportPicks 를 쓴다 — 파일 모양·저장 방식은 그대로다.
+       예시 화면과 결과가 없는 때에는 안 낸다. 「저장됨」 글자와 저장 상태는 건드리지 않는다 */
+    if (UP && !UP.demo && UP.payees && UP.payees.length) {
+      why.appendChild(el('div', null,
+        '분류 설정을 파일로 내려받습니다. 거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'));
+      var dl = el('button', 'b', '분류 파일 다운로드');
+      dl.type = 'button';
+      dl.style.marginTop = '8px';
+      dl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        useScreen('분류 파일 다운로드');
+        exportPicks();
+      });
+      why.appendChild(dl);
+      /* ★ 119차. 휴대폰으로 옮기는 순서. 카톡에서 파일을 누르면 앱에 저절로 들어간다고 하지 않는다 */
+      why.appendChild(el('div', null,
+        '카톡 ‘나에게 보내기’ 등으로 파일을 옮긴 뒤, 휴대폰에 저장하고 남는돈 첫 화면의 ‘분류 파일 불러오기’에서 선택해주세요.'));
+    }
     why.hidden = false;
   });
 })();
@@ -9518,6 +9543,25 @@ function afterFiles() {
     UP.tileTrade = tradeNow();
     try { startOnboard(); }
     catch (e) { UP.known = null; askName(); }
+    openUpPanel();
+    return;
+  }
+  /* ★ 119차. 분류 파일을 먼저 불러와 고르신 매장이면 그 매장으로 바로 잇는다.
+     「이어서 하기」(askKnownStore)와 같은 길이다 — 매장 이름을 다시 묻지 않고,
+     startOnboard 가 저장통의 (불러온) 분류를 되살린다. 성함은 저장된 답이 없으면 묻는다 */
+  if (PICKED_STORE && PICKED_STORE.불러옴) {
+    var 고른 = PICKED_STORE;
+    PICKED_STORE = null;
+    var 저장된 = loadPicks(고른.name === '(기본)' ? null : 고른.name) || {};
+    UP.known = null;
+    UP.tileTrade = tradeNow();
+    UP.store = 고른.name === '(기본)' ? null : 고른.name;
+    UP.trade = (저장된.업종 && TRADES[저장된.업종]) ? 저장된.업종 : tradeNow();
+    setTrade(UP.trade);
+    try {
+      if (Object.prototype.hasOwnProperty.call(저장된, 'owner')) { UP.owner = 저장된.owner || null; startOnboard(); }
+      else askOwner();
+    } catch (e) { askName(); }
     openUpPanel();
     return;
   }
@@ -12867,6 +12911,22 @@ function drawOnboard() {
   bar.appendChild(fill);
   barwrap.appendChild(bar);
   host.appendChild(barwrap);
+  /* ★ 119차. 거래내역을 먼저 올린 순서 — 저장해둔 분류 파일을 여기서 불러온다.
+     불러오면 정해진 곳은 빼고 아직 안 정한 곳만 이어서 묻는다 (importApply 'onboard').
+     예시와 보류 원인·차례로 정하기 길에서는 안 낸다 */
+  if (UP && !UP.demo && !UP.holdAsk && UP.store) {
+    var imrow = el('div', 'unsetgo');
+    var imb = el('button', 'b', '저장해둔 분류 파일 불러오기');
+    imb.type = 'button';
+    imb.addEventListener('click', function () {
+      useScreen('저장해둔 분류 파일 불러오기');
+      IMPORT_WHERE = 'onboard';
+      var f = document.getElementById('pickfile');
+      if (f) f.click();
+    });
+    imrow.appendChild(imb);
+    host.appendChild(imrow);
+  }
   if (UP.pos === 0 && !UP.hist.length) {
     host.appendChild(el('div', 'obsub',
       '한 번 정하면 다음 파일부터 같은 거래처는 다시 묻지 않습니다.'));
@@ -15208,7 +15268,7 @@ function drawCats() {
   out.addEventListener('click', exportPicks);
   var into = el('button', 'b', '불러오기');
   into.type = 'button';
-  into.addEventListener('click', function () { document.getElementById('pickfile').click(); });
+  into.addEventListener('click', function () { IMPORT_WHERE = 'cats'; document.getElementById('pickfile').click(); });   /* ★ 119차. 자리를 명시한다 */
   srow.appendChild(wipe); srow.appendChild(out); srow.appendChild(into);
   box.appendChild(srow);
   /* ★ 119차 B. 「되살리세요」는 다 돌아오는 것처럼 읽혔다 — 파일에는 거래처 분류 설정만 있다.
@@ -15361,41 +15421,71 @@ function exportPicks() {
      저장은 지금 매장 열쇠 하나에만 한다 (savePicks). 다른 매장은 안 건드린다.
    ★ 거래내역·예정 지출·직접 적은 금액은 파일에 없고 여기서 안 바뀐다.
    ★ 저장에 실패하면 불러오기 전 상태로 되돌리고 실패를 알린다. 성공이라고 쓰지 않는다 */
-function importNote(글, 성공) {
-  var host = document.getElementById('up-cats');
-  host.insertBefore(el('div', 성공 ? 'obdone' : 'lswarn', 글), host.firstChild);
+/* ★ 119차. 불러오기를 세 자리에서 쓴다 —
+     'cats'    항목 관리의 [불러오기]
+     'onboard' 거래처 확인 화면의 [저장해둔 분류 파일 불러오기] (거래내역을 먼저 올린 순서)
+     'start'   거래내역 올리기 화면의 [분류 파일 불러오기] (분류 파일을 먼저 불러오는 순서)
+   ★ 파일 읽기·검사(importPicks) · 확인 화면(importAsk) · 적용(importApply / importToStore)을
+     세 자리가 같이 쓴다. 자리는 어디에 그리고 어디로 돌아갈지만 가른다.
+   ★ 거래내역이 있으면 importApply(화면 분류에 합치고 savePicks),
+     아직 없으면 importToStore(같은 규칙으로 그 매장 저장통의 분류에 합친다).
+     분류 파일만으로 잔액이나 분석 결과를 만들지 않는다 */
+var IMPORT_WHERE = 'cats';
+function importHost(자리) {
+  return document.getElementById(자리 === 'onboard' ? 'up-onboard'
+                                 : 자리 === 'start' ? 'upimport' : 'up-cats');
+}
+function importRedraw(자리) {
+  if (자리 === 'onboard') drawOnboard();
+  else if (자리 === 'start') drawImportStart();
+  else drawCats();
+}
+function importNote(글, 성공, 자리) {
+  var host = importHost(자리 || 'cats');
+  var n = el('div', 성공 ? 'obdone' : 'lswarn', 글);
+  if (host) host.insertBefore(n, host.firstChild);
+  return n;
 }
 function importPicks(file) {
+  var 자리 = IMPORT_WHERE;
+  IMPORT_WHERE = 'cats';
   var fr = new FileReader();
   fr.onload = function () {
     var o = null;
     try { o = JSON.parse(fr.result); } catch (e) { }
     if (!o || o.v !== 1 || !o.picks) {
-      drawCats();
-      importNote('이 파일은 읽지 못했습니다. 바뀐 것은 없습니다.');
+      importRedraw(자리);
+      importNote('이 파일은 읽지 못했습니다. 바뀐 것은 없습니다.', false, 자리);
       return;
     }
+    /* 거래내역을 올리기 전 — 어느 매장에 넣을지부터 고르신다 */
+    if (자리 === 'start') { importChooseStore(o); return; }
     /* 대상 매장이 없으면 먼저 매장을 정하시게 한다 — 예시 화면도 여기로 온다 */
     if (!UP || !UP.payees || UP.demo || !UP.store) {
-      drawCats();
-      importNote('불러올 매장이 정해지지 않았습니다. 대표님 매장의 거래내역을 연 뒤 불러와주세요.');
+      importRedraw(자리);
+      importNote('불러올 매장이 정해지지 않았습니다. 대표님 매장의 거래내역을 연 뒤 불러와주세요.', false, 자리);
       return;
     }
-    importAsk(o);
+    importAsk(o, UP.store, 자리, false, false);
   };
   fr.readAsText(file);
 }
-/* 확인 화면. 여기까지는 아무것도 안 바뀌었다 */
-function importAsk(o) {
-  drawCats();
-  var host = document.getElementById('up-cats');
+/* 확인 화면. 여기까지는 아무것도 안 바뀌었다.
+   저장통만: 거래내역이 아직 없는 매장이다 (importToStore) · 새매장: 파일로 새 매장을 만든다 */
+function importAsk(o, 대상, 자리, 저장통만, 새매장) {
+  importRedraw(자리);
+  var host = importHost(자리);
+  var 이름 = 대상 || '이름 없이 정해둔 것';
   var box = el('div', 'catpanel');
-  box.appendChild(el('div', 'addq', '이 분류 설정을 「' + UP.store + '」에 불러올까요?'));
+  box.appendChild(el('div', 'addq', 새매장
+    ? '새 매장 「' + 이름 + '」을 만들고 이 분류 설정을 불러올까요?'
+    : '이 분류 설정을 「' + 이름 + '」에 불러올까요?'));
   box.appendChild(el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음')));
-  box.appendChild(el('div', 'obsub', '불러올 매장: ' + UP.store));
-  box.appendChild(el('div', 'obsub',
-    '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다. ' +
-    '지금 올린 거래내역에 있는 거래처에만 적용됩니다.'));
+  box.appendChild(el('div', 'obsub', '불러올 매장: ' + 이름));
+  box.appendChild(el('div', 'obsub', 새매장
+    ? '파일의 거래처 분류로 새 매장을 만듭니다.'
+    : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
+      (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')));
   var 함께 = [];
   if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet) 함께.push('항목 목록');
   if (o.목표일) 함께.push('분석 종료일');
@@ -15407,22 +15497,26 @@ function importAsk(o) {
   var r = el('div', 'addrow');
   var no = el('button', 'b', '취소');
   no.type = 'button';
-  no.addEventListener('click', function () { drawCats(); });
-  var yes = el('button', 'b on', '이 매장에 불러오기');
+  no.addEventListener('click', function () { importRedraw(자리); });
+  var yes = el('button', 'b on', 새매장 ? '새 매장으로 불러오기' : '이 매장에 불러오기');
   yes.type = 'button';
-  yes.addEventListener('click', function () { importApply(o); });
+  yes.addEventListener('click', function () {
+    if (저장통만) importToStore(o, 대상, 새매장);
+    else importApply(o, 자리);
+  });
   r.appendChild(no); r.appendChild(yes);
   box.appendChild(r);
   host.insertBefore(box, host.firstChild);
   try { box.scrollIntoView({ block: 'center' }); } catch (e) { }
 }
-function importApply(o) {
+function importApply(o, 자리) {
+  자리 = 자리 || 'cats';
   /* 되돌릴 수 있게 지금 상태를 들고 있는다 */
   var 전 = {
     accounts: UP.accounts.slice(), baseCats: UP.baseCats.slice(), keepSet: UP.keepSet.slice(),
     unskip: UP.unskip ? UP.unskip.slice() : UP.unskip, dueDay: UP.dueDay, trade: tradeNow(),
     xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
-    queue: UP.queue, pos: UP.pos, hist: UP.hist,
+    queue: UP.queue, pos: UP.pos, hist: UP.hist, target: UP.target,
     g: UP.payees.map(function (g) {
       return { g: g, cat: g.cat, auto: g.auto, catIn: g.catIn, catOut: g.catOut,
                autoIn: g.autoIn, autoOut: g.autoOut };
@@ -15451,7 +15545,7 @@ function importApply(o) {
   var 됨 = false;
   try { 됨 = savePicks(); } catch (e) { 됨 = false; }
   if (!됨) {
-    /* 저장하지 못했다 — 기존 저장본은 그대로다. 화면의 분류도 불러오기 전으로 돌린다 */
+    /* 저장하지 못했다 — 기존 저장본은 그대로다. 화면의 분류와 물음 차례도 불러오기 전으로 돌린다 */
     UP.accounts = 전.accounts; UP.baseCats = 전.baseCats; UP.keepSet = 전.keepSet;
     UP.unskip = 전.unskip; UP.xfer = 전.xfer;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
@@ -15460,14 +15554,152 @@ function importApply(o) {
       v.g.cat = v.cat; v.g.auto = v.auto; v.g.catIn = v.catIn; v.g.catOut = v.catOut;
       v.g.autoIn = v.autoIn; v.g.autoOut = v.autoOut;
     });
-    UP.queue = 전.queue; UP.pos = 전.pos; UP.hist = 전.hist;
+    UP.queue = 전.queue; UP.pos = 전.pos; UP.hist = 전.hist; UP.target = 전.target;
     UP.__due = null;
-    drawCats();
-    importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.');
+    importRedraw(자리);
+    importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.', false, 자리);
     return;
   }
-  drawCats();
-  importNote(won(n) + '곳을 불러왔습니다', true);
+  if (자리 === 'onboard') {
+    /* ★ 119차. 거래처 확인 중이었다 — 정해진 곳은 빼고 아직 안 정한 곳만 이어서 묻는다.
+       다 정해졌으면 drawOnboard 가 기존 완료 화면([결과 보기])을 낸다 */
+    UP.queue = buildQueue();
+    UP.pos = 0;
+    UP.hist = [];
+    UP.ask = null;
+    UP.said = null;
+  }
+  importRedraw(자리);
+  importNote(won(n) + '곳을 불러왔습니다', true, 자리);
+}
+/* ★ 119차. 거래내역을 올리기 전 — 파일의 분류를 그 매장 저장통에 합친다.
+   합치는 규칙은 importApply 와 같다: 같은 거래처는 파일 것으로, 파일에 없는 기존 분류는 그대로.
+   항목 목록·계산 밖 항목·다시 묻기로 한 거래처·분석 종료일·업종은 파일 것, 이체·섞인 카드는 합친다.
+   ★ 파일의 성함은 옮기지 않는다. 매장 이름은 고르신 이름이다.
+   ★ 저장에 실패하면 lsSet 이 못 쓴 것뿐이라 기존 저장본은 그대로다 */
+function importToStore(o, 이름, 새매장) {
+  var o2 = migrateCats(JSON.parse(JSON.stringify(o)));
+  var 기존 = 새매장 ? null : loadPicks(이름);
+  var body = 기존 ? JSON.parse(JSON.stringify(기존)) : {};
+  function 합(a, b) { var out = (a || []).slice(); (b || []).forEach(function (x) { if (out.indexOf(x) === -1) out.push(x); }); return out; }
+  body.picks = {};
+  Object.keys((기존 && 기존.picks) || {}).forEach(function (k) { body.picks[k] = 기존.picks[k]; });
+  Object.keys(o2.picks).forEach(function (k) { body.picks[k] = o2.picks[k]; });
+  if (o2.accounts && o2.accounts.length) body.accounts = o2.accounts.slice();
+  if (o2.baseCats && o2.baseCats.length) body.baseCats = o2.baseCats.slice();
+  if (o2.keepSet) body.keepSet = o2.keepSet.slice();
+  if (o2.unskip) body.unskip = o2.unskip.slice();
+  if (새매장 && o2.hidden) body.hidden = o2.hidden.slice();
+  if (o2.목표일) body.목표일 = o2.목표일;
+  if (o2.업종 && TRADES[o2.업종]) body.업종 = o2.업종;
+  if (o2.xfer) body.xfer = 합(기존 && 기존.xfer, o2.xfer);
+  if (o2.cardMixed) body.cardMixed = 합(기존 && 기존.cardMixed, o2.cardMixed);
+  body.계좌 = (기존 && 기존.계좌) || o2.계좌 || [];
+  body.store = 이름 || null;
+  body.n곳 = Object.keys(body.picks).length;
+  body.순번 = nextPickSeq();
+  body.cv = CAT_CV;
+  var cv = body.cv, n곳 = body.n곳, due = body.목표일, seq = body.순번;
+  delete body.cv; delete body.n곳; delete body.목표일; delete body.순번; delete body.v;
+  var 숫자 = hasNumber(body);                  /* 금액이 섞인 파일은 안 남긴다 (savePicks 와 같은 검사) */
+  body.cv = cv; body.n곳 = n곳; if (due != null) body.목표일 = due; body.순번 = seq;
+  body.v = 1;                                  /* 판 번호는 검사 뒤에 붙인다 (savePicks 와 같은 차례) */
+  var 됨 = !숫자 && lsSet(storeKey(이름), JSON.stringify(body));
+  if (!됨) {
+    drawImportStart();
+    importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.', false, 'start');
+    return;
+  }
+  /* 거래내역을 올리면 이 매장으로 이어진다 (afterFiles) */
+  PICKED_STORE = { key: storeKey(이름), name: 이름 || '(기본)', n: n곳, 불러옴: true };
+  drawUpMine();
+  drawImportStart();
+  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 올려주세요.', true, 'start');
+  var go = el('button', 'b on', '거래내역 올리기');
+  go.type = 'button';
+  go.style.marginLeft = '8px';
+  go.addEventListener('click', function () {
+    var inp = document.getElementById('upinput');
+    if (inp) { inp.value = ''; inp.click(); }
+  });
+  알림.appendChild(go);
+}
+/* ★ 119차. 거래내역 올리기 전 불러오기 — 어느 매장에 넣을지 고르신다.
+   ★ 같은 이름이라는 이유로 저절로 덮지 않는다. 기존 매장은 합치고, 새 매장은 없는 이름이어야 한다 */
+function importChooseStore(o) {
+  drawImportStart();
+  var host = importHost('start');
+  var box = el('div', 'catpanel');
+  box.appendChild(el('div', 'addq', '어느 매장에 불러올까요?'));
+  box.appendChild(el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음')));
+  var mine = [];
+  try { mine = savedStores(); } catch (e) { mine = []; }
+  if (mine.length) {
+    var 줄 = el('div', 'addrow');
+    mine.forEach(function (k) {
+      var b = el('button', 'b', (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name);
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        importAsk(o, k.name === '(기본)' ? null : k.name, 'start', true, false);
+      });
+      줄.appendChild(b);
+    });
+    box.appendChild(줄);
+  }
+  box.appendChild(el('div', 'obsub', '새 매장으로 만들기'));
+  var 새줄 = el('div', 'addrow');
+  var inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'nminput';
+  inp.value = o.store || '';
+  inp.placeholder = BIZ.곳 + ' 이름';
+  새줄.appendChild(inp);
+  var mk = el('button', 'b on', '새 매장으로');
+  mk.type = 'button';
+  var msg = el('div', 'lswarn');
+  msg.hidden = true;
+  mk.addEventListener('click', function () {
+    var nm = String(inp.value || '').trim();
+    if (!nm) { msg.textContent = BIZ.곳 + ' 이름을 적어주세요.'; msg.hidden = false; return; }
+    var 있음 = !!lsGet(storeKey(nm)) || mine.some(function (k) { return k.name === nm; });
+    if (있음) {
+      msg.textContent = '이미 있는 매장 이름입니다. 위에서 그 매장을 고르시거나 다른 이름을 적어주세요.';
+      msg.hidden = false;
+      return;
+    }
+    importAsk(o, nm, 'start', true, true);
+  });
+  새줄.appendChild(mk);
+  box.appendChild(새줄);
+  box.appendChild(msg);
+  var no = el('button', 'b', '취소');
+  no.type = 'button';
+  no.style.marginTop = '8px';
+  no.addEventListener('click', function () { drawImportStart(); });
+  box.appendChild(no);
+  host.insertBefore(box, host.firstChild);
+  try { box.scrollIntoView({ block: 'center' }); } catch (e) { }
+}
+/* ★ 119차. 거래내역 올리기 화면의 [분류 파일 불러오기] 자리 — 파일 고르는 자리 바로 아래.
+   주 단추(파일 고르기)보다 한 단계 낮은 모양이다 */
+function drawImportStart() {
+  var drop = document.getElementById('updrop');
+  if (!drop || !drop.parentNode) return;
+  var host = document.getElementById('upimport');
+  if (!host) { host = el('div', 'upimport'); host.id = 'upimport'; }
+  if (host.previousSibling !== drop) drop.parentNode.insertBefore(host, drop.nextSibling);
+  host.innerHTML = '';
+  var row = el('div', 'upimportrow');
+  row.appendChild(el('div', 'obsub', '다른 기기에서 받은 분류 파일을 먼저 불러올 수 있습니다.'));
+  var b = el('button', 'b', '분류 파일 불러오기');
+  b.type = 'button';
+  b.addEventListener('click', function () {
+    useScreen('분류 파일 불러오기');
+    IMPORT_WHERE = 'start';
+    var f = document.getElementById('pickfile');
+    if (f) f.click();
+  });
+  row.appendChild(b);
+  host.appendChild(row);
 }
 
 /* 「기타」의 지금 이름 — 사장님이 이름을 바꿨을 수도 있다 */
