@@ -21287,11 +21287,13 @@ function drawProfitChart(host, months, cols, 진행달) {
              profit: c.profit, lo: c.lo, hi: c.hi, close: c.close };
   });
   /* ★ 119차. 음수인 달 강조 — 기존 월별 값(monthNumbers)으로만 가른다. 계산은 안 바꾼다.
-     ★ 확정된 달만: 자료가 있고, 순이익을 셀 수 있고(blocked 아님), 안 정한 거래가 없는 달.
-       안 정한 거래가 있는 달을 임의로 적자로 칠하지 않는다. 0원은 강조하지 않는다.
-     ★ 진행 중인 달은 기존 「진행 중」 표시를 그대로 둔다 (그 달 순이익은 아직 다 안 쌓였다) */
+     ★ 안 정한 거래가 없으면 계좌 순이익 < 0 일 때.
+     ★ 안 정한 거래가 있으면 기존 범위의 상한 hi < 0 일 때만 — 어떻게 정해도 음수인 달이다.
+       범위가 0원에 닿거나 양수까지 걸치면 강조하지 않는다. 0원은 강조하지 않는다.
+     ★ 진행 중인 달도 같은 조건이다. 「진행 중」 알약은 그대로 둔다.
+     ★ 점 자리는 그대로 p.profit 이다 — 그래프 값의 뜻을 바꾸지 않는다 */
   pts.forEach(function (p) {
-    p.적자 = !p.없음 && !p.blocked && !p.unset && p.m !== 진행달 && p.profit < 0;
+    p.적자 = !p.없음 && !p.blocked && (p.unset ? p.hi < 0 : p.profit < 0);
   });
   var 연한조각 = pts.some(function (p) {
     return !p.blocked && p.unset && p.hi > p.lo;
@@ -21424,12 +21426,15 @@ function drawProfitChart(host, months, cols, 진행달) {
         if (p.적자) {
           점.setAttribute('class', 'negdot');
           var tt = svgEl('title', {});
-          tt.textContent = (+p.m.slice(5, 7)) + '월 계좌 순이익 ' + won(p.profit) + '원';
+          /* 안 정한 거래가 있는 달은 한 금액을 확정값처럼 쓰지 않고 기존 범위를 적는다 */
+          tt.textContent = (+p.m.slice(5, 7)) + '월 계좌 순이익 ' + (p.unset
+            ? '범위 ' + won(Math.round(p.lo)) + '원 ~ ' + won(Math.round(p.hi)) + '원'
+            : won(p.profit) + '원');
           점.appendChild(tt);
         }
         svg.appendChild(점);
       }
-      if (p.적자) {
+      if (p.적자 && !p.unset) {          /* 안 정한 거래가 있는 달은 금액 글을 안 쓴다 */
         var 글 = won(p.profit) + '원', gw = textW(글, 11);
         var gx = Math.max(LEFT + 1 + gw / 2, Math.min(W - RIGHT - 1 - gw / 2, cx));
         var gy = y(p.profit) + 16;
