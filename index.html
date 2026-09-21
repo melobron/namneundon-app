@@ -7782,6 +7782,10 @@ function 내결과있나() {
   return !!(UP && !UP.demo && UP.payees && UP.rows && UP.rows.length);
 }
 function closeUpPanel() {
+  /* ★ 119차. 보류 원인 경로 중에 머리의 [내 결과로 돌아가기]를 누르셨으면
+     원래 물음 차례로 되돌리고 결과(예상 잔액 카드)로 간다 — 원인 차례가 남지 않게 한다.
+     holdAskEnd 가 부르는 showResult 가 다시 여기로 오지만 그때는 holdAsk 가 비어 있다 */
+  if (UP && UP.holdAsk) { holdAskEnd(true); return; }
   document.getElementById('up').classList.remove('on');
   document.body.style.overflow = '';
   /* ★ 111차 ③. 나가는 곳을 이름과 맞춘다.
@@ -8071,8 +8075,10 @@ function drawA2HS() {
       row.appendChild(b);
     });
     warn.appendChild(row);
+    /* ★ 119차 B. 긴 설명은 항목 관리에 한 번만 둔다. 여기는 한 문장만 더한다 */
     warn.appendChild(el('div', 'a2b',
-      '내보낸 파일을 저장해두시고, 아이콘으로 열어서 항목 관리 → 불러오기 하시면 됩니다.'));
+      '내보낸 파일을 저장해두시고, 아이콘으로 열어서 항목 관리 → 불러오기 하시면 됩니다. ' +
+      '다른 기기에서는 거래처 분류 설정을 불러올 수 있습니다.'));
     host.appendChild(warn);
   }
 }
@@ -12561,7 +12567,75 @@ function undoPick() {
 }
 
 /* 결과 화면에서 이어 찍기 — 이미 찍은 건 건너뛰고 못정한부터 */
+/* ── 119차 A · 보류 원인부터 분류하기 ─────────────────────────────
+   보류 카드의 [분류하고 예상 잔액 보기]가 여는 길이다.
+   ★ 새 분류 화면을 만들지 않는다. 기존 거래처 확인 화면(drawOnboard·pickCat)을 쓰고
+     물을 차례만 이 길에서 잠깐 바꾼다. 돌아갈 때 원래 차례로 되돌린다 —
+     일반 「아직 안 정한 곳」 동선과 다른 매장에는 남기지 않는다.
+   ★ 누르는 순간의 보류 원인(c.보류.목록)만 묻는다. 줄마다 적힌 이름은 keyOf(r) 라
+     UP.byName 으로 앱의 거래처 하나에 그대로 닿는다. 같은 거래처는 한 번만 묻는다.
+   ★ 원인의 출금 쪽이 이미 정해진 거래처, 섞인 카드로 답하신 거래처는 다시 묻지 않는다.
+   ★ 원인을 다 보면 결과로 돌아간다. 비교 구간 밖의 미정 거래처는 이어서 묻지 않는다 */
+function holdAskStart(hold, months) {
+  if (!UP || !hold || !hold.목록) return false;
+  if (UP.holdAsk) holdAskEnd(false);          /* 남아 있던 원인 차례부터 되돌린다 */
+  var 합 = {}, list = [];
+  hold.목록.forEach(function (r) {
+    var g = UP.byName[r.이름];
+    if (!g || g.cardMixed) return;
+    if (gCatFor(g, false)) return;               /* 출금 쪽이 이미 정해졌다 */
+    if (합[g.name] == null) { 합[g.name] = 0; list.push(g); }
+    합[g.name] += r.액;
+  });
+  if (!list.length) return false;
+  list.sort(function (a, b) { return 합[b.name] - 합[a.name]; });
+  UP.holdAsk = {
+    queue: list, months: months,
+    저장: { queue: UP.queue, pos: UP.pos, target: UP.target, more: UP.more,
+            hist: UP.hist, ask: UP.ask, said: UP.said },
+    복귀: { dueDay: UP.dueDay, open: !!(UP.open && UP.open.__dueOpen),
+            month: UP.month, view: UP.view, store: UP.store }
+  };
+  UP.queue = list;
+  UP.pos = 0;
+  UP.target = list.length;
+  UP.more = true;
+  UP.hist = [];
+  UP.ask = null;
+  UP.said = null;
+  document.getElementById('uptitle').textContent = '거래처 확인';
+  upShow('up-onboard');
+  drawOnboard();
+  return true;
+}
+/* 원래 물음 차례와 화면 상태로 돌린다. 고르신 분류는 이미 저장됐다 (pickCat → savePicks).
+   ★ 결과로 가는 길(showResult)과 일반 동선(moreFromResult)도 먼저 이것을 부른다 —
+     다른 길로 빠져나가도 원인 차례가 남지 않게 한다 */
+function holdAskEnd(결과로) {
+  var h = UP && UP.holdAsk;
+  if (!h) return;
+  UP.holdAsk = null;
+  var sv = h.저장;
+  /* 원인 경로에서 다 정한 거래처는 원래 줄의 남은 자리에서 뺀다 (setCat 과 같은 셈) */
+  UP.queue = sv.queue.filter(function (g, i) { return i < sv.pos || !gDone(g); });
+  UP.pos = sv.pos; UP.target = sv.target; UP.more = sv.more;
+  UP.hist = sv.hist; UP.ask = null; UP.said = sv.said;
+  var bk = h.복귀;
+  if (UP.dueDay !== bk.dueDay) setDueDay(bk.dueDay);
+  UP.open = UP.open || {};
+  UP.open.__dueOpen = bk.open;
+  UP.month = bk.month; UP.view = bk.view;
+  if (!결과로) return;
+  showResult();
+  /* 예상 잔액 카드 자리로 돌아간다 */
+  setTimeout(function () {
+    var cd = document.querySelector('#up-result .duecard');
+    if (cd) cd.scrollIntoView({ block: 'start' });
+  }, 0);
+}
 function moreFromResult() {
+  /* ★ 119차. 보류 원인 차례가 남아 있으면 먼저 원래 차례로 되돌린다 */
+  if (UP.holdAsk) holdAskEnd(false);
   var rest = UP.payees.filter(function (g) { return !gDone(g) && !g.cardMixed; });
   if (UP.pos >= UP.queue.length && rest.length) {
     UP.queue = rest;             /* 목록을 다 돌았으면 남은 것으로 새로 만든다 */
@@ -12678,6 +12752,8 @@ function drawMutedNote(host) {
 }
 
 function drawOnboard() {
+  /* ★ 119차. 보류 원인을 다 봤으면 결과로 돌아간다 — 다른 미정 거래처를 이어 묻지 않는다 */
+  if (UP.holdAsk && UP.pos >= UP.queue.length) { holdAskEnd(true); return; }
   var host = document.getElementById('up-onboard');
   host.innerHTML = '';
   utStart();                    /* 온보딩 화면을 처음 그릴 때 시계 시작 */
@@ -12689,6 +12765,7 @@ function drawOnboard() {
   var goal = goalLine();
   var reached = doneShare >= goal.share;
   function appendReachedResult() {
+    if (UP.holdAsk) return;       /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
     if (!reached) return;
     var resultGo = el('button', 'b on big', '결과 보기');
     resultGo.type = 'button';
@@ -12837,7 +12914,8 @@ function drawOnboard() {
   host.appendChild(el('div', 'obquestion',
     cardQuestion ? '이 카드는 어떻게 쓰셨나요?' : '이 거래는 무엇인가요?'));
   /* 36차 G. 같은 앞글자·같은 카드 대금이 여럿이면 한 줄로 묶어 한 번에 찍게 한다 */
-  var bun = isCardOut(g) ? null : bundleFor(g);
+  /* ★ 119차. 보류 원인 경로에서는 묶지 않는다 — 묶음에는 원인이 아닌 거래처가 섞인다 */
+  var bun = (isCardOut(g) || UP.holdAsk) ? null : bundleFor(g);
   if (bun) { drawBundle(host, bun); appendReachedResult(); return; }
   var card = el('div', 'obcard');
   /* ★ 69차 ③. 이름 오른쪽에 「최근 거래 보기」가 붙는다 (아래 drawRawPeek) */
@@ -13124,6 +13202,18 @@ function drawOnboard() {
   });
   later.appendChild(skip);
   card.appendChild(later);
+  /* ★ 119차. 보류 원인 경로 — 적용 범위를 한 번 적고, 중간에 돌아갈 길을 둔다.
+     분류는 거래처 단위 그대로다. 섞인 거래처는 출금 쪽에만 넣는다 (pickCat) */
+  if (UP.holdAsk) {
+    card.appendChild(el('div', 'obsub', g.mixed
+      ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
+      : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'));
+    var hb = el('button', 'b', '결과로 돌아가기');
+    hb.type = 'button';
+    hb.style.marginTop = '10px';
+    hb.addEventListener('click', function () { holdAskEnd(true); });
+    card.appendChild(hb);
+  }
 
   host.appendChild(card);
   /* ★ 76차. 목표 비율에 닿으면 남은 거래처가 있어도 결과를 볼 수 있다.
@@ -13269,7 +13359,11 @@ function pickCat(g, cat, isIn) {
                  catIn: g.catIn, catOut: g.catOut,
                  autoIn: g.autoIn, autoOut: g.autoOut,
                  name: g.name, newCat: cat, kind: 'pick' });
-  if (g.mixed && isIn === null) {
+  /* ★ 119차. 보류 원인 경로에서는 원인인 출금 쪽만 정한다.
+     입금 쪽은 정해져 있든 아니든 건드리지 않는다 */
+  var 원인길 = !!UP.holdAsk;
+  if (원인길 && g.mixed) gSetCat(g, false, cat, false);
+  else if (g.mixed && isIn === null) {
     /* ★ 63-4. 한 번 묻고 양쪽에 같이 넣는다. 되묻지 않는다 —
        방향이 뜻을 가르는 항목(「대출」·「사업 외 용도」)은 sideOf 가 화면과
        계산에서 갈라 준다. 사장님께 두 번 여쭐 까닭이 없다 */
@@ -13280,12 +13374,14 @@ function pickCat(g, cat, isIn) {
   /* 찍은 결과를 그 자리에서 한 줄로 말한다 (35차 A).
      「매출·지출에 넣지 않습니다」만으로는 순이익이 어떻게 되는지 안 보인다 */
   UP.said = isKeep(cat) ? cat : null;
-  /* 섞인 거래처는 양쪽을 다 정하셔야 다음으로 넘어간다 */
-  if (gDone(g)) UP.pos++;
+  /* 섞인 거래처는 양쪽을 다 정하셔야 다음으로 넘어간다
+     ★ 119차. 보류 원인 경로는 출금 쪽이 정해지면 넘어간다 */
+  if (gDone(g) || (원인길 && gCatFor(g, false))) UP.pos++;
   utPick();
   savePicks();                     /* 찍을 때마다 바로 남긴다 */
-  /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다 */
-  var sim = gDone(g) ? similarPayees(g) : [];
+  /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다
+     ★ 119차. 보류 원인 경로에서는 원인이 아닌 거래처를 이어서 묻지 않는다 */
+  var sim = (!원인길 && gDone(g)) ? similarPayees(g) : [];
   UP.ask = sim.length ? { g: sim[0], cat: cat, from: g.name } : null;
   drawOnboard();
 }
@@ -14390,6 +14486,8 @@ function drawDueAsk2(days, n) {
 
 function showResult() {
   utStop();                      /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
+  /* ★ 119차. 보류 원인 경로에서 다른 길로 결과에 왔어도 원래 차례로 되돌린다 */
+  if (UP && UP.holdAsk) holdAskEnd(false);
   PAGE_DEMO = !!(UP && UP.demo);
   syncCloseLabel();
   syncUpOpen();
@@ -15026,8 +15124,17 @@ function drawCats() {
   into.addEventListener('click', function () { document.getElementById('pickfile').click(); });
   srow.appendChild(wipe); srow.appendChild(out); srow.appendChild(into);
   box.appendChild(srow);
+  /* ★ 119차 B. 「되살리세요」는 다 돌아오는 것처럼 읽혔다 — 파일에는 거래처 분류 설정만 있다.
+     옮기는 범위와 차례를 실제 동작대로 적는다. 불러오기는 그 기기에 올린 거래내역의
+     거래처에 적용되므로(importApply) 「거래내역을 연 뒤」라고 쓴다 */
   box.appendChild(el('div', 'obsub',
-    '기기를 바꾸거나 브라우저 기록을 지우면 저장이 사라집니다. 그때는 내보낸 파일로 되살리세요.'));
+    '기기를 바꾸거나 브라우저 기록을 지우면 저장이 사라집니다.'));
+  box.appendChild(el('div', 'obsub',
+    '거래처 분류 설정을 다른 기기로 옮길 수 있습니다. ' +
+    '거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'));
+  box.appendChild(el('div', 'obsub',
+    '내보낸 파일을 다른 기기로 옮긴 뒤, 그 기기의 남는돈에서 대상 매장의 거래내역을 열고 ' +
+    '「불러오기」를 눌러주세요. 메일·메신저·클라우드 등으로 파일을 옮길 수 있습니다.'));
   host.appendChild(box);
   drawUseBox(host);
 }
@@ -15139,7 +15246,13 @@ function drawUseBox(host) {
 
 function exportPicks() {
   var body = pickPayload();
+  /* ★ 119차 B. 판 번호·곳 수·목표일·순번은 금액이 아니다. savePicks 가 하듯 잠깐 빼고 본다.
+     빼지 않아서 hasNumber 가 늘 참이었고, [내보내기]를 눌러도 파일이 안 나왔다
+     (118-1차에서 실측). 검사를 푸는 것이 아니다 — 이름 붙은 넷만 빼고 나머지는 그대로 본다 */
+  var cv = body.cv, n곳 = body.n곳, due = body.목표일, seq = body.순번;
+  delete body.cv; delete body.n곳; delete body.목표일; delete body.순번;
   if (hasNumber(body)) return;
+  body.cv = cv; body.n곳 = n곳; body.목표일 = due; body.순번 = seq;
   body.v = 1;
   var blob = new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
@@ -15152,38 +15265,122 @@ function exportPicks() {
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 }
 
+/* ── 119차 B · 불러오기 전에 한 번 여쭙는다 ──────────────────────────
+   ★ 합치는 방식은 예전 그대로다 (코드로 확인한 것) —
+     지금 올린 거래내역의 거래처 가운데 파일에 있는 곳은 파일의 분류로 바뀌고,
+     파일에 없는 곳은 기존 분류를 그대로 둔다. 파일에만 있는 거래처는 이번에 쓰이지 않는다.
+     항목 목록·계산 밖 항목·다시 묻기로 한 거래처·분석 종료일·업종·이체 설정도 파일 것으로 바뀐다.
+   ★ 파일의 매장 이름·성함으로 지금 매장을 바꾸지 않는다 (예전에는 UP.store 를 덮었다).
+     저장은 지금 매장 열쇠 하나에만 한다 (savePicks). 다른 매장은 안 건드린다.
+   ★ 거래내역·예정 지출·직접 적은 금액은 파일에 없고 여기서 안 바뀐다.
+   ★ 저장에 실패하면 불러오기 전 상태로 되돌리고 실패를 알린다. 성공이라고 쓰지 않는다 */
+function importNote(글, 성공) {
+  var host = document.getElementById('up-cats');
+  host.insertBefore(el('div', 성공 ? 'obdone' : 'lswarn', 글), host.firstChild);
+}
 function importPicks(file) {
   var fr = new FileReader();
   fr.onload = function () {
     var o = null;
     try { o = JSON.parse(fr.result); } catch (e) { }
-    if (!o || o.v !== 1 || !o.picks) { alert('이 파일은 읽지 못합니다.'); return; }
-    o = migrateCats(o);            /* 옛 판 이름과 늘어난 기본 항목을 여기서도 맞춘다 */
-    if (o.accounts && o.accounts.length) UP.accounts = o.accounts.slice();
-    /* 35차 C. 여기도 길이로 견주지 않는다 */
-    if (o.baseCats && o.baseCats.length) UP.baseCats = o.baseCats.slice();
-    if (o.keepSet) UP.keepSet = o.keepSet.slice();
-    if (o.unskip) UP.unskip = o.unskip.slice();
-    if (o.목표일) setDueDay(o.목표일);               /* 57차 ⑦ · 60차 ① */
-    if (o.업종 && TRADES[o.업종]) setTrade(o.업종);  /* 62차 ② */
-    if (o.xfer) applyXferKeys(o.xfer);
-    if (o.store) UP.store = o.store;
-    var n = 0;
-    UP.payees.forEach(function (g) {
-      var c = null, list = g.rawList || [];
-      for (var i = 0; i < list.length && !c; i++) c = o.picks[list[i]];
-      if (!c) c = o.picks[g.name];
-      if (applySaved(g, c)) n++;
-    });
-    UP.queue = buildQueue(false);
-    UP.pos = 0;
-    UP.hist = [];
-    savePicks();
-    drawCats();
-    var host = document.getElementById('up-cats');
-    host.insertBefore(el('div', 'obdone', won(n) + '곳을 불러왔습니다'), host.firstChild);
+    if (!o || o.v !== 1 || !o.picks) {
+      drawCats();
+      importNote('이 파일은 읽지 못했습니다. 바뀐 것은 없습니다.');
+      return;
+    }
+    /* 대상 매장이 없으면 먼저 매장을 정하시게 한다 — 예시 화면도 여기로 온다 */
+    if (!UP || !UP.payees || UP.demo || !UP.store) {
+      drawCats();
+      importNote('불러올 매장이 정해지지 않았습니다. 대표님 매장의 거래내역을 연 뒤 불러와주세요.');
+      return;
+    }
+    importAsk(o);
   };
   fr.readAsText(file);
+}
+/* 확인 화면. 여기까지는 아무것도 안 바뀌었다 */
+function importAsk(o) {
+  drawCats();
+  var host = document.getElementById('up-cats');
+  var box = el('div', 'catpanel');
+  box.appendChild(el('div', 'addq', '이 분류 설정을 「' + UP.store + '」에 불러올까요?'));
+  box.appendChild(el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음')));
+  box.appendChild(el('div', 'obsub', '불러올 매장: ' + UP.store));
+  box.appendChild(el('div', 'obsub',
+    '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다. ' +
+    '지금 올린 거래내역에 있는 거래처에만 적용됩니다.'));
+  var 함께 = [];
+  if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet) 함께.push('항목 목록');
+  if (o.목표일) 함께.push('분석 종료일');
+  if (o.업종 && TRADES[o.업종]) 함께.push('업종');
+  if (o.xfer && o.xfer.length) 함께.push('이체 설정');
+  if (함께.length) {
+    box.appendChild(el('div', 'obsub', 함께.join('·') + ' 등 함께 저장된 설정도 적용됩니다.'));
+  }
+  var r = el('div', 'addrow');
+  var no = el('button', 'b', '취소');
+  no.type = 'button';
+  no.addEventListener('click', function () { drawCats(); });
+  var yes = el('button', 'b on', '이 매장에 불러오기');
+  yes.type = 'button';
+  yes.addEventListener('click', function () { importApply(o); });
+  r.appendChild(no); r.appendChild(yes);
+  box.appendChild(r);
+  host.insertBefore(box, host.firstChild);
+  try { box.scrollIntoView({ block: 'center' }); } catch (e) { }
+}
+function importApply(o) {
+  /* 되돌릴 수 있게 지금 상태를 들고 있는다 */
+  var 전 = {
+    accounts: UP.accounts.slice(), baseCats: UP.baseCats.slice(), keepSet: UP.keepSet.slice(),
+    unskip: UP.unskip ? UP.unskip.slice() : UP.unskip, dueDay: UP.dueDay, trade: tradeNow(),
+    xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
+    queue: UP.queue, pos: UP.pos, hist: UP.hist,
+    g: UP.payees.map(function (g) {
+      return { g: g, cat: g.cat, auto: g.auto, catIn: g.catIn, catOut: g.catOut,
+               autoIn: g.autoIn, autoOut: g.autoOut };
+    })
+  };
+  o = migrateCats(o);            /* 옛 판 이름과 늘어난 기본 항목을 여기서도 맞춘다 */
+  if (o.accounts && o.accounts.length) UP.accounts = o.accounts.slice();
+  /* 35차 C. 여기도 길이로 견주지 않는다 */
+  if (o.baseCats && o.baseCats.length) UP.baseCats = o.baseCats.slice();
+  if (o.keepSet) UP.keepSet = o.keepSet.slice();
+  if (o.unskip) UP.unskip = o.unskip.slice();
+  if (o.목표일) setDueDay(o.목표일);               /* 57차 ⑦ · 60차 ① */
+  if (o.업종 && TRADES[o.업종]) setTrade(o.업종);  /* 62차 ② */
+  if (o.xfer) applyXferKeys(o.xfer);
+  /* ★ 119차. 파일의 매장 이름으로 UP.store 를 덮지 않는다 */
+  var n = 0;
+  UP.payees.forEach(function (g) {
+    var c = null, list = g.rawList || [];
+    for (var i = 0; i < list.length && !c; i++) c = o.picks[list[i]];
+    if (!c) c = o.picks[g.name];
+    if (applySaved(g, c)) n++;
+  });
+  UP.queue = buildQueue(false);
+  UP.pos = 0;
+  UP.hist = [];
+  var 됨 = false;
+  try { 됨 = savePicks(); } catch (e) { 됨 = false; }
+  if (!됨) {
+    /* 저장하지 못했다 — 기존 저장본은 그대로다. 화면의 분류도 불러오기 전으로 돌린다 */
+    UP.accounts = 전.accounts; UP.baseCats = 전.baseCats; UP.keepSet = 전.keepSet;
+    UP.unskip = 전.unskip; UP.xfer = 전.xfer;
+    if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
+    if (tradeNow() !== 전.trade) setTrade(전.trade);
+    전.g.forEach(function (v) {
+      v.g.cat = v.cat; v.g.auto = v.auto; v.g.catIn = v.catIn; v.g.catOut = v.catOut;
+      v.g.autoIn = v.autoIn; v.g.autoOut = v.autoOut;
+    });
+    UP.queue = 전.queue; UP.pos = 전.pos; UP.hist = 전.hist;
+    UP.__due = null;
+    drawCats();
+    importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.');
+    return;
+  }
+  drawCats();
+  importNote(won(n) + '곳을 불러왔습니다', true);
 }
 
 /* 「기타」의 지금 이름 — 사장님이 이름을 바꿨을 수도 있다 */
@@ -17002,11 +17199,14 @@ function drawDueHoldCard(host, c, months) {
   top.appendChild(foldChip(open));
   box.appendChild(top);
   /* ★ 이 단추는 카드 머리의 접기·펴기를 건드리지 않는다 */
-  var go = el('button', 'fcopen', '안 정한 거래 보기');
+  /* ★ 119차 A. 목록으로 내려가는 대신 기존 거래처 확인 화면에서 원인부터 묻는다.
+     물을 거래처가 없으면(출금 쪽이 다 정해졌거나 섞인 카드뿐) 예전처럼 목록을 편다 */
+  var go = el('button', 'fcopen', '분류하고 예상 잔액 보기');
   go.type = 'button';
   go.addEventListener('click', function (e) {
     e.stopPropagation();
-    useScreen('보류 원인 거래 보기');
+    useScreen('보류 원인 분류');
+    if (holdAskStart(c.보류, months)) return;
     UP.open = UP.open || {};
     UP.open.__unset = true;
     UP.open.__hold = true;
@@ -22462,5 +22662,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 118-1차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차</div>
 </body></html>
