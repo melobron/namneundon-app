@@ -7243,8 +7243,9 @@ function drawStart() {
   var wmk = document.createElement('img');
   wmk.className = 'welmark'; wmk.src = BRAND_MARK; wmk.alt = '';
   box.appendChild(wmk);
-  box.appendChild(el('div', 'welbig', '10분이면 월마감이 끝납니다'));
-  box.appendChild(el('div', 'welsub', '거래처 20곳만 정하면 됩니다'));
+  /* ★ 119차 문구 보정. 시간(10분)과 거래처 수(20곳)를 약속하지 않는다 */
+  box.appendChild(el('div', 'welbig', '이번 달 번 돈과 쓴 돈을 확인하세요'));
+  box.appendChild(el('div', 'welsub', '거래내역을 올리고, 거래처의 용도를 정해주세요'));
 
   /* 안심 고지는 새로 쓰지 않고 이미 있는 것을 그대로 옮겨 온다 (49차) */
   var note = document.querySelector('#up .upnote');
@@ -8781,8 +8782,8 @@ function drawBankHelp(host) {
       '못 찾으시면 카카오채널로 물어봐주세요. 쓰시는 은행 화면 보고 알려드리겠습니다. ');
     물음.appendChild(kakaoAsk('카카오채널로 물어보기'));
     box.appendChild(물음);
-    box.appendChild(el('div', 'bh3',
-      '파일은 저희 서버로 가지 않으니 카톡으로 받으셔도 됩니다.'));
+    /* ★ 119차 문구 보정. 「카톡으로 받으셔도 됩니다」 줄을 지웠다 —
+       앱이 파일을 처리하는 것과 카카오톡으로 파일을 보내는 것이 섞여 읽혔다 */
   }
   host.appendChild(box);
 }
@@ -18802,8 +18803,9 @@ function drawResultInner(months) {
        같은 날짜를 두 줄로 말하면 한 화면에 같은 것이 두 자리가 된다 (49차) */
   var 배지 = el('div', 'hbadge');
   var 끝날 = asOfText();
-  배지.appendChild(el('span', 'hb1',
-    '오늘 ' + (끝날 ? 끝날.replace(/^\d+년\s*/, '') : '') + ' 기준'));
+  /* ★ 119차 문구 보정. 「오늘 8월 22일 기준」은 실제 오늘 날짜로 읽혔다.
+     자료의 날짜(asOfText)를 연도까지 그대로 쓰고 「자료 기준일」이라고 부른다 */
+  배지.appendChild(el('span', 'hb1', 끝날 ? '자료 기준일 ' + 끝날 : '자료 기준일'));
   var 마감달 = lastClosedMonth(months);
   if (마감달) 배지.appendChild(el('span', 'hb2', '최근 마감: ' + monNum(마감달)));
   host.appendChild(배지);
@@ -22671,5 +22673,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 문구 보정</div>
 </body></html>
