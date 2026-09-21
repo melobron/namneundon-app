@@ -4711,7 +4711,9 @@ var DEMO_PICKS = {
   '롯데프레시 A점': '식자재',
   '류지호': '기타',
   '문태경': '인건비',
-  '박서연': '식자재',
+  /* ★ 117차. 예시 전용. 매월 10일에 식자재 대금을 지급한 적이 없다는 요한의 운영 경험을 반영했다.
+     원본 거래와 대조한 것은 아니다. 일반 자동분류 규칙이 아니다 */
+  '박서연': '인건비',
   '배주원': '기타',
   '백나래': '인건비',
   '본도시락 A점': '식자재',
@@ -8220,10 +8222,12 @@ function startDemo() {
      ★ 고르는 규칙 — 나간 쪽 금액 큰 순으로 여섯째부터 셋. 첫째~다섯째를 건드리면
        달마다 흑자·적자가 뒤집혀(blocked) 순이익이 아예 안 나온다.
        너무 작은 곳을 고르면 F 규칙이 「사업 외 용도」로 넘겨버려 안 남는다 */
-  var outs = UP.payees.filter(function (g) {
-    return g.outSum > 0 && g.inN === 0 && gDone(g);
-  }).sort(function (a, b) { return b.outSum - a.outSum; });
-  outs.slice(5, 8).forEach(function (g) {
+  /* ★ 117차. 박서연·고은서는 원래 분류가 있어 되돌리지 않는다. 차예준은 용도를 확인하지 못해 미정으로 남긴다.
+     금액 순위로 고르지 않고 이름으로 정한다. 되돌리는 방법은 43차 그대로다 */
+  var DEMO_UNSET = ['차예준'];
+  DEMO_UNSET.forEach(function (name) {
+    var g = UP.byName[name];
+    if (!g) return;
     gSetCat(g, false, null, false);
     if (g.mixed) gSetCat(g, true, null, false);
     UP.unskip = UP.unskip || [];
@@ -22299,5 +22303,5 @@ try { drawStart(); } catch (e) { }
     </svg>
   </a>
 </div>
-<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 116차</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.21 · 117차</div>
 </body></html>
