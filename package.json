@@ -7,11 +7,14 @@
     "serve": "node tests/serve.mjs",
     "check": "node tools/check-load-order.mjs",
     "test": "node tools/check-load-order.mjs && playwright test",
-    "test:update": "playwright test --update-snapshots"
+    "test:update": "playwright test --update-snapshots",
+    "deploy:app": "wrangler deploy",
+    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "acorn": "^8.18.0",
-    "acorn-walk": "^8.3.5"
+    "acorn-walk": "^8.3.5",
+    "wrangler": "^4.136.3"
   }
 }
