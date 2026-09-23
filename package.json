@@ -1,0 +1,14 @@
+{
+  "name": "namneundon-app",
+  "private": true,
+  "description": "남는돈 — 개발 도구 설정. 앱 자체는 빌드 없이 index.html 그대로 배포된다",
+  "type": "module",
+  "scripts": {
+    "serve": "node tests/serve.mjs",
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}
