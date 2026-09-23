@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="남는돈">
+<meta name="theme-color" content="#ffffff">
+<!-- ★ 73차. 예전 PWA 이름·아이콘을 7일 캐시에서 다시 읽지 않도록
+     브랜드 자산 URL을 새 판으로 바꾼다. 실제 파일 이름과 계산 로직은 그대로다. -->
+<link rel="apple-touch-icon" href="icon-180.png?v=20260831-76-2-1">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=20260831-76-2-1">
+<link rel="manifest" href="manifest.json?v=20260831-76-2-1">
+<title>남는돈</title>
+<!--
+  남는돈 · 공개용
+
+  화면을 열면 예시가 먼저 보입니다. 예시도 대표님이 올린 파일과
+  똑같은 길을 탑니다 — 같은 계산, 같은 화면입니다.
+
+  예시 숫자는 실제 매장 계좌 거래내역(2023년 1월 1일 ~ 8월 22일)에서
+  만들었고, 거래처와 사람 이름은 가렸으며 금액은 배수로 바꿨습니다.
+-->
+
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+
+<div id="splash" class="splash">
+  <img class="splashmark" id="splashmark" alt="">
+  <div class="splashcopy">대표님, 이번 달 얼마 남아요?</div>
+</div>
+<header>
+  <div class="hleft">
+    
+    <img class="brandlogo" id="brandlogo" alt="남는돈" width="114" height="30" src="data:image/png;base64,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">
+    <!-- ★ 88차 ①. 글씨 크기 단추 둘. 로고 바로 오른쪽 · 어느 화면에서나 같은 자리다.
+         가장 작은 단에서는 가⁻ 가, 가장 큰 단에서는 가⁺ 가 흐려지고 안 눌린다 -->
+    <div class="fsbtns">
+      <button type="button" class="fsbtn" id="fsdown" aria-label="글씨 작게">가⁻</button>
+      <button type="button" class="fsbtn" id="fsup" aria-label="글씨 크게">가⁺</button>
+    </div>
+  </div>
+  
+  <div class="hright">
+    <div class="hsavedrow">
+      <button type="button" class="savedchip headimage" id="topimage" hidden>전체보기</button>
+      <button type="button" class="savedchip" id="savedchip">저장됨 <span>✓</span></button>
+    </div>
+    <button type="button" class="upbtn" id="upopen">내 거래내역 올려보기</button>
+  </div>
+</header>
+<div class="savedwhy" id="savedwhy" hidden></div>
+
+
+<div id="welcome"></div>
+
+<!-- ★ 119차. 가상 거래를 더해 「일부 거래를 바꾼」을 넣었다 (문장 하나만 바꾼다) -->
+<!-- ★ 117차. 예시 안내를 한 자리로 합친다. 「지난 자료로 만든 예시」와 같은 뜻이라 새 줄을 더하지 않고 이 문장을 바꾼다 -->
+<div class="demotop" id="demotop">기능 설명을 위해 이름·금액·일부 거래를 바꾼 예시입니다. 거래내역을 올리시면 실제 숫자로 바뀝니다.</div>
+
+
+<div id="a2hs-top"></div>
+
+<div id="up-result" hidden></div>
+
+<div id="up"><div class="upwrap">
+  <div class="uptop">
+    <div class="uptitle" id="uptitle">내 거래내역 올려보기</div>
+    <button type="button" class="upinfobtn" id="upinfobtn" aria-expanded="false"
+      aria-controls="upnote">! 안내</button>
+    <button type="button" class="upclose" id="upclose">← 첫 화면으로</button>
+  </div>
+
+  
+  <div class="upnote" id="upnote" hidden>
+    <b>파일은 서버로 전송되지 않습니다.</b> 계산은 이 브라우저 안에서만 이뤄집니다.<br>
+    은행에서 받은 거래내역은 이 기기 안에만 남습니다. 밖으로 나가지 않습니다.<br>
+    {{주인}}이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 이 브라우저에 남습니다.
+  </div>
+
+  <div id="up-pick">
+    <div id="up-tradenote"></div>
+    <div id="up-mine"></div>
+    
+    <!-- ★ 113차 수정 둘 ②. 신한을 「확인」 목록에서 뺀다.
+         검증방이 가진 신한 PDF 한 개가 안 읽힌다. 한 파일로 신한 전체가 안 된다고
+         할 수는 없지만, 무조건 「읽습니다」도 맞지 않다.
+         ★ 어느 양식이 안 되는지 특정하지 못했다 — 그래서 양식을 좁혀 적지 않고
+           「형식에 따라」로 둔다. 확인 못 한 것을 단정하지 않는다.
+         ★ 「다른 형식으로 받아보세요」는 안 붙인다. 읽히는 대안을 확인한 적이 없다.
+         ★ 국민·우리·카카오뱅크·케이뱅크는 그대로다. 실물로 확인된 것들이다 -->
+    <div class="upmust">
+      <b>폰에서 받은 PDF</b>를 읽습니다 (국민·우리·카카오뱅크·케이뱅크 확인).<br>
+      신한은행 파일은 형식에 따라 읽지 못할 수 있습니다.<br>
+      PC에서 받은 <b>엑셀(.xlsx)</b>과 경남은행 <b>HTML(.html)</b>도 읽습니다.<br>
+      처음에는 <b>최근 1개월</b>만 올려도 됩니다. 화면을 찍은 사진은 읽지 못합니다.
+    </div>
+    <div id="a2hs"></div>
+    <div class="updrop" id="updrop">
+      <p><b>거래내역 파일</b>을 올려주세요 (PDF · 엑셀 · 경남은행 HTML)<br>
+        <span class="dropsub">1년치를 올리면 월별 흐름도 함께 볼 수 있습니다.<br>
+        나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.<br>
+
+        안 열리면 <a class="asklink" href="https://pf.kakao.com/_bijxaX/chat"
+          target="_blank" rel="noopener noreferrer" aria-label="카카오톡 채널"><svg
+          class="askico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect
+          x="0" y="0" width="24" height="24" rx="6.5" fill="#FEE500"></rect><ellipse
+          cx="12" cy="10.9" rx="7.3" ry="5.7" fill="#3C1E1E"></ellipse><path
+          d="M8.7 15.1 L6.3 19.3 L11.1 16.3 Z" fill="#3C1E1E"></path></svg><span>여기로
+          알려주세요</span></a>.</span></p>
+      <label class="upfile">파일 고르기
+        <input type="file" id="upinput" accept=".xlsx,.xls,.html,.htm,.pdf,text/html,application/pdf" multiple hidden>
+      </label>
+    </div>
+    <!-- ★ 106차 ③. 파일을 읽은 결과가 은행 안내 열한 칸 아래에 묻혔다.
+         폰에서는 화면 두 개를 내려야 보이고, 위쪽은 올리기 전과 똑같아서
+         「올렸는데 아무 일도 안 일어났다」로 보였다.
+         차례만 바꾼다 — 자바스크립트는 id 로만 찾으니 아무 데도 안 깨진다 (49차) -->
+    <div class="upstat" id="upstat"></div>
+    <div id="upbad"></div>
+    <div id="bankhelp"></div>
+  </div>
+
+  
+  <div id="up-trade" hidden></div>
+  <div id="up-files" hidden></div>
+  <div id="up-name" hidden></div>
+  <div id="up-owner" hidden></div>
+  <div id="up-cats" hidden></div>
+  <input type="file" id="pickfile" accept=".json,application/json" hidden>
+  <div id="up-onboard" hidden></div>
+  <div id="up-duedate" hidden>
+    <div class="ddwrap"></div>
+  </div>
+  <div id="up-done" hidden></div>
+</div></div>
+
+<script src="src/00-early.js"></script>
+<script src="src/01-biz-demo.js"></script>
+<script src="src/02-text-loaders.js"></script>
+<script src="src/03-parse-excel.js"></script>
+<script src="src/04-parse-pdf.js"></script>
+<script src="src/05-verify.js"></script>
+<script src="src/06-classify.js"></script>
+<script src="src/07-state-categories.js"></script>
+<script src="src/08-ui-start-upload.js"></script>
+<script src="src/09-ui-panel-install.js"></script>
+<script src="src/10-demo-read-files.js"></script>
+<script src="src/11-upload-flow.js"></script>
+<script src="src/12-storage.js"></script>
+<script src="src/13-onboard.js"></script>
+<script src="src/14-compute.js"></script>
+<script src="src/15-result-panels.js"></script>
+<script src="src/16-due.js"></script>
+<script src="src/17-result.js"></script>
+<script src="src/18-charts-year.js"></script>
+
+<div class="applinks" id="applinks" hidden>
+  
+  <a href="https://namneundon.com" target="_blank"
+     rel="noopener noreferrer" aria-label="남는돈 소개" title="남는돈 소개">
+    <img class="appico" id="applinkmark" alt="" aria-hidden="true">
+  </a>
+  <a href="https://pf.kakao.com/_bijxaX/friend" target="_blank"
+     rel="noopener noreferrer" aria-label="카카오톡 채널 추가" title="카카오톡 채널 추가">
+    <svg class="appico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="0" y="0" width="24" height="24" rx="6.5" fill="#FEE500"></rect>
+      <ellipse cx="12" cy="10.9" rx="7.3" ry="5.7" fill="#3C1E1E"></ellipse>
+      <path d="M8.7 15.1 L6.3 19.3 L11.1 16.3 Z" fill="#3C1E1E"></path>
+    </svg>
+  </a>
+  
+  <a href="https://www.instagram.com/namneundon" target="_blank"
+     rel="noopener noreferrer" aria-label="남는돈 인스타그램" title="남는돈 인스타그램">
+    <svg class="appico appig" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="igGrad" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#FEDA75"></stop>
+          <stop offset="0.33" stop-color="#FA7E1E"></stop>
+          <stop offset="0.66" stop-color="#D62976"></stop>
+          <stop offset="1" stop-color="#962FBF"></stop>
+        </linearGradient>
+      </defs>
+      <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5.6"
+            fill="none" stroke="url(#igGrad)" stroke-width="2"></rect>
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="url(#igGrad)"
+              stroke-width="2"></circle>
+      <circle cx="17.5" cy="6.5" r="1.35" fill="url(#igGrad)"></circle>
+    </svg>
+  </a>
+  <!-- ★ 119차. 스레드 링크 보정. 주소는 검증방이 라이브 namneundon.com 에서 확인한 것이다.
+       다른 아이콘과 같은 appico 크기를 쓰고, 검은 둥근 사각형 안에 흰 로고를 그린다 (인라인 SVG) -->
+  <a href="https://www.threads.com/@namneundon" target="_blank"
+     rel="noopener noreferrer" aria-label="남는돈 스레드" title="남는돈 스레드">
+    <svg class="appico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="0" y="0" width="24" height="24" rx="6.5" fill="#000000"></rect>
+      <path transform="translate(4.8 4.8) scale(0.6)" fill="#FFFFFF" d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.216.094.321.142 1.49.7 2.58 1.761 3.154 3.07.797 1.82.871 4.79-1.548 7.158-1.85 1.81-4.094 2.628-7.277 2.65Zm1.003-11.69c-.242 0-.487.007-.739.021-1.836.103-2.98.946-2.916 2.143.067 1.256 1.452 1.839 2.784 1.767 1.224-.065 2.818-.543 3.086-3.71a10.5 10.5 0 0 0-2.215-.221z"></path>
+    </svg>
+  </a>
+</div>
+<div id="buildstamp" style="margin:14px 30px 18px;font-size:10.5px;line-height:1.5;color:var(--gray);text-align:right">2026.09.22 · 119차 업로드 안내 보정</div>
+</body></html>
