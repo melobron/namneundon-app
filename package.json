@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "serve": "node tests/serve.mjs",
-    "test": "playwright test",
+    "check": "node tools/check-load-order.mjs",
+    "test": "node tools/check-load-order.mjs && playwright test",
     "test:update": "playwright test --update-snapshots"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@playwright/test": "^1.63.0",
+    "acorn": "^8.18.0",
+    "acorn-walk": "^8.3.5"
   }
 }

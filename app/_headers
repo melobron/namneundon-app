@@ -16,6 +16,14 @@
 /sw.js
   Cache-Control: no-store
 
+# 리팩토링 2단계 — index.html 안에 있던 CSS·JS 를 파일로 나눴다.
+# index.html 과 같은 규칙이어야 한다. 하나만 새것이고 나머지가 옛것이면 조용히 깨진다
+/css/*
+  Cache-Control: no-store
+
+/src/*
+  Cache-Control: no-store
+
 /xlsx.full.min.js
   Cache-Control: public, max-age=604800
 
