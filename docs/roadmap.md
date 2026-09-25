@@ -6,7 +6,8 @@
 
 - ✅ 새 저장소 `melobron/namneundon-app`, 모든 가지를 119차 기준 `main` 하나로
 - ✅ 리팩토링 1단계 — 안전망 테스트 (PR #1, 머지됨)
-- ✅ 리팩토링 2단계 — 파일 나누기 (PR #2, **머지 대기**)
+- ✅ 리팩토링 2단계 — 파일 나누기 (PR #2, 머지됨)
+- ✅ 배포 설정·랜딩 복원 (PR #3 — `refactor/02-split-files` 에 합쳐짐 → PR #4 로 main 에)
 - ✅ Cloudflare 멤버 초대 수락, wrangler 로그인
 - ✅ 새 앱 Worker `namneundon-app` 배포, 배포된 곳에서 안전망 테스트 통과
 - ✅ 랜딩 원본 복원 → `landing/`, 미리보기로 운영과 동일 확인
@@ -15,11 +16,11 @@
 
 | # | 할 일 | 누가 | 비고 |
 |---|---|---|---|
-| A-1 | PR #2 머지 | 지원 | |
+| A-1 | PR #4 머지 (PR #3 내용을 main 으로) | 지원 | |
 | A-2 | `app.namneundon.com` 연결 — `npm run deploy:app` | 지원 | `wrangler.jsonc` 에 설정해 둠. DNS 변경이라 직접 실행 |
-| A-3 | **자료 옮기기 페이지** — 옛 주소의 브라우저 저장소를 새 주소로 넘긴다 | Claude | 이것 없이 주소를 바꾸면 기존 사장님 자료가 안 보인다 |
-| A-4 | 랜딩 「시작하기」를 새 주소로 — `npm run deploy:landing` | 지원 | A-3 뒤. `landing/` 에 이미 바꿔 둠 |
-| A-5 | 옛 주소 `aged-rain-dbc4` 에 자료 옮기기 + 새 주소로 이동 | Claude 준비 → 지원 실행 | A-3 과 한 묶음 |
+| ~~A-3~~ | ~~자료 옮기기 페이지~~ | — | 실사용자 없음 → 생략 (2026-09-25) |
+| A-4 | 랜딩 「시작하기」를 새 주소로 — `npm run deploy:landing` | 지원 | A-2 뒤. `landing/` 에 이미 바꿔 둠 |
+| A-5 | 옛 주소 → 새 주소 이동 — `npm run deploy:legacy` | 지원 | A-4 뒤. `legacy/` 준비 완료 |
 | A-6 | GitHub → Cloudflare 자동 배포 (main 에 합치면 바로 반영) | 지원 (대시보드 클릭) | Workers & Pages → `namneundon-app` → Settings → Build → Connect GitHub. 랜딩도 같은 방식 |
 | A-7 | main 보호 규칙 — PR 로만, 테스트 통과해야 합치기 | 지원 | GitHub → Settings → Branches |
 | A-8 | 미리보기 배포 `preview-repo.namneundon-ahv.pages.dev` 지우기 | 지원 | 확인용이었다 |

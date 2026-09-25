@@ -9,7 +9,8 @@
     "test": "node tools/check-load-order.mjs && playwright test",
     "test:update": "playwright test --update-snapshots",
     "deploy:app": "wrangler deploy",
-    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main"
+    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main",
+    "deploy:legacy": "wrangler deploy --config legacy/wrangler.jsonc"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
