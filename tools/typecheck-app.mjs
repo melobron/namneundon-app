@@ -6,7 +6,7 @@
 // 사용: node tools/typecheck-app.mjs
 import { execFileSync } from 'node:child_process';
 
-const BASELINE = 52;
+const BASELINE = 51;
 
 let out = '';
 try {

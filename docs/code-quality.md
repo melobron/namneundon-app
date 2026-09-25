@@ -25,7 +25,7 @@
 | ESLint 경고         |      ~~51~~ → **0** | 2026-09-25 모두 정리. 규칙도 오류로 되돌렸다 |
 | Stylelint 경고      |                 110 | `package.json` → `lint:css`                  |
 | html-validate 경고  |      ~~12~~ → **0** | 2026-09-25 모두 정리                         |
-| 앱 타입 오류        |                  52 | `tools/typecheck-app.mjs` 의 `BASELINE`      |
+| 앱 타입 오류        |     ~~52~~ → **51** | `tools/typecheck-app.mjs` 의 `BASELINE`      |
 | 개발 도구 타입 오류 |                   0 | —                                            |
 
 남은 기준선은 **CSS 선택자 순서**(Stylelint)와 **앱 타입**이다. 순서를 바꾸면 화면이 달라질 수 있어 리팩토링 때 정리한다.
@@ -56,7 +56,7 @@
 
 ## 도입하며 찾은 것
 
-- `14-compute.js` 의 `monthNumbers(m, cutDay)` 가 `monthCloseBalance(m, rows)` 를 부르는데,
-  `monthCloseBalance` 는 `rows` 를 받지 않는다. 날짜를 잘라 계산할 때(같은 기간 비교 등)
-  월초 잔액은 자른 기간으로, 월말 잔액은 그 달 전체로 잡힐 수 있다. 동작이 바뀌는 일이라 고치지 않고
-  [roadmap](roadmap.md) 에 적었다.
+- `14-compute.js` 의 `monthNumbers(m, cutDay)` 가 날짜를 잘라 계산할 때 월말 잔액만 그 달 전체로 잡았다
+  (타입 검사가 「`monthCloseBalance` 에 인자를 하나 더 넘긴다」로 찾았다). 검산식이 수천만 원 어긋났지만,
+  잘라 계산하는 자리(「지난달 같은 기간」)가 월말 잔액을 안 써서 화면에는 드러나지 않았다.
+  2026-09-25 고쳤고 `tests/ledger.spec.mjs` 가 지킨다.
