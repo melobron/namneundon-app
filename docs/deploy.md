@@ -4,7 +4,7 @@
 
 | 무엇 | 저장소 폴더 | Cloudflare | 주소 | 올리는 명령 |
 |---|---|---|---|---|
-| **앱 (새)** | `app/` | Worker `namneundon-app` (설정: `wrangler.jsonc`) | `namneundon-app.ykang2356.workers.dev` → `app.namneundon.com` (연결 대기) | `npm run deploy:app` |
+| **앱** | `app/` | Worker `namneundon-app` (설정: `wrangler.jsonc`) | **`app.namneundon.com`** | `npm run deploy:app` |
 | 앱 (옛) | `legacy/` | Worker `aged-rain-dbc4` | `aged-rain-dbc4.ykang2356.workers.dev` → 새 주소로 301 이동 | `npm run deploy:legacy` |
 | 랜딩 | `landing/` | Pages `namneundon` (Git 연결 없음) | `namneundon.com`, `www.namneundon.com` | `npm run deploy:landing` |
 | ? | — | Pages `namneundon-cards2` | `namneundon-cards2.pages.dev` | 용도 확인 필요 |
@@ -20,7 +20,7 @@ npx wrangler login     # 브라우저에서 2007jiwon@gmail.com 으로 로그인
 
 ```bash
 npm test                                                   # 로컬 검사
-BASE_URL=https://namneundon-app.ykang2356.workers.dev npx playwright test   # 배포된 곳 검사
+BASE_URL=https://app.namneundon.com npx playwright test   # 배포된 곳 검사
 ```
 
 ## 랜딩(`landing/`)에 대해
@@ -39,7 +39,7 @@ BASE_URL=https://namneundon-app.ykang2356.workers.dev npx playwright test   # �
 옛 주소 사용자를 새 주소로 보내기 전에, 옛 주소의 자료를 새 주소로 옮기는 장치가 먼저 있어야 한다.
 2026-09-25 주소 전환 때는 실사용자가 없어 옮기기 없이 바로 보냈다. 실사용자가 생긴 뒤 주소를 또 바꾼다면 옮기기가 필요하다.
 
-## 주소 전환 순서 (2026-09-25)
+## 주소 전환 (2026-09-25 완료)
 
 순서가 중요하다. 앞 단계가 살아 있는 것을 확인하고 다음으로 간다.
 

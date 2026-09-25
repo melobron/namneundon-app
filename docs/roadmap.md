@@ -16,13 +16,13 @@
 
 | # | 할 일 | 누가 | 비고 |
 |---|---|---|---|
-| A-1 | PR #4 머지 (PR #3 내용을 main 으로) | 지원 | |
-| A-2 | `app.namneundon.com` 연결 — `npm run deploy:app` | 지원 | `wrangler.jsonc` 에 설정해 둠. DNS 변경이라 직접 실행 |
+| ✅ A-1 | PR #4 머지 (PR #3 내용을 main 으로) | 지원 | |
+| ✅ A-2 | `app.namneundon.com` 연결 | Claude | 2026-09-25. 안전망 테스트 통과 |
 | ~~A-3~~ | ~~자료 옮기기 페이지~~ | — | 실사용자 없음 → 생략 (2026-09-25) |
-| A-4 | 랜딩 「시작하기」를 새 주소로 — `npm run deploy:landing` | 지원 | A-2 뒤. `landing/` 에 이미 바꿔 둠 |
-| A-5 | 옛 주소 → 새 주소 이동 — `npm run deploy:legacy` | 지원 | A-4 뒤. `legacy/` 준비 완료 |
+| ✅ A-4 | 랜딩 「시작하기」를 새 주소로 | Claude | 2026-09-25 |
+| ✅ A-5 | 옛 주소 → 새 주소 301 이동 | Claude | 2026-09-25 |
 | A-6 | GitHub → Cloudflare 자동 배포 (main 에 합치면 바로 반영) | 지원 (대시보드 클릭) | Workers & Pages → `namneundon-app` → Settings → Build → Connect GitHub. 랜딩도 같은 방식 |
-| A-7 | main 보호 규칙 — PR 로만, 테스트 통과해야 합치기 | 지원 | GitHub → Settings → Branches |
+| A-7 | main 보호 규칙 — PR 로만, 테스트 통과해야 합치기 | 지원 | **비공개 저장소는 무료 요금제에서 안 된다** (GitHub Pro 월 $4 필요). 그 전까지는 「main 에 직접 push 안 하기」를 약속으로 |
 | A-8 | 미리보기 배포 `preview-repo.namneundon-ahv.pages.dev` 지우기 | 지원 | 확인용이었다 |
 | A-9 | `namneundon-cards2` 가 무엇인지 확인, 안 쓰면 정리 | 요한에게 물어보기 | |
 
