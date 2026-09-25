@@ -1,6 +1,11 @@
 # main 에 합쳐지면 자동 배포한다.
-#   ① 안전망 테스트 → ② 바뀐 것만 Cloudflare 에 올린다 → ③ 운영 주소에서 다시 테스트
-# 테스트가 실패하면 올리지 않는다. 문서만 바뀌면 아무것도 올리지 않는다.
+#   ① 안전망 테스트 → ② 앱·랜딩을 Cloudflare 에 올린다 → ③ 운영 주소에서 다시 테스트
+# 테스트가 실패하면 올리지 않는다.
+#
+# ★ 2026-09-25. 예전에는 「직전 커밋 대비 바뀐 곳만」 올렸다. PR 셋을 연달아 합치자
+#   GitHub 가 기다리던 배포를 취소하고 마지막 것만 남겼는데, 마지막 것은 문서만 바뀌어
+#   앱을 안 올렸다 — 가운데 PR 의 계산 수정이 운영에 빠졌다.
+#   이제는 매번 최신 main 을 통째로 올린다. 앞 배포가 취소돼도 마지막 배포가 전부 싣는다.
 #
 # 필요한 비밀 값 (GitHub → Settings → Secrets and variables → Actions):
 #   CLOUDFLARE_API_TOKEN — 만드는 법은 docs/deploy.md
@@ -19,26 +24,7 @@ env:
   CLOUDFLARE_ACCOUNT_ID: 38950986f7a45785abaee1821078b111
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      app: ${{ steps.filter.outputs.app }}
-      landing: ${{ steps.filter.outputs.landing }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            app:
-              - 'app/**'
-              - 'wrangler.jsonc'
-            landing:
-              - 'landing/**'
-
   test:
-    needs: changes
-    if: needs.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -52,8 +38,7 @@ jobs:
       - run: npm test
 
   deploy-app:
-    needs: [changes, test]
-    if: needs.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
+    needs: test
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -66,6 +51,8 @@ jobs:
       - run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # 운영 주소가 내주는 파일이 저장소와 한 바이트도 다르지 않은지
+      - run: node tools/verify-deploy.mjs
       # 운영 주소에서 한 번 더 — 올라간 것이 테스트한 것과 같은지
       - run: npx playwright install --with-deps chromium
       - run: npm run test:prod
@@ -77,8 +64,7 @@ jobs:
           retention-days: 7
 
   deploy-landing:
-    needs: changes
-    if: needs.changes.outputs.landing == 'true'
+    needs: test
     runs-on: ubuntu-latest
     environment: production
     steps:
