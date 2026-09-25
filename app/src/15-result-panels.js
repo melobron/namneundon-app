@@ -1983,8 +1983,12 @@ function saveImage(btn, ready) {
   var H = Math.ceil(wrap.getBoundingClientRect().height);
 
   var css = '';
-  [].slice.call(document.querySelectorAll('style')).forEach(function (s) {
-    css += s.textContent;
+  [].slice.call(document.styleSheets).forEach(function (sheet) {
+    try {
+      [].slice.call(sheet.cssRules).forEach(function (rule) {
+        css += rule.cssText + '\n';
+      });
+    } catch (e) {}
   });
 
   var html = new XMLSerializer().serializeToString(wrap);
@@ -1996,6 +2000,9 @@ function saveImage(btn, ready) {
     '">' +
     '<foreignObject width="100%" height="100%">' +
     '<div xmlns="http://www.w3.org/1999/xhtml">' +
+    '<base href="' +
+    document.baseURI +
+    '" />' +
     '<style>' +
     css +
     '</style>' +

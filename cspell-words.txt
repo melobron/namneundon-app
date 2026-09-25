@@ -455,6 +455,7 @@ rawnames
 rawnm
 rawpeek
 rawrow
+requestfailed
 resasof
 resbase
 reseq
