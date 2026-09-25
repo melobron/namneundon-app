@@ -159,8 +159,6 @@ function monthNumbers(m, cutDay) {
   Object.keys(cats).forEach(function (k) {
     cost += cats[k];
   });
-  var first = rows[0],
-    last = rows[rows.length - 1];
   /* ★ 36차 4단계. 계좌마다 따로 잡아 더한다.
      예전에는 그 달 첫 줄·마지막 줄의 잔액을 그대로 썼다 —
      계좌가 둘이면 한 계좌만 잡히고 다른 계좌가 통째로 빠진다.
@@ -367,11 +365,9 @@ function isRunning(m, months) {
   return m === months[months.length - 1] && lastDayIn(m) < monthDays(m);
 }
 function nextMonthLabel(m) {
-  var y = +m.slice(0, 4),
-    n = +m.slice(5, 7) + 1;
+  var n = +m.slice(5, 7) + 1;
   if (n > 12) {
     n = 1;
-    y++;
   }
   return n + '월';
 }
@@ -640,8 +636,6 @@ function cmpLine(now, before, beforeLabel, upIsGood) {
   if (before === null || before === undefined) return null;
   var diff = now - before;
   if (diff === 0) return null;
-  var base = Math.abs(before);
-  var pct = base ? Math.round((Math.abs(diff) / base) * 100) : null;
   var up = diff > 0;
   var good = up === upIsGood;
   /* 적자에서 흑자로 넘어간 것을 「154% 증가」로 쓰면 뜻이 없다 */
@@ -985,7 +979,6 @@ function ratioWarnings(d, m, months) {
     });
     return out;
   }
-  var mm = +m.slice(5, 7) + '월 ';
 
   var food = catSum(d, ['식자재']),
     drink = catSum(d, ['주류·음료']);

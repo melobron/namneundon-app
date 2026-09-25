@@ -777,7 +777,7 @@ function afterFiles() {
     openUpPanel();
     return;
   }
-  var hit = null;
+  var hit;
   try {
     hit = storeForBanks(UP.banks);
   } catch (e) {

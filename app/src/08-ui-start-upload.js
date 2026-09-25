@@ -137,7 +137,7 @@ function upFocus(id) {
    ★ savedSummary() 는 안 건드린다 — 내보내기·세는 곳이 그것을 쓴다.
      여기서 넣는 것은 목록에 이름을 띄우는 것뿐이고 금액은 한 푼도 안 옮긴다 */
 function savedStores() {
-  var list = [];
+  var list;
   try {
     list = savedSummary().keys.slice();
   } catch (e) {
@@ -730,7 +730,7 @@ function drawUpMine() {
   }
   updropAfter(null); /* 제자리로 */
   drawImportStart(); /* ★ 119차 */
-  var mine = [];
+  var mine;
   try {
     mine = savedStores();
   } catch (e) {

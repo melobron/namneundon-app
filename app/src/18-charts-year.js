@@ -1649,9 +1649,6 @@ function drawYear(host, allMonths) {
   var 실cols = cols.filter(function (c) {
     return !c.없음;
   });
-  var 실months = 실cols.map(function (c) {
-    return c.m;
-  });
   var opening = openingMonths(실cols, allMonths);
   /* 진행 중인 달은 22일치라 평균을 끌어내린다. 평균에서 뺀다.
      문 열기 전 달도 같다.
@@ -1660,9 +1657,6 @@ function drawYear(host, allMonths) {
      ★ 71차 ⑤-6. 평균은 그 해 안에서 자료 있는 마감 달들만으로 낸다 */
   var done = 실cols.filter(function (c) {
     return c.m !== 진행달 && !opening[c.m];
-  });
-  var running = cols.filter(function (c) {
-    return c.m === 진행달;
   });
   var opened = 실cols.filter(function (c) {
     return opening[c.m];
@@ -2285,22 +2279,6 @@ function drawYear(host, allMonths) {
        여기서는 처음 그릴 때의 자리만 정한다 */
   wrap.scrollLeft = wrap.scrollWidth;
   /* ★ 66차 ③-3. 진행 중인 달이 어디까지의 누적인지 표 밑에 밝힌다 */
-  if (false && running.length) {
-    var 진행끝 = lastDayIn(running[0].m);
-    host.appendChild(
-      el(
-        'div',
-        'yfoot',
-        monNum(running[0].m) +
-          '은 ' +
-          monNum(running[0].m) +
-          ' ' +
-          진행끝 +
-          '일까지 누적입니다. ' +
-          '현재 계좌 잔액은 맨 위 이번 달에서 보실 수 있습니다.'
-      )
-    );
-  }
   /* ★ 71차 ⑤-5. 지났는데 자료가 없는 달 — 채우는 길을 알려드린다.
      71차 ②로 파일을 보탤 수 있게 됐으니 이것은 빈말이 아니다.
      ★ 아직 안 온 달은 여기 안 센다. 그건 기다리면 되는 것이라 할 말이 없다 */
@@ -2339,134 +2317,6 @@ function drawYear(host, allMonths) {
   }
   /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
      회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
-  return;
-  /* ★ 70차 ②. 여기 있던 「자세히 보기 ▾」 하나로 전부 여닫던 단추는 없앴다 —
-     매출 하나 보려고 비율까지 다 딸려 나왔다. 이제는 그룹 줄마다 따로 편다
-     (개발자 확정). 아래 각주는 그 단추와 상관없이 늘 나와 있었다 */
-
-  /* ★ 46차 ⑤. 각주가 일곱 줄이었다. 밖에는 두 줄만 남기고
-     나머지는 이미 있는 「자세히 보기 ▾」 안으로 넣는다 (새로 만들지 않는다).
-     ★ 밖에 남기는 것 — 표를 못 읽는 이유(어느 달이 —인지)와
-       평균의 기간(원칙 3: 금액엔 기간) */
-  var foot = el('div', 'yfoot');
-  /* ★ 61차 ①. 원칙 4 — 비율에는 분모를 밝힌다 */
-  foot.appendChild(el('div', null, tradeInfo().비율각주));
-  var blocked = cols.filter(function (c) {
-    return c.blocked;
-  });
-  if (blocked.length) {
-    /* ★ 47차 ③. 예전에는 열두 달을 다 늘어놓아 화면 두 줄을 먹었다.
-       게다가 「8월」이 두 번 나와 2025년인지 2026년인지 알 수 없었다.
-       ★ 넷 이하면 달을 적고, 다섯 이상이면 센다 — 어느 달인지는 표의 「—」가 이미 말한다.
-       ★ 해가 둘 이상 걸치면 해를 붙인다. 한 해 안이면 「5월·8월」 그대로 */
-    var b = el('div');
-    b.appendChild(el('span', 'unk', '—'));
-    var 여러해 = false,
-      y0 = blocked[0].m.slice(0, 4);
-    blocked.forEach(function (c) {
-      if (c.m.slice(0, 4) !== y0) 여러해 = true;
-    });
-    var 꼬리;
-    if (blocked.length >= 5) {
-      꼬리 = won(cols.length) + '달 중 ' + won(blocked.length) + '달';
-    } else {
-      꼬리 = blocked
-        .map(function (c) {
-          return 여러해
-            ? c.m.slice(0, 4) + '년 ' + +c.m.slice(5, 7) + '월'
-            : +c.m.slice(5, 7) + '월';
-        })
-        .join(' · ');
-    }
-    b.appendChild(
-      document.createTextNode(' 는 아직 다 정하지 않아 계산하지 못한 달입니다 (' + 꼬리 + ')')
-    );
-    foot.appendChild(b);
-    /* 다 못 보는 상태면 무엇을 하면 되는지까지 적는다 */
-    /* ★ 48차 ③. 「전부 미계산」일 때만 나오게 해두어 12/13 에서 안 나왔다.
-       13달 중 12달이면 사장님이 보시는 표는 사실상 빈 표다. 절반을 넘으면 말한다 */
-    if (blocked.length * 2 > cols.length) {
-      foot.appendChild(el('div', null, '거래처를 조금만 정하시면 이 표가 채워집니다.'));
-    }
-  }
-  /* 왜 그 달이 평균에서 빠졌는지 안 쓰면 사장님이 숫자를 못 믿으신다 */
-  /* 평균의 기간은 밖에 남긴다 — 원칙 3 */
-  if (done.length) {
-    var a0 = done[0].m,
-      a1 = done[done.length - 1].m;
-    var y0 = a0.slice(0, 4),
-      y1 = a1.slice(0, 4);
-    var span =
-      y0 +
-      '년 ' +
-      +a0.slice(5, 7) +
-      '월~' +
-      (y0 === y1 ? '' : y1 + '년 ') +
-      +a1.slice(5, 7) +
-      '월 ' +
-      won(done.length) +
-      '달치';
-    var av = el('div');
-    av.appendChild(document.createTextNode('평균은 ' + span + '입니다.'));
-    if (running.length) {
-      av.appendChild(
-        document.createTextNode(
-          ' 진행 중인 ' +
-            running
-              .map(function (c) {
-                return +c.m.slice(5, 7) + '월';
-              })
-              .join('·') +
-            '은 뺐습니다.'
-        )
-      );
-    }
-    foot.appendChild(av);
-  } else {
-    foot.appendChild(el('div', null, '평균을 낼 만한 달이 모자랍니다.'));
-  }
-  /* ★ 70차 ②. 예전에는 이 각주들이 「자세히 보기 ▾」 안에 있었다.
-     그 단추를 없앴는데 그대로 두면 각주가 영영 안 나온다 — 특히 DISCLAIMER_2 는
-     이 앱이 무엇을 안 세는지 밝히는 줄이라 조용히 사라지면 안 된다.
-     그래서 늘 보이게 둔다. 표 밖의 글이라 표 폭에는 닿지 않는다.
-     ★ 요청서가 각주를 다루지 않아 이쪽은 코딩방 판단이다 — 다시 접으라면 접는다 */
-  if (true) {
-    if (opened.length) {
-      foot.appendChild(
-        el(
-          'div',
-          null,
-          opened
-            .map(function (c) {
-              return +c.m.slice(5, 7) + '월';
-            })
-            .join(' · ') + '은 매출이 거의 없어 평균에서 뺐습니다.'
-        )
-      );
-    }
-    if (done.length) {
-      foot.appendChild(
-        el('div', null, '다음 달 파일을 올리시면 이 기간이 한 칸 밀려 평균도 달라집니다.')
-      );
-    }
-    foot.appendChild(
-      el(
-        'div',
-        null,
-        /* 36차. 화면에 없는 줄을 계산식이 가리키면 사장님이 검산을 못 하신다 */
-        anyOtherIn
-          ? '매출 + 그 밖의 입금 − 사업에 쓴 돈 = 순이익입니다.'
-          : '매출 − 사업에 쓴 돈 = 순이익입니다.'
-      )
-    );
-    foot.appendChild(
-      el('div', null, '사업 외 용도는 매출에도 지출에도 넣지 않습니다. 계좌 잔액에는 반영됩니다.')
-    );
-    DISCLAIMER_2.forEach(function (t) {
-      foot.appendChild(el('div', null, t));
-    });
-  }
-  host.appendChild(foot);
 }
 
 /* 화면을 열면 예시부터 세워둔다. 파일을 올리면 같은 자리에 그 숫자가 들어간다 */
