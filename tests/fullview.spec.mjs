@@ -6,12 +6,12 @@ const viewports = [390, 1024];
 
 async function readPng(page) {
   return page.evaluate(async () => {
-    const image = document.querySelector('.imgprevimg');
+    const image = /** @type {HTMLImageElement} */ (document.querySelector('.imgprevimg'));
     await image.decode();
     const canvas = document.createElement('canvas');
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
-    const context = canvas.getContext('2d');
+    const context = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
     context.drawImage(image, 0, 0);
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
     const colors = { green: 0, red: 0, panel: 0, line: 0 };
