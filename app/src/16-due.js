@@ -424,7 +424,7 @@ function dueSig(t, i, dd) {
     ks;
   for (x = 0; x < dd.한계; x++) {
     var m = duePayeeDaily(dd, x);
-    for (p in m) if (m.hasOwnProperty(p)) 합[p] = (합[p] || 0) + m[p];
+    for (p in m) if (Object.prototype.hasOwnProperty.call(m, p)) 합[p] = (합[p] || 0) + m[p];
   }
   ks = Object.keys(합).sort();
   for (x = 0; x < ks.length; x++) s += ks[x] + '=' + Math.round(합[ks[x]]) + ';';
@@ -512,7 +512,7 @@ function planLoad() {
   if (UP.demo) return UP.__planDemo || (UP.__planDemo = planEmpty());
   var raw = lsGet(planKey());
   if (!raw) return planEmpty();
-  var o = null;
+  var o;
   try {
     o = JSON.parse(raw);
   } catch (e) {
@@ -702,7 +702,7 @@ function duePlanBase(t, i) {
     var m = duePayeeDaily(dd, x),
       날 = t0 + 1 + x;
     for (p in m)
-      if (m.hasOwnProperty(p)) {
+      if (Object.prototype.hasOwnProperty.call(m, p)) {
         합[p] = (합[p] || 0) + m[p];
         if (첫[p] == null) 첫[p] = 날;
         끝[p] = 날;
@@ -2699,8 +2699,7 @@ function drawDueGraph(host, c, cv, pts) {
   /* 세로 범위 — 지난 것과 앞날을 다 담는다. 0원은 늘 넣는다 (마이너스가 보이게) */
   var lo = 0,
     hi = 0,
-    i,
-    v;
+    i;
   지난.forEach(function (p) {
     if (p.값 === null) return;
     if (p.값 < lo) lo = p.값;
@@ -3304,7 +3303,6 @@ function drawDueCard(host, months) {
   } catch (e) {
     cv = null;
   }
-  var day = dueDay();
   var mm = +c.목표.slice(5, 7),
     dd = +c.목표.slice(8, 10);
   var 까지 = mm + '월 ' + dd + '일';

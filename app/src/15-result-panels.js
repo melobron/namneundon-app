@@ -52,7 +52,7 @@ function viewableMonth(months, notThis) {
    기본값을 여기서 잡아 대표님은 확인만 하시면 되게 한다.
    ★ domOutflow 는 이미 있는 함수다. 새로 세지 않는다 */
 function bigOutDay(months, m) {
-  var dom = null;
+  var dom;
   try {
     dom = domOutflow(months, m, FC_MIN_MONTHS);
   } catch (e) {
@@ -522,7 +522,6 @@ function drawNames() {
         LOAD_ASK = null;
         UP.store = r.name;
         var saved = loadPicks();
-        var n = 0;
         if (saved) {
           if (saved.accounts && saved.accounts.length) UP.accounts = saved.accounts.slice();
           if (saved.baseCats && saved.baseCats.length) UP.baseCats = saved.baseCats.slice();
@@ -534,7 +533,7 @@ function drawNames() {
               lst = g.rawList || [];
             for (var i = 0; i < lst.length && !c; i++) c = saved.picks[lst[i]];
             if (!c) c = saved.picks[g.name];
-            if (applySaved(g, c)) n++;
+            applySaved(g, c);
           });
         }
         UP.manual = manualLoad();
@@ -1350,7 +1349,7 @@ function importApply(o, 자리) {
   UP.queue = buildQueue(false);
   UP.pos = 0;
   UP.hist = [];
-  var 됨 = false;
+  var 됨;
   try {
     됨 = savePicks();
   } catch (e) {

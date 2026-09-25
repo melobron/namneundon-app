@@ -280,7 +280,7 @@ function pdfBuild(lines, hi, cols) {
    ★ 날짜 칸이 없는 형식(부호 한 열짜리 등)은 이 방법을 안 쓴다 — null 을 돌려주고
      지금까지의 y 묶기가 그대로 후보로 남는다 */
 var PDF_DATE_ANCHOR =
-  /^(20\d{2})[.\-\/]?(0[1-9]|1[0-2])[.\-\/]?(0[1-9]|[12]\d|3[01])(\s*\d{1,2}:\d{2}(:\d{2})?)?/;
+  /^(20\d{2})[.\-/]?(0[1-9]|1[0-2])[.\-/]?(0[1-9]|[12]\d|3[01])(\s*\d{1,2}:\d{2}(:\d{2})?)?/;
 var PDF_ROW_TOL = 12; /* 닻 아래 이만큼(pt)까지는 같은 행의 이어진 줄로 본다 */
 function pdfDateColOf(cols) {
   var want = COLSPEC.at.map(nz);
@@ -387,7 +387,7 @@ function pdfRowsByDate(lines, hi, cols) {
     for (j = 0; j < its.length; j++) {
       var it = its[j];
       var m = PDF_DATE_ANCHOR.exec(it.s);
-      var 나머지 = null;
+      var 나머지;
       if (m) {
         현재 = 새행();
         현재y = it.y;

@@ -3,8 +3,8 @@
   "rules": {
     "doctype-style": "off",
     "void-style": "off",
-    "no-trailing-whitespace": "warn",
-    "no-inline-style": "warn",
-    "element-required-attributes": "warn"
+    "no-trailing-whitespace": "error",
+    "no-inline-style": "error",
+    "element-required-attributes": "error"
   }
 }

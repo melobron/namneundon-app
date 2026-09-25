@@ -154,13 +154,13 @@ function orderAndVerify(raw) {
      그래서 공백을 걷어내고 본다. 걷어내면 금액의 쉼표도 붙지만 날짜만 뽑으므로 상관없다 */
 var ASK_LABEL = /(조회기간|거래기간|조회대상기간|조회하신기간)/;
 function askFlat(s) {
-  return String(s == null ? '' : s).replace(/[\s 　]+/g, '');
+  return String(s == null ? '' : s).replace(/[\s\u00a0\u3000]+/g, '');
 }
 /* 날짜 세 모양을 한 자로 읽는다. 달·날이 말이 안 되면 버린다 */
 function askDates(t, 몇) {
   var out = [],
     m;
-  var re = /(20\d{2})(?:[.\-\/](\d{1,2})[.\-\/](\d{1,2})|년(\d{1,2})월(\d{1,2})일)/g;
+  var re = /(20\d{2})(?:[.\-/](\d{1,2})[.\-/](\d{1,2})|년(\d{1,2})월(\d{1,2})일)/g;
   while ((m = re.exec(t))) {
     var mo = +(m[2] || m[4]),
       d = +(m[3] || m[5]);

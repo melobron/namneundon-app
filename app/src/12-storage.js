@@ -194,7 +194,7 @@ var SAVE_STATE = 'ok';
    이제는 안 지우고, 대신 「이전 저장본은 유지됩니다」라고 화면에 적는다.
    조용히 살아나는 것이 문제였으므로, 조용하지 않게 하는 쪽으로 푼다 */
 function saveFail() {
-  var 예전있 = false;
+  var 예전있;
   try {
     예전있 = !!lsGet(dataKey());
   } catch (e) {
@@ -226,7 +226,7 @@ function saveData() {
 function loadData(name) {
   var raw = lsGet(dataKey(name));
   if (!raw) return null;
-  var o = null;
+  var o;
   try {
     o = JSON.parse(raw);
   } catch (e) {
@@ -1151,7 +1151,7 @@ function storeForBanks(banks) {
   }
   var hits = [];
   keys.forEach(function (key) {
-    var o = null;
+    var o;
     try {
       o = JSON.parse(localStorage.getItem(key));
     } catch (e) {

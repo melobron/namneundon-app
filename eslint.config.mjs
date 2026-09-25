@@ -40,20 +40,10 @@ export default [
     },
     rules: {
       // 최상위 이름은 다른 파일이 쓴다. 파일 하나만 보고 「안 쓴다」고 하면 오판이다
-      'no-unused-vars': ['warn', { vars: 'local', args: 'none', caughtErrors: 'none' }],
+      'no-unused-vars': ['error', { vars: 'local', args: 'none', caughtErrors: 'none' }],
       // 공용 전역으로 알려준 이름을 그 파일에서 선언하는 것은 정상이다
-      'no-redeclare': ['warn', { builtinGlobals: false }],
-      'no-empty': ['warn', { allowEmptyCatch: true }],
-      // ★ 아래는 도입(2026-09-25) 때 있던 것들이라 경고로 둔다 — 대부분 일부러 꺼 둔 옛 기능
-      //   (예: 18-charts-year 의 `return;` 뒤 각주, `if (false && …)`). 리팩토링 때 정리한다.
-      //   경고 수는 package.json 의 lint:js 에서 --max-warnings 로 묶어 둔다 — 늘면 CI 실패
-      'no-unreachable': 'warn',
-      'no-constant-condition': 'warn',
-      'no-constant-binary-expression': 'warn',
-      'no-useless-assignment': 'warn',
-      'no-useless-escape': 'warn',
-      'no-prototype-builtins': 'warn',
-      'no-irregular-whitespace': 'warn'
+      'no-redeclare': ['error', { builtinGlobals: false }],
+      'no-empty': ['error', { allowEmptyCatch: true }]
     }
   },
   {

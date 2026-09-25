@@ -6402,3 +6402,12 @@ body.failed > *:not(.err) {
   text-align: right;
   font-size: calc(15 * var(--fu));
 }
+
+/* 빌드 딱지 — 원래 index.html 안의 style="…" 였다 (2026-09-25 옮김) */
+#buildstamp {
+  margin: 14px 30px 18px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--gray);
+  text-align: right;
+}

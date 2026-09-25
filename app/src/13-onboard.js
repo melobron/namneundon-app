@@ -34,7 +34,7 @@ function cutTail(name) {
     s = inside.length <= 2 ? s.slice(0, i) : s + '…)';
   }
   /* 끝에 남은 구분자만. 중간 것은 절대 안 건드린다 */
-  return s.replace(/[\s_,\-]+$/, '');
+  return s.replace(/[\s_,-]+$/, '');
 }
 function isCut(name) {
   var t = cutTail(name);
@@ -907,7 +907,7 @@ var WORD_STOP = [
 ];
 function nameWords(name) {
   var s = String(name == null ? '' : name);
-  return s.split(/[\s()（）\[\]{}·,.\-_\/|+&#*]+/).filter(function (w) {
+  return s.split(/[\s()（）[\]{}·,.\-_/|+&#*]+/).filter(function (w) {
     return w.length >= 2 && WORD_STOP.indexOf(w) === -1;
   });
 }
@@ -988,7 +988,7 @@ function hintFor(name, net) {
 function coreName(s) {
   return s
     .replace(/\(주\)|\(유\)|㈜|주식회사|유한회사/g, '')
-    .replace(/[\s·.,\-_/()\[\]]/g, '')
+    .replace(/[\s·.,\-_/()[\]]/g, '')
     .toLowerCase();
 }
 function likeName(a, b) {
@@ -1435,7 +1435,7 @@ function drawRawPeek(card, raws, redraw, anchor) {
   }
   /* 은행이 이름을 자른 것인지 — 원문 그대로가 잘려 있으면 그렇게 적는다 */
   var 잘림 = raws.some(function (x) {
-    return /[…\.]{1,3}$/.test(String(x).trim());
+    return /[….]{1,3}$/.test(String(x).trim());
   });
   if (잘림) {
     box.appendChild(

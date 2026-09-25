@@ -278,13 +278,6 @@ function drawResultInner(months) {
     var p = Math.round((n / d.sales) * 100);
     return { txt: (p < 0 ? '−' : '') + Math.abs(p) + '%', minus: p < 0 };
   }
-  function line(label, value, cls, pctTxt) {
-    var row = el('div', 'orow');
-    row.appendChild(el('div', 'lab', label));
-    row.appendChild(el('div', 'v num' + (cls ? ' ' + cls : ''), value));
-    row.appendChild(el('div', 'p num', pctTxt || ''));
-    return row;
-  }
   /* ★ 54차 ⑥ · 매출 대비 비율.
    ★ 42차·43차 규칙은 그대로다 — 세 자리 %는 뜻이 없다.
    ★ 67차 ②. 매출보다 큰 항목을 예전에는 「N배」로 적었는데, 배수도 화면에서 뺀다.
@@ -345,26 +338,6 @@ function drawResultInner(months) {
       });
   }
   /* 눌러서 그 안의 거래처를 펼쳐 보는 줄 */
-  function tapLine(cat, label, value, cls, pctTxt, now, before, upIsGood, sub) {
-    var row = el('div', 'orow tapx');
-    var lab = el('div', 'lab', label);
-    lab.appendChild(el('span', 'chev', UP.open[cat] ? '▴' : '▾'));
-    if (sub) lab.appendChild(el('span', 'gcount', sub));
-    row.appendChild(lab);
-    row.appendChild(el('div', 'v num' + (cls ? ' ' + cls : ''), value));
-    row.appendChild(el('div', 'p num', pctTxt || ''));
-    row.addEventListener('click', function () {
-      if (UP.open[cat]) delete UP.open[cat];
-      else UP.open[cat] = true;
-      drawResult(months);
-    });
-    host.appendChild(row);
-    if (before !== null && before !== undefined) {
-      var cc = cmpLine(now, before, pLab, upIsGood);
-      if (cc) host.appendChild(cmpRow(cc, cat));
-    }
-    if (UP.open[cat]) drawDetail(host, d, cat);
-  }
 
   var mm = +UP.month.slice(5, 7);
   var running = isRunning(UP.month, months);
@@ -404,14 +377,6 @@ function drawResultInner(months) {
     return s;
   }
   /* 그 항목에 거래처 몇 곳, 거래 몇 건인지 */
-  function groupLine(dd, cat) {
-    var list = catPayees(dd, cat);
-    var n = 0;
-    list.forEach(function (e) {
-      n += e.n;
-    });
-    return list.length + '곳 · ' + n + '건';
-  }
 
   /* ── 손익 카드 ── 계산 순서 그대로 위에서 아래로 내려온다.
      들어온 돈 → (그중 매출 · 그 밖의 입금) → 나간 돈 → 가로줄 → 계좌 순이익.
@@ -462,7 +427,6 @@ function drawResultInner(months) {
   /* 이 달의 나간 돈 속 항목들 — 아래 두 덩어리가 같이 쓴다 */
   /* 35차 E. 안 정한 돈은 이제 지출에 안 섞인다. 그 자체를 한 칸으로 보여준다 */
   var unsetAmt = d.unknown || 0;
-  var unsetShare = unknownCostShare(d);
   /* ★ 43차. 항목 순서를 금액 큰 순에서 고정 순서로 바꾼다.
      매달 자리가 바뀌면 지난달과 견줄 수가 없다 — 「식자재가 어디 갔지」가 된다.
      UP.accounts 가 이미 사장님이 보시는 항목 차례다. 그 차례를 그대로 쓴다 */
@@ -479,59 +443,14 @@ function drawResultInner(months) {
       if (ia !== ib) return ia - ib;
       return d.cats[b] - d.cats[a];
     });
-  /* 분모는 매출 하나로 통일한다. 항목을 다 더하면 「나간 돈」의 매출 대비 %와 같아야
-     하므로, 반올림 오차는 가장 큰 항목이 떠안는다 */
-  var costPct = d.sales > 0 ? Math.round((d.outTotal / d.sales) * 100) : 0;
-  var pctOff = ratioMuted(d) || d.sales <= 0;
   var allKeys = keys.slice();
   if (d.cats[UNSET]) allKeys.push(UNSET);
-  var catPct = (function () {
-    var out = {},
-      sum = 0;
-    allKeys.forEach(function (k) {
-      out[k] = d.sales > 0 ? Math.round((d.cats[k] / d.sales) * 100) : 0;
-      sum += out[k];
-    });
-    var gap = costPct - sum;
-    if (gap !== 0 && allKeys.length) {
-      var big = allKeys.slice().sort(function (a, b) {
-        return d.cats[b] - d.cats[a];
-      })[0];
-      out[big] += gap;
-    }
-    return out;
-  })();
-  function catPctOf(k) {
-    return pctOff ? '' : catPct[k] + '%';
-  }
 
   /* 「나간 돈 75% 증가」의 차이가 전부 사장님 인출일 때가 있다.
      비교 줄의 분모는 안 건드리고, 제외분을 뺀 %를 한 줄 덧붙인다.
      ① 비교 줄이 없는 달에는 안 그린다 — 같은 숫자를 두 번 말하게 된다
      ② 두 %가 3%p 미만이면 소음이다
      ③ 방향이 뒤집히면 문턱과 상관없이 그린다 */
-  function onlyEarned(dd, prev, side) {
-    if (!prev) return '';
-    var nowAll = side === 'in' ? dd.inTotal : dd.outTotal;
-    var preAll = side === 'in' ? prev.inTotal : prev.outTotal;
-    var nowNet = side === 'in' ? dd.sales + dd.otherIn : dd.cost;
-    var preNet = side === 'in' ? prev.sales + prev.otherIn : prev.cost;
-    if (!preAll || !preNet) return '';
-    var a = nowAll / preAll - 1,
-      b = nowNet / preNet - 1;
-    var flip = a >= 0 !== b >= 0;
-    if (!flip && Math.abs(a - b) < 0.03) return '';
-    /* ★ 42차 3번. 여기도 세 자리 %가 나왔다 */
-    var mv2 = moveTxt(preNet, nowNet);
-    if (!mv2) return '';
-    var tail =
-      mv2.txt === null
-        ? '거의 다 줄었습니다'
-        : mv2.배
-          ? mv2.txt + '로 늘었습니다'
-          : mv2.txt + ' ' + (b >= 0 ? '증가' : '감소');
-    return (side === 'in' ? '매출과 그 밖의 입금만 보면 ' : '사업에 쓴 돈만 보면 ') + tail;
-  }
 
   /* ══ 43차 · 위에서 아래로 한 번에 읽히게 ══════════════════
      ★ 왜 다시 짰는가. 만든 사람이 1년치 표를 보고 자기 숫자를 못 읽었다 —
