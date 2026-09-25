@@ -8,12 +8,13 @@
      이건 금액이 아니라 설정값이다. 통을 나누면 그 검사도 옛 저장분도 안 건드린다
      (fc.a2hs.later · fc.breaks 와 같은 방식이다) */
 var FONT_KEY = 'fc.font';
-var FONT_MIN = 1, FONT_MAX = 3;
+var FONT_MIN = 1,
+  FONT_MAX = 3;
 var 글씨단 = FONT_MIN;
 
 function 글씨단읽기() {
   var v = +lsGet(FONT_KEY);
-  return (v >= FONT_MIN && v <= FONT_MAX) ? v : FONT_MIN;
+  return v >= FONT_MIN && v <= FONT_MAX ? v : FONT_MIN;
 }
 /* 화면에 단을 입히고, 더 갈 데가 없는 단추를 흐리게 한다 */
 function 글씨단그리기() {
@@ -23,8 +24,8 @@ function 글씨단그리기() {
   if (글씨단 > FONT_MIN) b.classList.add('fs' + 글씨단);
   var 작게 = document.getElementById('fsdown');
   var 크게 = document.getElementById('fsup');
-  if (작게) 작게.disabled = (글씨단 <= FONT_MIN);
-  if (크게) 크게.disabled = (글씨단 >= FONT_MAX);
+  if (작게) 작게.disabled = 글씨단 <= FONT_MIN;
+  if (크게) 크게.disabled = 글씨단 >= FONT_MAX;
 }
 function 글씨단옮기기(걸음) {
   var n = Math.min(FONT_MAX, Math.max(FONT_MIN, 글씨단 + 걸음));
@@ -38,8 +39,14 @@ function 글씨단옮기기(걸음) {
   글씨단그리기();
   var 작게 = document.getElementById('fsdown');
   var 크게 = document.getElementById('fsup');
-  if (작게) 작게.addEventListener('click', function () { 글씨단옮기기(-1); });
-  if (크게) 크게.addEventListener('click', function () { 글씨단옮기기(1); });
+  if (작게)
+    작게.addEventListener('click', function () {
+      글씨단옮기기(-1);
+    });
+  if (크게)
+    크게.addEventListener('click', function () {
+      글씨단옮기기(1);
+    });
 })();
 
 /* ── 63-9 · 저장되고 있다는 안심 ────────────────────────────────
@@ -47,10 +54,13 @@ function 글씨단옮기기(걸음) {
    그 문장은 안심 고지와 똑같아야 한다 (49차 · 63-14) */
 (function () {
   var chip = document.getElementById('savedchip');
-  var why  = document.getElementById('savedwhy');
+  var why = document.getElementById('savedwhy');
   if (!chip || !why) return;
   chip.addEventListener('click', function () {
-    if (!why.hidden) { why.hidden = true; return; }
+    if (!why.hidden) {
+      why.hidden = true;
+      return;
+    }
     why.innerHTML = '';
     /* ★ 91차 ①. 이제 거래내역도 이 기기에 남는다. 안 남는다고 말하면 그게 거짓말이다 —
        안심 고지(upnote)와 같은 말이어야 한다 (49차 · 63-14) */
@@ -59,16 +69,27 @@ function 글씨단옮기기(걸음) {
        서버로 가는 것은 여전히 없다 (앞 줄은 한 글자도 안 바뀐다) */
     /* ★ 116차 ⑪. 브라우저에 남는 것이 하나 늘었다 — 적어두신 예정 지출이다.
        서버로 가는 것은 여전히 없다 (앞 줄은 한 글자도 안 바뀐다) */
-    why.appendChild(el('div', null, BIZ.주인 +
-      '이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 이 브라우저에 저장됩니다.'));
+    why.appendChild(
+      el(
+        'div',
+        null,
+        BIZ.주인 +
+          '이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 이 브라우저에 저장됩니다.'
+      )
+    );
     if (!LS_OK) why.appendChild(el('div', 'lswarn', LS_MSG));
     /* ★ 119차. 지금 보고 있는 매장의 분류를 여기서도 파일로 받을 수 있게 한다.
        항목 관리의 [내보내기]와 같은 exportPicks 를 쓴다 — 파일 모양·저장 방식은 그대로다.
        예시 화면과 결과가 없는 때에는 안 낸다. 「저장됨」 글자와 저장 상태는 건드리지 않는다 */
     if (UP && !UP.demo && UP.payees && UP.payees.length) {
-      why.appendChild(el('div', null,
-        '분류 설정을 파일로 내려받습니다. 거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'));
-      var dl = el('button', 'b dlpick', '분류 파일 다운로드');   /* ★ 119차. 전용 색 (.b.dlpick) */
+      why.appendChild(
+        el(
+          'div',
+          null,
+          '분류 설정을 파일로 내려받습니다. 거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'
+        )
+      );
+      var dl = el('button', 'b dlpick', '분류 파일 다운로드'); /* ★ 119차. 전용 색 (.b.dlpick) */
       dl.type = 'button';
       dl.style.marginTop = '8px';
       dl.addEventListener('click', function (e) {
@@ -78,8 +99,13 @@ function 글씨단옮기기(걸음) {
       });
       why.appendChild(dl);
       /* ★ 119차. 휴대폰으로 옮기는 순서. 카톡에서 파일을 누르면 앱에 저절로 들어간다고 하지 않는다 */
-      why.appendChild(el('div', null,
-        '카톡 ‘나에게 보내기’ 등으로 파일을 옮긴 뒤, 휴대폰에 저장하고 남는돈 첫 화면의 ‘분류 파일 불러오기’에서 선택해주세요.'));
+      why.appendChild(
+        el(
+          'div',
+          null,
+          '카톡 ‘나에게 보내기’ 등으로 파일을 옮긴 뒤, 휴대폰에 저장하고 남는돈 첫 화면의 ‘분류 파일 불러오기’에서 선택해주세요.'
+        )
+      );
     }
     why.hidden = false;
   });
@@ -101,7 +127,10 @@ function closeUpPanel() {
   /* ★ 119차. 보류 원인 경로 중에 머리의 [내 결과로 돌아가기]를 누르셨으면
      원래 물음 차례로 되돌리고 결과(예상 잔액 카드)로 간다 — 원인 차례가 남지 않게 한다.
      holdAskEnd 가 부르는 showResult 가 다시 여기로 오지만 그때는 holdAsk 가 비어 있다 */
-  if (UP && UP.holdAsk) { holdAskEnd(true); return; }
+  if (UP && UP.holdAsk) {
+    holdAskEnd(true);
+    return;
+  }
   document.getElementById('up').classList.remove('on');
   document.body.style.overflow = '';
   /* ★ 111차 ③. 나가는 곳을 이름과 맞춘다.
@@ -111,7 +140,7 @@ function closeUpPanel() {
   if (내결과있나()) {
     var w0 = document.getElementById('welcome');
     if (w0) w0.hidden = true;
-    showDemoBehind(true);           /* 내 결과 화면을 되살린다 */
+    showDemoBehind(true); /* 내 결과 화면을 되살린다 */
     var r0 = document.getElementById('up-result');
     if (r0) r0.hidden = false;
     syncUpOpen();
@@ -119,7 +148,11 @@ function closeUpPanel() {
   }
   /* 시작 화면을 보고 계신 중이면 그대로 둔다 — 거기서도 예시는 안 보여야 한다 */
   var w = document.getElementById('welcome');
-  if (!w || w.hidden) { try { drawStart(); } catch (e) { } }
+  if (!w || w.hidden) {
+    try {
+      drawStart();
+    } catch (e) {}
+  }
   syncUpOpen();
 }
 /* ★ 119차. 예시 전환 보정 — 올려보기 창만 닫고 결과를 드러낸다. 시작 화면은 비우고 감춘다.
@@ -128,7 +161,10 @@ function closePanelToResult() {
   document.getElementById('up').classList.remove('on');
   document.body.style.overflow = '';
   var w0 = document.getElementById('welcome');
-  if (w0) { w0.hidden = true; w0.innerHTML = ''; }
+  if (w0) {
+    w0.hidden = true;
+    w0.innerHTML = '';
+  }
   showDemoBehind(true);
   syncUpOpen();
 }
@@ -168,7 +204,9 @@ window.addEventListener('beforeinstallprompt', function (e) {
   /* ★ 64-4차 2. 이 신호는 화면을 다 그린 뒤에 늦게 오기도 한다.
      그때 상자를 다시 안 그리면 단추가 영영 안 나타나고,
      안드로이드 크롬의 기본 길인 「탭 한 번」이 막힌다 */
-  try { refreshInstallTip(); } catch (e2) { }
+  try {
+    refreshInstallTip();
+  } catch (e2) {}
 });
 /* 시작 화면에 이미 그려둔 홈 화면 상자를 그 자리에서 갈아 끼운다 */
 function refreshInstallTip() {
@@ -182,7 +220,7 @@ function refreshInstallTip() {
    sw.js 는 아무것도 캐시하지 않는다 — respondWith 를 안 부르니 옛 버전이 남을 일이 없다 */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js').catch(function () { });
+    navigator.serviceWorker.register('sw.js').catch(function () {});
   });
 }
 
@@ -197,14 +235,20 @@ function inAppKind() {
 }
 
 function isStandalone() {
-  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-         window.navigator.standalone === true;
+  return (
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    window.navigator.standalone === true
+  );
 }
 function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
 }
-function isAndroid() { return /Android/.test(navigator.userAgent); }
+function isAndroid() {
+  return /Android/.test(navigator.userAgent);
+}
 
 /* 이 브라우저에 이미 저장된 분류 */
 function savedSummary() {
@@ -217,15 +261,16 @@ function savedSummary() {
         var o = JSON.parse(localStorage.getItem(k));
         if (o && o.picks) {
           /* ★ 46차 ⑥. 사장님이 세신 단위는 「곳」이다. 옛 저장분에는 없으니 그때만 키를 센다 */
-          var n = (typeof o.n곳 === 'number' && o.n곳 >= 0)
-                    ? o.n곳 : Object.keys(o.picks).length;
+          var n = typeof o.n곳 === 'number' && o.n곳 >= 0 ? o.n곳 : Object.keys(o.picks).length;
           if (!n) continue;
           out.keys.push({ key: k, name: k.slice(PICK_KEY.length), n: n });
           out.total += n;
         }
-      } catch (e) { }
+      } catch (e) {}
     }
-  } catch (e) { LS_OK = false; }
+  } catch (e) {
+    LS_OK = false;
+  }
   return out;
 }
 function exportRaw(key, name) {
@@ -239,7 +284,9 @@ function exportRaw(key, name) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /* 공유 버튼 그림 — 글로만 쓰면 못 찾는다 */
@@ -248,9 +295,10 @@ function shareIcon() {
   s.setAttribute('viewBox', '0 0 24 24');
   s.setAttribute('class', 'shicon');
   s.setAttribute('aria-hidden', 'true');
-  s.innerHTML = '<path d="M12 3l4 4h-3v9h-2V7H8l4-4z" fill="currentColor"/>' +
-                '<path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" fill="none" ' +
-                'stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+  s.innerHTML =
+    '<path d="M12 3l4 4h-3v9h-2V7H8l4-4z" fill="currentColor"/>' +
+    '<path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
   return s;
 }
 
@@ -259,12 +307,12 @@ function shareIcon() {
 /* 지금 어떤 환경인지 앱이 안다. 해당하는 안내 하나만 보여준다 —
    다 보여주면 아무도 안 읽는다. 판별이 틀려도 앱은 그대로 돌아간다 */
 function installCase() {
-  if (isStandalone()) return null;             /* 이미 아이콘으로 열었다 */
+  if (isStandalone()) return null; /* 이미 아이콘으로 열었다 */
   var kind = inAppKind();
   if (kind) return isIOS() ? 'inapp-ios' : 'inapp-and';
   if (isIOS()) return 'safari-ios';
   if (isAndroid()) return INSTALL_EVT ? 'chrome-evt' : 'chrome-menu';
-  return null;                                 /* 데스크톱에는 안 띄운다 */
+  return null; /* 데스크톱에는 안 띄운다 */
 }
 
 /* 「여기를 보세요」를 글로만 쓰면 못 찾는다. 화살표로 자리를 알려준다 */
@@ -279,7 +327,9 @@ function laterBtn(key) {
   var b = el('button', 'b', '나중에');
   b.type = 'button';
   b.addEventListener('click', function () {
-    lsSet(key, '1'); drawA2HS(); drawTopInApp();
+    lsSet(key, '1');
+    drawA2HS();
+    drawTopInApp();
   });
   return b;
 }
@@ -290,15 +340,19 @@ function drawInApp(host, ios) {
   var box = el('div', 'a2in');
   box.appendChild(el('div', 'a2t', '카톡에서 열면 정하신 거래처가 다음에 안 남습니다'));
   var br = ios ? '사파리' : '크롬';
-  box.appendChild(el('div', 'a2b',
-    br + ro(br) + ' 여시면 다음부터 다시 안 정하셔도 됩니다.'));
-  box.appendChild(pointRow(ios ? 'br' : 'tr',
-    ios ? '오른쪽 아래 [⋯] → 「Safari로 열기」'
-        : '오른쪽 위 메뉴 → 「다른 브라우저로 열기」 → Chrome'));
-  box.appendChild(el('div', 'a2b2',
-    '안 보이면 — 카톡 대화방에서 이 링크를 꾹 눌러 「링크 복사」 하시고,'));
-  box.appendChild(el('div', 'a2b2',
-    br + ' 앱을 열어 주소창에 붙여넣으시면 됩니다.'));
+  box.appendChild(el('div', 'a2b', br + ro(br) + ' 여시면 다음부터 다시 안 정하셔도 됩니다.'));
+  box.appendChild(
+    pointRow(
+      ios ? 'br' : 'tr',
+      ios
+        ? '오른쪽 아래 [⋯] → 「Safari로 열기」'
+        : '오른쪽 위 메뉴 → 「다른 브라우저로 열기」 → Chrome'
+    )
+  );
+  box.appendChild(
+    el('div', 'a2b2', '안 보이면 — 카톡 대화방에서 이 링크를 꾹 눌러 「링크 복사」 하시고,')
+  );
+  box.appendChild(el('div', 'a2b2', br + ' 앱을 열어 주소창에 붙여넣으시면 됩니다.'));
 
   var acts = el('div', 'a2acts');
   /* 안드로이드는 intent:// 로 크롬을 바로 열 수 있다.
@@ -308,8 +362,12 @@ function drawInApp(host, ios) {
     go.type = 'button';
     go.addEventListener('click', function () {
       var u = location.href.replace(/^https?:\/\//, '');
-      location.href = 'intent://' + u + '#Intent;scheme=' +
-        location.protocol.replace(':', '') + ';package=com.android.chrome;end';
+      location.href =
+        'intent://' +
+        u +
+        '#Intent;scheme=' +
+        location.protocol.replace(':', '') +
+        ';package=com.android.chrome;end';
     });
     acts.appendChild(go);
   }
@@ -342,7 +400,7 @@ function drawA2HS() {
     drawInApp(host, c === 'inapp-ios');
     return;
   }
-  if (lsGet(A2HS_KEY)) return;                 /* 「나중에」를 누르셨으면 안 띄운다 */
+  if (lsGet(A2HS_KEY)) return; /* 「나중에」를 누르셨으면 안 띄운다 */
 
   var box = el('div', 'a2hs');
   box.appendChild(el('div', 'a2t', '폰 화면에 아이콘을 만들어두시면 편합니다'));
@@ -356,12 +414,20 @@ function drawA2HS() {
     l1.appendChild(document.createTextNode(' 버튼을 누르고 → 「홈 화면에 추가」를 고르세요.'));
     box.appendChild(l1);
     box.appendChild(pointRow('down', '화면 아래쪽 가운데에 있습니다'));
-    box.appendChild(el('div', 'a2warn',
-      '한 가지 더 — 아이콘으로 열지 않으면 정하신 거래처가 열흘쯤 뒤에 사라질 수 있습니다. ' +
-      '지금 만들어두시는 게 좋습니다.'));
+    box.appendChild(
+      el(
+        'div',
+        'a2warn',
+        '한 가지 더 — 아이콘으로 열지 않으면 정하신 거래처가 열흘쯤 뒤에 사라질 수 있습니다. ' +
+          '지금 만들어두시는 게 좋습니다.'
+      )
+    );
     var ok = el('button', 'b on', '알겠습니다');
     ok.type = 'button';
-    ok.addEventListener('click', function () { lsSet(A2HS_KEY, '1'); drawA2HS(); });
+    ok.addEventListener('click', function () {
+      lsSet(A2HS_KEY, '1');
+      drawA2HS();
+    });
     acts.appendChild(ok);
   } else if (c === 'chrome-evt') {
     var mk = el('button', 'b on', '아이콘 만들기');
@@ -379,8 +445,7 @@ function drawA2HS() {
   } else {
     /* 프롬프트가 안 오는 크롬도 있다. 그럴 땐 메뉴 자리를 알려준다 */
     box.appendChild(pointRow('tr', '오른쪽 위 [⋮] → 「설치 및 바로가기 만들기」'));
-    box.appendChild(el('div', 'a2b2',
-      '홈 화면이나 앱 목록에 「남는돈」 아이콘이 생깁니다.'));
+    box.appendChild(el('div', 'a2b2', '홈 화면이나 앱 목록에 「남는돈」 아이콘이 생깁니다.'));
   }
   acts.appendChild(laterBtn(A2HS_KEY));
   box.appendChild(acts);
@@ -390,21 +455,29 @@ function drawA2HS() {
   var sm = savedSummary();
   if (sm.total) {
     var warn = el('div', 'a2move');
-    warn.appendChild(el('div', null,
-      '정해두신 거래처 ' + won(sm.total) + '곳이 이 브라우저에 저장돼 있습니다.'));
+    warn.appendChild(
+      el('div', null, '정해두신 거래처 ' + won(sm.total) + '곳이 이 브라우저에 저장돼 있습니다.')
+    );
     warn.appendChild(el('div', null, '홈 화면 아이콘으로 열면 이 내용이 따라가지 않습니다.'));
     var row = el('div', 'a2acts');
     sm.keys.forEach(function (k) {
       var b = el('button', 'b', sm.keys.length > 1 ? k.name + ' 내보내기' : '내보내기');
       b.type = 'button';
-      b.addEventListener('click', function () { exportRaw(k.key, k.name); });
+      b.addEventListener('click', function () {
+        exportRaw(k.key, k.name);
+      });
       row.appendChild(b);
     });
     warn.appendChild(row);
     /* ★ 119차 B. 긴 설명은 항목 관리에 한 번만 둔다. 여기는 한 문장만 더한다 */
-    warn.appendChild(el('div', 'a2b',
-      '내보낸 파일을 저장해두시고, 아이콘으로 열어서 항목 관리 → 불러오기 하시면 됩니다. ' +
-      '다른 기기에서는 거래처 분류 설정을 불러올 수 있습니다.'));
+    warn.appendChild(
+      el(
+        'div',
+        'a2b',
+        '내보낸 파일을 저장해두시고, 아이콘으로 열어서 항목 관리 → 불러오기 하시면 됩니다. ' +
+          '다른 기기에서는 거래처 분류 설정을 불러올 수 있습니다.'
+      )
+    );
     host.appendChild(warn);
   }
 }
@@ -412,7 +485,10 @@ function drawA2HS() {
 /* 거래처를 다 찍고 나서야 아이콘이 필요해지는 분이 있다.
    「나중에」를 눌렀어도 결과 화면 아래에서 다시 부를 수 있게 한다 */
 function reopenInstall() {
-  try { localStorage.removeItem(A2HS_KEY); localStorage.removeItem(INAPP_KEY); } catch (e) { }
+  try {
+    localStorage.removeItem(A2HS_KEY);
+    localStorage.removeItem(INAPP_KEY);
+  } catch (e) {}
   drawTopInApp();
   openUpPanel();
   openPick();
@@ -421,9 +497,8 @@ function reopenInstall() {
   if (h) h.scrollIntoView({ block: 'start' });
 }
 
-
-fillBiz();        /* 정적 화면의 {{주인}}·{{곳}} 을 채운다. 그림 그리기 전에 */
-drawTopInApp();   /* 첫 화면을 열자마자 — 카톡 안이면 여기서 먼저 알려야 한다 */
+fillBiz(); /* 정적 화면의 {{주인}}·{{곳}} 을 채운다. 그림 그리기 전에 */
+drawTopInApp(); /* 첫 화면을 열자마자 — 카톡 안이면 여기서 먼저 알려야 한다 */
 /* 빌드 표시는
 </body> 바로 앞에 붙고, 이 줄은 그 앞에서 돈다.
    문서가 다 읽힌 뒤에 불러야 판 이름을 읽을 수 있다 */
@@ -450,10 +525,16 @@ document.getElementById('pickfile').addEventListener('change', function () {
     if (input.files && input.files.length) handleFiles(input.files);
   });
   ['dragenter', 'dragover'].forEach(function (t) {
-    drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener(t, function (e) {
+      e.preventDefault();
+      drop.classList.add('over');
+    });
   });
   ['dragleave', 'drop'].forEach(function (t) {
-    drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    drop.addEventListener(t, function (e) {
+      e.preventDefault();
+      drop.classList.remove('over');
+    });
   });
   drop.addEventListener('drop', function (e) {
     if (e.dataTransfer && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
@@ -468,22 +549,31 @@ document.getElementById('pickfile').addEventListener('change', function () {
    ★ 새로 만들지 않는다. 알맹이를 따로 빼서 두 곳에서 같이 부른다 */
 function unreadableBody(host, found) {
   host.appendChild(el('div', 'unrlab', '파일에서 찾은 열 이름'));
-  host.appendChild(el('div', 'unrcols',
-    found && found.length ? found.join(' · ') : '(열 이름을 찾지 못했습니다)'));
+  host.appendChild(
+    el('div', 'unrcols', found && found.length ? found.join(' · ') : '(열 이름을 찾지 못했습니다)')
+  );
   host.appendChild(el('div', 'unrlab', '저희가 찾는 열'));
-  host.appendChild(el('div', 'unrcols',
-    '거래일시(또는 거래일자) · 입금 · 출금 · 거래후잔액'));
+  host.appendChild(el('div', 'unrcols', '거래일시(또는 거래일자) · 입금 · 출금 · 거래후잔액'));
   var tip = el('div', 'errn');
   /* 그냥 안 된다고만 하면 우리가 못 만든 줄 안다.
      잔액이 있어야 검산을 하고, 검산이 안 되면 숫자를 안 보여주는 게 원칙이다 */
-  tip.appendChild(el('div', null,
-    '은행에서 내려받을 때 「거래후 잔액」을 포함하는 항목이 있으면 켜고 다시 받아주세요.'));
+  tip.appendChild(
+    el(
+      'div',
+      null,
+      '은행에서 내려받을 때 「거래후 잔액」을 포함하는 항목이 있으면 켜고 다시 받아주세요.'
+    )
+  );
   tip.appendChild(el('div', null, '잔액이 있어야 계산이 맞는지 확인할 수 있습니다.'));
   tip.appendChild(el('div', null, '거래내역을 엑셀(.xlsx)로 내려받으셨는지도 확인해주세요.'));
   tip.appendChild(el('div', null, '화면을 복사해 붙여넣은 파일은 열 이름이 달라 읽지 못합니다.'));
   /* 은행 목록을 다 모르는 상태에서 쓸 수 있는 유일한 방법 —
      사장님이 열 이름만 알려주면 바로 넣을 수 있다 */
-  var 마지막 = el('div', null, '그래도 안 되면 위에 보이는 열 이름을 그대로 알려주세요. 바로 넣어드리겠습니다. ');
+  var 마지막 = el(
+    'div',
+    null,
+    '그래도 안 되면 위에 보이는 열 이름을 그대로 알려주세요. 바로 넣어드리겠습니다. '
+  );
   /* ★ 92차 ⑥. 「알려주세요」라고 말만 하고 알릴 자리를 안 줬다. 그 자리를 여기 둔다 */
   마지막.appendChild(kakaoAsk('카카오채널로 알려주기'));
   tip.appendChild(마지막);
@@ -508,6 +598,5 @@ function showUnreadable(found) {
   acts.appendChild(again);
   box.appendChild(acts);
   host.appendChild(box);
-  upFocus('upbad');              /* ★ 106차 ③ */
+  upFocus('upbad'); /* ★ 106차 ③ */
 }
-

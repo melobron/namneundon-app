@@ -1,5 +1,7 @@
 /* ── 매장 이름 ── 이름만 남는다. 거래내역과 금액은 창을 닫으면 사라진다 */
-function storeName() { return UP && UP.store ? UP.store : '내 ' + BIZ.곳; }
+function storeName() {
+  return UP && UP.store ? UP.store : '내 ' + BIZ.곳;
+}
 
 /* ── 금액 옆에는 반드시 그 금액이 어느 기간인지 ──
    사장님은 계좌와 대조하는 사람이다. 기간을 모르면 대조를 못 한다.
@@ -21,7 +23,7 @@ function openParenAt(s) {
     if (c === '(') stack.push(i);
     else if (c === ')') stack.pop();
   }
-  return stack.length ? stack[0] : -1;   /* 처음으로 안 닫힌 괄호 */
+  return stack.length ? stack[0] : -1; /* 처음으로 안 닫힌 괄호 */
 }
 function cutTail(name) {
   var s = String(name == null ? '' : name);
@@ -40,25 +42,30 @@ function isCut(name) {
 }
 function showName(name) {
   var t = cutTail(name);
-  return t || String(name == null ? '' : name);   /* 다 지워지면 원본 그대로 */
+  return t || String(name == null ? '' : name); /* 다 지워지면 원본 그대로 */
 }
 
 function payeeSpan(g) {
   var k = Object.keys((g && g.months) || {}).sort();
   if (!k.length) return '';
-  var mm = function (m) { return (+m.slice(5, 7)) + '월'; };
-  var y0 = k[0].slice(0, 4), y1 = k[k.length - 1].slice(0, 4);
+  var mm = function (m) {
+    return +m.slice(5, 7) + '월';
+  };
+  var y0 = k[0].slice(0, 4),
+    y1 = k[k.length - 1].slice(0, 4);
   if (k.length === 1) return y0 + '년 ' + mm(k[0]);
   if (y0 === y1) return y0 + '년 ' + mm(k[0]) + '~' + mm(k[k.length - 1]);
   return y0 + '년 ' + mm(k[0]) + '~' + y1 + '년 ' + mm(k[k.length - 1]);
 }
 /* ── 35차 B · 거래처 카드의 방향별 사실 줄 ── */
 function midOf(xs) {
-  var s = xs.slice().sort(function (a, b) { return a - b; });
+  var s = xs.slice().sort(function (a, b) {
+    return a - b;
+  });
   return s.length ? s[(s.length - 1) >> 1] : 0;
 }
 function dayText(at) {
-  return (+at.slice(5, 7)) + '월 ' + (+at.slice(8, 10)) + '일';
+  return +at.slice(5, 7) + '월 ' + +at.slice(8, 10) + '일';
 }
 /* 한쪽 방향의 달 범위 — 「4월~8월」
    ★ 해를 넘기면 해를 밝힌다. 안 그러면 2025년 8월~2026년 8월이 「8월~8월」이 된다 */
@@ -71,20 +78,33 @@ function repeatLine(g, isIn) {
   var months = Object.keys(isIn ? g.inMonths : g.outMonths).length;
   var n = isIn ? g.inN : g.outN;
   if (months < 3) return null;
-  if (n < months || n > months * 2) return null;   /* 매달 1~2건 */
+  if (n < months || n > months * 2) return null; /* 매달 1~2건 */
   var amts = isIn ? g.inAmts : g.outAmts;
   var mid = midOf(amts);
-  var even = mid > 0 && amts.every(function (a) { return Math.abs(a - mid) <= mid * 0.2; });
+  var even =
+    mid > 0 &&
+    amts.every(function (a) {
+      return Math.abs(a - mid) <= mid * 0.2;
+    });
   /* ★ 44차 2-1. 건수는 앞줄에서 이미 말했다. 여기서 또 쓰면 한 카드에 세 번 나온다 */
   /* ★ 64-3. 금액이 들쭉날쭉하면 「매달 나갑니다」만 나오고 총액뿐이었다 —
      실파일의 어느 거래처가 「7건 · 매달 나갑니다 — 총액」만 보여 한 달에 얼마인지 알 수 없었다.
      고르게 나가는 곳에는 이미 「매달 4일쯤 2,750,300원씩」이 나온다. 그 자리를 메운다.
      ★ 분모는 그 거래처가 있었던 달 수다. 없던 달을 0으로 세면 평균이 낮아진다 */
   var 합 = 0;
-  amts.forEach(function (a) { 합 += a; });
+  amts.forEach(function (a) {
+    합 += a;
+  });
   if (!even) {
-    return '매달 ' + (isIn ? '들어옵니다' : '나갑니다') +
-           ' — ' + won(months) + '달 평균 ' + won(Math.round(합 / months)) + '원쯤';
+    return (
+      '매달 ' +
+      (isIn ? '들어옵니다' : '나갑니다') +
+      ' — ' +
+      won(months) +
+      '달 평균 ' +
+      won(Math.round(합 / months)) +
+      '원쯤'
+    );
   }
   return '매달 ' + midOf(isIn ? g.inDays : g.outDays) + '일쯤 ' + won(mid) + '원씩';
 }
@@ -99,33 +119,43 @@ function factLine(g, isIn) {
   var row = el('div', 'obfact');
   row.appendChild(el('span', 'flab', isIn ? '들어온 돈' : '나간 돈'));
   /* 금액에는 반드시 기간을 붙인다 (이름 4원칙 3) */
-  var head = (n === 1 ? dayText(isIn ? g.inLast : g.outLast) : sideSpan(g, isIn)) +
-             ' · ' + n + '건';
+  var head =
+    (n === 1 ? dayText(isIn ? g.inLast : g.outLast) : sideSpan(g, isIn)) + ' · ' + n + '건';
   var rp = repeatLine(g, isIn);
   if (rp) head += ' · ' + rp;
   row.appendChild(el('span', 'fmeta', head));
-  row.appendChild(el('span', 'famt ' + (isIn ? 'in' : 'out'),
-                     won(isIn ? g.inSum : g.outSum) + '원'));
+  row.appendChild(
+    el('span', 'famt ' + (isIn ? 'in' : 'out'), won(isIn ? g.inSum : g.outSum) + '원')
+  );
   return row;
 }
 
 /* 한 카드 안에서 위는 +, 아래는 − 로 갈리면 같은 돈인지 헷갈린다.
    확인 카드 안에서는 부호를 늘 드러낸다 */
-function wonSign(n) { return (n > 0 ? '+' : '') + won(n); }
+function wonSign(n) {
+  return (n > 0 ? '+' : '') + won(n);
+}
 
 function monthSpan() {
   var ms = {};
-  UP.rows.forEach(function (r) { ms[r.at.slice(0, 7)] = 1; });
+  UP.rows.forEach(function (r) {
+    ms[r.at.slice(0, 7)] = 1;
+  });
   var k = Object.keys(ms).sort();
   if (!k.length) return '';
-  var f = function (m) { return m.slice(0, 4) + '년 ' + (+m.slice(5, 7)) + '월'; };
+  var f = function (m) {
+    return m.slice(0, 4) + '년 ' + +m.slice(5, 7) + '월';
+  };
   return k.length === 1 ? f(k[0]) : f(k[0]) + ' ~ ' + f(k[k.length - 1]);
 }
 
 /* 공백·점·가운뎃점만 다른 매장이 이미 있는지. 여럿이면 가장 많이 정해둔 것 하나만 */
 function similarStore(name) {
-  var flat = function (s) { return s.replace(/[\s.·]/g, ''); };
-  var n = flat(name), best = null;
+  var flat = function (s) {
+    return s.replace(/[\s.·]/g, '');
+  };
+  var n = flat(name),
+    best = null;
   savedSummary().keys.forEach(function (k) {
     if (k.name === '(기본)' || k.name === name) return;
     if (flat(k.name) === n && (!best || k.n > best.n)) best = k;
@@ -138,8 +168,9 @@ function askName() {
   upShow('up-name');
   var host = document.getElementById('up-name');
   host.innerHTML = '';
-  host.appendChild(el('div', 'obsub',
-    '파일을 읽었습니다. ' + won(UP.rows.length) + '건 · ' + monthSpan()));
+  host.appendChild(
+    el('div', 'obsub', '파일을 읽었습니다. ' + won(UP.rows.length) + '건 · ' + monthSpan())
+  );
   host.appendChild(el('div', 'obhead', BIZ.곳 + ' 이름을 알려주세요'));
 
   var input = document.createElement('input');
@@ -158,49 +189,66 @@ function askName() {
     var box = el('div', 'oldstores');
     box.appendChild(el('div', 'oshead', '전에 쓰시던 ' + BIZ.곳));
     var list = el('div', 'osbtns');
-    saved.keys.sort(function (a, b) { return b.n - a.n; }).forEach(function (k) {
-      var mine = (k.name === '(기본)');
-      var label = mine ? '이름 없이 정해둔 것' : k.name;
-      var line = el('div', 'osline');
-      var b = el('button', 'osb', label + ' · ' + won(k.n) + '곳 정해둠');
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        UP.store = mine ? null : k.name;
-        askOwner();
-      });
-      line.appendChild(b);
-      /* 이름을 잘못 넣으면 그 이름을 영영 보게 된다. 지울 수 있어야 한다.
+    saved.keys
+      .sort(function (a, b) {
+        return b.n - a.n;
+      })
+      .forEach(function (k) {
+        var mine = k.name === '(기본)';
+        var label = mine ? '이름 없이 정해둔 것' : k.name;
+        var line = el('div', 'osline');
+        var b = el('button', 'osb', label + ' · ' + won(k.n) + '곳 정해둠');
+        b.type = 'button';
+        b.addEventListener('click', function () {
+          UP.store = mine ? null : k.name;
+          askOwner();
+        });
+        line.appendChild(b);
+        /* 이름을 잘못 넣으면 그 이름을 영영 보게 된다. 지울 수 있어야 한다.
          고르기가 주된 일이라 [지우기]는 옅게 둔다 */
-      var del = el('button', 'oslink', '지우기');
-      del.type = 'button';
-      var ask = el('div', 'saveask');
-      ask.hidden = true;
-      del.addEventListener('click', function () { ask.hidden = !ask.hidden; });
-      line.appendChild(del);
-      list.appendChild(line);
+        var del = el('button', 'oslink', '지우기');
+        del.type = 'button';
+        var ask = el('div', 'saveask');
+        ask.hidden = true;
+        del.addEventListener('click', function () {
+          ask.hidden = !ask.hidden;
+        });
+        line.appendChild(del);
+        list.appendChild(line);
 
-      ask.appendChild(el('div', 'addq',
-        '「' + label + '」에 정해둔 ' + won(k.n) + '곳이 지워집니다. 되돌릴 수 없습니다.'));
-      var arow = el('div', 'addrow');
-      var yes = el('button', 'b on', '지우기');
-      yes.type = 'button';
-      yes.addEventListener('click', function () {
-        /* 지우는 것은 이 매장뿐이다. fc_use·다른 매장은 안 건드린다.
+        ask.appendChild(
+          el(
+            'div',
+            'addq',
+            '「' + label + '」에 정해둔 ' + won(k.n) + '곳이 지워집니다. 되돌릴 수 없습니다.'
+          )
+        );
+        var arow = el('div', 'addrow');
+        var yes = el('button', 'b on', '지우기');
+        yes.type = 'button';
+        yes.addEventListener('click', function () {
+          /* 지우는 것은 이 매장뿐이다. fc_use·다른 매장은 안 건드린다.
            ★ 91차 ④. 거래내역(fc.data)도 같이 지운다 (위 시작 화면의 지우기와 같은 말) */
-        lsDel(k.key);
-        delData(k.name);
-        askName();
+          lsDel(k.key);
+          delData(k.name);
+          askName();
+        });
+        var no = el('button', 'b', '취소');
+        no.type = 'button';
+        no.addEventListener('click', function () {
+          ask.hidden = true;
+        });
+        arow.appendChild(yes);
+        arow.appendChild(no);
+        ask.appendChild(arow);
+        list.appendChild(ask);
       });
-      var no = el('button', 'b', '취소');
-      no.type = 'button';
-      no.addEventListener('click', function () { ask.hidden = true; });
-      arow.appendChild(yes); arow.appendChild(no);
-      ask.appendChild(arow);
-      list.appendChild(ask);
-    });
     var neu = el('button', 'osb new', '새 ' + BIZ.곳);
     neu.type = 'button';
-    neu.addEventListener('click', function () { input.value = ''; input.focus(); });
+    neu.addEventListener('click', function () {
+      input.value = '';
+      input.focus();
+    });
     list.appendChild(neu);
     box.appendChild(list);
     host.appendChild(box);
@@ -222,18 +270,25 @@ function askName() {
       askBox.hidden = false;
       askBox.innerHTML = '';
       askBox.appendChild(el('div', 'addq', '「' + v + '」로 새로 시작합니다.'));
-      askBox.appendChild(el('div', 'cka',
-        '혹시 「' + near.name + '」을 말씀하시는 건가요?'));
-      askBox.appendChild(el('div', 'cka',
-        '그 ' + BIZ.곳 + '에는 ' + won(near.n) + '곳을 정해두셨습니다.'));
+      askBox.appendChild(el('div', 'cka', '혹시 「' + near.name + '」을 말씀하시는 건가요?'));
+      askBox.appendChild(
+        el('div', 'cka', '그 ' + BIZ.곳 + '에는 ' + won(near.n) + '곳을 정해두셨습니다.')
+      );
       var row = el('div', 'addrow');
       var yes = el('button', 'b on', '네, 그 ' + BIZ.곳 + '이에요');
       yes.type = 'button';
-      yes.addEventListener('click', function () { UP.store = near.name; askOwner(); });
+      yes.addEventListener('click', function () {
+        UP.store = near.name;
+        askOwner();
+      });
       var no = el('button', 'b', '아니요, 새 ' + BIZ.곳 + '입니다');
       no.type = 'button';
-      no.addEventListener('click', function () { UP.store = v; askOwner(); });
-      row.appendChild(yes); row.appendChild(no);
+      no.addEventListener('click', function () {
+        UP.store = v;
+        askOwner();
+      });
+      row.appendChild(yes);
+      row.appendChild(no);
       askBox.appendChild(row);
       return;
     }
@@ -242,10 +297,16 @@ function askName() {
   });
   var skip = el('button', 'oblink', '건너뛰기');
   skip.type = 'button';
-  skip.addEventListener('click', function () { UP.store = null; askOwner(); });
-  acts.appendChild(ok); acts.appendChild(skip);
+  skip.addEventListener('click', function () {
+    UP.store = null;
+    askOwner();
+  });
+  acts.appendChild(ok);
+  acts.appendChild(skip);
   host.appendChild(acts);
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') ok.click(); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') ok.click();
+  });
   input.focus();
 }
 
@@ -259,10 +320,11 @@ function askName() {
    ★ 짐작이라 틀릴 수 있다. 「이마트」는 성씨 「이」로 시작한다.
      그래서 회사로 읽히는 꼬리말을 먼저 걸러내고, 그래도 틀리면
      사장님이 [사람 이름 가리기]를 끄실 수 있게 둔다 */
-var SURNAME = ('김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구' +
-               '민진지엄채원천방공현함변염여추도소석선설마길연위표명기반라왕금옥육인맹제모탁국' +
-               '나사아자차카타파구용점편사')
-              .split('');
+var SURNAME = (
+  '김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구' +
+  '민진지엄채원천방공현함변염여추도소석선설마길연위표명기반라왕금옥육인맹제모탁국' +
+  '나사아자차카타파구용점편사'
+).split('');
 /* ★ 「사람 이름으로 보이는가」는 이미 looksPersonal 이 판단한다 (CORP_MARKS 로 회사를 걸러낸다).
    같은 것을 두 군데서 다르게 판단하면 42차 2번에서 본 일이 또 생긴다.
    여기서는 그 위에 두 가지를 더 얹는다 — 그림은 밖으로 나가므로 더 좁게 본다.
@@ -297,7 +359,10 @@ function personMask() {
   ((UP && UP.payees) || []).forEach(function (g) {
     (g.rawList || []).concat([g.name]).forEach(function (nm) {
       var t = String(nm).trim();
-      if (looksPersonName(t)) { map[t] = hideName(t); return; }
+      if (looksPersonName(t)) {
+        map[t] = hideName(t);
+        return;
+      }
       /* 「홍길동(○○상회)」 꼴 — 괄호 앞이 통째로 사람 이름이면 그 앞부분만 가린다.
          ★ 세금 이름도 같은 꼴이라(「주민세(사업소분)」) 세금·공과금은 먼저 빼낸다 */
       var m = t.match(/^([가-힣]{3,4})[(（]/);
@@ -308,7 +373,9 @@ function personMask() {
 }
 function maskPersons(root) {
   var map = personMask();
-  var keys = Object.keys(map).sort(function (a, b) { return b.length - a.length; });
+  var keys = Object.keys(map).sort(function (a, b) {
+    return b.length - a.length;
+  });
   if (!keys.length) return 0;
   var n = 0;
   var walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
@@ -333,7 +400,8 @@ function maskPersons(root) {
    개인 이름 출금은 일곱 갈래로 흩어지는데, 대표자 이름으로 좁히면 출금도 잡힌다 */
 function askOwner() {
   var saved = loadPicks();
-  if (saved && saved.owner) {          /* 두 번째 달부터는 안 묻는다 */
+  if (saved && saved.owner) {
+    /* 두 번째 달부터는 안 묻는다 */
     UP.owner = saved.owner;
     startOnboard();
     return;
@@ -344,8 +412,13 @@ function askOwner() {
   host.innerHTML = '';
   host.appendChild(el('div', 'obhead', BIZ.주인 + ' 성함을 알려주세요'));
   var sub = el('div', 'obsub');
-  sub.appendChild(el('div', null,
-    BIZ.주인 + ' 이름으로 오간 돈은 우선 사업 외 용도로 봅니다. 필요하면 바꿀 수 있습니다.'));
+  sub.appendChild(
+    el(
+      'div',
+      null,
+      BIZ.주인 + ' 이름으로 오간 돈은 우선 사업 외 용도로 봅니다. 필요하면 바꿀 수 있습니다.'
+    )
+  );
   host.appendChild(sub);
 
   var input = document.createElement('input');
@@ -366,10 +439,16 @@ function askOwner() {
   });
   var skip = el('button', 'oblink', '건너뛰기');
   skip.type = 'button';
-  skip.addEventListener('click', function () { UP.owner = null; startOnboard(); });
-  acts.appendChild(ok); acts.appendChild(skip);
+  skip.addEventListener('click', function () {
+    UP.owner = null;
+    startOnboard();
+  });
+  acts.appendChild(ok);
+  acts.appendChild(skip);
   host.appendChild(acts);
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') ok.click(); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') ok.click();
+  });
   input.focus();
 }
 
@@ -395,23 +474,31 @@ function startOnboard() {
   UP.merge = buildMergeMap(UP.rows);
   UP.payees = groupPayees(UP.rows);
   UP.byName = {};
-  UP.payees.forEach(function (g) { UP.byName[g.name] = g; });
+  UP.payees.forEach(function (g) {
+    UP.byName[g.name] = g;
+  });
   /* ★ 62차 ②. 업종의 기본 항목으로 시작한다 —
      UP_CATS 를 이름만 바꾼 것이라 자리는 그대로다 (baseName 이 자리로 맞춘다).
      감출 것과 더할 것도 여기서 세운다 */
-  var 업 = tradeNow(), 업정보 = TRADES[업];
+  var 업 = tradeNow(),
+    업정보 = TRADES[업];
   UP.trade = 업;
   UP.accounts = tradeCats(업).concat(업정보.더함);
-  UP.hidden = 업정보.감춤.map(function (c) { return 업정보.바꿈[c] || c; });
-  UP.baseCats = tradeCats(업);     /* 기본 항목 — 이름은 바꿔도 지우지는 못한다 */
-  UP.keepSet  = tradeKeep(업);     /* 이익 계산에서 빼는 항목 */
+  UP.hidden = 업정보.감춤.map(function (c) {
+    return 업정보.바꿈[c] || c;
+  });
+  UP.baseCats = tradeCats(업); /* 기본 항목 — 이름은 바꿔도 지우지는 못한다 */
+  UP.keepSet = tradeKeep(업); /* 이익 계산에서 빼는 항목 */
 
   /* 지난번에 정하신 것을 그대로 되살린다 — 두 번째 달부터는 찍을 게 거의 없다 */
   var saved = loadPicks();
   var applied = 0;
   if (saved) {
     /* ★ 62차 ②. 저장된 매장은 저장된 항목이 이긴다 — 타일에서 뭘 누르셨든 */
-    if (saved.업종 && TRADES[saved.업종]) { setTrade(saved.업종); UP.trade = saved.업종; }
+    if (saved.업종 && TRADES[saved.업종]) {
+      setTrade(saved.업종);
+      UP.trade = saved.업종;
+    }
     if (saved.accounts && saved.accounts.length) UP.accounts = saved.accounts.slice();
     if (saved.hidden) UP.hidden = saved.hidden.slice();
     /* 35차 C. 길이로 견주지 않는다. 이름 목록 그대로 되살린다 —
@@ -420,18 +507,26 @@ function startOnboard() {
     if (saved.baseCats && saved.baseCats.length) UP.baseCats = saved.baseCats.slice();
     if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
     if (saved.unskip) UP.unskip = saved.unskip.slice();
-    if (saved.목표일) setDueDay(saved.목표일);      /* 57차 ⑦ · 60차 ① */
-    if (saved.xfer) applyXferKeys(saved.xfer);   /* 37차 6번 */
-    UP.manual = manualLoad();          /* 36차 J. 저장통이 따로다 */
+    if (saved.목표일) setDueDay(saved.목표일); /* 57차 ⑦ · 60차 ① */
+    if (saved.xfer) applyXferKeys(saved.xfer); /* 37차 6번 */
+    UP.manual = manualLoad(); /* 36차 J. 저장통이 따로다 */
     UP.payees.forEach(function (g) {
       /* 원본 표기로 먼저 맞춰본다. 옛 저장값은 다듬은 이름으로 되어 있어 그것도 본다 */
-      var c = null, list = g.rawList || [];
+      var c = null,
+        list = g.rawList || [];
       for (var i = 0; i < list.length && !c; i++) c = saved.picks[list[i]];
       if (!c) c = saved.picks[g.name];
-      if (applySaved(g, c)) { applied++; g.__restored = true; }
-      if (saved.cardMixed && (saved.cardMixed.indexOf(g.name) !== -1 || list.some(function (raw) {
-        return saved.cardMixed.indexOf(raw) !== -1;
-      }))) {
+      if (applySaved(g, c)) {
+        applied++;
+        g.__restored = true;
+      }
+      if (
+        saved.cardMixed &&
+        (saved.cardMixed.indexOf(g.name) !== -1 ||
+          list.some(function (raw) {
+            return saved.cardMixed.indexOf(raw) !== -1;
+          }))
+      ) {
         g.cardMixed = true;
         if (!g.__restored) applied++;
         g.__restored = true;
@@ -455,10 +550,10 @@ function startOnboard() {
   UP.restored = applied;
   UP.queue = buildQueue();
   UP.pos = 0;
-  UP.target = UP_TARGET;         /* 이번 회차에 찍기로 한 개수. 더 찍으면 늘어난다 */
-  UP.more = false;               /* 사장님이 「더 찍기」를 눌렀는가 */
-  UP.hist = [];                  /* 되돌리기용 — 찍은 순서대로 쌓는다 */
-  savePicks();                   /* 매장 이름·성함만 넣고 안 찍어도 남게 */
+  UP.target = UP_TARGET; /* 이번 회차에 찍기로 한 개수. 더 찍으면 늘어난다 */
+  UP.more = false; /* 사장님이 「더 찍기」를 눌렀는가 */
+  UP.hist = []; /* 되돌리기용 — 찍은 순서대로 쌓는다 */
+  savePicks(); /* 매장 이름·성함만 넣고 안 찍어도 남게 */
   document.getElementById('uptitle').textContent = '거래처 확인';
   upShow('up-onboard');
   if (applied) showRestored(applied);
@@ -472,9 +567,10 @@ function startOnboard() {
    ★ 불러오기는 기존 검사·매장 확인·적용(importPicks·importAsk·importApply)을 그대로 쓴다 */
 function importChooseNow() {
   var on = !!UP.importAsk;
-  UP.importAsk = false;          /* 한 번만 */
-  return on && !UP.demo && !UP.holdAsk && !UP.known && !!UP.store &&
-         UP.queue && UP.queue.length > 0;
+  UP.importAsk = false; /* 한 번만 */
+  return (
+    on && !UP.demo && !UP.holdAsk && !UP.known && !!UP.store && UP.queue && UP.queue.length > 0
+  );
 }
 function drawImportChoose() {
   UP.importChosen = true;
@@ -482,8 +578,13 @@ function drawImportChoose() {
   host.innerHTML = '';
   var box = el('div', 'imchoose');
   box.appendChild(el('div', 'imchoosehead', '저장해둔 분류가 있나요?'));
-  box.appendChild(el('div', 'imchoosesub',
-    '다른 기기에서 받은 분류 파일을 불러오면 다시 정할 일을 줄일 수 있습니다.'));
+  box.appendChild(
+    el(
+      'div',
+      'imchoosesub',
+      '다른 기기에서 받은 분류 파일을 불러오면 다시 정할 일을 줄일 수 있습니다.'
+    )
+  );
   var acts = el('div', 'imchooseacts');
   var go = el('button', 'b on', '분류 파일 불러오기');
   go.type = 'button';
@@ -499,7 +600,8 @@ function drawImportChoose() {
     useScreen('파일 없이 직접 정하기');
     drawOnboard();
   });
-  acts.appendChild(go); acts.appendChild(self);
+  acts.appendChild(go);
+  acts.appendChild(self);
   box.appendChild(acts);
   host.appendChild(box);
 }
@@ -510,11 +612,18 @@ function showRestored(applied) {
   var host = document.getElementById('up-onboard');
   host.innerHTML = '';
   var rest = UP.queue.length;
-  host.appendChild(el('div', 'obhead',
-    '지난번에 정하신 ' + won(applied) + '곳을 그대로 적용했습니다.'));
-  host.appendChild(el('div', 'obsub', rest
-    ? '새로 나온 거래처 ' + won(rest) + '곳만 정하시면 됩니다.'
-    : '새로 정하실 거래처가 없습니다.'));
+  host.appendChild(
+    el('div', 'obhead', '지난번에 정하신 ' + won(applied) + '곳을 그대로 적용했습니다.')
+  );
+  host.appendChild(
+    el(
+      'div',
+      'obsub',
+      rest
+        ? '새로 나온 거래처 ' + won(rest) + '곳만 정하시면 됩니다.'
+        : '새로 정하실 거래처가 없습니다.'
+    )
+  );
 
   var acts = el('div', 'obdoneacts');
   if (rest) {
@@ -522,7 +631,9 @@ function showRestored(applied) {
        목표도 덮어쓰지 않는다 — 덮어쓰면 「결과 보기」가 영영 안 나온다 */
     var go = el('button', 'b on', '이어서 정하기');
     go.type = 'button';
-    go.addEventListener('click', function () { drawOnboard(); });
+    go.addEventListener('click', function () {
+      drawOnboard();
+    });
     acts.appendChild(go);
   } else {
     var see = el('button', 'b on', '결과 보기');
@@ -557,10 +668,12 @@ function showRestored(applied) {
    ★ trades 가 붙은 줄은 그 업종에서만 켜진다. 나머지는 업종과 상관없는 낱말이다
      (62차 ②의 「자동분류 낱말은 업종 무관만」과 같은 잣대) */
 var HINTS = [
-  { cat: '식자재',    trades: ['식당'],
-    words: ['식자재', '식재료', '농산', '축산', '수산', '청과', '유통', '마트', '푸드'] },
-  { cat: '주류·음료', trades: ['식당'],
-    words: ['주류', '소주', '맥주', '음료', '주정', '와인'] },
+  {
+    cat: '식자재',
+    trades: ['식당'],
+    words: ['식자재', '식재료', '농산', '축산', '수산', '청과', '유통', '마트', '푸드']
+  },
+  { cat: '주류·음료', trades: ['식당'], words: ['주류', '소주', '맥주', '음료', '주정', '와인'] },
   /* ★ 64-4차. 카페 자리 이름은 원두·재료 / 베이커리·디저트다 (TRADES 의 바꿈).
      여기 적는 것은 늘 「바꾸기 전 자리 이름」이다 — baseName 이 그 업종 이름으로 옮긴다 */
   /* ★ 64-4차 보완. 식당의 식자재 자리 낱말 아홉 개를 카페에도 얹는다 —
@@ -568,40 +681,146 @@ var HINTS = [
      ★ 주류 자리 낱말(음료·와인 따위)은 안 얹는다. 카페에서 그 자리는 베이커리·디저트라
        「○○음료」에 베이커리·디저트를 권하게 된다 — 63-11 에서 잡은 것과 같은 잘못이다.
      ★ 식당 줄은 그대로 둔다. 여기 얹는 것이지 저기서 옮겨오는 것이 아니다 */
-  { cat: '식자재',    trades: ['카페'],
-    words: ['커피', '원두', '로스터', '로스팅', '우유', '유제품',
-            '식자재', '식재료', '농산', '축산', '수산', '청과', '유통', '마트', '푸드'] },
-  { cat: '주류·음료', trades: ['카페'],
-    words: ['베이커리', '제과', '제빵'] },
-  { cat: '인건비',    words: ['인건비', '급여', '월급', '알바', '상여'] },
-  { cat: '월세',      words: ['임대', '월세', '임차', '관리비'] },
+  {
+    cat: '식자재',
+    trades: ['카페'],
+    words: [
+      '커피',
+      '원두',
+      '로스터',
+      '로스팅',
+      '우유',
+      '유제품',
+      '식자재',
+      '식재료',
+      '농산',
+      '축산',
+      '수산',
+      '청과',
+      '유통',
+      '마트',
+      '푸드'
+    ]
+  },
+  { cat: '주류·음료', trades: ['카페'], words: ['베이커리', '제과', '제빵'] },
+  { cat: '인건비', words: ['인건비', '급여', '월급', '알바', '상여'] },
+  { cat: '월세', words: ['임대', '월세', '임차', '관리비'] },
   /* 「스피드전기」「씨앤에스에너지」는 전기공사·설비 업체일 수도 있어 추천만 한다 */
   { cat: '전기·가스·수도', words: ['전기', '가스', '수도', '한전', '도시가스', '에너지'] },
-  { cat: '세금', words: [
-      '세금', '국고_', '국세', '지방세', '부가세', '부가가치세', '소득세', '원천세',
-      '종합소득세', '주민세', '재산세', '면허세', '세무서', '국세청', '홈택스', '위택스'] },
+  {
+    cat: '세금',
+    words: [
+      '세금',
+      '국고_',
+      '국세',
+      '지방세',
+      '부가세',
+      '부가가치세',
+      '소득세',
+      '원천세',
+      '종합소득세',
+      '주민세',
+      '재산세',
+      '면허세',
+      '세무서',
+      '국세청',
+      '홈택스',
+      '위택스'
+    ]
+  },
   /* 은행 표기에서 이름이 잘린다 — 「국민건강보험」이 아니라 「국민건강」으로 찍힌다 */
-  { cat: '보험', words: [
-      '보험', '연금', '국민연금', '건강', '건강보험', '건보',
-      '고용보험', '산재', '산재보험', '사회보험', '합산보험료', '4대보험', '사대보험',
-      '국민연금공단', '건강보험공단', '근로복지공단',
-      '화재보험', '배상책임', '삼성화재', 'db손해', 'kb손해', '현대해상', '메리츠화재'] },
+  {
+    cat: '보험',
+    words: [
+      '보험',
+      '연금',
+      '국민연금',
+      '건강',
+      '건강보험',
+      '건보',
+      '고용보험',
+      '산재',
+      '산재보험',
+      '사회보험',
+      '합산보험료',
+      '4대보험',
+      '사대보험',
+      '국민연금공단',
+      '건강보험공단',
+      '근로복지공단',
+      '화재보험',
+      '배상책임',
+      '삼성화재',
+      'db손해',
+      'kb손해',
+      '현대해상',
+      '메리츠화재'
+    ]
+  },
   { cat: '세무기장료', words: BOOKKEEPING_WORDS },
   /* ★ 57차 ③. 두 줄을 한 줄로 합친다 — 원금과 이자를 가르지 않기로 했으니
      둘을 갈라 놓을 까닭이 없어졌다 */
-  { cat: '대출 상환', words: ['대출이자', '여신이자', '대출원리금', '이자',
-                              '대출원금', '원금상환', '대출상환', '상환'], dir: 'out' },
-  { cat: '매출',      words: ['카드', '정산', '배달', '배민', '쿠팡이츠', '요기요'], dir: 'in' }
+  {
+    cat: '대출 상환',
+    words: [
+      '대출이자',
+      '여신이자',
+      '대출원리금',
+      '이자',
+      '대출원금',
+      '원금상환',
+      '대출상환',
+      '상환'
+    ],
+    dir: 'out'
+  },
+  { cat: '매출', words: ['카드', '정산', '배달', '배민', '쿠팡이츠', '요기요'], dir: 'in' }
 ];
 
 /* ── 사람 이름으로 들어온 큰 돈 ──
    실측: 30만원 이상 개인 이름 입금 99건 중 94.9%가 내가 넣은 돈이었다.
    그래도 단정하지 않는다. 추천 순서만 올리고 「매출」을 나란히 둔다 */
-var CORP_MARKS = ['주식회사', '(주)', '㈜', '유한회사', '(유)', '농협', '은행', '카드',
-                  '공단', '공사', '시스템', '상사', '마트', '푸드', '유통', '산업',
-                  '식품', '주류', '축산', '수산', '청과', '물산', '기업', '조합',
-                  '센터', '서비스', '컴퍼니', '코리아', '아트', '디자인', '스튜디오',
-                  '물류', '전자', '통신', '건설', '개발', '테크', '하우스', '홀딩스'];
+var CORP_MARKS = [
+  '주식회사',
+  '(주)',
+  '㈜',
+  '유한회사',
+  '(유)',
+  '농협',
+  '은행',
+  '카드',
+  '공단',
+  '공사',
+  '시스템',
+  '상사',
+  '마트',
+  '푸드',
+  '유통',
+  '산업',
+  '식품',
+  '주류',
+  '축산',
+  '수산',
+  '청과',
+  '물산',
+  '기업',
+  '조합',
+  '센터',
+  '서비스',
+  '컴퍼니',
+  '코리아',
+  '아트',
+  '디자인',
+  '스튜디오',
+  '물류',
+  '전자',
+  '통신',
+  '건설',
+  '개발',
+  '테크',
+  '하우스',
+  '홀딩스'
+];
 var PERSONAL_MIN = 300000;
 /* ★ 45차 ③ · 들어온 돈인데 매출이 아닐 게 뻔한 곳 ──────────────
    들어온 쪽 첫 버튼은 「매출」이다. 대개 맞다 — 들어온 돈의 대부분이 카드사 정산이다.
@@ -610,10 +829,23 @@ var PERSONAL_MIN = 300000;
    ★ 이건 추천이 아니라 「이런 곳에서는 고를 목록 자체가 다르다」는 규칙이다.
      44차에서 못 박은 「추천 때문에 자리를 흔들지 않는다」와 어긋나지 않는다.
    ★ 걸리는 조건 — 한두 번만 들어온 큰 돈 · 돈 빌려주는 기관 이름 · 대표자 성함 */
-var LOAN_WORDS = ['소상공인', '중소벤처', '진흥공단', '소진공', '보증재단',
-                  '신용보증', '기술보증', '미소금융', '저축은행', '캐피탈',
-                  '새마을금고', '신용협동', '수협', '농협은행'];
-var RARE_IN_MIN = 5000000;     /* 한두 번 들어온 「큰 돈」의 선 */
+var LOAN_WORDS = [
+  '소상공인',
+  '중소벤처',
+  '진흥공단',
+  '소진공',
+  '보증재단',
+  '신용보증',
+  '기술보증',
+  '미소금융',
+  '저축은행',
+  '캐피탈',
+  '새마을금고',
+  '신용협동',
+  '수협',
+  '농협은행'
+];
+var RARE_IN_MIN = 5000000; /* 한두 번 들어온 「큰 돈」의 선 */
 function loanLikeIn(g) {
   if (!g || !g.inN) return false;
   if (isOwnerName(g)) return true;
@@ -647,16 +879,37 @@ function personalFirst() {
    부분 문자열로 보면 엉뚱한 게 걸린다 */
 /* 「주식회사」처럼 어느 이름에나 붙는 낱말은 안 본다 —
    실측에서 「주식회사 ○○」 둘이 낱말 하나 때문에 같은 항목으로 걸렸다 */
-var WORD_STOP = ['주식회사', '유한회사', '합자회사', '개인사업', '사업자',
-                 '이체', '입금', '출금', '송금', '결제', '자동결제', '자동',
-                 '카드', '체크카드', '은행', '지점', '본점', '영업소',
-                 '대표', '대표자', '본인', '계좌', '거래', '환급'];
+var WORD_STOP = [
+  '주식회사',
+  '유한회사',
+  '합자회사',
+  '개인사업',
+  '사업자',
+  '이체',
+  '입금',
+  '출금',
+  '송금',
+  '결제',
+  '자동결제',
+  '자동',
+  '카드',
+  '체크카드',
+  '은행',
+  '지점',
+  '본점',
+  '영업소',
+  '대표',
+  '대표자',
+  '본인',
+  '계좌',
+  '거래',
+  '환급'
+];
 function nameWords(name) {
   var s = String(name == null ? '' : name);
-  return s.split(/[\s()（）\[\]{}·,.\-_\/|+&#*]+/)
-          .filter(function (w) {
-            return w.length >= 2 && WORD_STOP.indexOf(w) === -1;
-          });
+  return s.split(/[\s()（）\[\]{}·,.\-_\/|+&#*]+/).filter(function (w) {
+    return w.length >= 2 && WORD_STOP.indexOf(w) === -1;
+  });
 }
 /* 사장님이 직접 만드신 항목만 본다. 기본 항목 이름은 「기타」·「월세」처럼 짧아서
    엉뚱한 이름에 걸린다 — 그건 지금 쓰는 자동분류 낱말 목록에 맡긴다.
@@ -674,29 +927,40 @@ function madeHint(g) {
   if (!ws.length) return [];
   var hits = [];
   madeCats().forEach(function (cat) {
-    var bag = {}, n = 0;
-    nameWords(cat).forEach(function (w) { bag[w] = 1; });
+    var bag = {},
+      n = 0;
+    nameWords(cat).forEach(function (w) {
+      bag[w] = 1;
+    });
     /* 그 항목에 이미 찍어두신 거래처의 낱말도 같이 본다 */
     (UP.payees || []).forEach(function (p) {
       if (gCats(p).indexOf(cat) === -1 || p === g) return;
       n++;
-      nameWords(p.name).forEach(function (w) { bag[w] = 1; });
+      nameWords(p.name).forEach(function (w) {
+        bag[w] = 1;
+      });
     });
     for (var i = 0; i < ws.length; i++) {
-      if (bag[ws[i]]) { hits.push({ cat: cat, word: ws[i], n: n }); return; }
+      if (bag[ws[i]]) {
+        hits.push({ cat: cat, word: ws[i], n: n });
+        return;
+      }
     }
   });
   /* 여러 항목이 걸리면 찍어두신 거래처가 많은 쪽을 앞에 */
-  hits.sort(function (a, b) { return b.n - a.n; });
+  hits.sort(function (a, b) {
+    return b.n - a.n;
+  });
   return hits;
 }
 
 function hintFor(name, net) {
-  var hits = [], 업 = tradeNow();
+  var hits = [],
+    업 = tradeNow();
   HINTS.forEach(function (h) {
     /* ★ 63-11. 업종 전용 낱말은 그 업종에서만 켠다 */
     if (h.trades && h.trades.indexOf(업) === -1) return;
-    if (h.dir === 'in'  && net <= 0) return;
+    if (h.dir === 'in' && net <= 0) return;
     if (h.dir === 'out' && net >= 0) return;
     var best = '';
     h.words.forEach(function (w) {
@@ -708,7 +972,9 @@ function hintFor(name, net) {
        가드가 여기 있었다. 둘이 한 항목이 되어 가를 일이 없어졌다 */
     hits.push({ cat: cat === '매출' ? '매출' : baseName(cat), word: best });
   });
-  hits.sort(function (a, b) { return b.word.length - a.word.length; });
+  hits.sort(function (a, b) {
+    return b.word.length - a.word.length;
+  });
   /* 같은 항목이 두 번 앞에 서지 않게 */
   var seen = {};
   return hits.filter(function (h) {
@@ -720,9 +986,10 @@ function hintFor(name, net) {
 
 /* 은행 표기가 달라 같은 거래처가 갈리는 게 가장 흔한 못정한 원인이다 */
 function coreName(s) {
-  return s.replace(/\(주\)|\(유\)|㈜|주식회사|유한회사/g, '')
-          .replace(/[\s·.,\-_/()\[\]]/g, '')
-          .toLowerCase();
+  return s
+    .replace(/\(주\)|\(유\)|㈜|주식회사|유한회사/g, '')
+    .replace(/[\s·.,\-_/()\[\]]/g, '')
+    .toLowerCase();
 }
 function likeName(a, b) {
   if (a.length < 3 || b.length < 3) return false;
@@ -744,11 +1011,21 @@ function similarPayees(g) {
      세 글자짜리 「식자재」 하나가 「식자재A」부터 「식자재G」까지 일곱 곳에 다 걸렸다.
    ★ 저장 쪽(pickPayload)은 이미 「if (g.askSkip) return;」 로 걸러내고 있다. 같은 잣대를 맞춘 것이다 */
 function learnedFor(g) {
-  var a = coreName(g.name), hit = null;
+  var a = coreName(g.name),
+    hit = null;
   if (a.length < 3) return null;
   UP.payees.forEach(function (x) {
-    if (hit || x === g || !gDone(x) || gCats(x).length !== 1 ||
-        x.askSkip || x.auto || x.autoIn || x.autoOut) return;
+    if (
+      hit ||
+      x === g ||
+      !gDone(x) ||
+      gCats(x).length !== 1 ||
+      x.askSkip ||
+      x.auto ||
+      x.autoIn ||
+      x.autoOut
+    )
+      return;
     if (likeName(a, coreName(x.name))) hit = { cat: gCats(x)[0], from: x.name };
   });
   return hit;
@@ -764,7 +1041,8 @@ function learnedFor(g) {
    ★ 추천까지만이다. 자동 확정(autoCategory)은 여기를 안 탄다 —
      hintFor 를 부르는 곳은 온보딩 카드 한 곳뿐이다 */
 function memoHints(g, isIn) {
-  var out = [], seen = {};
+  var out = [],
+    seen = {};
   (g.memoList || []).forEach(function (m) {
     if (!m) return;
     hintFor(m, isIn ? 1 : -1).forEach(function (h) {
@@ -801,8 +1079,16 @@ function taxAcctWhere(g) {
      아래 정렬은 문장 안에서 읽히는 차례일 뿐이다 */
 function whySolo(b) {
   if (b.kind === 'learn') {
-    return '비슷한 이름 「' + showName(b.from) + '」' + eul(b.from) + ' ' +
-           b.cat + ro(b.cat) + ' 정하셔서 ✨를 달았습니다';
+    return (
+      '비슷한 이름 「' +
+      showName(b.from) +
+      '」' +
+      eul(b.from) +
+      ' ' +
+      b.cat +
+      ro(b.cat) +
+      ' 정하셔서 ✨를 달았습니다'
+    );
   }
   if (b.kind === 'made') {
     return '이름에 「' + b.word + '」' + ga(b.word) + ' 있고 ' + BIZ.주인 + '이 만드신 항목입니다';
@@ -846,7 +1132,7 @@ function whyFrom(bits, spark) {
    첫 화면에 큰 거래처가 나오면 「이걸 내가 다 해야 하나」 하고 멈춘다.
    이름만 봐도 짐작되는 것 세 개를 먼저 보여주면 세 번 눌러보고 계속하게 된다.
    실측: 커버리지 손실 0~2.4%p. 다섯 개로 늘리면 3~6%p라 셋이 적당하다 */
-var EASY_FIRST = 0;   /* 38차 11번. 안 쓴다 — 차례는 금액 큰 순 하나다 */
+var EASY_FIRST = 0; /* 38차 11번. 안 쓴다 — 차례는 금액 큰 순 하나다 */
 
 /* ── 36차 F · 작은 거래는 묻지 않는다 ──────────────────────────
    ★ 금액만 보고 넘기면 안 된다. 작은 거래처가 두 종류다.
@@ -860,18 +1146,20 @@ var EASY_FIRST = 0;   /* 38차 11번. 안 쓴다 — 차례는 금액 큰 순 �
      20곳 찍고 남는 것의 86~97%가 진짜 사업 지출이었다.
      그래서 금액을 화면에 드러내고(F-3) · 펼쳐서 되돌리고(F-4) · 크면 알린다(F-5).
      셋 중 하나라도 빠지면 사업에 쓴 돈이 조용히 줄어든다 */
-var ASK_MIN_SHARE  = 0.001;   /* 그 거래처 나간 돈이 전체 금액의 이만큼 미만이면 작다 */
-var ASK_MIN_MONTHS = 3;       /* 이만큼 되는 달에 나왔으면 「매달 나가는 곳」이라 계속 묻는다 */
+var ASK_MIN_SHARE = 0.001; /* 그 거래처 나간 돈이 전체 금액의 이만큼 미만이면 작다 */
+var ASK_MIN_MONTHS = 3; /* 이만큼 되는 달에 나왔으면 「매달 나가는 곳」이라 계속 묻는다 */
 /* ★ 63-3. F 규칙이 안 묻고 넘긴 것이 가는 곳 — 「내가 가져간 돈」.
    버튼(「사업 외 용도」)이 아니라 방향으로 갈려 나온 이름이다. 나간 돈만 넘기므로 이쪽이다 */
-var ASK_SKIP_CAT   = '내가 가져간 돈';
+var ASK_SKIP_CAT = '내가 가져간 돈';
 /* 화면에서 「사장님이 찍으신 사업 외 용도」와 갈라 부르는 이름 (36차) */
-var SKIP_PART      = '앱이 넘긴 작은 거래';
+var SKIP_PART = '앱이 넘긴 작은 거래';
 
 /* 파일 전체 금액 — 「전체 금액의 0.1%」의 분모 */
 function totalAbs() {
   var s = 0;
-  (UP.payees || []).forEach(function (g) { s += g.abs; });
+  (UP.payees || []).forEach(function (g) {
+    s += g.abs;
+  });
   return s;
 }
 /* 이 거래처를 안 묻고 넘길 것인가.
@@ -884,18 +1172,20 @@ function totalAbs() {
 function taxLike(name) {
   var t = nz(name);
   for (var i = 0; i < TAX_WORDS.length; i++) if (t.indexOf(TAX_WORDS[i]) !== -1) return true;
-  for (var j = 0; j < INSURANCE_WORDS.length; j++) if (t.indexOf(INSURANCE_WORDS[j]) !== -1) return true;
-  for (var k = 0; k < BOOKKEEPING_WORDS.length; k++) if (t.indexOf(BOOKKEEPING_WORDS[k]) !== -1) return true;
+  for (var j = 0; j < INSURANCE_WORDS.length; j++)
+    if (t.indexOf(INSURANCE_WORDS[j]) !== -1) return true;
+  for (var k = 0; k < BOOKKEEPING_WORDS.length; k++)
+    if (t.indexOf(BOOKKEEPING_WORDS[k]) !== -1) return true;
   for (var u = 0; u < UTIL_WORDS.length; u++) if (t.indexOf(UTIL_WORDS[u]) !== -1) return true;
   return startsUtil(t);
 }
 function askSkippable(g, total) {
   /* 사장님이 손수 되돌리신 곳은 다시 넘기지 않는다 — 창을 닫았다 열어도 그대로다 */
   if (UP.unskip && UP.unskip.indexOf(g.name) !== -1) return false;
-  if (gDone(g)) return false;              /* 이미 정해진 곳은 건드리지 않는다 */
-  if (g.inN > 0) return false;             /* 들어온 돈이 섞인 곳은 넘기지 않는다 */
-  if (taxLike(g.name)) return false;       /* 세금·보험·공과금은 작아도 안 넘긴다 (42차 1번) */
-  if (Object.keys(g.outMonths).length >= ASK_MIN_MONTHS) return false;  /* 매달 나가는 곳 */
+  if (gDone(g)) return false; /* 이미 정해진 곳은 건드리지 않는다 */
+  if (g.inN > 0) return false; /* 들어온 돈이 섞인 곳은 넘기지 않는다 */
+  if (taxLike(g.name)) return false; /* 세금·보험·공과금은 작아도 안 넘긴다 (42차 1번) */
+  if (Object.keys(g.outMonths).length >= ASK_MIN_MONTHS) return false; /* 매달 나가는 곳 */
   return total > 0 && g.outSum < total * ASK_MIN_SHARE;
 }
 /* 넘길 것을 찍어두고 목록으로 남긴다. 되돌릴 수 있어야 하므로 표시를 붙인다 */
@@ -936,9 +1226,13 @@ function unskipAllAsk() {
     if (g.mixed) gSetCat(g, true, null, false);
   });
   var chosen = {};
-  list.forEach(function (g) { chosen[g.name] = 1; });
+  list.forEach(function (g) {
+    chosen[g.name] = 1;
+  });
   var before = UP.queue.slice(0, UP.pos);
-  var after = UP.queue.slice(UP.pos).filter(function (g) { return !chosen[g.name]; });
+  var after = UP.queue.slice(UP.pos).filter(function (g) {
+    return !chosen[g.name];
+  });
   UP.queue = before.concat(list, after);
   UP.skipped = [];
   UP.target = Math.min(UP.queue.length, UP.pos + 10);
@@ -947,14 +1241,20 @@ function unskipAllAsk() {
 }
 /* 넘긴 것 합계 — 파일 전체 기간 기준이다 (원칙 3: 기간을 붙여 쓴다) */
 function skipTotals() {
-  var n = 0, sum = 0;
-  (UP.skipped || []).forEach(function (g) { n++; sum += g.outSum; });
+  var n = 0,
+    sum = 0;
+  (UP.skipped || []).forEach(function (g) {
+    n++;
+    sum += g.outSum;
+  });
   return { n: n, sum: sum };
 }
 /* 큐를 새로 만든다 — 넘길 것을 먼저 찍고 남은 것만 줄에 세운다 */
 function buildQueue(ordered) {
   applyAskSkip();
-  var rest = UP.payees.filter(function (g) { return !gDone(g) && !g.cardMixed; });
+  var rest = UP.payees.filter(function (g) {
+    return !gDone(g) && !g.cardMixed;
+  });
   return ordered === false ? rest : orderQueue(rest);
 }
 
@@ -966,11 +1266,13 @@ function buildQueue(ordered) {
    ★ 입금 쪽과 출금 쪽은 절대 같이 묶지 않는다 —
      카드 정산(들어온 돈)과 카드 대금(나간 돈)이 한 덩어리가 되면
      매출이 지출로, 지출이 매출로 넘어간다 */
-var GROUP_PREFIX = 4;      /* 앞 이 글자 수 이상이 같으면 한 줄로 묶는다 */
+var GROUP_PREFIX = 4; /* 앞 이 글자 수 이상이 같으면 한 줄로 묶는다 */
 
 /* 아직 안 정한 곳만 묶는다. 이미 정하신 곳은 건드리지 않는다 */
 function bundlePool() {
-  return (UP.queue || []).slice(UP.pos).filter(function (g) { return !gDone(g); });
+  return (UP.queue || []).slice(UP.pos).filter(function (g) {
+    return !gDone(g);
+  });
 }
 /* 나가는 카드 대금인가 — 카드사 이름이 있고 나간 쪽이다.
    ★ autoCategory 는 net > 0 일 때만 카드사를 매출로 잡는다. 분리는 이미 되고 있다 */
@@ -985,21 +1287,35 @@ function isCardOut(g) {
 }
 function spanOf(keys) {
   if (!keys.length) return '';
-  var mm = function (m) { return (+m.slice(5, 7)) + '월'; };
-  var y0 = keys[0].slice(0, 4), y1 = keys[keys.length - 1].slice(0, 4);
+  var mm = function (m) {
+    return +m.slice(5, 7) + '월';
+  };
+  var y0 = keys[0].slice(0, 4),
+    y1 = keys[keys.length - 1].slice(0, 4);
   if (keys.length === 1) return y0 + '년 ' + mm(keys[0]);
   if (y0 === y1) return y0 + '년 ' + mm(keys[0]) + '~' + mm(keys[keys.length - 1]);
   return y0 + '년 ' + mm(keys[0]) + '~' + y1 + '년 ' + mm(keys[keys.length - 1]);
 }
 function makeBundle(label, mems, kind) {
-  var sum = 0, n = 0, ms = {};
+  var sum = 0,
+    n = 0,
+    ms = {};
   mems.forEach(function (g) {
-    sum += (g.net > 0) ? g.inSum : g.outSum;
+    sum += g.net > 0 ? g.inSum : g.outSum;
     n += g.n;
-    Object.keys(g.months).forEach(function (k) { ms[k] = 1; });
+    Object.keys(g.months).forEach(function (k) {
+      ms[k] = 1;
+    });
   });
-  return { label: label, mems: mems, sum: sum, n: n, kind: kind,
-           into: mems[0].net > 0, span: spanOf(Object.keys(ms).sort()) };
+  return {
+    label: label,
+    mems: mems,
+    sum: sum,
+    n: n,
+    kind: kind,
+    into: mems[0].net > 0,
+    span: spanOf(Object.keys(ms).sort())
+  };
 }
 /* 이 거래처와 한 줄로 묶을 것들 */
 function bundleFor(g) {
@@ -1016,7 +1332,7 @@ function bundleFor(g) {
   var head = coreName(g.name).slice(0, GROUP_PREFIX);
   if (head.length < GROUP_PREFIX) return null;
   mems = pool.filter(function (x) {
-    return (x.net > 0) === mine && coreName(x.name).slice(0, GROUP_PREFIX) === head;
+    return x.net > 0 === mine && coreName(x.name).slice(0, GROUP_PREFIX) === head;
   });
   if (mems.length < 2) return null;
   return makeBundle(showName(mems[0].name).slice(0, GROUP_PREFIX), mems, 'prefix');
@@ -1037,7 +1353,9 @@ var RAW_PEEK = 5;
    ★ 00:00:00 은 시각이 없는 것으로 본다 — buildRows 도 같은 판정을 쓴다 */
 var 요일글 = ['일', '월', '화', '수', '목', '금', '토'];
 function dowText(at) {
-  var y = +String(at).slice(0, 4), m = +String(at).slice(5, 7), d = +String(at).slice(8, 10);
+  var y = +String(at).slice(0, 4),
+    m = +String(at).slice(5, 7),
+    d = +String(at).slice(8, 10);
   if (!y || !m || !d) return '';
   /* 날짜만 있는 글자라 UTC 로 만들어야 시간대 때문에 하루가 안 밀린다 */
   return 요일글[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
@@ -1045,7 +1363,8 @@ function dowText(at) {
 function clockText(at) {
   var s = String(at);
   if (s.length < 16) return '';
-  var hh = s.slice(11, 13), mm = s.slice(14, 16);
+  var hh = s.slice(11, 13),
+    mm = s.slice(14, 16);
   if (!/^\d\d$/.test(hh) || !/^\d\d$/.test(mm)) return '';
   if (hh === '00' && mm === '00' && s.slice(17, 19) === '00') return '';
   return hh + ':' + mm;
@@ -1061,10 +1380,15 @@ function clockText(at) {
 function drawRawPeek(card, raws, redraw, anchor) {
   if (!raws || !raws.length || !UP || !UP.rows) return;
   var 다시 = redraw || drawOnboard;
-  var 원 = UP.rows.filter(function (r) { return raws.indexOf(r.payee) !== -1; });
+  var 원 = UP.rows.filter(function (r) {
+    return raws.indexOf(r.payee) !== -1;
+  });
   if (!원.length) return;
-  원.sort(function (a, b) { return a.at < b.at ? 1 : (a.at > b.at ? -1 : 0); });
-  var 열쇠 = 'raw:' + raws[0], 몇쇠 = 'rawn:' + raws[0];
+  원.sort(function (a, b) {
+    return a.at < b.at ? 1 : a.at > b.at ? -1 : 0;
+  });
+  var 열쇠 = 'raw:' + raws[0],
+    몇쇠 = 'rawn:' + raws[0];
   var open = !!(UP.open && UP.open[열쇠]);
   /* ★ 67차 ①. 「이 거래처의 원거래 보기」는 길고 「원거래」가 은행 말이다.
      짧고 하는 일 그대로인 이름으로 바꾼다 */
@@ -1089,7 +1413,7 @@ function drawRawPeek(card, raws, redraw, anchor) {
     if (ck) when.appendChild(document.createTextNode(' ' + ck));
     row.appendChild(when);
     var rnm = el('span', 'rawnm', r.payee);
-    if (r.patched) rnm.appendChild(el('span', 'estmark', '추정'));   /* ★ 108차 ④ */
+    if (r.patched) rnm.appendChild(el('span', 'estmark', '추정')); /* ★ 108차 ④ */
     /* ★ 112차 ②㉰. 이 자리는 한 줄이라 긴 말을 못 넣는다. 짧은 딱지로 갈라만 둔다 —
        무엇이 정해졌고 무엇이 남았는지는 그날 펼친 목록(dayRow)에 다 적는다 */
     else if (r.byStated) rnm.appendChild(el('span', 'estmark', '차액 확인'));
@@ -1100,8 +1424,7 @@ function drawRawPeek(card, raws, redraw, anchor) {
   });
   /* ★ 67차 ①. 「외 N건」은 알려만 주고 갈 곳이 없었다. 눌러서 다섯 건씩 더 본다 */
   if (원.length > 몇) {
-    var more = el('button', 'oblink rawmorebtn',
-      '외 ' + won(원.length - 몇) + '건 보기');
+    var more = el('button', 'oblink rawmorebtn', '외 ' + won(원.length - 몇) + '건 보기');
     more.type = 'button';
     more.addEventListener('click', function () {
       UP.open = UP.open || {};
@@ -1111,10 +1434,13 @@ function drawRawPeek(card, raws, redraw, anchor) {
     box.appendChild(more);
   }
   /* 은행이 이름을 자른 것인지 — 원문 그대로가 잘려 있으면 그렇게 적는다 */
-  var 잘림 = raws.some(function (x) { return /[…\.]{1,3}$/.test(String(x).trim()); });
+  var 잘림 = raws.some(function (x) {
+    return /[…\.]{1,3}$/.test(String(x).trim());
+  });
   if (잘림) {
-    box.appendChild(el('div', 'rawmore',
-      '받으신 거래내역에 이름이 이렇게 잘려 있습니다. 앱이 자른 것이 아닙니다'));
+    box.appendChild(
+      el('div', 'rawmore', '받으신 거래내역에 이름이 이렇게 잘려 있습니다. 앱이 자른 것이 아닙니다')
+    );
   }
   card.appendChild(box);
 }
@@ -1130,29 +1456,51 @@ function drawBundle(host, b) {
   /* ★ 38차 9번. 금액을 건수 옆에 붙인다.
      큰 빨간 숫자가 따로 한 줄을 차지하니 「카드대금??? 6000만원???」 하고 놀라신다 */
   var meta = el('div', 'obmeta bunmeta');
-  meta.appendChild(el('span', 'bunspan',
-    b.span + ' · ' + won(b.mems.length) + '곳 · ' + b.n + '건'));
+  meta.appendChild(
+    el('span', 'bunspan', b.span + ' · ' + won(b.mems.length) + '곳 · ' + b.n + '건')
+  );
   meta.appendChild(el('span', 'bunamt ' + (b.into ? 'in' : 'out'), won(b.sum) + '원'));
   card.appendChild(meta);
   /* ★ 38차 13번. 처음부터 펼쳐서 보여준다. 합계만 보면 놀라신다 */
-  card.appendChild(el('div', 'obsub',
-    b.kind === 'card' ? '카드를 다 합치면 이렇게 됩니다'
-                      : b.mems.length + '곳을 한 번에 정합니다'));
+  card.appendChild(
+    el(
+      'div',
+      'obsub',
+      b.kind === 'card' ? '카드를 다 합치면 이렇게 됩니다' : b.mems.length + '곳을 한 번에 정합니다'
+    )
+  );
   /* ★ 64-4. 「2곳을 한 번에 정합니다」만으로는 뭘 묶었는지 알 수 없다 —
      이름이 잘려 있으면 더 그렇다. 묶인 이름을 그대로 보여준다 */
-  card.appendChild(el('div', 'obwhy',
-    '묶은 곳 — ' + b.mems.map(function (m) { return showName(m.name); }).join(' · ')));
+  card.appendChild(
+    el(
+      'div',
+      'obwhy',
+      '묶은 곳 — ' +
+        b.mems
+          .map(function (m) {
+            return showName(m.name);
+          })
+          .join(' · ')
+    )
+  );
   var 원본 = [];
-  b.mems.forEach(function (m) { (m.rawList || [m.name]).forEach(function (r) {
-    if (원본.indexOf(r) === -1) 원본.push(r); }); });
+  b.mems.forEach(function (m) {
+    (m.rawList || [m.name]).forEach(function (r) {
+      if (원본.indexOf(r) === -1) 원본.push(r);
+    });
+  });
   drawRawPeek(card, 원본, null, 이름칸);
 
   /* ★ 카드 대금은 어디로 보낼지 앱이 정하지 않는다.
      사업용 카드를 쓰시는 분은 「기타(지출)」이고 개인 카드가 섞인 분은 「사업 외 용도」다.
      앱은 어느 쪽인지 알 수 없다 (36차 G-2). 그래서 ✨를 안 단다 */
-  var quick = (b.into ? UP_QUICK_IN : UP_QUICK_OUT).map(function (c) {
-    return c === '매출' ? '매출' : baseName(c);
-  }).filter(function (c) { return c === '매출' || !isHidden(c); });   /* 감춘 항목은 버튼에도 없다 */
+  var quick = (b.into ? UP_QUICK_IN : UP_QUICK_OUT)
+    .map(function (c) {
+      return c === '매출' ? '매출' : baseName(c);
+    })
+    .filter(function (c) {
+      return c === '매출' || !isHidden(c);
+    }); /* 감춘 항목은 버튼에도 없다 */
   var outside = baseName('사업 외 용도');
   if (UP.accounts.indexOf(outside) !== -1 && quick.indexOf(outside) === -1) {
     var at = quick.indexOf(etcName());
@@ -1162,7 +1510,9 @@ function drawBundle(host, b) {
   quick.forEach(function (c) {
     var bt = el('button', 'b', c);
     bt.type = 'button';
-    bt.addEventListener('click', function () { pickBundle(b, c); });
+    bt.addEventListener('click', function () {
+      pickBundle(b, c);
+    });
     btns.appendChild(bt);
   });
   var more = el('button', 'upbtn plain', '다른 항목');
@@ -1175,15 +1525,24 @@ function drawBundle(host, b) {
   menu.hidden = true;
   card.appendChild(menu);
   more.addEventListener('click', function () {
-    if (!menu.hidden) { menu.hidden = true; more.classList.remove('on'); return; }
+    if (!menu.hidden) {
+      menu.hidden = true;
+      more.classList.remove('on');
+      return;
+    }
     more.classList.add('on');
     menu.innerHTML = '';
     UP.accounts.forEach(function (name) {
       var mb = el('button', 'mi', name);
       mb.type = 'button';
       var note = noteFor(name);
-      if (note) { if (isKeep(name)) mb.classList.add('keep'); mb.appendChild(el('span', 'msub', note)); }
-      mb.addEventListener('click', function () { pickBundle(b, name); });
+      if (note) {
+        if (isKeep(name)) mb.classList.add('keep');
+        mb.appendChild(el('span', 'msub', note));
+      }
+      mb.addEventListener('click', function () {
+        pickBundle(b, name);
+      });
       menu.appendChild(mb);
     });
     menu.hidden = false;
@@ -1204,30 +1563,38 @@ function drawBundle(host, b) {
   });
   if (open) {
     var box = el('div', 'dtl');
-    b.mems.slice().sort(function (x, y) {
-      return ((y.net > 0 ? y.inSum : y.outSum) - (x.net > 0 ? x.inSum : x.outSum));
-    }).forEach(function (m) {
-      var r2 = el('div', 'drow');
-      var nm = el('div', 'dnm');
-      nm.appendChild(document.createTextNode(showName(m.name)));
-      nm.appendChild(el('div', 'dspan', payeeSpan(m) + ' · ' + m.n + '건'));
-      r2.appendChild(nm);
-      r2.appendChild(el('div', 'dv num', won(m.net > 0 ? m.inSum : m.outSum)));
-      var ch = el('div', 'dch');
-      var cb = el('button', 'chbtn', '항목 고르기');
-      cb.type = 'button';
-      ch.appendChild(cb);
-      r2.appendChild(ch);
-      box.appendChild(r2);
-      var m2 = el('div', 'menu');
-      m2.hidden = true;
-      box.appendChild(m2);
-      cb.addEventListener('click', function () {
-        if (!m2.hidden) { m2.hidden = true; return; }
-        drawChangeMenu(m2, m, function () { drawOnboard(); });
-        m2.hidden = false;
+    b.mems
+      .slice()
+      .sort(function (x, y) {
+        return (y.net > 0 ? y.inSum : y.outSum) - (x.net > 0 ? x.inSum : x.outSum);
+      })
+      .forEach(function (m) {
+        var r2 = el('div', 'drow');
+        var nm = el('div', 'dnm');
+        nm.appendChild(document.createTextNode(showName(m.name)));
+        nm.appendChild(el('div', 'dspan', payeeSpan(m) + ' · ' + m.n + '건'));
+        r2.appendChild(nm);
+        r2.appendChild(el('div', 'dv num', won(m.net > 0 ? m.inSum : m.outSum)));
+        var ch = el('div', 'dch');
+        var cb = el('button', 'chbtn', '항목 고르기');
+        cb.type = 'button';
+        ch.appendChild(cb);
+        r2.appendChild(ch);
+        box.appendChild(r2);
+        var m2 = el('div', 'menu');
+        m2.hidden = true;
+        box.appendChild(m2);
+        cb.addEventListener('click', function () {
+          if (!m2.hidden) {
+            m2.hidden = true;
+            return;
+          }
+          drawChangeMenu(m2, m, function () {
+            drawOnboard();
+          });
+          m2.hidden = false;
+        });
       });
-    });
     card.appendChild(box);
   }
 
@@ -1241,8 +1608,14 @@ function drawBundle(host, b) {
   var skip = el('button', 'oblink', '나중에');
   skip.type = 'button';
   skip.addEventListener('click', function () {
-    UP.hist.push({ i: UP.pos, g: b.mems[0], cat: b.mems[0].cat, auto: b.mems[0].auto,
-                   name: b.label, kind: 'skip' });
+    UP.hist.push({
+      i: UP.pos,
+      g: b.mems[0],
+      cat: b.mems[0].cat,
+      auto: b.mems[0].auto,
+      name: b.label,
+      kind: 'skip'
+    });
     UP.pos++;
     utPick();
     drawOnboard();
@@ -1254,16 +1627,33 @@ function drawBundle(host, b) {
 
 /* 묶음을 한 번에 찍는다. 되돌릴 수 있게 하나로 쌓는다 */
 function pickBundle(b, cat) {
-  UP.hist.push({ kind: 'bundle', i: UP.pos, name: b.label, newCat: cat,
+  UP.hist.push({
+    kind: 'bundle',
+    i: UP.pos,
+    name: b.label,
+    newCat: cat,
     mems: b.mems.map(function (g) {
-      return { g: g, cat: g.cat, auto: g.auto, catIn: g.catIn, catOut: g.catOut,
-               autoIn: g.autoIn, autoOut: g.autoOut };
-    }) });
+      return {
+        g: g,
+        cat: g.cat,
+        auto: g.auto,
+        catIn: g.catIn,
+        catOut: g.catOut,
+        autoIn: g.autoIn,
+        autoOut: g.autoOut
+      };
+    })
+  });
   b.mems.forEach(function (g) {
-    if (g.mixed) { gSetCat(g, true, cat, false); gSetCat(g, false, cat, false); }
-    else { g.cat = cat; g.auto = false; }
+    if (g.mixed) {
+      gSetCat(g, true, cat, false);
+      gSetCat(g, false, cat, false);
+    } else {
+      g.cat = cat;
+      g.auto = false;
+    }
     var i = UP.queue.indexOf(g);
-    if (i > UP.pos) UP.queue.splice(i, 1);      /* 지금 보는 것은 남기고 뒤엣것만 뺀다 */
+    if (i > UP.pos) UP.queue.splice(i, 1); /* 지금 보는 것은 남기고 뒤엣것만 뺀다 */
   });
   UP.said = isKeep(cat) ? cat : null;
   UP.ask = null;
@@ -1284,7 +1674,7 @@ function pickBundle(b, cat) {
 function orderQueue(list) {
   return list.slice().sort(function (a, b) {
     if (b.abs !== a.abs) return b.abs - a.abs;
-    return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
   });
 }
 
@@ -1302,10 +1692,15 @@ var GOAL_MIN_SHARE = 0.005;
 /* 37차 3번. 큰 숫자가 분모를 가져갔으니 작은 줄에는 남은 곳 이야기만 둔다.
    짐작해서 쓰지 않는다 — 남은 곳이 없거나 금액을 못 재면 아무 말도 안 붙인다 */
 function goalRestText() {
-  var pend = (UP.queue || []).filter(function (g) { return !gDone(g); });
+  var pend = (UP.queue || []).filter(function (g) {
+    return !gDone(g);
+  });
   if (!pend.length) return '';
   var biggest = 0;
-  pend.forEach(function (g) { var v = gOpenAbs(g); if (v > biggest) biggest = v; });
+  pend.forEach(function (g) {
+    var v = gOpenAbs(g);
+    if (v > biggest) biggest = v;
+  });
   if (!biggest) return '';
   /* ★ 안심시키는 말일 때만 한다. 남은 것이 아직 큰데
      「남은 곳은 하나에 4,794만원이 안 됩니다」라고 하면 겁주는 말이 된다.
@@ -1324,16 +1719,31 @@ function goalLine() {
   if (!tot) return { share: 1, next: 0 };
   /* 이미 정한 금액 + 큐에서 앞으로 물을 것들을 큰 것부터 더해 나간다 */
   var acc = 0;
-  UP.payees.forEach(function (g) { acc += g.abs - gOpenAbs(g); });
-  var pend = (UP.queue || []).filter(function (g) { return !gDone(g); })
-    .map(function (g) { return gOpenAbs(g); })
-    .sort(function (a, b) { return b - a; });
+  UP.payees.forEach(function (g) {
+    acc += g.abs - gOpenAbs(g);
+  });
+  var pend = (UP.queue || [])
+    .filter(function (g) {
+      return !gDone(g);
+    })
+    .map(function (g) {
+      return gOpenAbs(g);
+    })
+    .sort(function (a, b) {
+      return b - a;
+    });
   var i = 0;
   /* 다음에 물을 것이 0.5% 미만이 될 때까지 */
-  while (i < pend.length && pend[i] >= tot * GOAL_MIN_SHARE) { acc += pend[i]; i++; }
+  while (i < pend.length && pend[i] >= tot * GOAL_MIN_SHARE) {
+    acc += pend[i];
+    i++;
+  }
   /* 그 지점에서 안 정한 금액이 아직 전체의 20%를 넘으면 넘지 않을 때까지 뒤로 민다 */
   var guard = 0;
-  while (i < pend.length && guard++ < 500 && goalShareLeft(tot, acc)) { acc += pend[i]; i++; }
+  while (i < pend.length && guard++ < 500 && goalShareLeft(tot, acc)) {
+    acc += pend[i];
+    i++;
+  }
   return { share: Math.min(1, acc / tot), next: pend.length - i };
 }
 /* 그 지점까지 정해도 안 정한 금액이 아직 전체의 20%를 넘는가.
@@ -1344,9 +1754,9 @@ function goalShareLeft(tot, acc) {
 }
 
 /* 18차 A의 RATIO_MAX_UNKNOWN 과 같은 값. 비율을 보여줄 수 있는 선이다 */
-var ONBOARD_MAX_UNKNOWN = 0.20;
+var ONBOARD_MAX_UNKNOWN = 0.2;
 function onboardDone() {
-  if (UP.pos >= UP.queue.length) return true;                  /* 다 봤으면 끝 */
+  if (UP.pos >= UP.queue.length) return true; /* 다 봤으면 끝 */
   if (UP.pos >= UP.target) return true;
   /* 건수가 아니라 금액이다. 220곳 중 152곳이 남아도 그게 금액의 2%면 할 일이 없다.
      다만 첫 회차에 서너 곳 찍고 끝나면 「이게 다야?」가 되니 최소 스무 곳은 보여준다.
@@ -1359,9 +1769,13 @@ function onboardDone() {
 
 /* 지금까지 금액의 몇 %를 분류했는지 */
 function coverage(extra) {
-  var tot = 0, done = 0;
+  var tot = 0,
+    done = 0;
   /* 섞인 거래처는 안 정한 쪽 금액만 남은 것으로 센다 (35차 B) */
-  UP.payees.forEach(function (g) { tot += g.abs; done += g.abs - gOpenAbs(g); });
+  UP.payees.forEach(function (g) {
+    tot += g.abs;
+    done += g.abs - gOpenAbs(g);
+  });
   if (extra) {
     var c = 0;
     for (var i = UP.pos; i < UP.queue.length && c < extra; i++) {
@@ -1381,21 +1795,29 @@ function pctTxt(x) {
 }
 
 /* 남은 거래처 수 — 이 회차 목록에서 아직 안 물어본 것 */
-function restCount() { return Math.max(0, UP.queue.length - UP.pos); }
+function restCount() {
+  return Math.max(0, UP.queue.length - UP.pos);
+}
 
 /* 한 걸음 되돌리기. 여러 번 누르면 계속 뒤로 간다 */
 function undoPick() {
   /* 36차 H-1. 찍은 게 하나도 없으면 성함 칸으로 되돌아간다.
      「어 뭐야? 내 이름 쓰는 거 어디 갔니?」 — 돌아갈 길이 없었다 */
-  if (!UP.hist.length) { askOwner(); return; }
+  if (!UP.hist.length) {
+    askOwner();
+    return;
+  }
   var h = UP.hist.pop();
   /* 36차 G. 묶어서 한 번에 찍은 것은 한 번에 되돌린다 */
   if (h.kind === 'bundle') {
     h.mems.forEach(function (m) {
-      m.g.cat = m.cat; m.g.auto = m.auto;
+      m.g.cat = m.cat;
+      m.g.auto = m.auto;
       if (m.g.mixed) {
-        m.g.catIn = m.catIn; m.g.catOut = m.catOut;
-        m.g.autoIn = m.autoIn; m.g.autoOut = m.autoOut;
+        m.g.catIn = m.catIn;
+        m.g.catOut = m.catOut;
+        m.g.autoIn = m.autoIn;
+        m.g.autoOut = m.autoOut;
       }
       if (UP.queue.indexOf(m.g) === -1) UP.queue.push(m.g);
     });
@@ -1413,13 +1835,16 @@ function undoPick() {
     g.cardMixed = h.cardMixed;
     savePicks();
   }
-  if (g.mixed) {                      /* 방향별로 찍은 것도 되돌린다 (35차 B) */
-    g.catIn = h.catIn; g.catOut = h.catOut;
-    g.autoIn = h.autoIn; g.autoOut = h.autoOut;
+  if (g.mixed) {
+    /* 방향별로 찍은 것도 되돌린다 (35차 B) */
+    g.catIn = h.catIn;
+    g.catOut = h.catOut;
+    g.autoIn = h.autoIn;
+    g.autoOut = h.autoOut;
   }
   UP.said = null;
   if (h.kind === 'same') {
-    if (h.qi >= 0) UP.queue.splice(h.qi, 0, g);   /* 목록에서 뺐던 것을 되돌린다 */
+    if (h.qi >= 0) UP.queue.splice(h.qi, 0, g); /* 목록에서 뺐던 것을 되돌린다 */
   } else {
     UP.pos = h.i;
   }
@@ -1439,17 +1864,23 @@ function undoPick() {
    ★ 원인을 다 보면 결과로 돌아간다. 비교 구간 밖의 미정 거래처는 이어서 묻지 않는다 */
 function holdAskStart(hold, months) {
   if (!UP || !hold || !hold.목록) return false;
-  if (UP.holdAsk) holdAskEnd(false);          /* 남아 있던 원인 차례부터 되돌린다 */
-  var 합 = {}, list = [];
+  if (UP.holdAsk) holdAskEnd(false); /* 남아 있던 원인 차례부터 되돌린다 */
+  var 합 = {},
+    list = [];
   hold.목록.forEach(function (r) {
     var g = UP.byName[r.이름];
     if (!g || g.cardMixed) return;
-    if (gCatFor(g, false)) return;               /* 출금 쪽이 이미 정해졌다 */
-    if (합[g.name] == null) { 합[g.name] = 0; list.push(g); }
+    if (gCatFor(g, false)) return; /* 출금 쪽이 이미 정해졌다 */
+    if (합[g.name] == null) {
+      합[g.name] = 0;
+      list.push(g);
+    }
     합[g.name] += r.액;
   });
   if (!list.length) return false;
-  list.sort(function (a, b) { return 합[b.name] - 합[a.name]; });
+  list.sort(function (a, b) {
+    return 합[b.name] - 합[a.name];
+  });
   return askListBegin(list, months, '원인');
 }
 /* ★ 119차. 차례로 정하기 — 원인 경로와 목록 경로가 같은 틀을 쓴다.
@@ -1457,11 +1888,25 @@ function holdAskStart(hold, months) {
    물을 차례만 잠깐 바꾸고 holdAskEnd 가 원래 차례·월·종료일·카드 펼침으로 되돌린다 */
 function askListBegin(list, months, 종류) {
   UP.holdAsk = {
-    queue: list, months: months, 종류: 종류,
-    저장: { queue: UP.queue, pos: UP.pos, target: UP.target, more: UP.more,
-            hist: UP.hist, ask: UP.ask, said: UP.said },
-    복귀: { dueDay: UP.dueDay, open: !!(UP.open && UP.open.__dueOpen),
-            month: UP.month, view: UP.view, store: UP.store }
+    queue: list,
+    months: months,
+    종류: 종류,
+    저장: {
+      queue: UP.queue,
+      pos: UP.pos,
+      target: UP.target,
+      more: UP.more,
+      hist: UP.hist,
+      ask: UP.ask,
+      said: UP.said
+    },
+    복귀: {
+      dueDay: UP.dueDay,
+      open: !!(UP.open && UP.open.__dueOpen),
+      month: UP.month,
+      view: UP.view,
+      store: UP.store
+    }
   };
   UP.queue = list;
   UP.pos = 0;
@@ -1481,7 +1926,8 @@ function askListBegin(list, months, 종류) {
 function listAskStart(names, months) {
   if (!UP) return false;
   if (UP.holdAsk) holdAskEnd(false);
-  var 본 = {}, list = [];
+  var 본 = {},
+    list = [];
   names.forEach(function (nm) {
     var g = UP.byName[nm];
     if (!g || 본[g.name] || gDone(g) || g.cardMixed) return;
@@ -1500,22 +1946,30 @@ function holdAskEnd(결과로) {
   UP.holdAsk = null;
   var sv = h.저장;
   /* 원인 경로에서 다 정한 거래처는 원래 줄의 남은 자리에서 뺀다 (setCat 과 같은 셈) */
-  UP.queue = sv.queue.filter(function (g, i) { return i < sv.pos || !gDone(g); });
-  UP.pos = sv.pos; UP.target = sv.target; UP.more = sv.more;
-  UP.hist = sv.hist; UP.ask = null; UP.said = sv.said;
+  UP.queue = sv.queue.filter(function (g, i) {
+    return i < sv.pos || !gDone(g);
+  });
+  UP.pos = sv.pos;
+  UP.target = sv.target;
+  UP.more = sv.more;
+  UP.hist = sv.hist;
+  UP.ask = null;
+  UP.said = sv.said;
   var bk = h.복귀;
   if (UP.dueDay !== bk.dueDay) setDueDay(bk.dueDay);
   UP.open = UP.open || {};
   UP.open.__dueOpen = bk.open;
-  UP.month = bk.month; UP.view = bk.view;
+  UP.month = bk.month;
+  UP.view = bk.view;
   if (!결과로) return;
   showResult();
   /* 원인 경로는 예상 잔액 카드 자리로, 목록 경로는 그 목록 자리로 돌아간다.
      ★ 119차. 차례로 정하기 — 목록이 다 비어 없어졌으면 그 달 결과 맨 위다 */
   setTimeout(function () {
-    var cd = h.종류 === '목록'
-      ? document.querySelector('#up-result .unsetbox')
-      : document.querySelector('#up-result .duecard');
+    var cd =
+      h.종류 === '목록'
+        ? document.querySelector('#up-result .unsetbox')
+        : document.querySelector('#up-result .duecard');
     if (cd) cd.scrollIntoView({ block: 'start' });
     else if (h.종류 === '목록') window.scrollTo(0, 0);
   }, 0);
@@ -1523,9 +1977,11 @@ function holdAskEnd(결과로) {
 function moreFromResult() {
   /* ★ 119차. 보류 원인 차례가 남아 있으면 먼저 원래 차례로 되돌린다 */
   if (UP.holdAsk) holdAskEnd(false);
-  var rest = UP.payees.filter(function (g) { return !gDone(g) && !g.cardMixed; });
+  var rest = UP.payees.filter(function (g) {
+    return !gDone(g) && !g.cardMixed;
+  });
   if (UP.pos >= UP.queue.length && rest.length) {
-    UP.queue = rest;             /* 목록을 다 돌았으면 남은 것으로 새로 만든다 */
+    UP.queue = rest; /* 목록을 다 돌았으면 남은 것으로 새로 만든다 */
     UP.pos = 0;
     UP.hist = [];
     UP.target = Math.min(10, rest.length);
@@ -1548,7 +2004,8 @@ function moreFromResult() {
    미리 알면 놀라움이 아니라 정보다 */
 function mutedMonths() {
   if (!UP || !UP.rows || !UP.rows.length) return [];
-  var months = monthList(), out = [];
+  var months = monthList(),
+    out = [];
   months.forEach(function (m) {
     var d = monthNumbers(m, isRunning(m, months) ? lastDayIn(m) : null);
     if (ratioMuted(d)) out.push(m);
@@ -1561,7 +2018,8 @@ function mutedMonths() {
    skipTotals() 가 전 기간 합계인데 그 옆줄이 「그 달」 사업에 쓴 돈을 분모로 썼다.
    같은 3,229만원이 한 줄에서는 4%, 바로 아랫줄에서는 81%였다 (20곳 찍고 2026-08) */
 function costAllSpan() {
-  var months = monthList(), t = 0;
+  var months = monthList(),
+    t = 0;
   months.forEach(function (m) {
     var d = monthNumbers(m, isRunning(m, months) ? lastDayIn(m) : null);
     t += d.cost || 0;
@@ -1570,7 +2028,8 @@ function costAllSpan() {
 }
 function blockedMonths() {
   if (!UP || !UP.rows || !UP.rows.length) return [];
-  var months = monthList(), out = [];
+  var months = monthList(),
+    out = [];
   months.forEach(function (m) {
     var d = monthNumbers(m, isRunning(m, months) ? lastDayIn(m) : null);
     if (d.blocked) out.push(m);
@@ -1583,54 +2042,98 @@ function blockedMonths() {
    그래서 30까지만 세어보고 안 되면 −1 이다 */
 var MUTED_TRY_MAX = 30;
 function picksToClearMonths() {
-  var rest = UP.queue.slice(UP.pos), i, hit = -1;
+  var rest = UP.queue.slice(UP.pos),
+    i,
+    hit = -1;
   var n = Math.min(rest.length, MUTED_TRY_MAX);
   for (i = 0; i < n; i++) rest[i].__was = rest[i].cat;
   for (i = 0; i <= n; i++) {
-    if (!mutedMonths().length) { hit = i; break; }
+    if (!mutedMonths().length) {
+      hit = i;
+      break;
+    }
     if (i < n) rest[i].cat = '기타경비';
   }
-  for (i = 0; i < n; i++) { rest[i].cat = rest[i].__was; delete rest[i].__was; }
+  for (i = 0; i < n; i++) {
+    rest[i].cat = rest[i].__was;
+    delete rest[i].__was;
+  }
   return hit;
 }
 function mutedNames(ms, months) {
   if (ms.length > 5) {
     return NUM_KO2(months.length) + ' 달 중 ' + NUM_KO2(ms.length) + ' 달은';
   }
-  return ms.map(function (m) { return (+m.slice(5, 7)) + '월'; }).join(' · ') + '은';
+  return (
+    ms
+      .map(function (m) {
+        return +m.slice(5, 7) + '월';
+      })
+      .join(' · ') + '은'
+  );
 }
 function NUM_KO2(n) {
-  var k = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟',
-           '아홉', '열'];
+  var k = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
   return k[n] || String(n);
 }
 function drawMutedNote(host) {
-  var months = monthList(), ms = mutedMonths();
+  var months = monthList(),
+    ms = mutedMonths();
   if (!ms.length) return;
   var box = el('div', 'obmuted');
-  var running = ms.filter(function (m) { return isRunning(m, months); });
+  var running = ms.filter(function (m) {
+    return isRunning(m, months);
+  });
 
   /* 진행 중인 달만 걸렸으면 이건 더 찍어서 풀 문제가 아니다. 기다리면 된다 */
   if (running.length === ms.length) {
     var m0 = ms[0];
     var d0 = monthNumbers(m0, lastDayIn(m0));
-    box.appendChild(el('div', null, '달마다 나눠 보면 ' + mutedNames(ms, months) +
-      ' 아직 사업에 쓴 돈으로 다 잡혔을 때의 ' + pctTxt(unknownCostShare(d0)) + '입니다.'));
-    box.appendChild(el('div', null, (+m0.slice(5, 7)) + '월은 아직 ' +
-      lastDayIn(m0) + '일치라 그렇습니다. 달이 끝나면 나아집니다.'));
+    box.appendChild(
+      el(
+        'div',
+        null,
+        '달마다 나눠 보면 ' +
+          mutedNames(ms, months) +
+          ' 아직 사업에 쓴 돈으로 다 잡혔을 때의 ' +
+          pctTxt(unknownCostShare(d0)) +
+          '입니다.'
+      )
+    );
+    box.appendChild(
+      el(
+        'div',
+        null,
+        +m0.slice(5, 7) +
+          '월은 아직 ' +
+          lastDayIn(m0) +
+          '일치라 그렇습니다. 달이 끝나면 나아집니다.'
+      )
+    );
     host.appendChild(box);
     return;
   }
 
   var need = picksToClearMonths();
-  var one = ms.length === 1 ? monthNumbers(ms[0],
-    isRunning(ms[0], months) ? lastDayIn(ms[0]) : null) : null;
-  box.appendChild(el('div', null, '달마다 나눠 보면 ' + mutedNames(ms, months) +
-    (one ? ' 아직 사업에 쓴 돈으로 다 잡혔을 때의 ' + pctTxt(unknownCostShare(one)) + '라, 그 달 비율은 안 보여드립니다.'
-         : ' 아직 비율을 보여드리기 어렵습니다.')));
+  var one =
+    ms.length === 1
+      ? monthNumbers(ms[0], isRunning(ms[0], months) ? lastDayIn(ms[0]) : null)
+      : null;
+  box.appendChild(
+    el(
+      'div',
+      null,
+      '달마다 나눠 보면 ' +
+        mutedNames(ms, months) +
+        (one
+          ? ' 아직 사업에 쓴 돈으로 다 잡혔을 때의 ' +
+            pctTxt(unknownCostShare(one)) +
+            '라, 그 달 비율은 안 보여드립니다.'
+          : ' 아직 비율을 보여드리기 어렵습니다.')
+    )
+  );
   if (need > 0) {
-    box.appendChild(el('div', null,
-      won(need) + '곳 더 정하시면 그 달도 보입니다.'));
+    box.appendChild(el('div', null, won(need) + '곳 더 정하시면 그 달도 보입니다.'));
   } else {
     /* 51곳 더 찍으라는 말은 어젯밤 그 문제로 돌아가는 것이다 */
     box.appendChild(el('div', null, '거래처를 더 정하실수록 나아집니다.'));
@@ -1640,10 +2143,13 @@ function drawMutedNote(host) {
 
 function drawOnboard() {
   /* ★ 119차. 보류 원인을 다 봤으면 결과로 돌아간다 — 다른 미정 거래처를 이어 묻지 않는다 */
-  if (UP.holdAsk && UP.pos >= UP.queue.length) { holdAskEnd(true); return; }
+  if (UP.holdAsk && UP.pos >= UP.queue.length) {
+    holdAskEnd(true);
+    return;
+  }
   var host = document.getElementById('up-onboard');
   host.innerHTML = '';
-  utStart();                    /* 온보딩 화면을 처음 그릴 때 시계 시작 */
+  utStart(); /* 온보딩 화면을 처음 그릴 때 시계 시작 */
 
   var done = onboardDone();
   /* ★ 74차. 설명 셋을 걷고 진행 사실 한 줄만 남긴다.
@@ -1652,7 +2158,7 @@ function drawOnboard() {
   var goal = goalLine();
   var reached = doneShare >= goal.share;
   function appendReachedResult() {
-    if (UP.holdAsk) return;       /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
+    if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
     if (!reached) return;
     var resultGo = el('button', 'b on big', '결과 보기');
     resultGo.type = 'button';
@@ -1662,8 +2168,7 @@ function drawOnboard() {
   }
   var covline = el('div', 'obcovline');
   covline.appendChild(el('span', 'obcov', won(UP.pos) + '곳 확인'));
-  covline.appendChild(el('b', 'obcovnum' + (reached ? ' ok' : ''),
-                         pctTxt(doneShare) + ' 정리됨'));
+  covline.appendChild(el('b', 'obcovnum' + (reached ? ' ok' : ''), pctTxt(doneShare) + ' 정리됨'));
   host.appendChild(covline);
   var barwrap = el('div', 'obbarwrap nogoal');
   var bar = el('div', 'obbar' + (reached ? ' ok' : ''));
@@ -1691,26 +2196,46 @@ function drawOnboard() {
     host.appendChild(imrow);
   }
   if (UP.pos === 0 && !UP.hist.length) {
-    host.appendChild(el('div', 'obsub',
-      '한 번 정하면 다음 파일부터 같은 거래처는 다시 묻지 않습니다.'));
+    host.appendChild(
+      el('div', 'obsub', '한 번 정하면 다음 파일부터 같은 거래처는 다시 묻지 않습니다.')
+    );
   }
 
   /* 은행 표기만 다른 같은 거래처인지 묻는다. 여기서 묶으면 찍을 개수가 줄어든다 */
   if (UP.ask) {
     var ask = el('div', 'askcard');
     ask.appendChild(el('div', 'ckq', '「' + showName(UP.ask.g.name) + '」도 같은 곳인가요?'));
-    ask.appendChild(el('div', 'cka',
-      UP.ask.g.n + '건 · ' + (UP.ask.g.net > 0 ? '+' : '−') +
-      won(Math.abs(UP.ask.g.net)) + '원 · 방금 「' + showName(UP.ask.from) + '」' +
-      eul(UP.ask.from) + ' ' + UP.ask.cat + ro(UP.ask.cat) + ' 정하셨습니다'));
+    ask.appendChild(
+      el(
+        'div',
+        'cka',
+        UP.ask.g.n +
+          '건 · ' +
+          (UP.ask.g.net > 0 ? '+' : '−') +
+          won(Math.abs(UP.ask.g.net)) +
+          '원 · 방금 「' +
+          showName(UP.ask.from) +
+          '」' +
+          eul(UP.ask.from) +
+          ' ' +
+          UP.ask.cat +
+          ro(UP.ask.cat) +
+          ' 정하셨습니다'
+      )
+    );
     var ab = el('div', 'ckbtns');
     var yes = el('button', 'b on', '같은 곳입니다 — ' + UP.ask.cat + ro(UP.ask.cat));
     yes.type = 'button';
-    yes.addEventListener('click', function () { takeAsk(true); });
+    yes.addEventListener('click', function () {
+      takeAsk(true);
+    });
     var no = el('button', 'b', '다른 곳입니다');
     no.type = 'button';
-    no.addEventListener('click', function () { takeAsk(false); });
-    ab.appendChild(yes); ab.appendChild(no);
+    no.addEventListener('click', function () {
+      takeAsk(false);
+    });
+    ab.appendChild(yes);
+    ab.appendChild(no);
     ask.appendChild(ab);
     host.appendChild(ask);
   }
@@ -1730,8 +2255,7 @@ function drawOnboard() {
     /* 35차 A. 찍는 순간 결과를 한 줄로 말한다.
        「매출·지출에 넣지 않습니다」만으로는 내 순이익이 어떻게 되는지 안 보인다 */
     if (UP.said) {
-      host.appendChild(el('div', 'obsaid',
-        '이렇게 정하면 순이익은 그대로입니다'));
+      host.appendChild(el('div', 'obsaid', '이렇게 정하면 순이익은 그대로입니다'));
     }
   }
 
@@ -1742,7 +2266,9 @@ function drawOnboard() {
        아직 남으신 경우는 ✓ 그대로다. 마크를 여기저기 뿌리지 않는다 */
     if (allDone) {
       var dmk = document.createElement('img');
-      dmk.className = 'obmark'; dmk.src = BRAND_MARK; dmk.alt = '';
+      dmk.className = 'obmark';
+      dmk.src = BRAND_MARK;
+      dmk.alt = '';
       dn.appendChild(dmk);
     } else {
       dn.appendChild(el('span', 'obtick', '✓'));
@@ -1751,24 +2277,34 @@ function drawOnboard() {
        「셀 수 없습니다」면 안 된다. 막힌 달이 있으면 실제로 보이는 데까지 말한다 */
     var vm = null;
     if (!allDone && blockedMonths().length) vm = viewableMonth(monthList(), null);
-    dn.appendChild(document.createTextNode(
-      allDone ? '다 정하셨습니다'
-              : (vm ? (+vm.slice(5, 7)) + '월까지는 보실 수 있습니다'
-                    : '이제 보실 수 있습니다')));
+    dn.appendChild(
+      document.createTextNode(
+        allDone
+          ? '다 정하셨습니다'
+          : vm
+            ? +vm.slice(5, 7) + '월까지는 보실 수 있습니다'
+            : '이제 보실 수 있습니다'
+      )
+    );
     host.appendChild(dn);
     /* 왜 됐는지 말해주지 않으면 남은 개수가 계속 마음에 걸린다.
        ★ 36차 K. 막대는 올라가는데 이 문장만 내려가면 한 화면에 두 방향이 섞인다.
          여기도 「정리했습니다」 쪽으로 말한다 */
     if (!allDone) {
-      host.appendChild(el('div', 'obthr',
-        '정리했습니다 ' + pctTxt(coverage(0)) +
-        '. 나머지는 숫자를 거의 안 바꿉니다.'));
+      host.appendChild(
+        el(
+          'div',
+          'obthr',
+          '정리했습니다 ' + pctTxt(coverage(0)) + '. 나머지는 숫자를 거의 안 바꿉니다.'
+        )
+      );
     }
     drawMutedNote(host);
     if (allDone) {
       /* 다음 달엔 이 일을 안 해도 된다는 걸 알려준다 */
-      host.appendChild(el('div', 'obnext',
-        '이제 매달 새로 올리셔도 이 거래처들은 자동으로 잡힙니다.'));
+      host.appendChild(
+        el('div', 'obnext', '이제 매달 새로 올리셔도 이 거래처들은 자동으로 잡힙니다.')
+      );
     }
     var acts = el('div', 'obdoneacts');
     var go = el('button', 'b on big', '결과 보기');
@@ -1779,8 +2315,7 @@ function drawOnboard() {
     var rest = restCount();
     if (rest > 0) {
       var n = Math.min(10, rest);
-      var more = el('button', 'b dim',
-        rest < 10 ? '남은 ' + rest + '곳 정하기' : '10곳 더 정하기');
+      var more = el('button', 'b dim', rest < 10 ? '남은 ' + rest + '곳 정하기' : '10곳 더 정하기');
       more.type = 'button';
       more.addEventListener('click', function () {
         UP.target = Math.min(UP.queue.length, UP.target + n);
@@ -1802,7 +2337,8 @@ function drawOnboard() {
        2% → 2% 는 더 찍으라는 말이 아니라 안 해도 된다는 말이다 */
     if (rest > 0) {
       var n2 = Math.min(10, rest);
-      var now2 = 1 - coverage(0), then2 = 1 - coverage(n2);
+      var now2 = 1 - coverage(0),
+        then2 = 1 - coverage(n2);
       if (now2 - then2 >= 0.01) {
         var line = el('div', 'obnext');
         line.appendChild(document.createTextNode(n2 + '곳 더 정하면 '));
@@ -1816,12 +2352,17 @@ function drawOnboard() {
 
   var g = UP.queue[UP.pos];
   var cardQuestion = isCardOut(g) && !g.cardBiz;
-  host.appendChild(el('div', 'obquestion',
-    cardQuestion ? '이 카드는 어떻게 쓰셨나요?' : '이 거래는 무엇인가요?'));
+  host.appendChild(
+    el('div', 'obquestion', cardQuestion ? '이 카드는 어떻게 쓰셨나요?' : '이 거래는 무엇인가요?')
+  );
   /* 36차 G. 같은 앞글자·같은 카드 대금이 여럿이면 한 줄로 묶어 한 번에 찍게 한다 */
   /* ★ 119차. 보류 원인 경로에서는 묶지 않는다 — 묶음에는 원인이 아닌 거래처가 섞인다 */
-  var bun = (isCardOut(g) || UP.holdAsk) ? null : bundleFor(g);
-  if (bun) { drawBundle(host, bun); appendReachedResult(); return; }
+  var bun = isCardOut(g) || UP.holdAsk ? null : bundleFor(g);
+  if (bun) {
+    drawBundle(host, bun);
+    appendReachedResult();
+    return;
+  }
   var card = el('div', 'obcard');
   /* ★ 69차 ③. 이름 오른쪽에 「최근 거래 보기」가 붙는다 (아래 drawRawPeek) */
   var 이름칸 = el('div', 'obname');
@@ -1842,7 +2383,8 @@ function drawOnboard() {
   }
 
   var facts = el('div', 'obfacts');
-  var fOut = factLine(g, false), fIn = factLine(g, true);
+  var fOut = factLine(g, false),
+    fIn = factLine(g, true);
   if (fOut) facts.appendChild(fOut);
   if (fIn) facts.appendChild(fIn);
   card.appendChild(facts);
@@ -1860,11 +2402,20 @@ function drawOnboard() {
     var mixedCard = el('button', 'b', '사업·개인이 섞인 카드');
     mixedCard.type = 'button';
     mixedCard.addEventListener('click', function () {
-      UP.hist.push({ i: UP.pos, g: g, cat: g.cat, auto: g.auto,
-                     catIn: g.catIn, catOut: g.catOut,
-                     autoIn: g.autoIn, autoOut: g.autoOut,
-                     cardMixed: !!g.cardMixed, name: g.name,
-                     newCat: '아직', kind: 'cardmixed' });
+      UP.hist.push({
+        i: UP.pos,
+        g: g,
+        cat: g.cat,
+        auto: g.auto,
+        catIn: g.catIn,
+        catOut: g.catOut,
+        autoIn: g.autoIn,
+        autoOut: g.autoOut,
+        cardMixed: !!g.cardMixed,
+        name: g.name,
+        newCat: '아직',
+        kind: 'cardmixed'
+      });
       g.cardMixed = true;
       UP.said = null;
       UP.pos++;
@@ -1907,9 +2458,13 @@ function drawOnboard() {
     var cur = gCatFor(g, isIn);
     /* 지운 항목은 고르기 버튼에도 안 나와야 한다.
        감춘 항목(약국의 「주류·음료」)도 마찬가지다 — 감춰놓고 버튼에 두면 감춘 게 아니다 */
-    var quick = (isIn ? UP_QUICK_IN : UP_QUICK_OUT).map(function (c) {
-      return c === '매출' ? '매출' : baseName(c);
-    }).filter(function (c) { return c === '매출' || !isHidden(c); });
+    var quick = (isIn ? UP_QUICK_IN : UP_QUICK_OUT)
+      .map(function (c) {
+        return c === '매출' ? '매출' : baseName(c);
+      })
+      .filter(function (c) {
+        return c === '매출' || !isHidden(c);
+      });
     /* 35차 D. 「사업 외 용도」는 늘 보이게 둔다.
        모를 때 누를 곳이 「기타」뿐이면 그건 지출이라 순이익이 깎인다 */
     var outside = baseName('사업 외 용도');
@@ -1923,7 +2478,8 @@ function drawOnboard() {
     /* ★ 45차 ③. 매출이 아닐 게 뻔한 들어온 돈은 고를 목록을 바꾼다.
        「대출」을 숨기지 않고 맨 앞에 둔다 */
     if (isIn && loanLikeIn(g)) {
-      var loan = baseName('대출'), put = baseName('사업 외 용도');
+      var loan = baseName('대출'),
+        put = baseName('사업 외 용도');
       [put, loan].forEach(function (c) {
         if (UP.accounts.indexOf(c) === -1) return;
         var at3 = quick.indexOf(c);
@@ -1937,7 +2493,8 @@ function drawOnboard() {
     }
     /* ★ 81차 ②. 이유를 완성된 문장이 아니라 조각으로 모은다.
        별표를 달았는지(spark) 정해진 뒤에야 어떤 문장으로 말할지 갈리기 때문이다 */
-    var front = [], bits = [];
+    var front = [],
+      bits = [];
     /* ★ 81차 ④. 이름이나 적요에 「세무」가 있으면 세무기장료가 첫 추천이다 (개발자 확정).
        ★ 다른 규칙보다 먼저 본다. 대표자 성함 규칙에 밀리면
          「○○세무회계」가 「사업 외 용도」로 추천되어, 사업 지출인 기장료가
@@ -1996,25 +2553,38 @@ function drawOnboard() {
     /* ★ 44차. front 는 이제 pool 안에 있다. 따로 더하면 두 번 세어
        멀쩡한 「식자재」가 잘려 나간다 (실파일에서 실제로 그랬다) */
     /* 한 번만 묻는 카드는 「매출」이 하나 더 붙으므로 여덟까지 둔다 */
-    var QUICK_MAX = (side === null && g.mixed) ? 8 : 7;
+    var QUICK_MAX = side === null && g.mixed ? 8 : 7;
     var merged = pool.slice();
-    front.forEach(function (c) { if (merged.indexOf(c) === -1) merged.push(c); });
+    front.forEach(function (c) {
+      if (merged.indexOf(c) === -1) merged.push(c);
+    });
     var extra = Math.max(0, merged.length - QUICK_MAX);
     if (extra > 0 && pool.length) {
       var usedN = {};
-      pool.forEach(function (c) { usedN[c] = 0; });
+      pool.forEach(function (c) {
+        usedN[c] = 0;
+      });
       (UP.payees || []).forEach(function (p) {
-        gCats(p).forEach(function (c) { if (usedN[c] != null) usedN[c]++; });
+        gCats(p).forEach(function (c) {
+          if (usedN[c] != null) usedN[c]++;
+        });
       });
       /* 「기타」와 「사업 외 용도」는 옮길 곳이라 맨 마지막까지 남긴다 */
       var keepLast = [etcName(), outside];
-      var drop = pool.filter(function (c) { return front.indexOf(c) === -1; })
+      var drop = pool
+        .filter(function (c) {
+          return front.indexOf(c) === -1;
+        })
         .sort(function (a, b) {
-          var ka = keepLast.indexOf(a) !== -1, kb = keepLast.indexOf(b) !== -1;
+          var ka = keepLast.indexOf(a) !== -1,
+            kb = keepLast.indexOf(b) !== -1;
           if (ka !== kb) return ka ? 1 : -1;
           return usedN[a] - usedN[b];
-        }).slice(0, extra);
-      pool = pool.filter(function (c) { return drop.indexOf(c) === -1; });
+        })
+        .slice(0, extra);
+      pool = pool.filter(function (c) {
+        return drop.indexOf(c) === -1;
+      });
     }
     /* ★ 44차 2-3·2-4. 예전에는 추천을 맨 앞으로 당겼다. 두 가지가 나빴다.
        ① 양쪽 자리가 달라져서 뒤죽박죽으로 보였다 —
@@ -2026,7 +2596,9 @@ function drawOnboard() {
          그러면 첫 버튼은 나간 쪽 「식자재」·들어온 쪽 「매출」이다 —
          잘못 눌러도 손해가 작은 항목이 앞에 온다 */
     var order = pool.slice();
-    front.forEach(function (c) { if (order.indexOf(c) === -1) order.push(c); });
+    front.forEach(function (c) {
+      if (order.indexOf(c) === -1) order.push(c);
+    });
     /* ✨는 하나만. 둘 이상 추천되면 아무것도 안 단다 (35차 B) —
        「내가 넣은 돈」과 「매출」에 ✨가 같이 붙던 것이 정반대 추천이었다 */
     var spark = front.length === 1 ? front[0] : null;
@@ -2040,7 +2612,10 @@ function drawOnboard() {
        앞으로 당기기로 정해졌다 */
     if (spark) {
       var si = order.indexOf(spark);
-      if (si > 0) { order.splice(si, 1); order.unshift(spark); }
+      if (si > 0) {
+        order.splice(si, 1);
+        order.unshift(spark);
+      }
     }
 
     /* ★ 63-4. 「나간 돈은?」·「들어온 돈은?」 이름표는 없앴다 —
@@ -2050,7 +2625,9 @@ function drawOnboard() {
       var b = el('button', 'b' + (c === spark ? ' hint' : '') + (c === cur ? ' on' : ''), c);
       b.type = 'button';
       if (c === spark) b.appendChild(el('span', 'spark', '✨'));
-      b.addEventListener('click', function () { pickCat(g, c, side); });
+      b.addEventListener('click', function () {
+        pickCat(g, c, side);
+      });
       btns.appendChild(b);
     });
     /* 고르는 버튼이 아니라 목록을 여는 버튼이다. 색만으로 구분하지 않는다 —
@@ -2065,23 +2642,35 @@ function drawOnboard() {
     menu.hidden = true;
     card.appendChild(menu);
     more.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; more.classList.remove('on'); return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        more.classList.remove('on');
+        return;
+      }
       more.classList.add('on');
       drawCatMenu(menu, g, side, order);
       menu.hidden = false;
     });
     /* ★ 81차 ②. 여기서 spark 가 정해져 있다 — 별표를 달았으면 예전 문장,
        안 달았으면 「어느 쪽인지 확실하지 않습니다」 한 줄로 묶는다 */
-    whyFrom(bits, spark).forEach(function (w) { if (whyAll.indexOf(w) === -1) whyAll.push(w); });
+    whyFrom(bits, spark).forEach(function (w) {
+      if (whyAll.indexOf(w) === -1) whyAll.push(w);
+    });
   });
   if (whyAll.length) card.appendChild(el('div', 'obwhy', '↑ ' + whyAll.join(' · ')));
   drawRawPeek(card, g.rawList || [g.name], null, 이름칸);
   /* 통장과 대조할 수 있게 원본 표기를 남긴다 */
   if (g.rawList && g.rawList.length > 1) {
-    card.appendChild(el('div', 'obwhy',
-      '거래내역에는 ' + g.rawList.slice(0, 4).join(' · ') +
-      (g.rawList.length > 4 ? ' 외 ' + (g.rawList.length - 4) + '개' : '') +
-      ' 로 적혀 있어 한 곳으로 묶었습니다'));
+    card.appendChild(
+      el(
+        'div',
+        'obwhy',
+        '거래내역에는 ' +
+          g.rawList.slice(0, 4).join(' · ') +
+          (g.rawList.length > 4 ? ' 외 ' + (g.rawList.length - 4) + '개' : '') +
+          ' 로 적혀 있어 한 곳으로 묶었습니다'
+      )
+    );
   }
 
   var later = el('div', 'oblater');
@@ -2111,13 +2700,21 @@ function drawOnboard() {
      분류는 거래처 단위 그대로다. 섞인 거래처는 출금 쪽에만 넣는다 (pickCat) */
   if (UP.holdAsk) {
     /* ★ 119차. 차례로 정하기 — 목록 경로는 기존 규칙대로 양쪽에 같이 넣으므로 「거래」 문장이다 */
-    card.appendChild(el('div', 'obsub', (g.mixed && UP.holdAsk.종류 === '원인')
-      ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
-      : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'));
+    card.appendChild(
+      el(
+        'div',
+        'obsub',
+        g.mixed && UP.holdAsk.종류 === '원인'
+          ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
+          : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'
+      )
+    );
     var hb = el('button', 'b', '결과로 돌아가기');
     hb.type = 'button';
     hb.style.marginTop = '10px';
-    hb.addEventListener('click', function () { holdAskEnd(true); });
+    hb.addEventListener('click', function () {
+      holdAskEnd(true);
+    });
     card.appendChild(hb);
   }
 
@@ -2132,23 +2729,28 @@ function drawCatMenu(menu, g, side, shown) {
   menu.innerHTML = '';
   /* 감춘 항목(약국의 「주류·음료」 등)은 목록에도 안 나온다.
      다만 그 항목으로 이미 정해둔 거래처라면 보여야 바꾸실 수 있다 */
-  UP.accounts.filter(function (n) {
-    return (!isHidden(n) || gCats(g).indexOf(n) !== -1) &&
-           (!shown || shown.indexOf(n) === -1);
-  }).forEach(function (name) {
-    var b = el('button', 'mi', name);
-    b.type = 'button';
-    var note = noteFor(name);
-    if (note) {
-      if (isKeep(name)) b.classList.add('keep');
-      b.appendChild(el('span', 'msub', note));
-    }
-    b.addEventListener('click', function () { pickCat(g, name, side); });
-    menu.appendChild(b);
-  });
+  UP.accounts
+    .filter(function (n) {
+      return (!isHidden(n) || gCats(g).indexOf(n) !== -1) && (!shown || shown.indexOf(n) === -1);
+    })
+    .forEach(function (name) {
+      var b = el('button', 'mi', name);
+      b.type = 'button';
+      var note = noteFor(name);
+      if (note) {
+        if (isKeep(name)) b.classList.add('keep');
+        b.appendChild(el('span', 'msub', note));
+      }
+      b.addEventListener('click', function () {
+        pickCat(g, name, side);
+      });
+      menu.appendChild(b);
+    });
   var add = el('button', 'mi add', '+ 항목 추가');
   add.type = 'button';
-  add.addEventListener('click', function () { drawCatAdd(menu, g, side, shown); });
+  add.addEventListener('click', function () {
+    drawCatAdd(menu, g, side, shown);
+  });
   menu.appendChild(add);
 }
 
@@ -2170,8 +2772,11 @@ function drawNameBox(box, opt) {
   ok.type = 'button';
   var cancel = el('button', 'b', '취소');
   cancel.type = 'button';
-  row.appendChild(ok); row.appendChild(cancel);
-  wrap.appendChild(input); wrap.appendChild(msg); wrap.appendChild(row);
+  row.appendChild(ok);
+  row.appendChild(cancel);
+  wrap.appendChild(input);
+  wrap.appendChild(msg);
+  wrap.appendChild(row);
   box.appendChild(wrap);
   input.focus();
   input.select();
@@ -2179,32 +2784,58 @@ function drawNameBox(box, opt) {
 
   ok.addEventListener('click', function () {
     var name = input.value.trim();
-    if (!name) { input.focus(); return; }
-    if (opt.self && name === opt.self) { opt.onDone(name); return; }
+    if (!name) {
+      input.focus();
+      return;
+    }
+    if (opt.self && name === opt.self) {
+      opt.onDone(name);
+      return;
+    }
     var same = findSame(name);
-    if (same && same.hit === opt.self) { opt.onDone(name); return; }
-    if (!same) { opt.onDone(name); return; }
+    if (same && same.hit === opt.self) {
+      opt.onDone(name);
+      return;
+    }
+    if (!same) {
+      opt.onDone(name);
+      return;
+    }
 
     msg.hidden = false;
     msg.innerHTML = '';
-    msg.appendChild(el('div', 'addq', same.exact
-      ? '「' + same.hit + '」이 이미 있습니다.'
-      : '「' + same.hit + '」이 이미 있습니다. 이걸 쓰시겠어요?'));
+    msg.appendChild(
+      el(
+        'div',
+        'addq',
+        same.exact
+          ? '「' + same.hit + '」이 이미 있습니다.'
+          : '「' + same.hit + '」이 이미 있습니다. 이걸 쓰시겠어요?'
+      )
+    );
     var acts = el('div', 'addrow');
     var use = el('button', 'b on', '기존 것 쓰기');
     use.type = 'button';
-    use.addEventListener('click', function () { opt.onDone(same.hit, true); });
+    use.addEventListener('click', function () {
+      opt.onDone(same.hit, true);
+    });
     acts.appendChild(use);
     if (!same.exact) {
       var mk = el('button', 'b', '새로 만들기');
       mk.type = 'button';
-      mk.addEventListener('click', function () { opt.onDone(name); });
+      mk.addEventListener('click', function () {
+        opt.onDone(name);
+      });
       acts.appendChild(mk);
     }
     msg.appendChild(acts);
   });
-  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') ok.click(); });
-  input.addEventListener('input', function () { msg.hidden = true; });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') ok.click();
+  });
+  input.addEventListener('input', function () {
+    msg.hidden = true;
+  });
 }
 
 /* ── 35차 C · 새 항목을 만들 때 한 번 묻는다 ──
@@ -2213,18 +2844,24 @@ function drawNameBox(box, opt) {
 function askBizKind(box, name, after) {
   box.innerHTML = '';
   var wrap = el('div', 'addbox');
-  wrap.appendChild(el('div', 'addq',
-    '「' + name + '」은 사업으로 번 돈(또는 사업에 쓴 돈)인가요?'));
+  wrap.appendChild(
+    el('div', 'addq', '「' + name + '」은 사업으로 번 돈(또는 사업에 쓴 돈)인가요?')
+  );
   var row = el('div', 'addrow2');
   var yes = el('button', 'b on', '예');
   yes.type = 'button';
-  yes.addEventListener('click', function () { after(false); });
+  yes.addEventListener('click', function () {
+    after(false);
+  });
   var no = el('button', 'b');
   no.type = 'button';
   no.appendChild(document.createTextNode('아니요'));
   no.appendChild(el('span', 'bsub', '매출·지출에 넣지 않습니다'));
-  no.addEventListener('click', function () { after(true); });
-  row.appendChild(yes); row.appendChild(no);
+  no.addEventListener('click', function () {
+    after(true);
+  });
+  row.appendChild(yes);
+  row.appendChild(no);
   wrap.appendChild(row);
   box.appendChild(wrap);
 }
@@ -2239,9 +2876,14 @@ function addAccount(name, keep) {
 
 function drawCatAdd(menu, g, side, shown) {
   drawNameBox(menu, {
-    onCancel: function () { drawCatMenu(menu, g, side, shown); },
+    onCancel: function () {
+      drawCatMenu(menu, g, side, shown);
+    },
     onDone: function (name, existing) {
-      if (existing) { pickCat(g, name, side); return; }
+      if (existing) {
+        pickCat(g, name, side);
+        return;
+      }
       askBizKind(menu, name, function (keep) {
         addAccount(name, keep);
         pickCat(g, name, side);
@@ -2261,10 +2903,19 @@ function pickCat(g, cat, isIn) {
     if (cat === '매출') UP.personalPick.sales++;
     else if (isKeep(cat)) UP.personalPick.put++;
   }
-  UP.hist.push({ i: UP.pos, g: g, cat: g.cat, auto: g.auto,
-                 catIn: g.catIn, catOut: g.catOut,
-                 autoIn: g.autoIn, autoOut: g.autoOut,
-                 name: g.name, newCat: cat, kind: 'pick' });
+  UP.hist.push({
+    i: UP.pos,
+    g: g,
+    cat: g.cat,
+    auto: g.auto,
+    catIn: g.catIn,
+    catOut: g.catOut,
+    autoIn: g.autoIn,
+    autoOut: g.autoOut,
+    name: g.name,
+    newCat: cat,
+    kind: 'pick'
+  });
   /* ★ 119차. 보류 원인 경로에서는 원인인 출금 쪽만 정한다.
      입금 쪽은 정해져 있든 아니든 건드리지 않는다 */
   var 원인길 = !!(UP.holdAsk && UP.holdAsk.종류 === '원인');
@@ -2276,7 +2927,10 @@ function pickCat(g, cat, isIn) {
     gSetCat(g, false, cat, false);
     gSetCat(g, true, cat, false);
   } else if (g.mixed) gSetCat(g, isIn, cat, false);
-  else { g.cat = cat; g.auto = false; }
+  else {
+    g.cat = cat;
+    g.auto = false;
+  }
   /* 찍은 결과를 그 자리에서 한 줄로 말한다 (35차 A).
      「매출·지출에 넣지 않습니다」만으로는 순이익이 어떻게 되는지 안 보인다 */
   UP.said = isKeep(cat) ? cat : null;
@@ -2284,11 +2938,11 @@ function pickCat(g, cat, isIn) {
      ★ 119차. 보류 원인 경로는 출금 쪽이 정해지면 넘어간다 */
   if (gDone(g) || (원인길 && gCatFor(g, false))) UP.pos++;
   utPick();
-  savePicks();                     /* 찍을 때마다 바로 남긴다 */
+  savePicks(); /* 찍을 때마다 바로 남긴다 */
   /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다
      ★ 119차. 보류 원인 경로에서는 원인이 아닌 거래처를 이어서 묻지 않는다 */
   /* ★ 119차. 차례로 정하기 — 목록 경로도 목록 밖 거래처를 이어 묻지 않는다 */
-  var sim = (!UP.holdAsk && gDone(g)) ? similarPayees(g) : [];
+  var sim = !UP.holdAsk && gDone(g) ? similarPayees(g) : [];
   UP.ask = sim.length ? { g: sim[0], cat: cat, from: g.name } : null;
   drawOnboard();
 }
@@ -2297,20 +2951,36 @@ function pickCat(g, cat, isIn) {
 function takeAsk(yes) {
   var a = UP.ask;
   UP.ask = null;
-  if (!a) { drawOnboard(); return; }
+  if (!a) {
+    drawOnboard();
+    return;
+  }
   if (yes) {
     var qi = UP.queue.indexOf(a.g);
-    UP.hist.push({ i: UP.pos, g: a.g, cat: a.g.cat, auto: a.g.auto,
-                   catIn: a.g.catIn, catOut: a.g.catOut,
-                   autoIn: a.g.autoIn, autoOut: a.g.autoOut,
-                   name: a.g.name, newCat: a.cat, kind: 'same',
-                   qi: (qi >= UP.pos ? qi : -1) });
+    UP.hist.push({
+      i: UP.pos,
+      g: a.g,
+      cat: a.g.cat,
+      auto: a.g.auto,
+      catIn: a.g.catIn,
+      catOut: a.g.catOut,
+      autoIn: a.g.autoIn,
+      autoOut: a.g.autoOut,
+      name: a.g.name,
+      newCat: a.cat,
+      kind: 'same',
+      qi: qi >= UP.pos ? qi : -1
+    });
     /* 섞인 곳이면 양쪽에 같은 것을 넣는다. 방향에 따라 뜻이 갈리는 이름은 화면이 돌려 준다 */
-    if (a.g.mixed) { gSetCat(a.g, true, a.cat, false); gSetCat(a.g, false, a.cat, false); }
-    else { a.g.cat = a.cat; a.g.auto = false; }
+    if (a.g.mixed) {
+      gSetCat(a.g, true, a.cat, false);
+      gSetCat(a.g, false, a.cat, false);
+    } else {
+      a.g.cat = a.cat;
+      a.g.auto = false;
+    }
     savePicks();
     if (qi >= UP.pos) UP.queue.splice(qi, 1);
   }
   drawOnboard();
 }
-

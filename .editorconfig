@@ -1,0 +1,19 @@
+# 편집기 공통 설정 — VS Code·Cursor 등이 이 파일을 읽어 같은 모양으로 저장한다
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+# 마크다운은 줄 끝 공백 두 칸이 줄바꿈이다
+trim_trailing_whitespace = false
+
+[tests/snapshots/**]
+# 스냅샷은 앱이 낸 글자 그대로여야 한다
+trim_trailing_whitespace = false
+insert_final_newline = false

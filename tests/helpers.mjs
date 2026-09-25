@@ -13,7 +13,7 @@ export async function openApp(page) {
   // 저장 id 에 Math.random 이 쓰인다. 같은 순서의 난수가 나오도록 씨앗을 고정한다
   await page.addInitScript(() => {
     let s = 20260923;
-    Math.random = () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
+    Math.random = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
   });
   await page.goto('/');
   await expect(page.getByRole('button', { name: '예시 먼저 보기' })).toBeVisible();
@@ -38,30 +38,58 @@ export async function screenText(page, selector = 'body') {
 export async function collectNumbers(page) {
   return page.evaluate(() => {
     const months = monthList();
-    const noRows = (o) => { const c = Object.assign({}, o); delete c.rows; return c; };
+    const noRows = (o) => {
+      const c = Object.assign({}, o);
+      delete c.rows;
+      return c;
+    };
     const t = dueTable();
     const last = t ? t.days.length - 1 : -1;
-    const due = (i) => { try { return dueProject(t, i, DUE_DEFAULT); } catch (e) { return 'ERR ' + e.message; } };
+    const due = (i) => {
+      try {
+        return dueProject(t, i, DUE_DEFAULT);
+      } catch (e) {
+        return 'ERR ' + e.message;
+      }
+    };
     return {
       verify: {
-        rows: UP.rows.length, opening: UP.opening, closing: UP.closing,
-        breaks: (UP.breaks || []).length, moved: UP.moved || 0,
-        patched: UP.patched || 0, unsure: UP.unsure || 0,
+        rows: UP.rows.length,
+        opening: UP.opening,
+        closing: UP.closing,
+        breaks: (UP.breaks || []).length,
+        moved: UP.moved || 0,
+        patched: UP.patched || 0,
+        unsure: UP.unsure || 0
       },
       // [이름, 건수, 합계, 항목, 자동 분류 여부]
-      payees: UP.payees.map((g) => [g.name, g.n, g.net, g.cat == null ? null : g.cat, g.auto == null ? null : g.auto]),
-      months: months.map((m) => Object.assign(noRows(monthNumbers(m)), {
-        endBalance: monthEndBalance(m), closeBalance: monthCloseBalance(m),
-      })),
+      payees: UP.payees.map((g) => [
+        g.name,
+        g.n,
+        g.net,
+        g.cat == null ? null : g.cat,
+        g.auto == null ? null : g.auto
+      ]),
+      months: months.map((m) =>
+        Object.assign(noRows(monthNumbers(m)), {
+          endBalance: monthEndBalance(m),
+          closeBalance: monthCloseBalance(m)
+        })
+      ),
       forecastError: ASOF_DAYS.map((d) => [d, forecastError(months, d)]),
       forecastAsOf: months.map((m) => ASOF_DAYS.map((d) => forecastAsOf(months, m, d))),
       salesProjection: months.map((m) => salesProjection(months, m)),
       nowBalance: nowBalance(),
       transfers: findTransfers(),
-      due: last < 0 ? null : {
-        days: t.days.length,
-        last: due(last), twoThirds: due(Math.floor(last * 0.66)), oneThird: due(Math.floor(last * 0.33)),
-      },
+      due:
+        last < 0
+          ? null
+          : {
+              days: t.days.length,
+              last: due(last),
+              twoThirds: due(Math.floor(last * 0.66)),
+              oneThird: due(Math.floor(last * 0.33))
+            }
     };
   });
 }
@@ -76,7 +104,8 @@ export async function demoAsBankXlsx(page) {
     const rows = [['거래일시', '적요', '출금액', '입금액', '잔액']];
     let bal = DEMO_OPEN;
     DEMO_TX.forEach((s) => {
-      const f = s.split('|'), a = +f[2];
+      const f = s.split('|'),
+        a = +f[2];
       bal += a;
       rows.push([DEMO_YEAR + '-' + f[0], f[1], a < 0 ? -a : 0, a > 0 ? a : 0, bal]);
     });
@@ -87,7 +116,7 @@ export async function demoAsBankXlsx(page) {
   return {
     name: '국민은행_거래내역.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: Buffer.from(b64, 'base64'),
+    buffer: Buffer.from(b64, 'base64')
   };
 }
 
@@ -95,10 +124,16 @@ export async function demoAsBankXlsx(page) {
 export async function storageDump(page) {
   return page.evaluate(() => {
     const out = {};
-    Object.keys(localStorage).sort().forEach((k) => {
-      const v = localStorage.getItem(k);
-      try { out[k] = JSON.parse(v); } catch { out[k] = v; }
-    });
+    Object.keys(localStorage)
+      .sort()
+      .forEach((k) => {
+        const v = localStorage.getItem(k);
+        try {
+          out[k] = JSON.parse(v);
+        } catch {
+          out[k] = v;
+        }
+      });
     return out;
   });
 }

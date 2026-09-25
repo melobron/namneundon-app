@@ -53,15 +53,23 @@ function viewableMonth(months, notThis) {
    ★ domOutflow 는 이미 있는 함수다. 새로 세지 않는다 */
 function bigOutDay(months, m) {
   var dom = null;
-  try { dom = domOutflow(months, m, FC_MIN_MONTHS); } catch (e) { return null; }
+  try {
+    dom = domOutflow(months, m, FC_MIN_MONTHS);
+  } catch (e) {
+    return null;
+  }
   if (!dom || dom.n < FC_MIN_MONTHS) return null;
-  var best = null, bestV = 0;
+  var best = null,
+    bestV = 0;
   /* ★ 103차 ③. 고르실 수 있는 날과 같은 범위로 넓힌다. 묻는 값과 권하는 값의
      범위가 다르면 말일에 몰리는 대표님께는 영영 엉뚱한 날을 권하게 된다.
      domOutflow 의 avg 는 「그 날이 있던 달 수」로 이미 나눠져 있어 29~31 도 셀 수 있다 */
   for (var d = 1; d <= 31; d++) {
     var v = dom.avg[d] || 0;
-    if (v > bestV) { bestV = v; best = d; }
+    if (v > bestV) {
+      bestV = v;
+      best = d;
+    }
   }
   return best;
 }
@@ -71,8 +79,10 @@ function needDueAsk() {
   if (!UP || UP.demo) return false;
   if (UP.dueAsked) return false;
   var o = null;
-  try { o = loadPicks(UP.store); } catch (e) { }
-  if (o && o.목표일) return false;                /* 저장통에 이미 답이 있다 */
+  try {
+    o = loadPicks(UP.store);
+  } catch (e) {}
+  if (o && o.목표일) return false; /* 저장통에 이미 답이 있다 */
   return true;
 }
 function drawDueAsk(months) {
@@ -86,19 +96,33 @@ function drawDueAsk(months) {
 
   host.appendChild(el('div', 'ddq', '매달 지출이 가장 많은 날은 언제인가요?'));
   /* ★ 왜 묻는지 한 줄. 이유를 안 적으면 그냥 절차가 된다 */
-  host.appendChild(el('div', 'ddsub',
-    '고르신 날까지의 예상 잔액 흐름을 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'));
+  host.appendChild(
+    el(
+      'div',
+      'ddsub',
+      '고르신 날까지의 예상 잔액 흐름을 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'
+    )
+  );
   /* ★ 지어내지 않는다. 자료로 찾은 것이 있을 때만 근거를 적는다 */
   if (권함) {
-    host.appendChild(el('div', 'ddsub',
-      '지난 3달에는 ' + dueDayText(권함) + '에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'));
+    host.appendChild(
+      el(
+        'div',
+        'ddsub',
+        '지난 3달에는 ' + dueDayText(권함) + '에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'
+      )
+    );
   }
   var days = el('div', 'duedays');
-  for (var i = 1; i <= 31; i++) {                  /* ★ 103차 ③. 29·30·말일까지 */
+  for (var i = 1; i <= 31; i++) {
+    /* ★ 103차 ③. 29·30·말일까지 */
     (function (n) {
       var b = el('button', n === 고른날 ? 'on' : '', dueDayShort(n));
       b.type = 'button';
-      b.addEventListener('click', function () { 고른날 = n; drawDueAsk2(days, n); });
+      b.addEventListener('click', function () {
+        고른날 = n;
+        drawDueAsk2(days, n);
+      });
       days.appendChild(b);
     })(i);
   }
@@ -119,12 +143,13 @@ function drawDueAsk(months) {
 }
 /* 눌린 날만 바꿔 그린다 — 화면을 통째로 다시 그리면 스크롤이 튄다 */
 function drawDueAsk2(days, n) {
-  var bs = days.querySelectorAll('button'), i;
-  for (i = 0; i < bs.length; i++) bs[i].className = (i + 1 === n) ? 'on' : '';
+  var bs = days.querySelectorAll('button'),
+    i;
+  for (i = 0; i < bs.length; i++) bs[i].className = i + 1 === n ? 'on' : '';
 }
 
 function showResult() {
-  utStop();                      /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
+  utStop(); /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
   /* ★ 119차. 보류 원인 경로에서 다른 길로 결과에 왔어도 원래 차례로 되돌린다 */
   if (UP && UP.holdAsk) holdAskEnd(false);
   PAGE_DEMO = !!(UP && UP.demo);
@@ -149,15 +174,15 @@ function showResult() {
   document.getElementById('up-result').hidden = false;
   document.getElementById('demotop').hidden = !(UP && UP.demo);
   var months = monthList();
-  UP.month = UP.month && months.indexOf(UP.month) !== -1
-           ? UP.month : defaultMonth(months);
+  UP.month = UP.month && months.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(months);
   if (!UP.view) UP.view = 'month';
   if (!UP.open) UP.open = {};
   drawResult(months);
 }
 
-
-function monthLabel(m) { return m.replace('-', '년 ') + '월'; }
+function monthLabel(m) {
+  return m.replace('-', '년 ') + '월';
+}
 /* 1년치 표 각주가 이미 「진행 중」이라고 쓴다. 말을 하나로 맞춘다 */
 function monthLabelR(m, months) {
   return monthLabel(m) + (isRunning(m, months) ? ' (진행 중)' : '');
@@ -184,7 +209,9 @@ function manwon(v) {
 /* + 는 파랑, − 는 빨강. 이 앱 어디서나 같다 */
 /* ★ 111차 ④. 화면 금액은 원 단위다. 색 규칙은 manwonB 와 같다 —
    + 는 파랑, − 는 빨강. manwon()·manwonB() 는 안 지운다 */
-function wonB(v) { return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', won(v) + '원'); }
+function wonB(v) {
+  return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', won(v) + '원');
+}
 function manwonB(v) {
   return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', manwon(v));
 }
@@ -203,7 +230,9 @@ function moneyRead(v) {
 function moneyLive(inp) {
   inp.addEventListener('input', function () {
     /* 앞의 0은 걷어낸다 — 「007」이 그대로 남으면 콤마 자리가 어긋난다 */
-    var raw = String(inp.value).replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+    var raw = String(inp.value)
+      .replace(/[^0-9]/g, '')
+      .replace(/^0+(?=\d)/, '');
     var t = raw ? won(+raw) : '';
     if (t === inp.value) return;
     /* 가운데를 고치실 때 커서가 끝으로 튀지 않게, 뒤에서 센 자리를 지킨다 */
@@ -213,23 +242,29 @@ function moneyLive(inp) {
     var p = t.length - 뒤;
     if (p < 0) p = 0;
     if (p > t.length) p = t.length;
-    try { inp.setSelectionRange(p, p); } catch (e) { }
+    try {
+      inp.setSelectionRange(p, p);
+    } catch (e) {}
   });
 }
 
 /* 거래내역의 마지막 거래 시각 — 언제까지의 숫자인지 위에 크게 적는다 */
 function asOfText() {
   var at = '';
-  UP.rows.forEach(function (r) { if (r.at > at) at = r.at; });
+  UP.rows.forEach(function (r) {
+    if (r.at > at) at = r.at;
+  });
   if (!at) return '';
   /* 시·분은 안 쓴다. 사장님이 대조하는 단위는 날짜이고,
      이 줄이 길어지면 순이익이 첫 화면에서 밀린다 */
-  return (+at.slice(0, 4)) + '년 ' + (+at.slice(5, 7)) + '월 ' + (+at.slice(8, 10)) + '일';
+  return +at.slice(0, 4) + '년 ' + +at.slice(5, 7) + '월 ' + +at.slice(8, 10) + '일';
 }
 
 /* 아직 항목을 안 정한 거래처 수 */
 function unsetCount() {
-  return UP.payees.filter(function (g) { return !gDone(g); }).length;
+  return UP.payees.filter(function (g) {
+    return !gDone(g);
+  }).length;
 }
 
 /* 결과 화면에서 항목을 바꾸면 그 거래처 전체에 적용된다 */
@@ -237,46 +272,65 @@ function setCat(g, name) {
   g.cardMixed = false;
   if (UP.accounts.indexOf(name) === -1) UP.accounts.push(name);
   /* 결과 화면은 거래처 한 줄로 보여준다. 섞인 곳이면 양쪽 다 이걸로 정한다 */
-  if (g.mixed) { gSetCat(g, true, name, false); gSetCat(g, false, name, false); }
-  else { g.cat = name; g.auto = false; }
+  if (g.mixed) {
+    gSetCat(g, true, name, false);
+    gSetCat(g, false, name, false);
+  } else {
+    g.cat = name;
+    g.auto = false;
+  }
   var i = UP.queue.indexOf(g);
-  if (i >= UP.pos) UP.queue.splice(i, 1);   /* 아직 안 물어본 것이면 목록에서 뺀다 */
+  if (i >= UP.pos) UP.queue.splice(i, 1); /* 아직 안 물어본 것이면 목록에서 뺀다 */
   savePicks();
   drawResult(monthList());
 }
 
 /* 감춘 항목은 고르는 자리에만 안 나온다. 이미 찍힌 거래는 그대로 남는다 */
-function isHidden(name) { return (UP.hidden || []).indexOf(name) !== -1; }
+function isHidden(name) {
+  return (UP.hidden || []).indexOf(name) !== -1;
+}
 
 function drawChangeMenu(box, g, after) {
   box.innerHTML = '';
-  var names = UP.accounts.filter(function (n) { return !isHidden(n) || gCats(g).indexOf(n) !== -1; });
+  var names = UP.accounts.filter(function (n) {
+    return !isHidden(n) || gCats(g).indexOf(n) !== -1;
+  });
   if (names.indexOf('매출') === -1) names.unshift('매출');
   names.forEach(function (name) {
     var b = el('button', 'mi', name);
     b.type = 'button';
-    if (gCats(g).indexOf(name) !== -1) b.classList.add("on");
+    if (gCats(g).indexOf(name) !== -1) b.classList.add('on');
     var note2 = noteFor(name);
     if (note2) {
       if (isKeep(name)) b.classList.add('keep');
       b.appendChild(el('span', 'msub', note2));
     }
     b.addEventListener('click', function () {
-      if (after) { setCatQuiet(g, name); after(name); return; }
+      if (after) {
+        setCatQuiet(g, name);
+        after(name);
+        return;
+      }
       setCat(g, name);
     });
     box.appendChild(b);
   });
   var add = el('button', 'mi add', '+ 항목 추가');
   add.type = 'button';
-  add.addEventListener('click', function () { drawCatAddHere(box, g); });
+  add.addEventListener('click', function () {
+    drawCatAddHere(box, g);
+  });
   box.appendChild(add);
   /* 잘못 찍었을 때 빠져나갈 길 — 다른 항목으로 바꾸는 것만으로는 모자라다 */
   if (gCats(g).length) {
     var off = el('button', 'mi rollback', '아직 안 정함으로 되돌리기');
     off.type = 'button';
     off.addEventListener('click', function () {
-      if (after) { unsetCatQuiet(g); after(null); return; }
+      if (after) {
+        unsetCatQuiet(g);
+        after(null);
+        return;
+      }
       unsetCatQuiet(g);
       drawResult(monthList());
     });
@@ -286,11 +340,14 @@ function drawChangeMenu(box, g, after) {
 
 function drawCatAddHere(box, g) {
   drawNameBox(box, {
-    onCancel: function () { drawChangeMenu(box, g); },
-    onDone: function (name) { setCat(g, name); }
+    onCancel: function () {
+      drawChangeMenu(box, g);
+    },
+    onDone: function (name) {
+      setCat(g, name);
+    }
   });
 }
-
 
 /* ── 36차 H · 매장 이름과 성함 고치기 ─────────────────────
    「어 뭐야? 내 이름 쓰는 거 어디 갔니?」 — 온보딩을 지나면 고칠 길이 없었다.
@@ -300,46 +357,78 @@ function drawCatAddHere(box, g) {
 function renameStore(oldName, neu) {
   if (!neu || neu === oldName) return;
   var a = lsGet(storeKey(oldName));
-  if (a) { lsSet(storeKey(neu), a); try { localStorage.removeItem(storeKey(oldName)); } catch (e) { } }
+  if (a) {
+    lsSet(storeKey(neu), a);
+    try {
+      localStorage.removeItem(storeKey(oldName));
+    } catch (e) {}
+  }
   var b = lsGet(manualKey(oldName));
-  if (b) { lsSet(manualKey(neu), b); try { localStorage.removeItem(manualKey(oldName)); } catch (e) { } }
+  if (b) {
+    lsSet(manualKey(neu), b);
+    try {
+      localStorage.removeItem(manualKey(oldName));
+    } catch (e) {}
+  }
   var c = lsGet(bankKey(oldName));
-  if (c) { lsSet(bankKey(neu), c); try { localStorage.removeItem(bankKey(oldName)); } catch (e) { } }
+  if (c) {
+    lsSet(bankKey(neu), c);
+    try {
+      localStorage.removeItem(bankKey(oldName));
+    } catch (e) {}
+  }
   /* ★ 91차 ①. 거래내역(fc.data)도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
      이 기기에 남겨둔 거래내역을 못 찾아 다시 올리셔야 한다 */
   var d = lsGet(dataKey(oldName));
-  if (d) { lsSet(dataKey(neu), d); try { localStorage.removeItem(dataKey(oldName)); } catch (e) { } }
+  if (d) {
+    lsSet(dataKey(neu), d);
+    try {
+      localStorage.removeItem(dataKey(oldName));
+    } catch (e) {}
+  }
   /* ★ 116차 ⑪. 예정 지출도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
      정해두신 예정 지출을 못 찾는다. 열쇠는 storeKey 와 같은 매장 식별값이다 */
   var e5 = lsGet(planKey(oldName));
-  if (e5) { lsSet(planKey(neu), e5); try { localStorage.removeItem(planKey(oldName)); } catch (e) { } }
+  if (e5) {
+    lsSet(planKey(neu), e5);
+    try {
+      localStorage.removeItem(planKey(oldName));
+    } catch (e) {}
+  }
   UP.__plan = null;
   if (lsGet(LAST_KEY) === String(oldName || '(기본)')) lsSet(LAST_KEY, String(neu || '(기본)'));
-  DATA_SIG = null;                 /* 열쇠가 바뀌었으니 다음 저장은 새 자리에 다시 쓴다 */
+  DATA_SIG = null; /* 열쇠가 바뀌었으니 다음 저장은 새 자리에 다시 쓴다 */
   UP.store = neu;
 }
 /* 이 브라우저에 저장된 매장 — 직접 넣기가 몇 달 있는지도 같이 센다 */
 function storeRows() {
-  var out = [], seen = {};
+  var out = [],
+    seen = {};
   var s = savedSummary();
-  s.keys.forEach(function (k) { seen[k.name] = { name: k.name, picks: k.n, months: 0 }; });
+  s.keys.forEach(function (k) {
+    seen[k.name] = { name: k.name, picks: k.n, months: 0 };
+  });
   try {
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i);
       if (!key || key.indexOf(MANUAL_KEY) !== 0) continue;
       var nm = key.slice(MANUAL_KEY.length);
       var o = null;
-      try { o = JSON.parse(localStorage.getItem(key)); } catch (e) { }
-      var mn = (o && o.amounts) ? Object.keys(o.amounts).length : 0;
+      try {
+        o = JSON.parse(localStorage.getItem(key));
+      } catch (e) {}
+      var mn = o && o.amounts ? Object.keys(o.amounts).length : 0;
       if (!seen[nm]) seen[nm] = { name: nm, picks: 0, months: 0 };
       seen[nm].months = mn;
     }
-  } catch (e) { }
-  Object.keys(seen).forEach(function (k) { out.push(seen[k]); });
+  } catch (e) {}
+  Object.keys(seen).forEach(function (k) {
+    out.push(seen[k]);
+  });
   return out;
 }
 
-var LOAD_ASK = null;   /* 지금 덮어쓸지 여쭙는 중인 매장 이름 */
+var LOAD_ASK = null; /* 지금 덮어쓸지 여쭙는 중인 매장 이름 */
 /* ★ 116차 ⑪. 지금 지울지 여쭙는 중인 매장 이름 — 예정 지출도 같이 지워지므로
    덮어쓰기(LOAD_ASK)와 같은 무게로 한 번 여쭙는다 */
 var DEL_ASK = null;
@@ -352,24 +441,38 @@ function openNames() {
 function drawNames() {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
-  host.appendChild(el('div', 'obsub',
-    BIZ.곳 + ' 이름을 고치면 지난번에 정하신 것도 함께 따라갑니다. ' +
-    '성함은 ' + BIZ.주인 + ' 이름으로 오간 돈을 가려내는 데 씁니다.'));
+  host.appendChild(
+    el(
+      'div',
+      'obsub',
+      BIZ.곳 +
+        ' 이름을 고치면 지난번에 정하신 것도 함께 따라갑니다. ' +
+        '성함은 ' +
+        BIZ.주인 +
+        ' 이름으로 오간 돈을 가려내는 데 씁니다.'
+    )
+  );
 
   var oldStore = UP.store || '';
   var s1 = el('div', 'nmfield');
   s1.appendChild(el('div', 'nmlab', BIZ.곳 + ' 이름'));
   var i1 = document.createElement('input');
-  i1.type = 'text'; i1.className = 'nminput'; i1.maxLength = 20;
-  i1.value = oldStore; i1.placeholder = '내 ' + BIZ.곳;
+  i1.type = 'text';
+  i1.className = 'nminput';
+  i1.maxLength = 20;
+  i1.value = oldStore;
+  i1.placeholder = '내 ' + BIZ.곳;
   s1.appendChild(i1);
   host.appendChild(s1);
 
   var s2 = el('div', 'nmfield');
   s2.appendChild(el('div', 'nmlab', BIZ.주인 + ' 성함'));
   var i2 = document.createElement('input');
-  i2.type = 'text'; i2.className = 'nminput'; i2.maxLength = 20;
-  i2.value = UP.owner || ''; i2.placeholder = '건너뛰셔도 됩니다';
+  i2.type = 'text';
+  i2.className = 'nminput';
+  i2.maxLength = 20;
+  i2.value = UP.owner || '';
+  i2.placeholder = '건너뛰셔도 됩니다';
   s2.appendChild(i2);
   host.appendChild(s2);
 
@@ -387,7 +490,8 @@ function drawNames() {
   var back = el('button', 'b', '돌아가기');
   back.type = 'button';
   back.addEventListener('click', showResult);
-  acts.appendChild(ok); acts.appendChild(back);
+  acts.appendChild(ok);
+  acts.appendChild(back);
   host.appendChild(acts);
 
   /* H-4. 이 브라우저에 저장된 매장 — 이름을 잘못 적어 둘로 갈린 것도 여기서 보인다 */
@@ -409,7 +513,12 @@ function drawNames() {
       ld.addEventListener('click', function () {
         /* ★ 36차. 덮어쓰기는 지우기와 같은 무게다 —
            되돌릴 길이 「처음부터 다시 정하기」뿐이다. 한 번 여쭙는다 */
-        if (LOAD_ASK !== r.name) { LOAD_ASK = r.name; DEL_ASK = null; drawNames(); return; }
+        if (LOAD_ASK !== r.name) {
+          LOAD_ASK = r.name;
+          DEL_ASK = null;
+          drawNames();
+          return;
+        }
         LOAD_ASK = null;
         UP.store = r.name;
         var saved = loadPicks();
@@ -420,8 +529,9 @@ function drawNames() {
           if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
           if (saved.unskip) UP.unskip = saved.unskip.slice();
           UP.payees.forEach(function (g) {
-          if (saved.xfer) applyXferKeys(saved.xfer);
-            var c = null, lst = g.rawList || [];
+            if (saved.xfer) applyXferKeys(saved.xfer);
+            var c = null,
+              lst = g.rawList || [];
             for (var i = 0; i < lst.length && !c; i++) c = saved.picks[lst[i]];
             if (!c) c = saved.picks[g.name];
             if (applySaved(g, c)) n++;
@@ -429,7 +539,8 @@ function drawNames() {
         }
         UP.manual = manualLoad();
         UP.queue = buildQueue();
-        UP.pos = 0; UP.hist = [];
+        UP.pos = 0;
+        UP.hist = [];
         savePicks();
         showResult();
       });
@@ -437,14 +548,27 @@ function drawNames() {
       var del = el('button', 'chbtn del', '지우기');
       del.type = 'button';
       del.addEventListener('click', function () {
-        if (DEL_ASK !== r.name) { DEL_ASK = r.name; LOAD_ASK = null; drawNames(); return; }
+        if (DEL_ASK !== r.name) {
+          DEL_ASK = r.name;
+          LOAD_ASK = null;
+          drawNames();
+          return;
+        }
         DEL_ASK = null;
-        try { localStorage.removeItem(storeKey(r.name)); } catch (e) { }
-        try { localStorage.removeItem(manualKey(r.name)); } catch (e) { }
-        try { localStorage.removeItem(bankKey(r.name)); } catch (e) { }
+        try {
+          localStorage.removeItem(storeKey(r.name));
+        } catch (e) {}
+        try {
+          localStorage.removeItem(manualKey(r.name));
+        } catch (e) {}
+        try {
+          localStorage.removeItem(bankKey(r.name));
+        } catch (e) {}
         /* ★ 116차 ⑪. 그 매장의 예정 지출도 같이 지운다.
            다른 매장의 계획은 그대로 둔다 (완료 기준 ⑫) */
-        try { localStorage.removeItem(planKey(r.name)); } catch (e) { }
+        try {
+          localStorage.removeItem(planKey(r.name));
+        } catch (e) {}
         if (UP && UP.store === r.name) UP.__plan = null;
         drawNames();
       });
@@ -453,32 +577,56 @@ function drawNames() {
       list.appendChild(row);
       if (LOAD_ASK === r.name) {
         var ask = el('div', 'catpanel');
-        ask.appendChild(el('div', 'addq',
-          '「' + r.name + '」에 저장된 것을 지금 올리신 파일에 덮어씁니다. 할까요?'));
+        ask.appendChild(
+          el(
+            'div',
+            'addq',
+            '「' + r.name + '」에 저장된 것을 지금 올리신 파일에 덮어씁니다. 할까요?'
+          )
+        );
         var ar = el('div', 'addrow');
         var yes = el('button', 'b on', '덮어쓰기');
         yes.type = 'button';
-        yes.addEventListener('click', function () { ld.click(); });
+        yes.addEventListener('click', function () {
+          ld.click();
+        });
         var no = el('button', 'b', '취소');
         no.type = 'button';
-        no.addEventListener('click', function () { LOAD_ASK = null; drawNames(); });
-        ar.appendChild(yes); ar.appendChild(no);
+        no.addEventListener('click', function () {
+          LOAD_ASK = null;
+          drawNames();
+        });
+        ar.appendChild(yes);
+        ar.appendChild(no);
         ask.appendChild(ar);
         list.appendChild(ask);
       }
       /* ★ 116차 ⑪. 지우기 확인. 무엇이 같이 지워지는지를 그대로 적는다 */
       if (DEL_ASK === r.name) {
         var dask = el('div', 'catpanel');
-        dask.appendChild(el('div', 'addq',
-          '「' + r.name + '」에 저장된 거래처 분류·직접 넣기·계좌 이름과 예정 지출을 같이 지웁니다. 할까요?'));
+        dask.appendChild(
+          el(
+            'div',
+            'addq',
+            '「' +
+              r.name +
+              '」에 저장된 거래처 분류·직접 넣기·계좌 이름과 예정 지출을 같이 지웁니다. 할까요?'
+          )
+        );
         var dr = el('div', 'addrow');
         var dyes = el('button', 'b on', '지우기');
         dyes.type = 'button';
-        dyes.addEventListener('click', function () { del.click(); });
+        dyes.addEventListener('click', function () {
+          del.click();
+        });
         var dno = el('button', 'b', '취소');
         dno.type = 'button';
-        dno.addEventListener('click', function () { DEL_ASK = null; drawNames(); });
-        dr.appendChild(dyes); dr.appendChild(dno);
+        dno.addEventListener('click', function () {
+          DEL_ASK = null;
+          drawNames();
+        });
+        dr.appendChild(dyes);
+        dr.appendChild(dno);
         dask.appendChild(dr);
         list.appendChild(dask);
       }
@@ -487,11 +635,12 @@ function drawNames() {
   }
 }
 /* ── 항목 관리 ── */
-var CAT_EDIT = null;    /* 지금 고치는 중인 항목 이름 */
-var CAT_DEL  = null;    /* 지금 지우려는 항목 이름 */
+var CAT_EDIT = null; /* 지금 고치는 중인 항목 이름 */
+var CAT_DEL = null; /* 지금 지우려는 항목 이름 */
 
 function openCats() {
-  CAT_EDIT = null; CAT_DEL = null;
+  CAT_EDIT = null;
+  CAT_DEL = null;
   document.getElementById('uptitle').textContent = '항목 관리';
   openUpPanel();
   upShow('up-cats');
@@ -502,9 +651,14 @@ function drawCats() {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
   host.appendChild(el('div', 'catspan', monthSpan() + ' 올리신 거래 전체 기준입니다'));
-  host.appendChild(el('div', 'obsub',
-    '이름을 바꾸면 그 항목으로 정하신 거래도 같이 따라갑니다. ' +
-    '기본 항목은 이름만 바꿀 수 있고 지울 수 없습니다.'));
+  host.appendChild(
+    el(
+      'div',
+      'obsub',
+      '이름을 바꾸면 그 항목으로 정하신 거래도 같이 따라갑니다. ' +
+        '기본 항목은 이름만 바꿀 수 있고 지울 수 없습니다.'
+    )
+  );
 
   var list = el('div', 'catlist');
   UP.accounts.forEach(function (name, idx) {
@@ -512,7 +666,10 @@ function drawCats() {
     var row = el('div', 'catrow');
 
     var mv = el('div', 'catmv');
-    [['↑', -1], ['↓', 1]].forEach(function (p) {
+    [
+      ['↑', -1],
+      ['↓', 1]
+    ].forEach(function (p) {
       var b = el('button', 'mvb', p[0]);
       b.type = 'button';
       b.disabled = (p[1] < 0 && idx === 0) || (p[1] > 0 && idx === UP.accounts.length - 1);
@@ -540,8 +697,7 @@ function drawCats() {
     var 셈글 = used.places ? won(used.places) + '곳 · ' + won(used.rows) + '건' : '0곳';
     var cn;
     if (used.places) {
-      cn = el('button', 'catn num catbtn' + (열림 ? ' on' : ''),
-              셈글 + (열림 ? ' ▲' : ' ▼'));
+      cn = el('button', 'catn num catbtn' + (열림 ? ' on' : ''), 셈글 + (열림 ? ' ▲' : ' ▼'));
       cn.type = 'button';
       cn.setAttribute('aria-expanded', 열림 ? 'true' : 'false');
       cn.addEventListener('click', function () {
@@ -558,7 +714,11 @@ function drawCats() {
     var acts = el('div', 'catacts');
     var ed = el('button', 'chbtn', '수정');
     ed.type = 'button';
-    ed.addEventListener('click', function () { CAT_EDIT = name; CAT_DEL = null; drawCats(); });
+    ed.addEventListener('click', function () {
+      CAT_EDIT = name;
+      CAT_DEL = null;
+      drawCats();
+    });
     acts.appendChild(ed);
     if (!used.places) {
       var hd = el('button', 'chbtn', isHidden(name) ? '다시 보이기' : '감추기');
@@ -566,7 +726,8 @@ function drawCats() {
       hd.addEventListener('click', function () {
         UP.hidden = UP.hidden || [];
         var j = UP.hidden.indexOf(name);
-        if (j === -1) UP.hidden.push(name); else UP.hidden.splice(j, 1);
+        if (j === -1) UP.hidden.push(name);
+        else UP.hidden.splice(j, 1);
         savePicks();
         drawCats();
       });
@@ -589,7 +750,11 @@ function drawCats() {
     if (name !== etcName() && !isKeep(name) && !isLocked(name)) {
       var de = el('button', 'chbtn del', '삭제');
       de.type = 'button';
-      de.addEventListener('click', function () { CAT_DEL = name; CAT_EDIT = null; drawCats(); });
+      de.addEventListener('click', function () {
+        CAT_DEL = name;
+        CAT_EDIT = null;
+        drawCats();
+      });
       acts.appendChild(de);
     }
     /* ★ 69차 ①. 펼친 거래처 목록 — 수정·삭제 단추 바로 위에 온다 (시안).
@@ -620,11 +785,21 @@ function drawCats() {
       var eb = el('div', 'catpanel');
       list.appendChild(eb);
       drawNameBox(eb, {
-        value: name, self: name, okText: '이름 바꾸기',
-        onCancel: function () { CAT_EDIT = null; drawCats(); },
+        value: name,
+        self: name,
+        okText: '이름 바꾸기',
+        onCancel: function () {
+          CAT_EDIT = null;
+          drawCats();
+        },
         onDone: function (neu, existing) {
-          if (existing && neu !== name) {      /* 기존 항목으로 합치기 */
-            if (isBase(name)) { CAT_EDIT = null; drawCats(); return; }
+          if (existing && neu !== name) {
+            /* 기존 항목으로 합치기 */
+            if (isBase(name)) {
+              CAT_EDIT = null;
+              drawCats();
+              return;
+            }
             deleteCat(name, neu);
           } else {
             renameCat(name, neu);
@@ -638,14 +813,26 @@ function drawCats() {
     if (CAT_DEL === name) {
       var db = el('div', 'catpanel');
       if (used.rows > 0) {
-        db.appendChild(el('div', 'addq',
-          '「' + name + '」' + ro(name) + ' 정하신 거래가 ' + won(used.rows) + '건 있습니다. 어떻게 할까요?'));
+        db.appendChild(
+          el(
+            'div',
+            'addq',
+            '「' +
+              name +
+              '」' +
+              ro(name) +
+              ' 정하신 거래가 ' +
+              won(used.rows) +
+              '건 있습니다. 어떻게 할까요?'
+          )
+        );
         var r1 = el('div', 'addrow');
         var toEtc = el('button', 'b on', '기타로 옮기기');
         toEtc.type = 'button';
         toEtc.addEventListener('click', function () {
           deleteCat(name, etcName());
-          CAT_DEL = null; drawCats();
+          CAT_DEL = null;
+          drawCats();
         });
         var toOther = el('button', 'b', '다른 항목으로 옮기기');
         toOther.type = 'button';
@@ -661,7 +848,8 @@ function drawCats() {
             b.type = 'button';
             b.addEventListener('click', function () {
               deleteCat(name, o);
-              CAT_DEL = null; drawCats();
+              CAT_DEL = null;
+              drawCats();
             });
             menu.appendChild(b);
           });
@@ -671,13 +859,19 @@ function drawCats() {
         toUnset.type = 'button';
         toUnset.addEventListener('click', function () {
           deleteCat(name, null);
-          CAT_DEL = null; drawCats();
+          CAT_DEL = null;
+          drawCats();
         });
         var cancel = el('button', 'b', '취소');
         cancel.type = 'button';
-        cancel.addEventListener('click', function () { CAT_DEL = null; drawCats(); });
-        r1.appendChild(toEtc); r1.appendChild(toOther);
-        r1.appendChild(toUnset); r1.appendChild(cancel);
+        cancel.addEventListener('click', function () {
+          CAT_DEL = null;
+          drawCats();
+        });
+        r1.appendChild(toEtc);
+        r1.appendChild(toOther);
+        r1.appendChild(toUnset);
+        r1.appendChild(cancel);
         db.appendChild(r1);
       } else {
         db.appendChild(el('div', 'addq', '「' + name + '」을 지울까요? 정하신 거래는 없습니다.'));
@@ -686,12 +880,17 @@ function drawCats() {
         yes.type = 'button';
         yes.addEventListener('click', function () {
           deleteCat(name, etcName());
-          CAT_DEL = null; drawCats();
+          CAT_DEL = null;
+          drawCats();
         });
         var no = el('button', 'b', '취소');
         no.type = 'button';
-        no.addEventListener('click', function () { CAT_DEL = null; drawCats(); });
-        r2.appendChild(yes); r2.appendChild(no);
+        no.addEventListener('click', function () {
+          CAT_DEL = null;
+          drawCats();
+        });
+        r2.appendChild(yes);
+        r2.appendChild(no);
         db.appendChild(r2);
       }
       list.appendChild(db);
@@ -707,13 +906,20 @@ function drawCats() {
   add.addEventListener('click', function () {
     addBox.hidden = false;
     drawNameBox(addBox, {
-      onCancel: function () { addBox.hidden = true; addBox.innerHTML = ''; },
+      onCancel: function () {
+        addBox.hidden = true;
+        addBox.innerHTML = '';
+      },
       onDone: function (name, existing) {
-        if (existing) { drawCats(); return; }
+        if (existing) {
+          drawCats();
+          return;
+        }
         /* 35차 C. 만들 때 한 번 묻는다 */
         askBizKind(addBox, name, function (keep) {
           addAccount(name, keep);
-          addBox.hidden = true; addBox.innerHTML = '';
+          addBox.hidden = true;
+          addBox.innerHTML = '';
           drawCats();
         });
       }
@@ -724,19 +930,26 @@ function drawCats() {
   back.addEventListener('click', function () {
     showResult();
   });
-  acts2.appendChild(back); acts2.appendChild(add);
+  acts2.appendChild(back);
+  acts2.appendChild(add);
   host.appendChild(acts2);
   host.appendChild(addBox);
 
   /* ── 저장 ── 이 브라우저에 남는 건 거래처 이름과 항목뿐이다 */
   var box = el('div', 'savebox');
   box.appendChild(el('div', 'obhead', '저장'));
-  box.appendChild(el('div', 'obsub',
-    /* ★ 36차 J. 첫 화면(upnote)과 같은 말이어야 한다.
+  box.appendChild(
+    el(
+      'div',
+      'obsub',
+      /* ★ 36차 J. 첫 화면(upnote)과 같은 말이어야 한다.
        직접 넣기가 생기면서 금액도 남게 됐는데 여기만 옛 문구였다 */
-    /* ★ 91차 ①. 거래내역이 이 기기에 남게 됐다. 첫 화면(upnote)과 같은 말을 쓴다 */
-    '은행에서 받은 거래내역은 이 기기 안에만 남습니다. ' + BIZ.주인 +
-    '이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 함께 남습니다.'));
+      /* ★ 91차 ①. 거래내역이 이 기기에 남게 됐다. 첫 화면(upnote)과 같은 말을 쓴다 */
+      '은행에서 받은 거래내역은 이 기기 안에만 남습니다. ' +
+        BIZ.주인 +
+        '이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 함께 남습니다.'
+    )
+  );
   if (!LS_OK) box.appendChild(el('div', 'lswarn', LS_MSG));
 
   var srow = el('div', 'obdoneacts');
@@ -756,27 +969,43 @@ function drawCats() {
     delData();
     UP.manual = { v: 1, items: [], amounts: {} };
     wipe.textContent = '지웠습니다';
-    setTimeout(function () { wipe.textContent = '이 기기의 저장 지우기'; }, 1500);
+    setTimeout(function () {
+      wipe.textContent = '이 기기의 저장 지우기';
+    }, 1500);
   });
   var out = el('button', 'b', '내보내기');
   out.type = 'button';
   out.addEventListener('click', exportPicks);
   var into = el('button', 'b', '불러오기');
   into.type = 'button';
-  into.addEventListener('click', function () { IMPORT_WHERE = 'cats'; document.getElementById('pickfile').click(); });   /* ★ 119차. 자리를 명시한다 */
-  srow.appendChild(wipe); srow.appendChild(out); srow.appendChild(into);
+  into.addEventListener('click', function () {
+    IMPORT_WHERE = 'cats';
+    document.getElementById('pickfile').click();
+  }); /* ★ 119차. 자리를 명시한다 */
+  srow.appendChild(wipe);
+  srow.appendChild(out);
+  srow.appendChild(into);
   box.appendChild(srow);
   /* ★ 119차 B. 「되살리세요」는 다 돌아오는 것처럼 읽혔다 — 파일에는 거래처 분류 설정만 있다.
      옮기는 범위와 차례를 실제 동작대로 적는다. 불러오기는 그 기기에 올린 거래내역의
      거래처에 적용되므로(importApply) 「거래내역을 연 뒤」라고 쓴다 */
-  box.appendChild(el('div', 'obsub',
-    '기기를 바꾸거나 브라우저 기록을 지우면 저장이 사라집니다.'));
-  box.appendChild(el('div', 'obsub',
-    '거래처 분류 설정을 다른 기기로 옮길 수 있습니다. ' +
-    '거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'));
-  box.appendChild(el('div', 'obsub',
-    '내보낸 파일을 다른 기기로 옮긴 뒤, 그 기기의 남는돈에서 대상 매장의 거래내역을 열고 ' +
-    '「불러오기」를 눌러주세요. 메일·메신저·클라우드 등으로 파일을 옮길 수 있습니다.'));
+  box.appendChild(el('div', 'obsub', '기기를 바꾸거나 브라우저 기록을 지우면 저장이 사라집니다.'));
+  box.appendChild(
+    el(
+      'div',
+      'obsub',
+      '거래처 분류 설정을 다른 기기로 옮길 수 있습니다. ' +
+        '거래내역·예정 지출·직접 적은 금액은 포함되지 않습니다.'
+    )
+  );
+  box.appendChild(
+    el(
+      'div',
+      'obsub',
+      '내보낸 파일을 다른 기기로 옮긴 뒤, 그 기기의 남는돈에서 대상 매장의 거래내역을 열고 ' +
+        '「불러오기」를 눌러주세요. 메일·메신저·클라우드 등으로 파일을 옮길 수 있습니다.'
+    )
+  );
   host.appendChild(box);
   drawUseBox(host);
 }
@@ -784,7 +1013,9 @@ function drawCats() {
 /* 진짜 오류일 때만 말한다. 그때도 다음에 할 일을 같이 알려드린다 */
 function shareFailed(btn) {
   btn.textContent = '보내지 못했습니다. 복사하기를 눌러주세요';
-  setTimeout(function () { btn.textContent = '기록 보내기'; }, 3000);
+  setTimeout(function () {
+    btn.textContent = '기록 보내기';
+  }, 3000);
 }
 
 /* ── 사용 기록 상자 ── 항목 관리 맨 아래.
@@ -792,16 +1023,22 @@ function shareFailed(btn) {
 function drawUseBox(host) {
   var box = el('div', 'savebox');
   box.appendChild(el('div', 'obhead', '사용 기록'));
-  box.appendChild(el('div', 'obsub',
-    '이 앱이 이 기기에 남겨둔 기록입니다. 금액과 거래처 이름은 들어가지 않습니다.'));
+  box.appendChild(
+    el(
+      'div',
+      'obsub',
+      '이 앱이 이 기기에 남겨둔 기록입니다. 금액과 거래처 이름은 들어가지 않습니다.'
+    )
+  );
   var t = useText();
   if (!t) {
     box.appendChild(el('div', 'obsub', '아직 기록이 없습니다.'));
     host.appendChild(box);
     return;
   }
-  box.appendChild(el('div', 'obsub',
-    '아래를 복사해서 보내주시면 무엇을 고쳐야 할지 아는 데 큰 도움이 됩니다.'));
+  box.appendChild(
+    el('div', 'obsub', '아래를 복사해서 보내주시면 무엇을 고쳐야 할지 아는 데 큰 도움이 됩니다.')
+  );
   var pre = el('div', 'usebox');
   pre.textContent = t;
   box.appendChild(pre);
@@ -820,8 +1057,12 @@ function drawUseBox(host) {
     sh.type = 'button';
     sh.addEventListener('click', function () {
       var r;
-      try { r = navigator.share({ title: '남는돈 사용 기록', text: t }); }
-      catch (e) { shareFailed(sh); return; }
+      try {
+        r = navigator.share({ title: '남는돈 사용 기록', text: t });
+      } catch (e) {
+        shareFailed(sh);
+        return;
+      }
       if (r && r.catch) {
         r.catch(function (e) {
           /* 공유 시트에서 그만두신 것이다. 「실패했습니다」가 뜨면
@@ -839,25 +1080,31 @@ function drawUseBox(host) {
   cp.addEventListener('click', function () {
     var done = function () {
       cp.textContent = '복사했습니다';
-      setTimeout(function () { cp.textContent = '복사하기'; }, 1500);
+      setTimeout(function () {
+        cp.textContent = '복사하기';
+      }, 1500);
     };
     /* 안 되는 브라우저에서는 긁어서 복사하실 수 있게 글을 통째로 선택해둔다 */
     var fall = function () {
       cp.textContent = '아래 글을 눌러 복사해주세요';
-      setTimeout(function () { cp.textContent = '복사하기'; }, 2500);
+      setTimeout(function () {
+        cp.textContent = '복사하기';
+      }, 2500);
       try {
         var r = document.createRange();
         r.selectNodeContents(pre);
         var s = window.getSelection();
         s.removeAllRanges();
         s.addRange(r);
-      } catch (e) { }
+      } catch (e) {}
     };
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(t).then(done, fall);
       } else fall();
-    } catch (e) { fall(); }
+    } catch (e) {
+      fall();
+    }
   });
   row.appendChild(cp);
 
@@ -865,7 +1112,9 @@ function drawUseBox(host) {
   del.type = 'button';
   var ask = el('div', 'saveask');
   ask.hidden = true;
-  del.addEventListener('click', function () { ask.hidden = !ask.hidden; });
+  del.addEventListener('click', function () {
+    ask.hidden = !ask.hidden;
+  });
   row.appendChild(del);
   box.appendChild(row);
 
@@ -879,8 +1128,11 @@ function drawUseBox(host) {
   });
   var no = el('button', 'b', '취소');
   no.type = 'button';
-  no.addEventListener('click', function () { ask.hidden = true; });
-  arow.appendChild(yes); arow.appendChild(no);
+  no.addEventListener('click', function () {
+    ask.hidden = true;
+  });
+  arow.appendChild(yes);
+  arow.appendChild(no);
   ask.appendChild(arow);
   box.appendChild(ask);
   host.appendChild(box);
@@ -891,10 +1143,19 @@ function exportPicks() {
   /* ★ 119차 B. 판 번호·곳 수·목표일·순번은 금액이 아니다. savePicks 가 하듯 잠깐 빼고 본다.
      빼지 않아서 hasNumber 가 늘 참이었고, [내보내기]를 눌러도 파일이 안 나왔다
      (118-1차에서 실측). 검사를 푸는 것이 아니다 — 이름 붙은 넷만 빼고 나머지는 그대로 본다 */
-  var cv = body.cv, n곳 = body.n곳, due = body.목표일, seq = body.순번;
-  delete body.cv; delete body.n곳; delete body.목표일; delete body.순번;
+  var cv = body.cv,
+    n곳 = body.n곳,
+    due = body.목표일,
+    seq = body.순번;
+  delete body.cv;
+  delete body.n곳;
+  delete body.목표일;
+  delete body.순번;
   if (hasNumber(body)) return;
-  body.cv = cv; body.n곳 = n곳; body.목표일 = due; body.순번 = seq;
+  body.cv = cv;
+  body.n곳 = n곳;
+  body.목표일 = due;
+  body.순번 = seq;
   body.v = 1;
   var blob = new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
@@ -904,7 +1165,9 @@ function exportPicks() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /* ── 119차 B · 불러오기 전에 한 번 여쭙는다 ──────────────────────────
@@ -927,12 +1190,17 @@ function exportPicks() {
      분류 파일만으로 잔액이나 분석 결과를 만들지 않는다 */
 var IMPORT_WHERE = 'cats';
 function importHost(자리) {
-  return document.getElementById(자리 === 'onboard' || 자리 === 'choose' ? 'up-onboard'
-                                 : 자리 === 'start' ? 'upimport' : 'up-cats');
+  return document.getElementById(
+    자리 === 'onboard' || 자리 === 'choose'
+      ? 'up-onboard'
+      : 자리 === 'start'
+        ? 'upimport'
+        : 'up-cats'
+  );
 }
 function importRedraw(자리) {
   if (자리 === 'onboard') drawOnboard();
-  else if (자리 === 'choose') drawImportChoose();   /* ★ 119차. 취소·실패면 선택 단계에 머문다 */
+  else if (자리 === 'choose') drawImportChoose(); /* ★ 119차. 취소·실패면 선택 단계에 머문다 */
   else if (자리 === 'start') drawImportStart();
   else drawCats();
 }
@@ -948,18 +1216,27 @@ function importPicks(file) {
   var fr = new FileReader();
   fr.onload = function () {
     var o = null;
-    try { o = JSON.parse(fr.result); } catch (e) { }
+    try {
+      o = JSON.parse(fr.result);
+    } catch (e) {}
     if (!o || o.v !== 1 || !o.picks) {
       importRedraw(자리);
       importNote('이 파일은 읽지 못했습니다. 바뀐 것은 없습니다.', false, 자리);
       return;
     }
     /* 거래내역을 올리기 전 — 어느 매장에 넣을지부터 고르신다 */
-    if (자리 === 'start') { importChooseStore(o); return; }
+    if (자리 === 'start') {
+      importChooseStore(o);
+      return;
+    }
     /* 대상 매장이 없으면 먼저 매장을 정하시게 한다 — 예시 화면도 여기로 온다 */
     if (!UP || !UP.payees || UP.demo || !UP.store) {
       importRedraw(자리);
-      importNote('불러올 매장이 정해지지 않았습니다. 대표님 매장의 거래내역을 연 뒤 불러와주세요.', false, 자리);
+      importNote(
+        '불러올 매장이 정해지지 않았습니다. 대표님 매장의 거래내역을 연 뒤 불러와주세요.',
+        false,
+        자리
+      );
       return;
     }
     importAsk(o, UP.store, 자리, false, false);
@@ -973,17 +1250,32 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
   var host = importHost(자리);
   var 이름 = 대상 || '이름 없이 정해둔 것';
   var box = el('div', 'catpanel');
-  box.appendChild(el('div', 'addq', 새매장
-    ? '새 매장 「' + 이름 + '」을 만들고 이 분류 설정을 불러올까요?'
-    : '이 분류 설정을 「' + 이름 + '」에 불러올까요?'));
-  box.appendChild(el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음')));
+  box.appendChild(
+    el(
+      'div',
+      'addq',
+      새매장
+        ? '새 매장 「' + 이름 + '」을 만들고 이 분류 설정을 불러올까요?'
+        : '이 분류 설정을 「' + 이름 + '」에 불러올까요?'
+    )
+  );
+  box.appendChild(
+    el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음'))
+  );
   box.appendChild(el('div', 'obsub', '불러올 매장: ' + 이름));
-  box.appendChild(el('div', 'obsub', 새매장
-    ? '파일의 거래처 분류로 새 매장을 만듭니다.'
-    : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
-      (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')));
+  box.appendChild(
+    el(
+      'div',
+      'obsub',
+      새매장
+        ? '파일의 거래처 분류로 새 매장을 만듭니다.'
+        : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
+            (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')
+    )
+  );
   var 함께 = [];
-  if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet) 함께.push('항목 목록');
+  if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet)
+    함께.push('항목 목록');
   if (o.목표일) 함께.push('분석 종료일');
   if (o.업종 && TRADES[o.업종]) 함께.push('업종');
   if (o.xfer && o.xfer.length) 함께.push('이체 설정');
@@ -993,44 +1285,64 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
   var r = el('div', 'addrow');
   var no = el('button', 'b', '취소');
   no.type = 'button';
-  no.addEventListener('click', function () { importRedraw(자리); });
+  no.addEventListener('click', function () {
+    importRedraw(자리);
+  });
   var yes = el('button', 'b on', 새매장 ? '새 매장으로 불러오기' : '이 매장에 불러오기');
   yes.type = 'button';
   yes.addEventListener('click', function () {
     if (저장통만) importToStore(o, 대상, 새매장);
     else importApply(o, 자리);
   });
-  r.appendChild(no); r.appendChild(yes);
+  r.appendChild(no);
+  r.appendChild(yes);
   box.appendChild(r);
   host.insertBefore(box, host.firstChild);
-  try { box.scrollIntoView({ block: 'center' }); } catch (e) { }
+  try {
+    box.scrollIntoView({ block: 'center' });
+  } catch (e) {}
 }
 function importApply(o, 자리) {
   자리 = 자리 || 'cats';
   /* 되돌릴 수 있게 지금 상태를 들고 있는다 */
   var 전 = {
-    accounts: UP.accounts.slice(), baseCats: UP.baseCats.slice(), keepSet: UP.keepSet.slice(),
-    unskip: UP.unskip ? UP.unskip.slice() : UP.unskip, dueDay: UP.dueDay, trade: tradeNow(),
+    accounts: UP.accounts.slice(),
+    baseCats: UP.baseCats.slice(),
+    keepSet: UP.keepSet.slice(),
+    unskip: UP.unskip ? UP.unskip.slice() : UP.unskip,
+    dueDay: UP.dueDay,
+    trade: tradeNow(),
     xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
-    queue: UP.queue, pos: UP.pos, hist: UP.hist, target: UP.target,
+    queue: UP.queue,
+    pos: UP.pos,
+    hist: UP.hist,
+    target: UP.target,
     g: UP.payees.map(function (g) {
-      return { g: g, cat: g.cat, auto: g.auto, catIn: g.catIn, catOut: g.catOut,
-               autoIn: g.autoIn, autoOut: g.autoOut };
+      return {
+        g: g,
+        cat: g.cat,
+        auto: g.auto,
+        catIn: g.catIn,
+        catOut: g.catOut,
+        autoIn: g.autoIn,
+        autoOut: g.autoOut
+      };
     })
   };
-  o = migrateCats(o);            /* 옛 판 이름과 늘어난 기본 항목을 여기서도 맞춘다 */
+  o = migrateCats(o); /* 옛 판 이름과 늘어난 기본 항목을 여기서도 맞춘다 */
   if (o.accounts && o.accounts.length) UP.accounts = o.accounts.slice();
   /* 35차 C. 여기도 길이로 견주지 않는다 */
   if (o.baseCats && o.baseCats.length) UP.baseCats = o.baseCats.slice();
   if (o.keepSet) UP.keepSet = o.keepSet.slice();
   if (o.unskip) UP.unskip = o.unskip.slice();
-  if (o.목표일) setDueDay(o.목표일);               /* 57차 ⑦ · 60차 ① */
-  if (o.업종 && TRADES[o.업종]) setTrade(o.업종);  /* 62차 ② */
+  if (o.목표일) setDueDay(o.목표일); /* 57차 ⑦ · 60차 ① */
+  if (o.업종 && TRADES[o.업종]) setTrade(o.업종); /* 62차 ② */
   if (o.xfer) applyXferKeys(o.xfer);
   /* ★ 119차. 파일의 매장 이름으로 UP.store 를 덮지 않는다 */
   var n = 0;
   UP.payees.forEach(function (g) {
-    var c = null, list = g.rawList || [];
+    var c = null,
+      list = g.rawList || [];
     for (var i = 0; i < list.length && !c; i++) c = o.picks[list[i]];
     if (!c) c = o.picks[g.name];
     if (applySaved(g, c)) n++;
@@ -1039,18 +1351,32 @@ function importApply(o, 자리) {
   UP.pos = 0;
   UP.hist = [];
   var 됨 = false;
-  try { 됨 = savePicks(); } catch (e) { 됨 = false; }
+  try {
+    됨 = savePicks();
+  } catch (e) {
+    됨 = false;
+  }
   if (!됨) {
     /* 저장하지 못했다 — 기존 저장본은 그대로다. 화면의 분류와 물음 차례도 불러오기 전으로 돌린다 */
-    UP.accounts = 전.accounts; UP.baseCats = 전.baseCats; UP.keepSet = 전.keepSet;
-    UP.unskip = 전.unskip; UP.xfer = 전.xfer;
+    UP.accounts = 전.accounts;
+    UP.baseCats = 전.baseCats;
+    UP.keepSet = 전.keepSet;
+    UP.unskip = 전.unskip;
+    UP.xfer = 전.xfer;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
     if (tradeNow() !== 전.trade) setTrade(전.trade);
     전.g.forEach(function (v) {
-      v.g.cat = v.cat; v.g.auto = v.auto; v.g.catIn = v.catIn; v.g.catOut = v.catOut;
-      v.g.autoIn = v.autoIn; v.g.autoOut = v.autoOut;
+      v.g.cat = v.cat;
+      v.g.auto = v.auto;
+      v.g.catIn = v.catIn;
+      v.g.catOut = v.catOut;
+      v.g.autoIn = v.autoIn;
+      v.g.autoOut = v.autoOut;
     });
-    UP.queue = 전.queue; UP.pos = 전.pos; UP.hist = 전.hist; UP.target = 전.target;
+    UP.queue = 전.queue;
+    UP.pos = 전.pos;
+    UP.hist = 전.hist;
+    UP.target = 전.target;
     UP.__due = null;
     importRedraw(자리);
     importNote('저장하지 못해 불러오지 않았습니다. 기존 분류는 그대로입니다.', false, 자리);
@@ -1079,10 +1405,20 @@ function importToStore(o, 이름, 새매장) {
   var o2 = migrateCats(JSON.parse(JSON.stringify(o)));
   var 기존 = 새매장 ? null : loadPicks(이름);
   var body = 기존 ? JSON.parse(JSON.stringify(기존)) : {};
-  function 합(a, b) { var out = (a || []).slice(); (b || []).forEach(function (x) { if (out.indexOf(x) === -1) out.push(x); }); return out; }
+  function 합(a, b) {
+    var out = (a || []).slice();
+    (b || []).forEach(function (x) {
+      if (out.indexOf(x) === -1) out.push(x);
+    });
+    return out;
+  }
   body.picks = {};
-  Object.keys((기존 && 기존.picks) || {}).forEach(function (k) { body.picks[k] = 기존.picks[k]; });
-  Object.keys(o2.picks).forEach(function (k) { body.picks[k] = o2.picks[k]; });
+  Object.keys((기존 && 기존.picks) || {}).forEach(function (k) {
+    body.picks[k] = 기존.picks[k];
+  });
+  Object.keys(o2.picks).forEach(function (k) {
+    body.picks[k] = o2.picks[k];
+  });
   if (o2.accounts && o2.accounts.length) body.accounts = o2.accounts.slice();
   if (o2.baseCats && o2.baseCats.length) body.baseCats = o2.baseCats.slice();
   if (o2.keepSet) body.keepSet = o2.keepSet.slice();
@@ -1097,11 +1433,21 @@ function importToStore(o, 이름, 새매장) {
   body.n곳 = Object.keys(body.picks).length;
   body.순번 = nextPickSeq();
   body.cv = CAT_CV;
-  var cv = body.cv, n곳 = body.n곳, due = body.목표일, seq = body.순번;
-  delete body.cv; delete body.n곳; delete body.목표일; delete body.순번; delete body.v;
-  var 숫자 = hasNumber(body);                  /* 금액이 섞인 파일은 안 남긴다 (savePicks 와 같은 검사) */
-  body.cv = cv; body.n곳 = n곳; if (due != null) body.목표일 = due; body.순번 = seq;
-  body.v = 1;                                  /* 판 번호는 검사 뒤에 붙인다 (savePicks 와 같은 차례) */
+  var cv = body.cv,
+    n곳 = body.n곳,
+    due = body.목표일,
+    seq = body.순번;
+  delete body.cv;
+  delete body.n곳;
+  delete body.목표일;
+  delete body.순번;
+  delete body.v;
+  var 숫자 = hasNumber(body); /* 금액이 섞인 파일은 안 남긴다 (savePicks 와 같은 검사) */
+  body.cv = cv;
+  body.n곳 = n곳;
+  if (due != null) body.목표일 = due;
+  body.순번 = seq;
+  body.v = 1; /* 판 번호는 검사 뒤에 붙인다 (savePicks 와 같은 차례) */
   var 됨 = !숫자 && lsSet(storeKey(이름), JSON.stringify(body));
   if (!됨) {
     drawImportStart();
@@ -1118,7 +1464,10 @@ function importToStore(o, 이름, 새매장) {
   go.style.marginLeft = '8px';
   go.addEventListener('click', function () {
     var inp = document.getElementById('upinput');
-    if (inp) { inp.value = ''; inp.click(); }
+    if (inp) {
+      inp.value = '';
+      inp.click();
+    }
   });
   알림.appendChild(go);
 }
@@ -1129,13 +1478,19 @@ function importChooseStore(o) {
   var host = importHost('start');
   var box = el('div', 'catpanel');
   box.appendChild(el('div', 'addq', '어느 매장에 불러올까요?'));
-  box.appendChild(el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음')));
+  box.appendChild(
+    el('div', 'obsub', '파일의 매장 이름: ' + (o.store ? o.store : '파일에 매장 이름 없음'))
+  );
   var mine = [];
-  try { mine = savedStores(); } catch (e) { mine = []; }
+  try {
+    mine = savedStores();
+  } catch (e) {
+    mine = [];
+  }
   if (mine.length) {
     var 줄 = el('div', 'addrow');
     mine.forEach(function (k) {
-      var b = el('button', 'b', (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name);
+      var b = el('button', 'b', k.name === '(기본)' ? '이름 없이 정해둔 것' : k.name);
       b.type = 'button';
       b.addEventListener('click', function () {
         importAsk(o, k.name === '(기본)' ? null : k.name, 'start', true, false);
@@ -1147,7 +1502,8 @@ function importChooseStore(o) {
   box.appendChild(el('div', 'obsub', '새 매장으로 만들기'));
   var 새줄 = el('div', 'addrow');
   var inp = document.createElement('input');
-  inp.type = 'text'; inp.className = 'nminput';
+  inp.type = 'text';
+  inp.className = 'nminput';
   inp.value = o.store || '';
   inp.placeholder = BIZ.곳 + ' 이름';
   새줄.appendChild(inp);
@@ -1157,10 +1513,19 @@ function importChooseStore(o) {
   msg.hidden = true;
   mk.addEventListener('click', function () {
     var nm = String(inp.value || '').trim();
-    if (!nm) { msg.textContent = BIZ.곳 + ' 이름을 적어주세요.'; msg.hidden = false; return; }
-    var 있음 = !!lsGet(storeKey(nm)) || mine.some(function (k) { return k.name === nm; });
+    if (!nm) {
+      msg.textContent = BIZ.곳 + ' 이름을 적어주세요.';
+      msg.hidden = false;
+      return;
+    }
+    var 있음 =
+      !!lsGet(storeKey(nm)) ||
+      mine.some(function (k) {
+        return k.name === nm;
+      });
     if (있음) {
-      msg.textContent = '이미 있는 매장 이름입니다. 위에서 그 매장을 고르시거나 다른 이름을 적어주세요.';
+      msg.textContent =
+        '이미 있는 매장 이름입니다. 위에서 그 매장을 고르시거나 다른 이름을 적어주세요.';
       msg.hidden = false;
       return;
     }
@@ -1172,10 +1537,14 @@ function importChooseStore(o) {
   var no = el('button', 'b', '취소');
   no.type = 'button';
   no.style.marginTop = '8px';
-  no.addEventListener('click', function () { drawImportStart(); });
+  no.addEventListener('click', function () {
+    drawImportStart();
+  });
   box.appendChild(no);
   host.insertBefore(box, host.firstChild);
-  try { box.scrollIntoView({ block: 'center' }); } catch (e) { }
+  try {
+    box.scrollIntoView({ block: 'center' });
+  } catch (e) {}
 }
 /* ★ 119차. 거래내역 올리기 화면의 [분류 파일 불러오기] 자리 — 파일 고르는 자리 바로 아래.
    주 단추(파일 고르기)보다 한 단계 낮은 모양이다 */
@@ -1183,7 +1552,10 @@ function drawImportStart() {
   var drop = document.getElementById('updrop');
   if (!drop || !drop.parentNode) return;
   var host = document.getElementById('upimport');
-  if (!host) { host = el('div', 'upimport'); host.id = 'upimport'; }
+  if (!host) {
+    host = el('div', 'upimport');
+    host.id = 'upimport';
+  }
   if (host.previousSibling !== drop) drop.parentNode.insertBefore(host, drop.nextSibling);
   host.innerHTML = '';
   var row = el('div', 'upimportrow');
@@ -1211,13 +1583,18 @@ function catPayees(d, cat) {
   var m = {};
   d.rows.forEach(function (r) {
     if (catOf(r) !== cat) return;
-    var k = keyOf(r); var e = m[k] || (m[k] = { name: k, n: 0, sum: 0,
-                                          unknown: isUnknown(r) });
+    var k = keyOf(r);
+    var e = m[k] || (m[k] = { name: k, n: 0, sum: 0, unknown: isUnknown(r) });
     e.n++;
-    e.sum += (cat === '매출' ? r.amount : -r.amount);
+    e.sum += cat === '매출' ? r.amount : -r.amount;
   });
-  return Object.keys(m).map(function (k) { return m[k]; })
-    .sort(function (a, b) { return Math.abs(b.sum) - Math.abs(a.sum); });
+  return Object.keys(m)
+    .map(function (k) {
+      return m[k];
+    })
+    .sort(function (a, b) {
+      return Math.abs(b.sum) - Math.abs(a.sum);
+    });
 }
 
 /* ── 36차 ── 사업과 무관한 항목의 거래처 목록.
@@ -1228,10 +1605,11 @@ function catPayees(d, cat) {
 function keepPayees(d, cat, isIn, skipOnly) {
   var m = {};
   d.rows.forEach(function (r) {
-    if ((r.amount > 0) !== isIn) return;
+    if (r.amount > 0 !== isIn) return;
     /* 36차 4단계. 이체는 줄 단위라 항목으로 안 거른다 */
-    if (cat === XFER_PART) { if (!xferOn(r)) return; }
-    else {
+    if (cat === XFER_PART) {
+      if (!xferOn(r)) return;
+    } else {
       if (xferOn(r)) return;
       if (catOf(r) !== cat) return;
       var g0 = UP.byName[keyOf(r)];
@@ -1243,13 +1621,21 @@ function keepPayees(d, cat, isIn, skipOnly) {
     e.n++;
     e.sum += Math.abs(r.amount);
   });
-  return Object.keys(m).map(function (k) { return m[k]; })
-    .sort(function (a, b) { return b.sum - a.sum; });
+  return Object.keys(m)
+    .map(function (k) {
+      return m[k];
+    })
+    .sort(function (a, b) {
+      return b.sum - a.sum;
+    });
 }
 /* 그 항목에 든 거래처가 몇 곳·몇 건인지 — 다른 항목 줄과 같은 꼬리표 */
 function keepCount(d, cat, isIn, skipOnly) {
-  var l = keepPayees(d, cat, isIn, skipOnly), n = 0;
-  l.forEach(function (e) { n += e.n; });
+  var l = keepPayees(d, cat, isIn, skipOnly),
+    n = 0;
+  l.forEach(function (e) {
+    n += e.n;
+  });
   return l.length ? won(l.length) + '곳 · ' + won(n) + '건' : '';
 }
 /* 펼친 목록. 「그 밖의 입금」과 같은 모양으로 맞춘다 —
@@ -1261,7 +1647,7 @@ function drawKeepDetail(host, d, cat, isIn, skipOnly, after) {
     var g = UP.byName[e.name];
     var row = el('div', 'drow');
     var nm = el('div', 'dnm');
-    var au = g && (g.mixed ? (g.autoIn || g.autoOut) : g.auto);
+    var au = g && (g.mixed ? g.autoIn || g.autoOut : g.auto);
     nm.appendChild(el('span', au ? 'mark auto' : 'mark mine', au ? '⚙' : '✓'));
     nm.appendChild(document.createTextNode(showName(e.name) + ' · ' + e.n + '건'));
     if (g && g.askSkip) nm.appendChild(el('span', 'autotag', '(앱이 넘김)'));
@@ -1278,7 +1664,10 @@ function drawKeepDetail(host, d, cat, isIn, skipOnly, after) {
     menu.hidden = true;
     box.appendChild(menu);
     btn.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        return;
+      }
       /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 */
       if (g && g.askSkip) unskipAsk(g);
       drawChangeMenu(menu, g, after);
@@ -1286,13 +1675,18 @@ function drawKeepDetail(host, d, cat, isIn, skipOnly, after) {
     });
   });
   if (list.length > DTL_STEP) {
-    box.appendChild(el('div', 'subnote',
-      '금액이 큰 ' + DTL_STEP + '곳만 보여드립니다 (전부 ' + won(list.length) + '곳)'));
+    box.appendChild(
+      el(
+        'div',
+        'subnote',
+        '금액이 큰 ' + DTL_STEP + '곳만 보여드립니다 (전부 ' + won(list.length) + '곳)'
+      )
+    );
   }
   host.appendChild(box);
 }
 
-var DTL_STEP = 12;             /* 한 번에 보여주는 거래처 수 */
+var DTL_STEP = 12; /* 한 번에 보여주는 거래처 수 */
 
 /* ── 43차 4단계 · 그 자리에서 정하기 ────────────────────────
    「아직 안 정한 돈 2,327만원」을 읽고 나서 할 수 있는 게 없었다.
@@ -1300,17 +1694,26 @@ var DTL_STEP = 12;             /* 한 번에 보여주는 거래처 수 */
    ★ 금액 큰 순으로 늘어놓고, 그 줄에서 항목을 찍으면 바로 위 숫자가 다시 계산된다.
    ★ 버튼은 온보딩에서 쓰던 drawChangeMenu 를 그대로 쓴다. 새로 만들지 않는다 */
 function drawUnsetDetail(host, d, months) {
-  var list = Object.keys(d.unkPayees || {}).map(function (nm) {
-    return { name: nm, sum: d.unkPayees[nm] };
-  }).sort(function (a, b) { return b.sum - a.sum; });
+  var list = Object.keys(d.unkPayees || {})
+    .map(function (nm) {
+      return { name: nm, sum: d.unkPayees[nm] };
+    })
+    .sort(function (a, b) {
+      return b.sum - a.sum;
+    });
   if (!list.length) return;
   /* ★ 119차. 차례로 정하기 — 첫 거래처 위 오른쪽에 단추 하나.
      보이는 목록의 거래처를 기존 거래처 확인 화면에서 차례로 묻는다. 물을 곳이 없으면 안 낸다 */
-  var 보이는 = list.slice(0, DTL_STEP).map(function (e) { return e.name; });
-  var 물을 = 보이는.filter(function (nm) { var g = UP.byName[nm]; return g && !gDone(g) && !g.cardMixed; });
+  var 보이는 = list.slice(0, DTL_STEP).map(function (e) {
+    return e.name;
+  });
+  var 물을 = 보이는.filter(function (nm) {
+    var g = UP.byName[nm];
+    return g && !gDone(g) && !g.cardMixed;
+  });
   if (물을.length) {
     var gorow = el('div', 'unsetgo');
-    var go = el('button', 'b on', '차례로 정하기');   /* ★ 119차. 주요 실행 단추 색 (b on) */
+    var go = el('button', 'b on', '차례로 정하기'); /* ★ 119차. 주요 실행 단추 색 (b on) */
     go.type = 'button';
     go.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -1339,21 +1742,38 @@ function drawUnsetDetail(host, d, months) {
     /* ★ 68차 ①. 「이 사람이 누구지」가 바로 이 목록에서 생긴다.
        정하기 화면에 넣은 부품을 그대로 단다 — 같은 모양·같은 원칙(사실만).
        ★ 결과 화면이므로 다시 그리는 것은 drawResult 다 */
-    drawRawPeek(box, g.rawList || [g.name], function () { drawResult(months); }, nm);
+    drawRawPeek(
+      box,
+      g.rawList || [g.name],
+      function () {
+        drawResult(months);
+      },
+      nm
+    );
     var menu = el('div', 'menu');
     menu.hidden = true;
     box.appendChild(menu);
     btn.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        return;
+      }
       /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 */
       if (g.askSkip) unskipAsk(g);
-      drawChangeMenu(menu, g, function () { drawResult(months); });
+      drawChangeMenu(menu, g, function () {
+        drawResult(months);
+      });
       menu.hidden = false;
     });
   });
   if (list.length > DTL_STEP) {
-    box.appendChild(el('div', 'subnote',
-      '금액이 큰 ' + DTL_STEP + '곳만 보여드립니다 (전부 ' + won(list.length) + '곳)'));
+    box.appendChild(
+      el(
+        'div',
+        'subnote',
+        '금액이 큰 ' + DTL_STEP + '곳만 보여드립니다 (전부 ' + won(list.length) + '곳)'
+      )
+    );
   }
   host.appendChild(box);
 }
@@ -1364,7 +1784,9 @@ function drawDetail(host, d, cat) {
   var shown = UP.open[cat] === true ? DTL_STEP : UP.open[cat];
   var n = Math.min(list.length, shown);
   var catTotal = 0;
-  list.forEach(function (e) { catTotal += Math.abs(e.sum); });
+  list.forEach(function (e) {
+    catTotal += Math.abs(e.sum);
+  });
 
   list.slice(0, n).forEach(function (e) {
     var g = UP.byName[e.name];
@@ -1388,19 +1810,22 @@ function drawDetail(host, d, cat) {
     menu.hidden = true;
     box.appendChild(menu);
     btn.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        return;
+      }
       drawChangeMenu(menu, g);
       menu.hidden = false;
     });
 
     /* 자동으로 잡은 것 중 금액이 큰 것은 사장님이 본 적이 없다. 확인을 권한다 */
-    if (auto && catTotal > 0 && Math.abs(e.sum) / catTotal >= 0.20) {
+    if (auto && catTotal > 0 && Math.abs(e.sum) / catTotal >= 0.2) {
       var ask = el('div', 'autoask');
       ask.appendChild(el('span', null, '↑ 이거 ' + cat + ' 맞나요?'));
       var yes = el('button', 'chbtn', '확인');
       yes.type = 'button';
       yes.addEventListener('click', function () {
-        g.auto = false;                       /* 사장님이 확인한 것으로 바꾼다 */
+        g.auto = false; /* 사장님이 확인한 것으로 바꾼다 */
         drawResult(monthList());
       });
       var no = el('button', 'chbtn', '다른 항목으로');
@@ -1409,7 +1834,8 @@ function drawDetail(host, d, cat) {
         drawChangeMenu(menu, g);
         menu.hidden = false;
       });
-      ask.appendChild(yes); ask.appendChild(no);
+      ask.appendChild(yes);
+      ask.appendChild(no);
       box.appendChild(ask);
     }
   });
@@ -1434,12 +1860,16 @@ function saveImage(btn, ready) {
   var src = document.getElementById('up-result');
   var W = 760;
   var wrap = document.createElement('div');
-  wrap.setAttribute('style',
+  wrap.setAttribute(
+    'style',
     /* ★ 88차 ①. 저장 그림은 늘 1단으로 그린다 — 종이 폭이 760px 이라 줄을 쌓을 까닭이 없고,
        그림은 body 밖(SVG 안)에서 그려져서 :root 의 「글씨 한 칸」이 안 닿는다.
        여기서 한 번 못 박아 두면 어느 단에서 저장하셔도 그림은 같다 */
-    '--fu:1px;width:' + W + 'px;background:var(--paper);padding:28px 30px 24px;' +
-    'font-family:inherit;color:var(--ink);box-sizing:border-box');
+    '--fu:1px;width:' +
+      W +
+      'px;background:var(--paper);padding:28px 30px 24px;' +
+      'font-family:inherit;color:var(--ink);box-sizing:border-box'
+  );
 
   var head = document.createElement('div');
   head.setAttribute('style', 'font-size:17px;font-weight:800;margin-bottom:4px');
@@ -1447,27 +1877,41 @@ function saveImage(btn, ready) {
   wrap.appendChild(head);
   var sub = document.createElement('div');
   sub.setAttribute('style', 'font-size:13px;color:var(--gray);margin-bottom:14px');
-  var lastD = lastDayIn(UP.month), mmN = +UP.month.slice(5, 7);
+  var lastD = lastDayIn(UP.month),
+    mmN = +UP.month.slice(5, 7);
   /* 1년치를 저장하는데 한 달 기간이 적혀 있으면 받는 사람이 헷갈린다.
      보고 있는 화면이 무엇인지에 따라 머리를 달리 쓴다 */
   if (UP.view === 'year') {
     var ms = monthList();
-    var a = ms[0], b = ms[ms.length - 1];
-    sub.textContent = a.slice(0, 4) + '년 ' + (+a.slice(5, 7)) + '월 ~ ' +
-                      (a.slice(0, 4) === b.slice(0, 4) ? '' : b.slice(0, 4) + '년 ') +
-                      (+b.slice(5, 7)) + '월 · 실제 숫자입니다';
+    var a = ms[0],
+      b = ms[ms.length - 1];
+    sub.textContent =
+      a.slice(0, 4) +
+      '년 ' +
+      +a.slice(5, 7) +
+      '월 ~ ' +
+      (a.slice(0, 4) === b.slice(0, 4) ? '' : b.slice(0, 4) + '년 ') +
+      +b.slice(5, 7) +
+      '월 · 실제 숫자입니다';
     if (isRunning(b, ms)) {
       var sub2 = document.createElement('div');
       sub2.setAttribute('style', 'font-size:13px;color:var(--gray);margin:-10px 0 14px');
-      sub2.textContent = (+b.slice(5, 7)) + '월은 ' + lastDayIn(b) + '일까지입니다';
+      sub2.textContent = +b.slice(5, 7) + '월은 ' + lastDayIn(b) + '일까지입니다';
       wrap.appendChild(sub);
       wrap.appendChild(sub2);
     } else {
       wrap.appendChild(sub);
     }
   } else {
-    sub.textContent = UP.month.slice(0, 4) + '년 ' + mmN + '월 1일 ~ ' + mmN + '월 ' +
-                      lastD + '일 · 실제 숫자입니다';
+    sub.textContent =
+      UP.month.slice(0, 4) +
+      '년 ' +
+      mmN +
+      '월 1일 ~ ' +
+      mmN +
+      '월 ' +
+      lastD +
+      '일 · 실제 숫자입니다';
     wrap.appendChild(sub);
   }
 
@@ -1475,12 +1919,25 @@ function saveImage(btn, ready) {
   /* ★ 42차 4번. 화면이 아니라 이 사본에서만 가린다 */
   if (!UP || UP.hideNames !== false) maskPersons(body);
   /* 눌러야 뜻이 있는 것들은 이미지에서 뺀다 */
-  ['button', '.rmode', '.rsel select', '.unsetacts', '.ckbtns', '.ckfix',
-   '.menu', '.dmore', '.dsc'].forEach(function (sel) {
-    [].slice.call(body.querySelectorAll(sel)).forEach(function (e) { e.remove(); });
+  [
+    'button',
+    '.rmode',
+    '.rsel select',
+    '.unsetacts',
+    '.ckbtns',
+    '.ckfix',
+    '.menu',
+    '.dmore',
+    '.dsc'
+  ].forEach(function (sel) {
+    [].slice.call(body.querySelectorAll(sel)).forEach(function (e) {
+      e.remove();
+    });
   });
   /* ★ 88차 ②. 「자세히 ▾」 상자도 눌러야 뜻이 있는 것이라 그림에서는 뺀다 */
-  [].slice.call(body.querySelectorAll('.chev, .foldchip')).forEach(function (e) { e.remove(); });
+  [].slice.call(body.querySelectorAll('.chev, .foldchip')).forEach(function (e) {
+    e.remove();
+  });
   var sel = body.querySelector('.rsel');
   if (sel) sel.remove();
   body.hidden = false;
@@ -1488,9 +1945,11 @@ function saveImage(btn, ready) {
   wrap.appendChild(body);
 
   var foot = document.createElement('div');
-  foot.setAttribute('style',
+  foot.setAttribute(
+    'style',
     'margin-top:18px;padding-top:12px;border-top:1px solid var(--line);' +
-    'font-size:12px;color:var(--gray);line-height:1.6');
+      'font-size:12px;color:var(--gray);line-height:1.6'
+  );
   foot.textContent = DISCLAIMER;
   wrap.appendChild(foot);
 
@@ -1509,7 +1968,7 @@ function saveImage(btn, ready) {
      안 벗기면 재는 자리(body 안)에서는 줄이 쌓이고 그려지는 자리(SVG 안)에서는 안 쌓여,
      잰 높이와 그린 높이가 어긋나 그림 아래에 빈 자리가 남는다.
      그림을 다 뜬 뒤 그대로 되돌린다 (아래 removeChild 자리) */
-  var 벗긴단 = (글씨단 > FONT_MIN) ? ('fs' + 글씨단) : '';
+  var 벗긴단 = 글씨단 > FONT_MIN ? 'fs' + 글씨단 : '';
   if (벗긴단) document.body.classList.remove(벗긴단);
 
   /* 표가 화면 폭보다 넓으면 그만큼 종이를 넓힌다 */
@@ -1525,22 +1984,34 @@ function saveImage(btn, ready) {
   var H = Math.ceil(wrap.getBoundingClientRect().height);
 
   var css = '';
-  [].slice.call(document.querySelectorAll('style')).forEach(function (s) { css += s.textContent; });
+  [].slice.call(document.querySelectorAll('style')).forEach(function (s) {
+    css += s.textContent;
+  });
 
   var html = new XMLSerializer().serializeToString(wrap);
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">' +
-            '<foreignObject width="100%" height="100%">' +
-            '<div xmlns="http://www.w3.org/1999/xhtml">' +
-            '<style>' + css + '</style>' + html + '</div>' +
-            '</foreignObject></svg>';
+  var svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' +
+    W +
+    '" height="' +
+    H +
+    '">' +
+    '<foreignObject width="100%" height="100%">' +
+    '<div xmlns="http://www.w3.org/1999/xhtml">' +
+    '<style>' +
+    css +
+    '</style>' +
+    html +
+    '</div>' +
+    '</foreignObject></svg>';
   document.body.removeChild(stage);
   if (벗긴단) document.body.classList.add(벗긴단);
 
   var img = new Image();
   img.onload = function () {
-    var s = 2;                                  /* 폰에서도 읽히게 두 배로 */
+    var s = 2; /* 폰에서도 읽히게 두 배로 */
     var cv = document.createElement('canvas');
-    cv.width = W * s; cv.height = H * s;
+    cv.width = W * s;
+    cv.height = H * s;
     var cx = cv.getContext('2d');
     cx.fillStyle = '#fff';
     cx.fillRect(0, 0, cv.width, cv.height);
@@ -1565,7 +2036,9 @@ function saveImage(btn, ready) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 1000);
       if (btn) btn.textContent = '전체보기';
     }, 'image/png');
   };
@@ -1585,14 +2058,18 @@ function openImagePreview(btn) {
   if (UP.hideNames === undefined) UP.hideNames = true;
 
   var oldOverflow = document.body.style.overflow;
-  var url = null, closed = false, turn = 0;
+  var url = null,
+    closed = false,
+    turn = 0;
   var over = el('div', 'imgpreview');
   over.setAttribute('role', 'dialog');
   over.setAttribute('aria-modal', 'true');
   over.setAttribute('aria-label', UP.view === 'year' ? '1년 전체보기' : '한 달 전체보기');
 
   var head = el('div', 'imgprevhead');
-  head.appendChild(el('div', 'imgprevtitle', UP.view === 'year' ? '1년 전체보기' : '한 달 전체보기'));
+  head.appendChild(
+    el('div', 'imgprevtitle', UP.view === 'year' ? '1년 전체보기' : '한 달 전체보기')
+  );
   var headActs = el('div', 'imgprevheadacts');
   var down = el('button', 'b on', '이미지 저장');
   down.type = 'button';
@@ -1630,7 +2107,10 @@ function openImagePreview(btn) {
   }
   function renderPreview() {
     var mine = ++turn;
-    if (url) { URL.revokeObjectURL(url); url = null; }
+    if (url) {
+      URL.revokeObjectURL(url);
+      url = null;
+    }
     down.disabled = true;
     body.innerHTML = '';
     body.appendChild(el('div', 'imgprevloading', '전체 화면 만드는 중…'));
@@ -1679,8 +2159,13 @@ function openImagePreview(btn) {
 /* 매출이 아닌 입금이 어디서 들어왔는지 */
 function drawInDetail(host, d) {
   var m = d.otherInPayees;
-  var list = Object.keys(m).map(function (k) { return { name: k, sum: m[k] }; })
-    .sort(function (a, b) { return b.sum - a.sum; });
+  var list = Object.keys(m)
+    .map(function (k) {
+      return { name: k, sum: m[k] };
+    })
+    .sort(function (a, b) {
+      return b.sum - a.sum;
+    });
   var box = el('div', 'dtl');
   list.slice(0, 12).forEach(function (e) {
     var g = UP.byName[e.name];
@@ -1700,7 +2185,10 @@ function drawInDetail(host, d) {
     menu.hidden = true;
     box.appendChild(menu);
     btn.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        return;
+      }
       drawChangeMenu(menu, g);
       menu.hidden = false;
     });
@@ -1725,8 +2213,10 @@ var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거�
    그렇게 써두면 사장님이 우리 숫자를 안 믿으신다.
    자문이냐 아니냐보다 무엇이 안 들어 있는지가 훨씬 쓸모 있다 */
 var DISCLAIMER_1 = '이 계좌에 들어오고 나간 돈만 셌습니다.';
-var DISCLAIMER_2 = ['현금 매출 · 다른 계좌 · 개인카드로 쓰신 사업비 · 외상 · 재고는 들어 있지 않습니다.',
-                    '회계상 계산하는 순이익과는 다를 수 있습니다.'];
+var DISCLAIMER_2 = [
+  '현금 매출 · 다른 계좌 · 개인카드로 쓰신 사업비 · 외상 · 재고는 들어 있지 않습니다.',
+  '회계상 계산하는 순이익과는 다를 수 있습니다.'
+];
 /* 이미지로 저장할 때는 접을 수가 없으니 한 덩이로 쓴다 */
 var DISCLAIMER = DISCLAIMER_1 + ' ' + DISCLAIMER_2.join(' ');
 /* ★ 76차. 결과 화면에는 회계상 순이익과 다를 수 있다는 핵심 한 줄만 남긴다.
@@ -1748,32 +2238,48 @@ function dscLine(host) {
      둘 다 있어서, 안 가르면 하나를 누를 때 다른 하나가 같이 열린다.
      51차에 항목 열쇠를 안 가른 것은 맞았지만 여기는 같은 이름에 두 상태다 */
 var WHY = {
-  in:     ['이 계좌에 들어온 돈 중에서 매출과 그 밖의 입금을 더한 금액입니다.',
-           '대출로 들어온 돈이나 {{주인}}이 넣으신 돈은 여기 안 들어갑니다.'],
-  out:    ['이 계좌에서 나간 돈 중에서 사업에 쓴 것만 더한 금액입니다.',
-           '{{주인}}이 가져가신 돈이나 개인 지출은 여기 안 들어갑니다.'],
-  profit: ['사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.',
-           '회계상 계산하는 순이익과는 다를 수 있습니다.',
-           /* ★ 82차 ③. ○○ 약사 지적 — 약국은 매입한 의약품을 반품할 수 있고
+  in: [
+    '이 계좌에 들어온 돈 중에서 매출과 그 밖의 입금을 더한 금액입니다.',
+    '대출로 들어온 돈이나 {{주인}}이 넣으신 돈은 여기 안 들어갑니다.'
+  ],
+  out: [
+    '이 계좌에서 나간 돈 중에서 사업에 쓴 것만 더한 금액입니다.',
+    '{{주인}}이 가져가신 돈이나 개인 지출은 여기 안 들어갑니다.'
+  ],
+  profit: [
+    '사업으로 번 돈에서 사업에 쓴 돈을 뺀 금액입니다.',
+    '회계상 계산하는 순이익과는 다를 수 있습니다.',
+    /* ★ 82차 ③. ○○ 약사 지적 — 약국은 매입한 의약품을 반품할 수 있고
               재고로도 남는다. 식당처럼 그달에 다 소모되는 업종이 아니다.
               ★ 업종으로 가르지 않는다. 물음표 안에만 두고 기본 화면에는 안 보인다 —
                 DISCLAIMER_2 는 안 건드린다 (그쪽이 기본 화면에 나가는 줄이다) */
-           '산 물건이 재고로 남는 업종은 계좌에서 나간 돈이 그달의 비용과 다를 수 있습니다.',
-           '이 계좌에 실제로 오간 돈만 셉니다. 현금 매출·외상·재고는 안 들어 있습니다.',
-           '대출 상환은 지출에 들어갑니다.'],
-  unset:  ['매출인지 지출인지 아직 안 정하신 거래입니다.',
-           '정하기 전까지는 매출에도 지출에도 안 넣습니다. 그래서 순이익이 달라질 수 있습니다.',
-           /* ★ 82차 ⑥. 0으로 만들어야 하는 자리가 아니다 */
-           '다 채우지 않으셔도 됩니다. 확실하지 않은 것을 억지로 정하면 숫자가 오히려 틀어집니다.'],
-  keep:   ['사업이 아니라 {{주인}} 개인으로 오간 돈입니다.',
-           '매출도 지출도 아니라 순이익에서 뺐습니다. 잔액에는 반영됩니다.'],
-  bal:    ['그 달 마지막 날 계좌에 남아 있던 돈입니다.',
-           '순이익과 다릅니다 — 사업 외 용도까지 오간 뒤의 금액이라서요.'],
+    '산 물건이 재고로 남는 업종은 계좌에서 나간 돈이 그달의 비용과 다를 수 있습니다.',
+    '이 계좌에 실제로 오간 돈만 셉니다. 현금 매출·외상·재고는 안 들어 있습니다.',
+    '대출 상환은 지출에 들어갑니다.'
+  ],
+  unset: [
+    '매출인지 지출인지 아직 안 정하신 거래입니다.',
+    '정하기 전까지는 매출에도 지출에도 안 넣습니다. 그래서 순이익이 달라질 수 있습니다.',
+    /* ★ 82차 ⑥. 0으로 만들어야 하는 자리가 아니다 */
+    '다 채우지 않으셔도 됩니다. 확실하지 않은 것을 억지로 정하면 숫자가 오히려 틀어집니다.'
+  ],
+  keep: [
+    '사업이 아니라 {{주인}} 개인으로 오간 돈입니다.',
+    '매출도 지출도 아니라 순이익에서 뺐습니다. 잔액에는 반영됩니다.'
+  ],
+  bal: [
+    '그 달 마지막 날 계좌에 남아 있던 돈입니다.',
+    '순이익과 다릅니다 — 사업 외 용도까지 오간 뒤의 금액이라서요.'
+  ],
   /* 진행 중인 달에는 「지금 계좌 잔액」이라 첫 줄이 달라야 한다 */
-  balnow: ['오늘까지 계좌에 남아 있는 돈입니다.',
-           '순이익과 다릅니다 — 사업 외 용도까지 오간 뒤의 금액이라서요.']
+  balnow: [
+    '오늘까지 계좌에 남아 있는 돈입니다.',
+    '순이익과 다릅니다 — 사업 외 용도까지 오간 뒤의 금액이라서요.'
+  ]
 };
-function whyKey(id) { return 'why:' + id; }
+function whyKey(id) {
+  return 'why:' + id;
+}
 /* 누르면 그 줄의 ▾ 는 안 열린다. 반대도 마찬가지다.
    ★ 54차 ③. 열어둔 ? 는 채워진다. data-why 로 짝을 지어
      아래 fixWhyTails() 가 말풍선 꼬리를 이 ? 밑에 맞춘다 */
@@ -1784,12 +2290,15 @@ function whyMark(id, redraw) {
   q.addEventListener('click', function (e) {
     e.stopPropagation();
     var k = whyKey(id);
-    if (UP.open[k]) delete UP.open[k]; else UP.open[k] = true;
+    if (UP.open[k]) delete UP.open[k];
+    else UP.open[k] = true;
     redraw();
   });
   return q;
 }
-function whyOpen(id) { return !!UP.open[whyKey(id)]; }
+function whyOpen(id) {
+  return !!UP.open[whyKey(id)];
+}
 /* ★ 66차 ⑤. WHY 는 파일을 읽을 때 한 번 만들어지는데 업종은 나중에 정해진다.
    그래서 글에는 {{주인}} 을 넣어두고 그릴 때 채운다 —
    정적 화면의 fillBiz 와 같은 방식이다 (새 장치를 만들지 않는다) */
@@ -1809,7 +2318,7 @@ function whyBox(id) {
   });
   return b;
 }
-var WHY_TAIL = 7;              /* 꼬리 높이 (border-width 와 같아야 한다) */
+var WHY_TAIL = 7; /* 꼬리 높이 (border-width 와 같아야 한다) */
 /* ── 54차 ③ · 말풍선 꼬리를 누른 ? 밑에 맞춘다 ─────────────────
    라벨 길이가 줄마다 달라 ? 자리가 다르다. 그릴 때마다 새로 잰다.
    ★ x 를 두 번 맞춘다. 가운데에서 상자를 위로 끌어올리기 때문에
@@ -1822,18 +2331,23 @@ function fixWhyTails() {
     var box = boxes[i];
     var q = document.querySelector('.why[data-why="' + box.getAttribute('data-why') + '"]');
     if (!q) continue;
-    box.style.marginTop = '';                 /* 다시 잴 때는 CSS 값에서 시작한다 */
-    var qr = q.getBoundingClientRect(), br = box.getBoundingClientRect();
+    box.style.marginTop = ''; /* 다시 잴 때는 CSS 값에서 시작한다 */
+    var qr = q.getBoundingClientRect(),
+      br = box.getBoundingClientRect();
     box.style.setProperty('--tx', Math.round(qr.left - br.left + 1) + 'px');
     /* 줄의 아래 여백만큼 꼬리가 떠 있다. 그 틈을 재서 없앤다 */
     var gap = box.getBoundingClientRect().top - q.getBoundingClientRect().bottom;
     var m = parseFloat(getComputedStyle(box).marginTop) || 0;
-    box.style.marginTop = (m - gap + WHY_TAIL) + 'px';
+    box.style.marginTop = m - gap + WHY_TAIL + 'px';
     /* 상자가 움직였으니 x 를 한 번 더 맞춘다 */
-    var qr2 = q.getBoundingClientRect(), br2 = box.getBoundingClientRect();
+    var qr2 = q.getBoundingClientRect(),
+      br2 = box.getBoundingClientRect();
     box.style.setProperty('--tx', Math.round(qr2.left - br2.left + 1) + 'px');
   }
 }
 /* 창 크기가 바뀌면 ? 자리가 달라진다 */
-window.addEventListener('resize', function () { try { fixWhyTails(); } catch (e) { } });
-
+window.addEventListener('resize', function () {
+  try {
+    fixWhyTails();
+  } catch (e) {}
+});

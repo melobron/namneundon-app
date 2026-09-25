@@ -12,7 +12,7 @@ var PICK_KEY = 'fc.picks.';
    변호사 확인 — 사용자가 직접 입력한 숫자를 그 사람 브라우저에 남기는 것은 문제없다 */
 var MANUAL_KEY = 'fc.manual.';
 
-var LS_OK = true;          /* 시크릿 모드에서는 저장이 막힌다 — 앱은 그대로 돌아가야 한다 */
+var LS_OK = true; /* 시크릿 모드에서는 저장이 막힌다 — 앱은 그대로 돌아가야 한다 */
 var LS_MSG = '이 브라우저에서는 저장이 안 됩니다. 매번 다시 정하셔야 합니다';
 
 /* lsGet · lsSet · lsDel 은 00-early.js 에 있다 (첫 화면에서 바로 쓰여서 맨 앞에 둔다) */
@@ -39,7 +39,7 @@ function storeKey(name) {
      비동기로 바꿔야 하는데, 얻는 것보다 흔들 자리가 훨씬 많다.
      넘치면 조용히 접는다 — 저장이 안 돼도 앱은 메모리로 그대로 돌아간다 */
 var DATA_KEY = 'fc.data.';
-var LAST_KEY = 'fc.last';        /* 마지막으로 남긴 매장 — 열 때 어느 것부터 볼지 */
+var LAST_KEY = 'fc.last'; /* 마지막으로 남긴 매장 — 열 때 어느 것부터 볼지 */
 /* ★ 105차 ④. 분석이 끝난 날짜 하나만 남긴다 (2026-09-19 요한 결정).
    ★ 파일을 고른 시각이 아니다 — 거래가 실제로 반영되고 결과 화면까지 간 날이다.
    ★ 「올리신 날」이 아니라 「분석한 날」이다. 같은 파일을 다시 분석할 수도 있다.
@@ -55,7 +55,7 @@ function lastRunKey(name) {
 }
 function lastRunDay(name) {
   var v = lsGet(lastRunKey(name));
-  return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null;
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
 }
 /* 결과 화면이 실제로 그려진 뒤에만 찍는다. 그리고 「새 거래가 는 판」에만 찍는다 —
    통에서 되살린 판이나, 같은 파일을 또 올려 겹친 거래를 걸러내고 나니
@@ -63,10 +63,10 @@ function lastRunDay(name) {
 function markLastRun() {
   if (!UP || UP.demo || !UP.__새거래) return;
   lsSet(lastRunKey(), dataDay());
-  UP.__새거래 = false;            /* 다시 그려도 두 번 찍지 않는다 */
+  UP.__새거래 = false; /* 다시 그려도 두 번 찍지 않는다 */
 }
-var DATA_CAP = 2000000;          /* 이 글자 수를 넘으면 안 남긴다 (통이 터지지 않게) */
-var DATA_SIG = null;             /* 마지막으로 남긴 것의 지문 — 안 바뀌었으면 다시 안 쓴다 */
+var DATA_CAP = 2000000; /* 이 글자 수를 넘으면 안 남긴다 (통이 터지지 않게) */
+var DATA_SIG = null; /* 마지막으로 남긴 것의 지문 — 안 바뀌었으면 다시 안 쓴다 */
 
 function dataKey(name) {
   var s = String(name != null ? name : (UP && UP.store) || '').trim();
@@ -75,44 +75,83 @@ function dataKey(name) {
 /* 그날부터 오늘까지 며칠 — 날짜만 센다. 시각은 안 본다 */
 function daysSince(day) {
   if (!day) return 0;
-  var a = dayMs(day), b = dayMs(dataDay());
+  var a = dayMs(day),
+    b = dayMs(dataDay());
   var n = Math.round((b - a) / 86400000);
   return n > 0 ? n : 0;
 }
 /* 저장한 날. 시각은 안 남긴다 — 사장님 생활을 들여다보지 않는다 (fc_use 와 같은 태도) */
 function dataDay() {
-  var d = new Date(), m = d.getMonth() + 1, x = d.getDate();
+  var d = new Date(),
+    m = d.getMonth() + 1,
+    x = d.getDate();
   return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (x < 10 ? '0' + x : x);
 }
 /* 바뀌었는가만 본다. 200KB 를 찍을 때마다 다시 쓰지 않으려는 것이다 */
 function dataSig() {
   var n = 0;
-  (UP.banks || []).forEach(function (b) { n += (b.rows || []).length; });
-  return (UP.banks || []).length + '|' + n + '|' + (UP.store || '') + '|' +
-         (UP.owner || '') + '|' + (UP.trade || '') + '|' +
-         (UP.opening || 0) + '|' + (UP.closing || 0) + '|' +
-         (UP.patched || 0) + '|' + (UP.unsure || 0) + '|' + (UP.zeroed || 0) + '|' +
-         /* ★ 112차 ②. 다시 고르시면 이 값이 바뀐다 — 안 넣으면 지문이 같아 저장을 건너뛴다 */
-         (UP.byStated || 0) + '|' + (UP.autoPatched || 0);
+  (UP.banks || []).forEach(function (b) {
+    n += (b.rows || []).length;
+  });
+  return (
+    (UP.banks || []).length +
+    '|' +
+    n +
+    '|' +
+    (UP.store || '') +
+    '|' +
+    (UP.owner || '') +
+    '|' +
+    (UP.trade || '') +
+    '|' +
+    (UP.opening || 0) +
+    '|' +
+    (UP.closing || 0) +
+    '|' +
+    (UP.patched || 0) +
+    '|' +
+    (UP.unsure || 0) +
+    '|' +
+    (UP.zeroed || 0) +
+    '|' +
+    /* ★ 112차 ②. 다시 고르시면 이 값이 바뀐다 — 안 넣으면 지문이 같아 저장을 건너뛴다 */
+    (UP.byStated || 0) +
+    '|' +
+    (UP.autoPatched || 0)
+  );
 }
 /* 넣을 값을 하나하나 손으로 고른다 — 객체를 통째로 복사하면
    나중에 누가 UP 에 무엇을 붙여도 여기로 따라 들어온다 (fc_use 와 같은 방식) */
 function dataPayload() {
   var banks = (UP.banks || []).map(function (b) {
     return {
-      name: b.name || null, file: b.file || null,
-      sheet: b.sheet || null, header: b.header != null ? b.header : 0,
-      balName: b.balName || null, balTried: b.balTried || null,
-      bankHint: b.bankHint || null, bank: b.bank || null,
-      typed: b.typed || null, found: b.found || null,
-      from: b.from || null, to: b.to || null,
+      name: b.name || null,
+      file: b.file || null,
+      sheet: b.sheet || null,
+      header: b.header != null ? b.header : 0,
+      balName: b.balName || null,
+      balTried: b.balTried || null,
+      bankHint: b.bankHint || null,
+      bank: b.bank || null,
+      typed: b.typed || null,
+      found: b.found || null,
+      from: b.from || null,
+      to: b.to || null,
       /* ★ 113차 ①. 파일에서 읽은 조회 기간과 완전성 판단.
          이게 빠지면 다음에 열 때 자료 범위가 조용히 좁아진다 */
       range: b.range || null,
-      opening: +b.opening || 0, closing: +b.closing || 0, moved: +b.moved || 0,
+      opening: +b.opening || 0,
+      closing: +b.closing || 0,
+      moved: +b.moved || 0,
       rows: (b.rows || []).map(function (r) {
-        var o = { at: r.at, payee: r.payee, amount: r.amount, balance: r.balance,
-                  excelRow: r.excelRow || 0, memo: r.memo || '' };
+        var o = {
+          at: r.at,
+          payee: r.payee,
+          amount: r.amount,
+          balance: r.balance,
+          excelRow: r.excelRow || 0,
+          memo: r.memo || ''
+        };
         /* 부호를 잔액으로 푸는 파일에서만 쓰는 값들. 없으면 안 넣는다 */
         if (r.mag != null) o.mag = r.mag;
         if (r.kindDir) o.kindDir = r.kindDir;
@@ -131,11 +170,18 @@ function dataPayload() {
       })
     };
   });
-  return { dv: 1, 저장일: dataDay(),
-           store: UP.store || null, owner: UP.owner || null,
-           trade: UP.trade || null, dueDay: UP.dueDay || null,
-           patched: +UP.patched || 0, unsure: +UP.unsure || 0, zeroed: +UP.zeroed || 0,
-           banks: banks };
+  return {
+    dv: 1,
+    저장일: dataDay(),
+    store: UP.store || null,
+    owner: UP.owner || null,
+    trade: UP.trade || null,
+    dueDay: UP.dueDay || null,
+    patched: +UP.patched || 0,
+    unsure: +UP.unsure || 0,
+    zeroed: +UP.zeroed || 0,
+    banks: banks
+  };
 }
 /* ★ 112차 ③. 저장이 어떻게 됐는지 그 자리에서 알려드리려면 결과를 들고 있어야 한다.
      'ok'   남겼다
@@ -149,17 +195,25 @@ var SAVE_STATE = 'ok';
    조용히 살아나는 것이 문제였으므로, 조용하지 않게 하는 쪽으로 푼다 */
 function saveFail() {
   var 예전있 = false;
-  try { 예전있 = !!lsGet(dataKey()); } catch (e) { 예전있 = false; }
+  try {
+    예전있 = !!lsGet(dataKey());
+  } catch (e) {
+    예전있 = false;
+  }
   SAVE_STATE = 예전있 ? 'kept' : 'none';
-  DATA_SIG = null;                 /* 다음에 또 해본다 — 자리가 나면 남을 수도 있다 */
+  DATA_SIG = null; /* 다음에 또 해본다 — 자리가 나면 남을 수도 있다 */
   return false;
 }
 function saveData() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
   var sig = dataSig();
-  if (sig === DATA_SIG) return true;          /* 안 바뀌었다 */
+  if (sig === DATA_SIG) return true; /* 안 바뀌었다 */
   var body;
-  try { body = JSON.stringify(dataPayload()); } catch (e) { return saveFail(); }
+  try {
+    body = JSON.stringify(dataPayload());
+  } catch (e) {
+    return saveFail();
+  }
   /* 통이 감당할 크기를 넘으면 안 남긴다 */
   if (body.length > DATA_CAP) return saveFail();
   if (!lsSet(dataKey(), body)) return saveFail();
@@ -173,11 +227,20 @@ function loadData(name) {
   var raw = lsGet(dataKey(name));
   if (!raw) return null;
   var o = null;
-  try { o = JSON.parse(raw); } catch (e) { return null; }
+  try {
+    o = JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
   if (!o || o.dv !== 1 || !o.banks || !o.banks.length) return null;
   var ok = o.banks.every(function (b) {
-    return b && b.rows && b.rows.length &&
-           typeof b.rows[0].at === 'string' && typeof b.rows[0].balance === 'number';
+    return (
+      b &&
+      b.rows &&
+      b.rows.length &&
+      typeof b.rows[0].at === 'string' &&
+      typeof b.rows[0].balance === 'number'
+    );
   });
   return ok ? o : null;
 }
@@ -192,15 +255,27 @@ function delData(name) {
      residual·patched·unsure 로 붙어 있다 (amtOf 가 그것을 읽는다) */
 function banksFromData(o) {
   return (o.banks || []).map(function (b) {
-    return { name: b.name, file: b.file, sheet: b.sheet, header: b.header,
-             balName: b.balName, balTried: b.balTried, bankHint: b.bankHint,
-             bank: b.bank, typed: b.typed || null, found: b.found || null,
-             from: b.from || null, to: b.to || null,
-             range: b.range || null,          /* ★ 113차 ① */
-             opening: +b.opening || 0, closing: +b.closing || 0, moved: +b.moved || 0,
-             breaks: [],
-             kept: true,        /* 이름이 이미 붙은 계좌다 — 번호를 다시 안 붙인다 */
-             rows: (b.rows || []).slice() };
+    return {
+      name: b.name,
+      file: b.file,
+      sheet: b.sheet,
+      header: b.header,
+      balName: b.balName,
+      balTried: b.balTried,
+      bankHint: b.bankHint,
+      bank: b.bank,
+      typed: b.typed || null,
+      found: b.found || null,
+      from: b.from || null,
+      to: b.to || null,
+      range: b.range || null /* ★ 113차 ① */,
+      opening: +b.opening || 0,
+      closing: +b.closing || 0,
+      moved: +b.moved || 0,
+      breaks: [],
+      kept: true /* 이름이 이미 붙은 계좌다 — 번호를 다시 안 붙인다 */,
+      rows: (b.rows || []).slice()
+    };
   });
 }
 
@@ -208,7 +283,10 @@ function banksFromData(o) {
 function hasNumber(v) {
   if (typeof v === 'number') return true;
   if (Array.isArray(v)) return v.some(hasNumber);
-  if (v && typeof v === 'object') return Object.keys(v).some(function (k) { return hasNumber(v[k]); });
+  if (v && typeof v === 'object')
+    return Object.keys(v).some(function (k) {
+      return hasNumber(v[k]);
+    });
   return false;
 }
 
@@ -216,7 +294,9 @@ function pickPayload() {
   /* 거래내역에 찍힌 원본 표기를 키로 쓴다.
      다듬은 이름으로 저장하면, 나중에 다듬는 규칙을 한 번만 손대도
      저장된 키가 안 맞아 되살림이 조용히 0곳이 된다 */
-  var picks = {}, mixedCards = [], 곳 = 0;
+  var picks = {},
+    mixedCards = [],
+    곳 = 0;
   (UP.payees || []).forEach(function (g) {
     /* ★ 46차 ⑥. F 가 안 묻고 넘긴 곳은 auto 가 false 라 「손으로 정한 것」으로
        저장되고 있었다. 세 곳 찍고 나가신 분이 돌아오면 「99곳」이라고 나왔다 —
@@ -239,32 +319,42 @@ function pickPayload() {
          읽을 때 applySaved 가 양쪽에 같이 넣어 준다.
          방향마다 다르게 저장된 옛 것도 그대로 읽히므로 모양은 둘 다 살려 둔다 */
       var o = {};
-      if (g.catIn  && !g.autoIn)  o['입금'] = g.catIn;
+      if (g.catIn && !g.autoIn) o['입금'] = g.catIn;
       if (g.catOut && !g.autoOut) o['출금'] = g.catOut;
       if (o['입금'] && o['입금'] === o['출금']) v = o['입금'];
       else if (Object.keys(o).length) v = o;
-    } else if (g.cat && !g.auto) v = g.cat;        /* 손으로 정한 것만 */
+    } else if (g.cat && !g.auto) v = g.cat; /* 손으로 정한 것만 */
     if (!v) return;
     /* ★ 46차 ⑥. 저장은 원본 표기별로 한다(되살릴 때 그래야 맞다).
        그런데 한 거래처가 표기 여럿을 가지면 키가 여럿이 된다 —
        세 곳 찍고 아홉 곳이라고 나왔다. 사장님이 세신 단위는 「곳」이다 */
     곳++;
-    (g.rawList || [g.name]).forEach(function (raw) { picks[raw] = v; });
+    (g.rawList || [g.name]).forEach(function (raw) {
+      picks[raw] = v;
+    });
   });
-  return { n곳: 곳, 목표일: UP.dueDay || null, 업종: UP.trade || null,
-           /* ★ 63-1. 이 매장이 어느 계좌 파일에서 나왔는지 열쇠만 남긴다.
+  return {
+    n곳: 곳,
+    목표일: UP.dueDay || null,
+    업종: UP.trade || null,
+    /* ★ 63-1. 이 매장이 어느 계좌 파일에서 나왔는지 열쇠만 남긴다.
               열쇠는 (시트 이름 + 파일 이름에서 숫자를 뺀 것)이라 계좌번호도 잔액도 아니다 —
               hasNumber 검사를 그대로 지난다 (bankNameKey 가 숫자를 통째로 뺀다) */
-           계좌: bankKeysNow(),
-           store: UP.store || null, owner: UP.owner || null,
-           xfer: xferKeys(),
-           unskip: (UP.unskip || []).slice(),   /* 36차 F. 손수 되돌리신 곳 — 이름만, 숫자 없음 */ 
-           accounts: UP.accounts.slice(),
-           hidden: (UP.hidden || []).slice(),
-           baseCats: UP.baseCats.slice(), keepSet: UP.keepSet.slice(),
-           /* ★ 63-1. 저장한 차례. 같은 계좌에 매장이 둘이면 마지막에 쓰신 쪽이 그 계좌의 주인이다 */
-           순번: nextPickSeq(),
-           cv: CAT_CV, picks: picks, cardMixed: mixedCards };
+    계좌: bankKeysNow(),
+    store: UP.store || null,
+    owner: UP.owner || null,
+    xfer: xferKeys(),
+    unskip: (UP.unskip || []).slice() /* 36차 F. 손수 되돌리신 곳 — 이름만, 숫자 없음 */,
+    accounts: UP.accounts.slice(),
+    hidden: (UP.hidden || []).slice(),
+    baseCats: UP.baseCats.slice(),
+    keepSet: UP.keepSet.slice(),
+    /* ★ 63-1. 저장한 차례. 같은 계좌에 매장이 둘이면 마지막에 쓰신 쪽이 그 계좌의 주인이다 */
+    순번: nextPickSeq(),
+    cv: CAT_CV,
+    picks: picks,
+    cardMixed: mixedCards
+  };
 }
 /* 저장통에 있는 가장 큰 순번 + 1. 금액도 시각도 아니고 차례를 세는 수다 —
    「이 계좌를 마지막에 쓴 매장이 어디인가」만 알면 되므로 시계는 안 본다 */
@@ -275,10 +365,16 @@ function nextPickSeq() {
       var k = localStorage.key(i);
       if (!k || k.indexOf(PICK_KEY) !== 0) continue;
       var o = null;
-      try { o = JSON.parse(localStorage.getItem(k)); } catch (e) { continue; }
+      try {
+        o = JSON.parse(localStorage.getItem(k));
+      } catch (e) {
+        continue;
+      }
       if (o && typeof o.순번 === 'number' && o.순번 > max) max = o.순번;
     }
-  } catch (e) { return 1; }
+  } catch (e) {
+    return 1;
+  }
   return max + 1;
 }
 
@@ -286,12 +382,14 @@ function savePicks() {
   if (!UP || !UP.payees) return false;
   /* ★ 57차 ⑦. 분류가 바뀌면 매출·사업 지출이 바뀌므로 하루 표를 다시 만든다 */
   UP.__due = null;
-  if (UP.demo) return false;              /* 예시는 이 브라우저에 남기지 않는다 */
+  if (UP.demo) return false; /* 예시는 이 브라우저에 남기지 않는다 */
   /* ★ 91차 ①. 거래내역 데이터셋(fc.data)도 여기서 같이 남긴다 —
      분류가 남는 자리마다 거래내역도 같이 있어야 다음에 열 때 짝이 맞는다.
      통은 따로다. 아래 hasNumber 검사는 fc.picks 의 것이고 한 글자도 안 건드린다.
      바뀐 게 없으면 saveData 가 지문만 보고 바로 돌아 나온다 */
-  try { saveData(); } catch (e) { }
+  try {
+    saveData();
+  } catch (e) {}
   var body = pickPayload();
   /* ★ 41차. cv 는 저장 모양의 판 번호지 금액이 아니다. 그런데 hasNumber 는
      「숫자면 무조건」이라, 38차에 cv:2 를 붙인 뒤로 이 함수가 늘 false 를 돌려줬다 —
@@ -300,12 +398,15 @@ function savePicks() {
   /* ★ 57차 ⑦. 목표일도 금액이 아니라 날짜 하나(1~28)다. 판 번호와 같이 뺀다.
      ★ 63-1. 순번도 같다 — 저장한 차례를 세는 수지 금액이 아니다.
      ★ 검사는 여전히 안 푼다 — 이름 붙은 넷만 잠깐 빼고 나머지 전부를 그대로 본다 */
-  var cv = body.cv, n곳 = body.n곳, due = body.목표일, seq = body.순번;
+  var cv = body.cv,
+    n곳 = body.n곳,
+    due = body.목표일,
+    seq = body.순번;
   delete body.cv;
-  delete body.n곳;                               /* 판 번호와 같이 — 금액이 아니다 */
+  delete body.n곳; /* 판 번호와 같이 — 금액이 아니다 */
   delete body.목표일;
   delete body.순번;
-  if (hasNumber(body)) return false;              /* 금액이 섞였으면 안 남긴다 */
+  if (hasNumber(body)) return false; /* 금액이 섞였으면 안 남긴다 */
   body.cv = cv;
   body.n곳 = n곳;
   body.목표일 = due;
@@ -318,7 +419,6 @@ function savePicks() {
 }
 var PICK_SAVED = true;
 
-
 /* ── 사용 기록 ──────────────────────────────────────────────
    파일이 서버로 안 가니 「그분들이 실제로 쓰고 계신가」를 알 방법이 없다.
    그 원칙은 안 깬다 — 앱이 이 기기에서만 재고, 보내는 것은
@@ -330,22 +430,30 @@ var PICK_SAVED = true;
    날짜는 월-일만 남긴다 — 시각까지 남기면 사장님 생활을 들여다보는 것이 된다 */
 /* ★ 39차 5번. 「모자랄 것 같다」 카드를 걷어내면서 그 로그통도 비운다.
    쓰던 분 브라우저에 남아 있을 수 있어 한 번 지우고 간다 */
-try { localStorage.removeItem('fc_log'); } catch (e) { }
+try {
+  localStorage.removeItem('fc_log');
+} catch (e) {}
 var USE_KEY = 'fc_use';
-var USE_MAX = 30;          /* 줄은 최근 30개까지 */
-var USE_CAP = 120;         /* 한 곳에 2분을 넘기면 2분으로 자른다 */
-var USE_FAIL_MAX = 10;     /* 못 읽은 파일은 최근 10개까지 */
+var USE_MAX = 30; /* 줄은 최근 30개까지 */
+var USE_CAP = 120; /* 한 곳에 2분을 넘기면 2분으로 자른다 */
+var USE_FAIL_MAX = 10; /* 못 읽은 파일은 최근 10개까지 */
 /* 왜 못 읽었는지는 이 중 하나로만 남긴다. 파일 이름은 절대 안 남는다 */
 var USE_FAIL_WHY = {
-  notxlsx: '엑셀 아님', nodate: '거래일시 열 못 찾음', noamt: '금액 열 못 찾음',
-  norows: '줄 없음', balance: '잔액 검산 안 맞음', unknown: '읽다가 멈춤',
+  notxlsx: '엑셀 아님',
+  nodate: '거래일시 열 못 찾음',
+  noamt: '금액 열 못 찾음',
+  norows: '줄 없음',
+  balance: '잔액 검산 안 맞음',
+  unknown: '읽다가 멈춤',
   /* ★ 102차 추가 ②. 이 줄이 없으면 새 열쇠가 '읽다가 멈춤'으로 기록돼
      「엑셀이 암호 걸려 되돌아간 건이 몇 건인가」를 셀 수가 없다 — 가른 뜻이 없어진다 */
   xlsx_locked: '엑셀 암호 걸림',
   /* ★ 92차 ⑤. PDF 사유. 어느 은행 양식을 먼저 넣어야 하는지 알 길이 이것뿐이다.
      여기에도 파일 이름은 안 들어간다 — 왜 못 읽었는지 한 마디뿐이다 */
-  pdf_no_header: 'PDF 양식 모름', pdf_image: 'PDF 가 사진',
-  pdf_locked: 'PDF 비밀번호 안 넣음', pdf_open: 'PDF 열다가 멈춤',
+  pdf_no_header: 'PDF 양식 모름',
+  pdf_image: 'PDF 가 사진',
+  pdf_locked: 'PDF 비밀번호 안 넣음',
+  pdf_open: 'PDF 열다가 멈춤',
   pdf_total: 'PDF 합계 안 맞음'
 };
 /* 「본 것」은 세지 않는다 — 카드 id 에 거래처 이름이 들어 있어 본 목록을 남길 수 없고,
@@ -355,7 +463,9 @@ var USE_FAIL_WHY = {
 var USE_CARDS = ['맞습니다', '확인해볼게요', '되돌리기'];
 
 function useDay() {
-  var d = new Date(), m = d.getMonth() + 1, x = d.getDate();
+  var d = new Date(),
+    m = d.getMonth() + 1,
+    x = d.getDate();
   return (m < 10 ? '0' + m : m) + '-' + (x < 10 ? '0' + x : x);
 }
 /* 빌드가 심어주는 표시. 개발본에는 없다 */
@@ -364,9 +474,20 @@ function useStamp() {
   return e ? String(e.textContent || '').trim() : '(개발본)';
 }
 function useBlank() {
-  var o = { v: 1, 판: '', 연날: [], 올림: [], 올림실패: [], 찍기: [], 되살림: [],
-            확인카드: {}, 열어본화면: {} };
-  USE_CARDS.forEach(function (k) { o.확인카드[k] = 0; });
+  var o = {
+    v: 1,
+    판: '',
+    연날: [],
+    올림: [],
+    올림실패: [],
+    찍기: [],
+    되살림: [],
+    확인카드: {},
+    열어본화면: {}
+  };
+  USE_CARDS.forEach(function (k) {
+    o.확인카드[k] = 0;
+  });
   return o;
 }
 function useRead() {
@@ -375,7 +496,9 @@ function useRead() {
     if (!o || o.v !== 1) return useBlank();
     var b = useBlank();
     b.판 = String(o.판 || '');
-    (o.연날 || []).forEach(function (d) { b.연날.push(String(d)); });
+    (o.연날 || []).forEach(function (d) {
+      b.연날.push(String(d));
+    });
     (o.올림 || []).forEach(function (x) {
       var e = { 날: String(x.날), 기간: String(x.기간) };
       if (x.못정한 != null) e.못정한 = +x.못정한;
@@ -384,19 +507,40 @@ function useRead() {
     (o.올림실패 || []).forEach(function (x) {
       b.올림실패.push({ 날: String(x.날), 왜: String(x.왜) });
     });
-    (o.찍기 || []).forEach(function (x) { b.찍기.push({ 날: String(x.날), 곳: +x.곳 || 0, 초: +x.초 || 0 }); });
-    (o.되살림 || []).forEach(function (x) { b.되살림.push({ 날: String(x.날), 곳: +x.곳 || 0 }); });
-    USE_CARDS.forEach(function (k) { b.확인카드[k] = +(o.확인카드 || {})[k] || 0; });
-    Object.keys(o.열어본화면 || {}).forEach(function (k) { b.열어본화면[String(k)] = +o.열어본화면[k] || 0; });
+    (o.찍기 || []).forEach(function (x) {
+      b.찍기.push({ 날: String(x.날), 곳: +x.곳 || 0, 초: +x.초 || 0 });
+    });
+    (o.되살림 || []).forEach(function (x) {
+      b.되살림.push({ 날: String(x.날), 곳: +x.곳 || 0 });
+    });
+    USE_CARDS.forEach(function (k) {
+      b.확인카드[k] = +(o.확인카드 || {})[k] || 0;
+    });
+    Object.keys(o.열어본화면 || {}).forEach(function (k) {
+      b.열어본화면[String(k)] = +o.열어본화면[k] || 0;
+    });
     return b;
-  } catch (e) { return useBlank(); }
+  } catch (e) {
+    return useBlank();
+  }
 }
 /* 저장은 이 함수 하나로만 한다. 넣는 값을 여기서 전부 손으로 고른다 —
    객체를 통째로 넘기면 나중에 누가 금액이 든 필드를 붙여도 안 걸린다 */
 function useWrite(o) {
-  var out = { v: 1, 판: String(o.판 || ''), 연날: [], 올림: [], 올림실패: [],
-              찍기: [], 되살림: [], 확인카드: {}, 열어본화면: {} };
-  (o.연날 || []).slice(-USE_MAX).forEach(function (d) { out.연날.push(String(d)); });
+  var out = {
+    v: 1,
+    판: String(o.판 || ''),
+    연날: [],
+    올림: [],
+    올림실패: [],
+    찍기: [],
+    되살림: [],
+    확인카드: {},
+    열어본화면: {}
+  };
+  (o.연날 || []).slice(-USE_MAX).forEach(function (d) {
+    out.연날.push(String(d));
+  });
   (o.올림 || []).slice(-USE_MAX).forEach(function (x) {
     var e = { 날: String(x.날), 기간: String(x.기간) };
     /* 온보딩을 끝냈을 때의 못 정한 금액 비율. 소수 둘째 자리까지 */
@@ -413,15 +557,21 @@ function useWrite(o) {
   (o.되살림 || []).slice(-USE_MAX).forEach(function (x) {
     out.되살림.push({ 날: String(x.날), 곳: +x.곳 || 0 });
   });
-  USE_CARDS.forEach(function (k) { out.확인카드[k] = +(o.확인카드 || {})[k] || 0; });
-  Object.keys(o.열어본화면 || {}).slice(0, 12).forEach(function (k) {
-    out.열어본화면[String(k)] = +o.열어본화면[k] || 0;
+  USE_CARDS.forEach(function (k) {
+    out.확인카드[k] = +(o.확인카드 || {})[k] || 0;
   });
+  Object.keys(o.열어본화면 || {})
+    .slice(0, 12)
+    .forEach(function (k) {
+      out.열어본화면[String(k)] = +o.열어본화면[k] || 0;
+    });
   return lsSet(USE_KEY, JSON.stringify(out));
 }
 /* 예시 화면은 사장님이 실제로 쓰신 것이 아니다 —
    다만 「앱을 연 날」은 예시로 여셨어도 연 것이라 따로 센다 */
-function useSkip() { return !!(window.UP && UP.demo); }
+function useSkip() {
+  return !!(window.UP && UP.demo);
+}
 function useEdit(fn) {
   var o = useRead();
   o.판 = useStamp();
@@ -431,7 +581,9 @@ function useEdit(fn) {
 /* useOpened 는 00-early.js 에 있다 (09 에서 첫 화면에 등록해서 맨 앞에 둔다) */
 function useUpload(span) {
   if (useSkip()) return;
-  useEdit(function (o) { o.올림.push({ 날: useDay(), 기간: String(span) }); });
+  useEdit(function (o) {
+    o.올림.push({ 날: useDay(), 기간: String(span) });
+  });
 }
 /* 온보딩이 끝난 시점의 못 정한 금액 비율을 방금 올린 줄에 적는다.
    「20곳만 찍으면 됩니다」가 처음 보는 파일에서도 성립하는지 재는 유일한 숫자다 */
@@ -446,25 +598,34 @@ function useUnknownShare(x) {
 function useFail(key) {
   if (useSkip()) return;
   var why = USE_FAIL_WHY[key] || USE_FAIL_WHY.unknown;
-  useEdit(function (o) { o.올림실패.push({ 날: useDay(), 왜: why }); });
+  useEdit(function (o) {
+    o.올림실패.push({ 날: useDay(), 왜: why });
+  });
 }
 function useRestored(n) {
   if (useSkip()) return;
-  useEdit(function (o) { o.되살림.push({ 날: useDay(), 곳: +n || 0 }); });
+  useEdit(function (o) {
+    o.되살림.push({ 날: useDay(), 곳: +n || 0 });
+  });
 }
 function useAddPick(places, sec) {
   if (useSkip()) return;
-  useEdit(function (o) { o.찍기.push({ 날: useDay(), 곳: +places || 0, 초: +sec || 0 }); });
+  useEdit(function (o) {
+    o.찍기.push({ 날: useDay(), 곳: +places || 0, 초: +sec || 0 });
+  });
 }
 function useScreen(name) {
   if (useSkip()) return;
-  useEdit(function (o) { o.열어본화면[name] = (+o.열어본화면[name] || 0) + 1; });
+  useEdit(function (o) {
+    o.열어본화면[name] = (+o.열어본화면[name] || 0) + 1;
+  });
 }
 function useCard(kind) {
   if (useSkip()) return;
-  useEdit(function (o) { o.확인카드[kind] = (+o.확인카드[kind] || 0) + 1; });
+  useEdit(function (o) {
+    o.확인카드[kind] = (+o.확인카드[kind] || 0) + 1;
+  });
 }
-
 
 /* ── 온보딩 시계 ──
    이 숫자로 파일럿을 계속할지 정한다. 부풀려지면 안 된다.
@@ -477,7 +638,8 @@ function utAccrue() {
   UT.at = Date.now();
   if (s > 0) UT.cur += s;
 }
-function utClose() {          /* 지금 보고 있던 한 곳을 닫는다 */
+function utClose() {
+  /* 지금 보고 있던 한 곳을 닫는다 */
   utAccrue();
   UT.sec += Math.min(UT.cur, USE_CAP);
   UT.cur = 0;
@@ -486,31 +648,43 @@ function utStart() {
   if (UT.on) return;
   UT = { on: true, at: Date.now(), sec: 0, cur: 0, places: 0 };
 }
-function utPick() {           /* 한 곳을 정했거나 미뤘다 */
+function utPick() {
+  /* 한 곳을 정했거나 미뤘다 */
   if (!UT.on) return;
   utClose();
   UT.places++;
 }
-function utStop() {           /* 「결과 보기」·「그만 찍고 결과 보기」 */
+function utStop() {
+  /* 「결과 보기」·「그만 찍고 결과 보기」 */
   if (!UT.on) return;
   utClose();
-  var p = UT.places, s = UT.sec;
-  UT.on = false; UT.at = 0; UT.cur = 0;
+  var p = UT.places,
+    s = UT.sec;
+  UT.on = false;
+  UT.at = 0;
+  UT.cur = 0;
   if (p > 0) useAddPick(p, s);
   /* 여기가 온보딩이 끝나는 자리다 */
   if (UP && UP.payees && UP.payees.length) useUnknownShare(1 - coverage(0));
 }
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) { utAccrue(); UT.at = 0; }
-  else if (UT.on && !UT.at) { UT.at = Date.now(); }
+  if (document.hidden) {
+    utAccrue();
+    UT.at = 0;
+  } else if (UT.on && !UT.at) {
+    UT.at = Date.now();
+  }
 });
 
 /* 화면에 보여줄 글. 사장님이 이걸 그대로 보고 누르신다 */
 function useMin(sec) {
-  var m = Math.floor(sec / 60), s = sec % 60;
+  var m = Math.floor(sec / 60),
+    s = sec % 60;
   return m ? m + '분 ' + s + '초' : s + '초';
 }
-function useDot(d) { return (+d.slice(0, 2)) + '/' + (+d.slice(3, 5)); }
+function useDot(d) {
+  return +d.slice(0, 2) + '/' + +d.slice(3, 5);
+}
 function useText() {
   var o = useRead();
   if (!o.연날.length && !o.올림.length && !o.올림실패.length && !o.찍기.length) return null;
@@ -522,13 +696,20 @@ function useText() {
   if (o.올림.length) {
     L.push('파일 올림    ' + o.올림.length + '번');
     o.올림.forEach(function (x) {
-      L.push('  ' + useDot(x.날) + '  ' + x.기간 +
-        (x.못정한 != null ? '  못 정한 금액 ' + Math.round(x.못정한 * 100) + '%' : ''));
+      L.push(
+        '  ' +
+          useDot(x.날) +
+          '  ' +
+          x.기간 +
+          (x.못정한 != null ? '  못 정한 금액 ' + Math.round(x.못정한 * 100) + '%' : '')
+      );
     });
   }
   if (o.올림실패.length) {
     L.push('못 읽은 파일  ' + o.올림실패.length + '번');
-    o.올림실패.forEach(function (x) { L.push('  ' + useDot(x.날) + '  ' + x.왜); });
+    o.올림실패.forEach(function (x) {
+      L.push('  ' + useDot(x.날) + '  ' + x.왜);
+    });
   }
   if (o.찍기.length || o.되살림.length) {
     L.push('거래처 정하기');
@@ -544,12 +725,26 @@ function useText() {
      그러면 「4/16 = 25%밖에 안 봤네」로 잘못 읽힌다.
      분모가 틀린 건 없는 것보다 나쁘다. 아래 셋은 누르신 횟수라 정확하다 */
   if (c.맞습니다 || c.확인해볼게요 || c.되돌리기) {
-    L.push('확인 카드   ' + c.맞습니다 + '장 확인 · ' +
-           c.확인해볼게요 + '장 확인해볼게요 · ' + c.되돌리기 + '장 되돌림');
+    L.push(
+      '확인 카드   ' +
+        c.맞습니다 +
+        '장 확인 · ' +
+        c.확인해볼게요 +
+        '장 확인해볼게요 · ' +
+        c.되돌리기 +
+        '장 되돌림'
+    );
   }
   var ks = Object.keys(o.열어본화면);
   if (ks.length) {
-    L.push('열어본 화면  ' + ks.map(function (k) { return k + ' ' + o.열어본화면[k] + '번'; }).join(' · '));
+    L.push(
+      '열어본 화면  ' +
+        ks
+          .map(function (k) {
+            return k + ' ' + o.열어본화면[k] + '번';
+          })
+          .join(' · ')
+    );
   }
   return L.join('\n');
 }
@@ -568,18 +763,20 @@ function useText() {
    ★ 「대출받은 돈」 → 「대출」. 57차에 「대출」을 「대출 상환」으로 보냈던 규칙은
      이 표에서 빼고 CAT_RENAMED_OLD 로 옮긴다 — cv 2 이하에서만 돌아야 한다.
      지금 「대출」은 계산 밖 항목이라, 여기 두면 새 이름이 곧바로 지출로 끌려간다 */
-var CAT_RENAMED = { '대출 갚은 돈': '대출 상환',
-                    '은행 원금 상환': '대출 상환',
-                    '대출이자': '대출 상환',
-                    '대출받은 돈': '대출',
-                    '공과금': '전기·가스·수도',      /* 63-6 */
-                    '투자받은 돈': '사업 외 용도',   /* 38차 7번 */
-                    '가게에서 뺀 돈': '사업 외 용도',
-                    '내가 가져간 돈': '사업 외 용도',
-                    '내가 넣은 돈': '사업 외 용도',
-                    '가게에 넣은 돈': '사업 외 용도' };
+var CAT_RENAMED = {
+  '대출 갚은 돈': '대출 상환',
+  '은행 원금 상환': '대출 상환',
+  대출이자: '대출 상환',
+  '대출받은 돈': '대출',
+  공과금: '전기·가스·수도' /* 63-6 */,
+  '투자받은 돈': '사업 외 용도' /* 38차 7번 */,
+  '가게에서 뺀 돈': '사업 외 용도',
+  '내가 가져간 돈': '사업 외 용도',
+  '내가 넣은 돈': '사업 외 용도',
+  '가게에 넣은 돈': '사업 외 용도'
+};
 /* cv 2 이하에만 쓰는 표. 그때의 「대출」은 그냥 지출 항목이었다 */
-var CAT_RENAMED_OLD = { '대출': '대출 상환' };
+var CAT_RENAMED_OLD = { 대출: '대출 상환' };
 /* 이름만 바뀐 것이 아니라 성격이 바뀐 것 — 계산 밖에서 지출로 왔다.
    keepSet 에 옛 이름이 남아 있으면 새 이름이 그 자리를 물려받아
    지출 항목이 계산 밖에 남는다. 그 자리는 덜어낸다 */
@@ -592,10 +789,14 @@ function migrateCats(o) {
   if (Array.isArray(o.baseCats) && o.cv !== CAT_CV) {
     /* ★ 57차. cv 2 는 길이가 16 으로 옛 판과 같아 길이로 못 가른다. cv 로 가른다 */
     /* ★ 63차. cv 3 도 마찬가지다 — 길이(14)로는 못 가른다 */
-    var lg = (o.cv === 4) ? CAT_LEGACY_CV4
-           : (o.cv === 3) ? CAT_LEGACY_CV3
-           : (o.cv === 2) ? CAT_LEGACY_CV2
-           : CAT_LEGACY[o.baseCats.length];
+    var lg =
+      o.cv === 4
+        ? CAT_LEGACY_CV4
+        : o.cv === 3
+          ? CAT_LEGACY_CV3
+          : o.cv === 2
+            ? CAT_LEGACY_CV2
+            : CAT_LEGACY[o.baseCats.length];
     renameMap = {};
     if (lg) {
       lg.forEach(function (orig, i) {
@@ -611,7 +812,10 @@ function migrateCats(o) {
         var i = o[k].indexOf(old);
         if (i === -1) return;
         /* ★ 57차. 계산 밖에서 지출로 옮겨온 이름은 keepSet 에서 아예 덜어낸다 */
-        if (k === 'keepSet' && CAT_UNKEEP[neu]) { o[k].splice(i, 1); return; }
+        if (k === 'keepSet' && CAT_UNKEEP[neu]) {
+          o[k].splice(i, 1);
+          return;
+        }
         /* 새 이름이 이미 있으면 옛 칸을 덜어낸다. 안 그러면 두 이름이 같이 남는다 */
         if (o[k].indexOf(neu) === -1) o[k][i] = neu;
         else o[k].splice(i, 1);
@@ -644,36 +848,49 @@ function migrateCats(o) {
       var neu = CAT_RENAMED[orig];
       if (neu && renameMap[neu] === undefined) renameMap[neu] = renameMap[orig];
     });
-    o.baseCats = UP_CATS.map(function (c) { return renameMap[c] || c; });
+    o.baseCats = UP_CATS.map(function (c) {
+      return renameMap[c] || c;
+    });
     o.cv = CAT_CV;
   }
   /* 그 판에는 아예 없던 항목만 더한다. 사장님이 손수 지우신 것은 되살리지 않는다 */
   if (Array.isArray(o.accounts)) {
     var had = {};
     [15, 16, 17].forEach(function (n) {
-      (CAT_LEGACY[n] || []).forEach(function (c) { had[c] = 1; });
+      (CAT_LEGACY[n] || []).forEach(function (c) {
+        had[c] = 1;
+      });
     });
-    CAT_LEGACY_CV2.forEach(function (c) { had[c] = 1; });   /* 57차 */
-    CAT_LEGACY_CV3.forEach(function (c) { had[c] = 1; });   /* 63차 */
-    CAT_LEGACY_CV4.forEach(function (c) { had[c] = 1; });   /* 75차 */
+    CAT_LEGACY_CV2.forEach(function (c) {
+      had[c] = 1;
+    }); /* 57차 */
+    CAT_LEGACY_CV3.forEach(function (c) {
+      had[c] = 1;
+    }); /* 63차 */
+    CAT_LEGACY_CV4.forEach(function (c) {
+      had[c] = 1;
+    }); /* 75차 */
     /* ★ 63차. 이름만 옮긴 항목은 옛 판에 있던 것이다.
        안 그러면 「공과금」을 손수 지우신 분께 「전기·가스·수도」가 되살아난다 */
     Object.keys(CAT_RENAMED).forEach(function (old) {
       if (had[old]) had[CAT_RENAMED[old]] = 1;
     });
     UP_CATS.forEach(function (c) {
-      if (had[c]) return;                                   /* 옛 판에도 있던 것 */
+      if (had[c]) return; /* 옛 판에도 있던 것 */
       if (o.accounts.indexOf(c) === -1) o.accounts.push(c);
-      if (Array.isArray(o.keepSet) && UP_KEEP.indexOf(c) !== -1 &&
-          o.keepSet.indexOf(c) === -1) o.keepSet.push(c);
+      if (Array.isArray(o.keepSet) && UP_KEEP.indexOf(c) !== -1 && o.keepSet.indexOf(c) === -1)
+        o.keepSet.push(c);
     });
     /* 75차 전의 묶음 항목은 새 기본 목록에서는 없앤다.
        다만 실제 저장 분류가 남아 있으면 조용히 버리지 않고 옛 항목으로 보존한다. */
     var legacyUsed = false;
     Object.keys(o.picks || {}).forEach(function (raw) {
       var v = o.picks[raw];
-      if (v === '세금·보험' || (v && typeof v === 'object' &&
-          (v['입금'] === '세금·보험' || v['출금'] === '세금·보험'))) legacyUsed = true;
+      if (
+        v === '세금·보험' ||
+        (v && typeof v === 'object' && (v['입금'] === '세금·보험' || v['출금'] === '세금·보험'))
+      )
+        legacyUsed = true;
     });
     if (!legacyUsed) {
       var oldTax = o.accounts.indexOf('세금·보험');
@@ -686,12 +903,18 @@ function migrateCats(o) {
      「대출 상환」과 안 붙는다. 손수 만드신 항목은 뒤에 그대로 둔다 */
   if (Array.isArray(o.accounts) && Array.isArray(o.baseCats)) {
     var order = {};
-    o.baseCats.forEach(function (c, i) { order[c] = i; });
-    var base = [], extra = [];
-    o.accounts.forEach(function (c) {
-      if (order[c] !== undefined) base.push(c); else extra.push(c);
+    o.baseCats.forEach(function (c, i) {
+      order[c] = i;
     });
-    base.sort(function (a, b) { return order[a] - order[b]; });
+    var base = [],
+      extra = [];
+    o.accounts.forEach(function (c) {
+      if (order[c] !== undefined) base.push(c);
+      else extra.push(c);
+    });
+    base.sort(function (a, b) {
+      return order[a] - order[b];
+    });
     o.accounts = base.concat(extra);
   }
   return o;
@@ -703,10 +926,9 @@ function loadPicks(name) {
   try {
     var o = JSON.parse(raw);
     if (o && o.v === 1 && o.picks) return migrateCats(o);
-  } catch (e) { }
+  } catch (e) {}
   return null;
 }
-
 
 /* ── 36차 J · 직접 넣기 칸 ────────────────────────────────
    「현금 매출을 입력하게끔 그것도 해야 돼」 · 「그냥 텍스트로 적을 수 있게끔」
@@ -725,7 +947,7 @@ function manualKey(name) {
    ★ items 에는 안 담는다. 화면에만 늘 있는 줄로 두고, 금액은 이 열쇠로 찾는다.
      그래서 아무것도 안 적으면 fc.manual 이 아예 안 생기고
      manualSum 이 예전과 똑같이 0을 돌려준다 (83차 ⑥) */
-var CASH_ID   = 'cash';
+var CASH_ID = 'cash';
 var CASH_NAME = '현금매출';
 /* { v:2, items: [{id, name, side}],
      amounts: { '2023-07': { id: 금액 } },      ← 달 단위. 옛 판 그대로다
@@ -740,11 +962,14 @@ function manualLoad(name) {
       if (manualShapeOk(o)) {
         /* ★ 83차 ②-3. 옛 판(v:1)은 빈 days 를 붙여 2로 올린다.
            적어두신 금액은 amounts 에 그대로 있어 하나도 안 사라진다 */
-        if (o.v === 1) { o.days = {}; o.v = 2; }
+        if (o.v === 1) {
+          o.days = {};
+          o.v = 2;
+        }
         return o;
       }
     }
-  } catch (e) { }
+  } catch (e) {}
   return { v: 2, items: [], amounts: {}, days: {} };
 }
 /* ── 저장 직전 모양 검사 ──
@@ -765,21 +990,40 @@ function manualShapeOk(m) {
     if (열쇠 !== 'amounts,days,items,v') return false;
   } else return false;
   if (!Array.isArray(m.items)) return false;
-  var okItem = true, ids = {};
+  var okItem = true,
+    ids = {};
   m.items.forEach(function (it) {
-    if (!it || typeof it !== 'object') { okItem = false; return; }
-    if (Object.keys(it).sort().join(',') !== 'id,name,side') { okItem = false; return; }
-    if (typeof it.id !== 'string' || typeof it.name !== 'string') { okItem = false; return; }
-    if (it.side !== 'in' && it.side !== 'out') { okItem = false; return; }
+    if (!it || typeof it !== 'object') {
+      okItem = false;
+      return;
+    }
+    if (Object.keys(it).sort().join(',') !== 'id,name,side') {
+      okItem = false;
+      return;
+    }
+    if (typeof it.id !== 'string' || typeof it.name !== 'string') {
+      okItem = false;
+      return;
+    }
+    if (it.side !== 'in' && it.side !== 'out') {
+      okItem = false;
+      return;
+    }
     ids[it.id] = 1;
   });
   if (!okItem) return false;
   if (!m.amounts || typeof m.amounts !== 'object' || Array.isArray(m.amounts)) return false;
   var okAmt = true;
   Object.keys(m.amounts).forEach(function (mo) {
-    if (!/^[0-9]{4}-[0-9]{2}$/.test(mo)) { okAmt = false; return; }
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(mo)) {
+      okAmt = false;
+      return;
+    }
     var box = m.amounts[mo];
-    if (!box || typeof box !== 'object' || Array.isArray(box)) { okAmt = false; return; }
+    if (!box || typeof box !== 'object' || Array.isArray(box)) {
+      okAmt = false;
+      return;
+    }
     Object.keys(box).forEach(function (id) {
       if (typeof box[id] !== 'number' || !isFinite(box[id])) okAmt = false;
     });
@@ -792,15 +1036,38 @@ function manualShapeOk(m) {
   if (!m.days || typeof m.days !== 'object' || Array.isArray(m.days)) return false;
   var okDay = true;
   Object.keys(m.days).forEach(function (mo) {
-    if (!/^[0-9]{4}-[0-9]{2}$/.test(mo)) { okDay = false; return; }
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(mo)) {
+      okDay = false;
+      return;
+    }
     var arr = m.days[mo];
-    if (!Array.isArray(arr)) { okDay = false; return; }
+    if (!Array.isArray(arr)) {
+      okDay = false;
+      return;
+    }
     arr.forEach(function (it) {
-      if (!it || typeof it !== 'object') { okDay = false; return; }
-      if (Object.keys(it).sort().join(',') !== 'amt,day,id') { okDay = false; return; }
-      if (typeof it.id !== 'string') { okDay = false; return; }
-      if (typeof it.day !== 'number' || !isFinite(it.day) ||
-          it.day < 1 || it.day > 31 || it.day !== Math.floor(it.day)) { okDay = false; return; }
+      if (!it || typeof it !== 'object') {
+        okDay = false;
+        return;
+      }
+      if (Object.keys(it).sort().join(',') !== 'amt,day,id') {
+        okDay = false;
+        return;
+      }
+      if (typeof it.id !== 'string') {
+        okDay = false;
+        return;
+      }
+      if (
+        typeof it.day !== 'number' ||
+        !isFinite(it.day) ||
+        it.day < 1 ||
+        it.day > 31 ||
+        it.day !== Math.floor(it.day)
+      ) {
+        okDay = false;
+        return;
+      }
       if (typeof it.amt !== 'number' || !isFinite(it.amt)) okDay = false;
     });
   });
@@ -863,10 +1130,14 @@ function bankKeysNow() {
        ④ 그래도 같으면 이름 차례 (마지막 못)
    ★ 하나라도 훑다가 깨져도 나머지는 본다 — 통 하나가 망가졌다고 되살림을 통째로 버리지 않는다 */
 function storeForBanks(banks) {
-  var want = {}, any = false;
+  var want = {},
+    any = false;
   (banks || []).forEach(function (b) {
     var k = bankKeyOf(b);
-    if (k) { want[k] = 1; any = true; }
+    if (k) {
+      want[k] = 1;
+      any = true;
+    }
   });
   if (!any) return null;
   var keys = [];
@@ -875,14 +1146,22 @@ function storeForBanks(banks) {
       var key = localStorage.key(i);
       if (key && key.indexOf(PICK_KEY) === 0) keys.push(key);
     }
-  } catch (e) { return null; }
+  } catch (e) {
+    return null;
+  }
   var hits = [];
   keys.forEach(function (key) {
     var o = null;
-    try { o = JSON.parse(localStorage.getItem(key)); } catch (e) { return; }
+    try {
+      o = JSON.parse(localStorage.getItem(key));
+    } catch (e) {
+      return;
+    }
     if (!o || !o.picks || !Array.isArray(o.계좌)) return;
     var m = 0;
-    o.계좌.forEach(function (k2) { if (want[k2]) m++; });
+    o.계좌.forEach(function (k2) {
+      if (want[k2]) m++;
+    });
     if (!m) return;
     /* ★ 63-1 재수정. 예전에는 「정해둔 곳이 0이면 되살릴 것이 없다」고 건너뛰었다.
        그게 이 버그였다 — 매장 이름만 짓고 거래처는 한 곳도 안 정한 채 나가신 분이
@@ -890,26 +1169,32 @@ function storeForBanks(banks) {
        0곳이라는 이유로 못 알아보고 새 매장 이름을 또 물었다.
        ★ 되살릴 것은 분류만이 아니다 — 매장 이름·업종·항목·성함이 그 계좌에 붙어 있다.
          0곳이어도 그 계좌의 매장은 그 매장이다. 줄 세울 때만 뒤로 민다 */
-    var n = (typeof o.n곳 === 'number' && o.n곳 >= 0) ? o.n곳 : Object.keys(o.picks).length;
+    var n = typeof o.n곳 === 'number' && o.n곳 >= 0 ? o.n곳 : Object.keys(o.picks).length;
     var nm = key.slice(PICK_KEY.length);
-    hits.push({ key: key, name: nm === '(기본)' ? null : nm, label: nm, n: n, m: m,
-                seq: (typeof o.순번 === 'number') ? o.순번 : 0,
-                /* ★ 71차 ④. 「이어서 하기」인데 성함을 또 물었다.
+    hits.push({
+      key: key,
+      name: nm === '(기본)' ? null : nm,
+      label: nm,
+      n: n,
+      m: m,
+      seq: typeof o.순번 === 'number' ? o.순번 : 0,
+      /* ★ 71차 ④. 「이어서 하기」인데 성함을 또 물었다.
                    저장된 답을 여기서 같이 들고 온다 — 저장 모양은 안 건드린다.
                    읽기만 한다 (pickPayload 는 예전부터 owner 를 넣어 왔다).
                    ★ 「답이 없다」와 「건너뛰기로 답했다」는 다른 것이다 —
                      건너뛰신 분께 같은 질문을 또 하면 그것도 안 이어진 것이다.
                      그래서 값이 아니라 열쇠가 있는지로 가른다 */
-                owner: (typeof o.owner === 'string' && o.owner) ? o.owner : null,
-                owner답함: Object.prototype.hasOwnProperty.call(o, 'owner'),
-                업종: (o.업종 && TRADES[o.업종]) ? o.업종 : TRADE_DEFAULT });
+      owner: typeof o.owner === 'string' && o.owner ? o.owner : null,
+      owner답함: Object.prototype.hasOwnProperty.call(o, 'owner'),
+      업종: o.업종 && TRADES[o.업종] ? o.업종 : TRADE_DEFAULT
+    });
   });
   if (!hits.length) return null;
   hits.sort(function (a, b) {
     if (b.m !== a.m) return b.m - a.m;
     if (b.seq !== a.seq) return b.seq - a.seq;
     if (b.n !== a.n) return b.n - a.n;
-    return a.label < b.label ? -1 : (a.label > b.label ? 1 : 0);
+    return a.label < b.label ? -1 : a.label > b.label ? 1 : 0;
   });
   return hits[0];
 }
@@ -924,7 +1209,10 @@ function banksShapeOk(o) {
   if (keys.length > 40) return false;
   var ok = true;
   keys.forEach(function (k) {
-    if (typeof k !== 'string' || k.length > 80) { ok = false; return; }
+    if (typeof k !== 'string' || k.length > 80) {
+      ok = false;
+      return;
+    }
     if (typeof n[k] !== 'string' || !n[k].length || n[k].length > 20) ok = false;
   });
   return ok;
@@ -933,7 +1221,7 @@ function banksLoad(name) {
   try {
     var o = JSON.parse(lsGet(bankKey(name)) || 'null');
     if (banksShapeOk(o)) return o;
-  } catch (e) { }
+  } catch (e) {}
   return { v: 1, names: {} };
 }
 function banksSave() {
@@ -944,7 +1232,7 @@ function banksSave() {
     if (!t || t.length > 20) return;
     box.names[bankNameKey(b)] = t;
   });
-  if (!banksShapeOk(box)) return false;      /* 모양이 다르면 저장하지 않는다 */
+  if (!banksShapeOk(box)) return false; /* 모양이 다르면 저장하지 않는다 */
   return lsSet(bankKey(), JSON.stringify(box));
 }
 /* ── 45차 ⑥ · 매장을 고르기 전에도 계좌 이름을 되살린다 ─────────────
@@ -956,31 +1244,41 @@ function banksSave() {
      40차에 고친 「틀린 이름을 확신 있게 붙이는」 자리로 되돌아간다.
      하나로 모일 때만 쓴다. 모르는 것은 모른다고 둔다 */
 function bankNameAnyStore(key) {
-  var found = null, many = false;
+  var found = null,
+    many = false;
   try {
     for (var i = 0; i < localStorage.length; i++) {
       var k = localStorage.key(i);
       if (!k || k.indexOf(BANK_KEY) !== 0) continue;
       var o = null;
-      try { o = JSON.parse(localStorage.getItem(k)); } catch (e) { continue; }
+      try {
+        o = JSON.parse(localStorage.getItem(k));
+      } catch (e) {
+        continue;
+      }
       if (!banksShapeOk(o)) continue;
       var v = o.names[key];
       if (!v) continue;
       if (found === null) found = v;
       else if (found !== v) many = true;
     }
-  } catch (e) { return null; }
-  return many ? null : found;      /* 서로 다르면 안 쓴다 */
+  } catch (e) {
+    return null;
+  }
+  return many ? null : found; /* 서로 다르면 안 쓴다 */
 }
 function banksRestore() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return 0;
-  var box = banksLoad(), n = 0;
+  var box = banksLoad(),
+    n = 0;
   UP.banks.forEach(function (b) {
-    if (b.found) return;                     /* 자동으로 잡은 이름은 안 건드린다 */
-    if (b.typed) return;                     /* 이번에 직접 넣으신 것이 먼저다 */
+    if (b.found) return; /* 자동으로 잡은 이름은 안 건드린다 */
+    if (b.typed) return; /* 이번에 직접 넣으신 것이 먼저다 */
     var v = box.names[bankNameKey(b)];
     if (!v) return;
-    b.typed = v; b.bank = v; n++;
+    b.typed = v;
+    b.bank = v;
+    n++;
   });
   return n;
 }
@@ -990,7 +1288,7 @@ function manualSave() {
   var m = UP.manual || { v: 2, items: [], amounts: {}, days: {} };
   m.days = m.days || {};
   m.v = 2;
-  if (!manualShapeOk(m)) return false;      /* 모양이 다르면 안 남긴다 */
+  if (!manualShapeOk(m)) return false; /* 모양이 다르면 안 남긴다 */
   return lsSet(manualKey(), JSON.stringify(m));
 }
 /* 손대기 전에 통을 만든다. ★ 아무것도 안 적으면 이 함수가 안 불려
@@ -1001,7 +1299,9 @@ function manualBag() {
   return UP.manual;
 }
 function manualItems(side) {
-  return ((UP.manual && UP.manual.items) || []).filter(function (it) { return it.side === side; });
+  return ((UP.manual && UP.manual.items) || []).filter(function (it) {
+    return it.side === side;
+  });
 }
 function manualAmt(m, id) {
   var box = (UP.manual && UP.manual.amounts && UP.manual.amounts[m]) || {};
@@ -1017,20 +1317,28 @@ function manualSet(m, id, v) {
 /* ── 83차 ② · 날짜 있는 것 ────────────────────────────────── */
 function manualDays(m, id) {
   var arr = (UP.manual && UP.manual.days && UP.manual.days[m]) || [];
-  return arr.filter(function (it) { return it.id === id; });
+  return arr.filter(function (it) {
+    return it.id === id;
+  });
 }
 function manualDayAdd(m, id, day, amt) {
   manualBag();
   UP.manual.days[m] = UP.manual.days[m] || [];
   UP.manual.days[m].push({ id: id, day: day, amt: amt });
-  UP.manual.days[m].sort(function (a, b) { return a.day - b.day; });
+  UP.manual.days[m].sort(function (a, b) {
+    return a.day - b.day;
+  });
   manualSave();
 }
 function manualDayRemove(m, id, day, amt) {
   if (!UP.manual || !UP.manual.days || !UP.manual.days[m]) return;
-  var arr = UP.manual.days[m], i;
+  var arr = UP.manual.days[m],
+    i;
   for (i = 0; i < arr.length; i++) {
-    if (arr[i].id === id && arr[i].day === day && arr[i].amt === amt) { arr.splice(i, 1); break; }
+    if (arr[i].id === id && arr[i].day === day && arr[i].amt === amt) {
+      arr.splice(i, 1);
+      break;
+    }
   }
   if (!arr.length) delete UP.manual.days[m];
   manualSave();
@@ -1042,7 +1350,10 @@ function manualDayRemove(m, id, day, amt) {
         그 달 전체를 뜻하는 값이라 반쪽 달에 통째로 넣으면 거짓이 된다
    ★ 83차 ⑥. 아무것도 안 적으면 두 갈래 다 0이라 예전과 한 자리도 안 다르다 */
 function manualSum(m, side, cutDay) {
-  var s = 0, ids = manualItems(side).map(function (it) { return it.id; });
+  var s = 0,
+    ids = manualItems(side).map(function (it) {
+      return it.id;
+    });
   if (side === 'in' && ids.indexOf(CASH_ID) === -1) ids.push(CASH_ID);
   ids.forEach(function (id) {
     if (!cutDay) s += manualAmt(m, id);
@@ -1063,7 +1374,9 @@ function manualAdd(name, side) {
 /* 항목을 지워도 과거 달에 적힌 금액은 남긴다 (규칙 7) */
 function manualRemove(id) {
   if (!UP.manual) return;
-  UP.manual.items = UP.manual.items.filter(function (it) { return it.id !== id; });
+  UP.manual.items = UP.manual.items.filter(function (it) {
+    return it.id !== id;
+  });
   manualSave();
 }
 /* 아직 안 적으신 끝난 달이 몇 개인가 (규칙 3) */
@@ -1071,9 +1384,11 @@ function manualLeft(months) {
   if (!UP.manual || !UP.manual.items.length) return 0;
   var n = 0;
   (months || []).forEach(function (m) {
-    if (isRunning(m, months)) return;          /* 진행 중인 달은 안 센다 (규칙 2) */
+    if (isRunning(m, months)) return; /* 진행 중인 달은 안 센다 (규칙 2) */
     var any = false;
-    UP.manual.items.forEach(function (it) { if (manualAmt(m, it.id)) any = true; });
+    UP.manual.items.forEach(function (it) {
+      if (manualAmt(m, it.id)) any = true;
+    });
     if (!any) n++;
   });
   return n;

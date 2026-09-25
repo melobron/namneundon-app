@@ -6,9 +6,32 @@
 
 /* ── 브라우저 저장소 읽기·쓰기 (원래 12-storage.js, PICK_KEY 아래)
    09 의 글씨 크기·카톡 안내가 첫 화면에서 부른다 */
-function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { LS_OK = false; return null; } }
-function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { LS_OK = false; return false; } }
-function lsDel(k) { try { localStorage.removeItem(k); return true; } catch (e) { LS_OK = false; return false; } }
+function lsGet(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch (e) {
+    LS_OK = false;
+    return null;
+  }
+}
+function lsSet(k, v) {
+  try {
+    localStorage.setItem(k, v);
+    return true;
+  } catch (e) {
+    LS_OK = false;
+    return false;
+  }
+}
+function lsDel(k) {
+  try {
+    localStorage.removeItem(k);
+    return true;
+  } catch (e) {
+    LS_OK = false;
+    return false;
+  }
+}
 
 /* ── (원래 12-storage.js, useEdit 아래)
    09 에서 document.addEventListener('DOMContentLoaded', useOpened) 로 등록하는 순간 이름이 있어야 한다 */

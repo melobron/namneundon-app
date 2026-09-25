@@ -1,0 +1,16 @@
+// 타입 검사 — 개발 도구(tests/, tools/, 설정 파일). 오류 0 을 지킨다
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": ["tests/**/*.mjs", "tests/**/*.d.ts", "tools/**/*.mjs", "*.mjs"]
+}

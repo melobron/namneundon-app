@@ -1,0 +1,17 @@
+# 커밋 전 자동 검사 — 바뀐 파일만 빠르게.
+# 급할 때 건너뛰기: git commit --no-verify (CI 에서는 전부 다시 검사한다)
+
+# 1. 모양 정리·린터·맞춤법 (바뀐 파일만)
+npx lint-staged
+
+# 2. 앱 파일을 건드렸으면 불러오는 순서 검사
+if git diff --cached --name-only | grep -q '^app/src/'; then
+  node tools/check-load-order.mjs
+fi
+
+# 3. 비밀 값 유출 검사 (gitleaks 가 깔려 있으면)
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --redact --no-banner --exit-code 1 .
+else
+  echo "(gitleaks 없음 — brew install gitleaks 권장. CI 에서는 검사한다)"
+fi

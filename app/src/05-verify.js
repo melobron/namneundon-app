@@ -8,14 +8,17 @@ function amtOf(r) {
 /* 몇 건의 순서를 바꿔가며 앞 잔액 ± 금액 = 뒤 잔액이 이어지는 배열을 찾는다.
    그리디로는 놓치는 경우가 있어 되돌아가며 전부 시도한다 (최대 6건 = 720가지) */
 function chainOrder(list, start) {
-  var n = list.length, used = new Array(n), out = new Array(n);
+  var n = list.length,
+    used = new Array(n),
+    out = new Array(n);
   function step(k, run) {
     if (k === n) return true;
     for (var i = 0; i < n; i++) {
       if (used[i]) continue;
       var a = amtOf(list[i]);
       if (a === null || list[i].balance !== run + a) continue;
-      used[i] = true; out[k] = list[i];
+      used[i] = true;
+      out[k] = list[i];
       if (step(k + 1, list[i].balance)) return true;
       used[i] = false;
     }
@@ -24,13 +27,13 @@ function chainOrder(list, start) {
   return step(0, start) ? out.slice() : null;
 }
 
-var FIX_WIN  = 6;    /* 이보다 넓은 구간은 건드리지 않는다 — 경우의 수가 폭발한다 */
-var FIX_SPAN = 60;   /* 구간 안 시각 차이가 이 초를 넘으면 건드리지 않는다 */
+var FIX_WIN = 6; /* 이보다 넓은 구간은 건드리지 않는다 — 경우의 수가 폭발한다 */
+var FIX_SPAN = 60; /* 구간 안 시각 차이가 이 초를 넘으면 건드리지 않는다 */
 
 function secOf(at) {
   var s = Date.UTC(+at.slice(0, 4), +at.slice(5, 7) - 1, +at.slice(8, 10)) / 1000;
   if (at.length >= 19) {
-    s += (+at.slice(11, 13)) * 3600 + (+at.slice(14, 16)) * 60 + (+at.slice(17, 19));
+    s += +at.slice(11, 13) * 3600 + +at.slice(14, 16) * 60 + +at.slice(17, 19);
   }
   return s;
 }
@@ -38,11 +41,17 @@ function secOf(at) {
 /* 잔액이 끊긴 자리에서 붙어 있는 몇 건의 순서를 바꿔본다.
    은행 파일은 같은 초에 여러 건이거나 1초 차이로 붙은 거래의 순서가 뒤바뀌어 있다 */
 function repairRun(rows, opening) {
-  var out = [], run = opening, moved = 0, i = 0;
+  var out = [],
+    run = opening,
+    moved = 0,
+    i = 0;
   while (i < rows.length) {
     var a = amtOf(rows[i]);
     if (a !== null && rows[i].balance === run + a) {
-      out.push(rows[i]); run = rows[i].balance; i++; continue;
+      out.push(rows[i]);
+      run = rows[i].balance;
+      i++;
+      continue;
     }
     var done = false;
     for (var w = 2; w <= FIX_WIN && i + w <= rows.length; w++) {
@@ -57,25 +66,37 @@ function repairRun(rows, opening) {
       }
       if (changed) moved += w;
       run = ord[w - 1].balance;
-      i += w; done = true; break;
+      i += w;
+      done = true;
+      break;
     }
-    if (!done) { out.push(rows[i]); run = rows[i].balance; i++; }
+    if (!done) {
+      out.push(rows[i]);
+      run = rows[i].balance;
+      i++;
+    }
   }
   return { rows: out, moved: moved };
 }
 
 function orderAndVerify(raw) {
-  var rows = raw.slice().sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : 0; });
+  var rows = raw.slice().sort(function (a, b) {
+    return a.at < b.at ? -1 : a.at > b.at ? 1 : 0;
+  });
 
   /* 첫 시각 묶음에서 시작 잔액을 잡는다 */
   var end = 1;
   while (end < rows.length && rows[end].at === rows[0].at) end++;
-  var head = rows.slice(0, end), opening = null;
+  var head = rows.slice(0, end),
+    opening = null;
   for (var c = 0; c < head.length; c++) {
     var a0 = amtOf(head[c]);
     if (a0 === null) continue;
     var guess = head[c].balance - a0;
-    if (chainOrder(head, guess)) { opening = guess; break; }
+    if (chainOrder(head, guess)) {
+      opening = guess;
+      break;
+    }
   }
   if (opening === null) opening = rows[0].balance - (amtOf(rows[0]) || 0);
 
@@ -85,18 +106,26 @@ function orderAndVerify(raw) {
   var breaks = [];
   var prev = opening;
   for (var k = 0; k < out.length; k++) {
-    var row = out[k], a = amtOf(row);
+    var row = out[k],
+      a = amtOf(row);
     if (a === null) {
-      breaks.push({ row: row, prev: prev, gap: row.balance - prev,
-                    why: '금액 칸이 비어 있습니다' });
+      breaks.push({
+        row: row,
+        prev: prev,
+        gap: row.balance - prev,
+        why: '금액 칸이 비어 있습니다'
+      });
     } else if (row.balance !== prev + a) {
-      breaks.push({ row: row, prev: prev, gap: row.balance - (prev + a),
-                    why: '앞 잔액에 금액을 더한 값과 다릅니다' });
+      breaks.push({
+        row: row,
+        prev: prev,
+        gap: row.balance - (prev + a),
+        why: '앞 잔액에 금액을 더한 값과 다릅니다'
+      });
     }
     prev = row.balance;
   }
-  return { rows: out, opening: opening, closing: prev,
-           breaks: breaks, moved: fixed.moved };
+  return { rows: out, opening: opening, closing: prev, breaks: breaks, moved: fixed.moved };
 }
 
 /* ── 113차 ① · 파일에 적힌 조회 기간 ──────────────────────────────────
@@ -129,10 +158,12 @@ function askFlat(s) {
 }
 /* 날짜 세 모양을 한 자로 읽는다. 달·날이 말이 안 되면 버린다 */
 function askDates(t, 몇) {
-  var out = [], m;
+  var out = [],
+    m;
   var re = /(20\d{2})(?:[.\-\/](\d{1,2})[.\-\/](\d{1,2})|년(\d{1,2})월(\d{1,2})일)/g;
   while ((m = re.exec(t))) {
-    var mo = +(m[2] || m[4]), d = +(m[3] || m[5]);
+    var mo = +(m[2] || m[4]),
+      d = +(m[3] || m[5]);
     if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) continue;
     out.push(m[1] + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d);
     if (out.length >= (몇 || 4)) break;
@@ -206,17 +237,19 @@ function askedRange(lines) {
    ★ 아래 셋(입출금거래내역·거래명세표·입출금내역조회)은 아직 실물로 확인 못 했다.
      실물 아홉 가운데 이 셋에 걸리는 파일은 없다 (암호가 걸린 국민·신한 빼고 실측).
      확인되면 남기고, 아니면 같은 잣대로 빼야 한다 — 남겨둔 빚이다 */
-var FULL_DOC = /(거래내역증명|예금거래실적증명|거래실적증명|입출금거래내역|거래명세표|입출금내역조회|거래내역서)/;
+var FULL_DOC =
+  /(거래내역증명|예금거래실적증명|거래실적증명|입출금거래내역|거래명세표|입출금내역조회|거래내역서)/;
 /* 「일부만 받았다」고 파일이 말하는 표기. 이쪽이 먼저 이긴다 —
    「입금 거래내역서」처럼 제목에 갈래가 박힌 파일이 FULL_DOC 로 새지 않게 한다 */
-var PART_DOC = /(입금만|출금만|입금내역만|출금내역만|입금거래내역|출금거래내역|입금내역서|출금내역서|거래종류[:：]?(입금|출금)|조회구분[:：]?(입금|출금))/;
+var PART_DOC =
+  /(입금만|출금만|입금내역만|출금내역만|입금거래내역|출금거래내역|입금내역서|출금내역서|거래종류[:：]?(입금|출금)|조회구분[:：]?(입금|출금))/;
 var ACCT_LABEL = /(계좌번호|계좌구분|출금계좌|입출금계좌)/;
 function rangeEvid(lines, opt) {
   var 글 = (lines || []).map(askFlat).join('\n');
   var o = opt || {};
   var e = { acct: null, all: null, pages: null, totals: null, parsed: null };
   /* 가 — 계좌와 조회 기간이 같이 적혀 있는가 */
-  e.acct = (ACCT_LABEL.test(글) && ASK_LABEL.test(글)) ? true : false;
+  e.acct = ACCT_LABEL.test(글) && ASK_LABEL.test(글) ? true : false;
   /* 나 — 「일부만 받았다」고 파일이 말할 때만 false. 그 밖에는 모름(null)이다.
      ★ 113차 보류분 (2026-09-20 GPT 최종). 제목 낱말(FULL_DOC)을 근거로 안 쓴다.
        은행이 발급한 증명서라는 사실은 문서의 출처를 뒷받침하지만,
@@ -231,7 +264,7 @@ function rangeEvid(lines, opt) {
   e.all = PART_DOC.test(글) ? false : null;
   /* 다 — 쪽 꼬리가 실제 쪽 수와 맞을 때만 */
   if (o.pages != null) {
-    e.pages = (o.pageFoot != null) ? (o.pageFoot === o.pages) : null;
+    e.pages = o.pageFoot != null ? o.pageFoot === o.pages : null;
   }
   /* 라 — 파일에 적힌 합계와 우리가 뽑은 합계 (pdfTotalsOk 가 null 이면 표기가 없다) */
   if (o.totals !== undefined) e.totals = o.totals;
@@ -244,8 +277,8 @@ function rangeEvid(lines, opt) {
        그래서 PDF 는 다른 자를 쓴다 — 표를 가르는 방법을 여럿 시도해 보고,
        고른 것이 가장 많이 뽑은 것과 같은지 본다. 다른 방법이 더 많이 뽑았다면
        고른 쪽이 흘린 것이다 (lost). 이 값은 92-2차 ②가 이미 세고 있던 것이다 */
-  if (o.lost != null) e.parsed = (o.lost === 0);
-  else if (o.dropped != null) e.parsed = (o.dropped === 0);
+  if (o.lost != null) e.parsed = o.lost === 0;
+  else if (o.dropped != null) e.parsed = o.dropped === 0;
   return e;
 }
 /* 근거를 종합한다. 애매하면 확장하지 않는 쪽이 기본값이다 (②) */
@@ -261,8 +294,11 @@ function rangeVerdict(asked, e, 밖) {
      ★ 문장: 는 통째로 쓰는 완성문이다 — 아래 넷은 실제로 확인한 것이라
        지금까지처럼 사유 조각으로 두고 rangeNotes 가 뒷말을 붙인다 */
   if (e.pages === false) {
-    return { ok: false, why: '쪽 표기를 확인하지 못했습니다',
-             문장: '파일의 조회 기간을 계산에 적용하지 못해 거래일 기준으로 계산했습니다.' };
+    return {
+      ok: false,
+      why: '쪽 표기를 확인하지 못했습니다',
+      문장: '파일의 조회 기간을 계산에 적용하지 못해 거래일 기준으로 계산했습니다.'
+    };
   }
   if (e.totals === false) return { ok: false, why: '파일에 적힌 합계와 읽은 합계가 다릅니다' };
   if (e.parsed === false) return { ok: false, why: '읽지 못한 거래 줄이 있습니다' };
@@ -275,9 +311,12 @@ function rangeVerdict(asked, e, 밖) {
      ★ 읽어낸 조회 기간은 버리지 않는다. makeRange 가 range.asked 에 그대로 담아
        돌려주므로, 나중에 내보내기 설정이 확인되면 그때 그 값으로 확장하면 된다 */
   if (e.all !== true) {
-    return { ok: false, why: '전체 입출금 내역인지 확인할 수 없습니다',
-             문장: '조회 기간은 확인했지만 전체 거래내역인지 확인하지 못해 ' +
-                   '거래일 기준으로 계산했습니다.' };
+    return {
+      ok: false,
+      why: '전체 입출금 내역인지 확인할 수 없습니다',
+      문장:
+        '조회 기간은 확인했지만 전체 거래내역인지 확인하지 못해 ' + '거래일 기준으로 계산했습니다.'
+    };
   }
   if (e.parsed !== true) return { ok: false, why: '읽지 못한 줄이 있는지 확인할 수 없습니다' };
   return { ok: true, why: '조회 기간·계좌가 같이 적혀 있고 읽지 못한 줄이 없습니다' };
@@ -287,7 +326,10 @@ function rangeVerdict(asked, e, 밖) {
      여기서 정하는 것은 「지출 표본으로 쓸 수 있는 날」이지 잔액이 아니다 */
 function makeRange(lines, rows, opt) {
   var asked = askedRange(lines);
-  var 첫 = null, 끝 = null, 밖 = 0, i;
+  var 첫 = null,
+    끝 = null,
+    밖 = 0,
+    i;
   for (i = 0; i < (rows || []).length; i++) {
     var d = rows[i].at.slice(0, 10);
     if (첫 === null || d < 첫) 첫 = d;
@@ -296,7 +338,13 @@ function makeRange(lines, rows, opt) {
   }
   var e = rangeEvid(lines, opt);
   var v = rangeVerdict(asked, e, 밖);
-  return { asked: asked, seen: (첫 ? { from: 첫, to: 끝 } : null),
-           evid: e, 밖: 밖, ok: v.ok, why: v.why, 문장: v.문장 || null };
+  return {
+    asked: asked,
+    seen: 첫 ? { from: 첫, to: 끝 } : null,
+    evid: e,
+    밖: 밖,
+    ok: v.ok,
+    why: v.why,
+    문장: v.문장 || null
+  };
 }
-

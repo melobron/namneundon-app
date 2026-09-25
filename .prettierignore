@@ -1,0 +1,9 @@
+# 남이 만든 압축 파일
+*.min.js
+# HTML 은 공백이 화면에 영향을 준다. 모양은 html-validate 로만 검사한다
+*.html
+# 앱이 낸 결과 그대로여야 하는 것
+tests/snapshots/
+package-lock.json
+# 저장소 밖 자료
+google-drive/

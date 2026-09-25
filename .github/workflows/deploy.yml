@@ -9,10 +9,10 @@ name: 자동 배포
 on:
   push:
     branches: [main]
-  workflow_dispatch:        # Actions 화면에서 손으로 다시 돌릴 수 있게
+  workflow_dispatch: # Actions 화면에서 손으로 다시 돌릴 수 있게
 
 concurrency:
-  group: deploy             # 배포가 겹치지 않게 한 번에 하나씩
+  group: deploy # 배포가 겹치지 않게 한 번에 하나씩
   cancel-in-progress: false
 
 env:
@@ -93,4 +93,3 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: 랜딩이 앱 주소를 가리키는지
         run: curl -fsS https://namneundon.com/ | grep -q "APP_URL   = 'https://app.namneundon.com'"
-

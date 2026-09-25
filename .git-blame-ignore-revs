@@ -1,0 +1,5 @@
+# git blame 에서 건너뛸 커밋 — 모양만 바꾼 것
+# GitHub 는 이 파일을 자동으로 읽는다. 로컬: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# 포매터(Prettier) 적용
+eaa0a1c375a032b799ec06e2d40100e7aadfb72e

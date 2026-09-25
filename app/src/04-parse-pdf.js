@@ -7,8 +7,8 @@
      머리글은 그 표가 스스로 알려주는 유일한 자리다.
    ★ 머리글을 못 찾으면 조각을 그대로 칸으로 놓고 넘긴다.
      판정은 여전히 findHeader 가 한다. 못 읽으면 ⑤ 안내로 간다 — 멈추지 않는다 */
-var PDF_LINE_TOL = 3;        /* 이만큼(pt) 안이면 같은 줄로 본다 */
-var PDF_MIN_CHARS = 50;      /* 글자가 이보다 적으면 사진을 찍어 넣은 PDF 다 */
+var PDF_LINE_TOL = 3; /* 이만큼(pt) 안이면 같은 줄로 본다 */
+var PDF_MIN_CHARS = 50; /* 글자가 이보다 적으면 사진을 찍어 넣은 PDF 다 */
 
 /* 조각들을 y 로 묶어 줄을 만든다. 줄 안은 x 순으로 놓는다 */
 /* ── 92-1차 ② · 낱자로 온 글자를 단어로 잇는다 ───────────────────────
@@ -27,7 +27,8 @@ function pdfJoinChars(items) {
     if (앞) {
       var 폭 = (앞.w || 0) / Math.max(1, 앞.s.length);
       var 틈 = it.x - (앞.x + (앞.w || 0));
-      if (틈 <= Math.min(1.8, 폭 * 0.35)) {          /* 겹치거나 맞닿아 있다 */
+      if (틈 <= Math.min(1.8, 폭 * 0.35)) {
+        /* 겹치거나 맞닿아 있다 */
         앞.s += it.s;
         앞.w = Math.max(앞.x + (앞.w || 0), it.x + (it.w || 0)) - 앞.x;
         return;
@@ -39,15 +40,24 @@ function pdfJoinChars(items) {
 }
 function pdfLines(items) {
   var out = [];
-  items.slice().sort(function (a, b) { return (b.y - a.y) || (a.x - b.x); })
+  items
+    .slice()
+    .sort(function (a, b) {
+      return b.y - a.y || a.x - b.x;
+    })
     .forEach(function (it) {
       var last = out[out.length - 1];
-      if (last && Math.abs(last.y - it.y) <= PDF_LINE_TOL) { last.items.push(it); return; }
+      if (last && Math.abs(last.y - it.y) <= PDF_LINE_TOL) {
+        last.items.push(it);
+        return;
+      }
       out.push({ y: it.y, items: [it] });
     });
   out.forEach(function (l) {
-    l.items.sort(function (a, b) { return a.x - b.x; });
-    l.items = pdfJoinChars(l.items);     /* 칸을 가르기 전에 단어부터 만든다 */
+    l.items.sort(function (a, b) {
+      return a.x - b.x;
+    });
+    l.items = pdfJoinChars(l.items); /* 칸을 가르기 전에 단어부터 만든다 */
   });
   return out;
 }
@@ -55,17 +65,27 @@ function pdfLines(items) {
    ★ 겹침으로 본다. 금액은 오른쪽 맞춤이라 머리글보다 왼쪽에서 시작하는데,
      시작 x 로만 재면 앞 칸으로 밀려 들어간다 */
 function pdfColOf(cols, it) {
-  var a1 = it.x, a2 = it.x + (it.w || 0);
-  var best = 0, bestv = -1, c;
+  var a1 = it.x,
+    a2 = it.x + (it.w || 0);
+  var best = 0,
+    bestv = -1,
+    c;
   for (c = 0; c < cols.length; c++) {
     var ov = Math.min(a2, cols[c].x2) - Math.max(a1, cols[c].x1);
-    if (ov > bestv) { bestv = ov; best = c; }
+    if (ov > bestv) {
+      bestv = ov;
+      best = c;
+    }
   }
   if (bestv > 0) return best;
-  var mid = (a1 + a2) / 2, bd = null;
+  var mid = (a1 + a2) / 2,
+    bd = null;
   for (c = 0; c < cols.length; c++) {
     var d = Math.abs((cols[c].x1 + cols[c].x2) / 2 - mid);
-    if (bd === null || d < bd) { bd = d; best = c; }
+    if (bd === null || d < bd) {
+      bd = d;
+      best = c;
+    }
   }
   return best;
 }
@@ -82,12 +102,13 @@ function pdfPeelNumbers(grid, hi, cols) {
   });
   for (var r = hi + 1; r < grid.length; r++) {
     for (var k = 0; k < 돈칸.length; k++) {
-      var c = 돈칸[k], v = String(grid[r][c] == null ? '' : grid[r][c]);
+      var c = 돈칸[k],
+        v = String(grid[r][c] == null ? '' : grid[r][c]);
       var m = /^(.*\S)\s+([-−+]?\d[\d,]*)$/.exec(v);
       if (!m) continue;
-      if (!/[^\d,\-−+.\s]/.test(m[1])) continue;   /* 앞쪽도 수뿐이면 두 금액이다. 안 건드린다 */
+      if (!/[^\d,\-−+.\s]/.test(m[1])) continue; /* 앞쪽도 수뿐이면 두 금액이다. 안 건드린다 */
       grid[r][c] = m[2];
-      if (c > 0) grid[r][c - 1] = grid[r][c - 1] ? (grid[r][c - 1] + ' ' + m[1]) : m[1];
+      if (c > 0) grid[r][c - 1] = grid[r][c - 1] ? grid[r][c - 1] + ' ' + m[1] : m[1];
     }
   }
 }
@@ -96,7 +117,8 @@ function pdfPeelNumbers(grid, hi, cols) {
    건드리면 다른 은행이 같이 흔들린다. 고치는 자리는 PDF 쪽이어야 한다.
    ★ 머리글이 날짜라고 말한 칸에서만 편다. 여덟 자리 수는 계좌번호일 수도 있다 */
 function pdfFixDates(grid, hi, cols) {
-  var want = COLSPEC.at.map(nz), 날짜칸 = [];
+  var want = COLSPEC.at.map(nz),
+    날짜칸 = [];
   cols.forEach(function (c, i) {
     var n = nz(c.name);
     if (want.indexOf(n) !== -1 || DATE_WIDE.test(n)) 날짜칸.push(i);
@@ -106,7 +128,8 @@ function pdfFixDates(grid, hi, cols) {
       var c = 날짜칸[k];
       var m = /^(20\d{2})(\d{2})(\d{2})(\s[\s\S]*)?$/.exec(String(grid[r][c] || '').trim());
       if (!m) continue;
-      var mo = +m[2], da = +m[3];
+      var mo = +m[2],
+        da = +m[3];
       if (mo < 1 || mo > 12 || da < 1 || da > 31) continue;
       grid[r][c] = m[1] + '-' + m[2] + '-' + m[3] + (m[4] || '');
     }
@@ -119,33 +142,43 @@ function pdfFixDates(grid, hi, cols) {
    ─ 빈 띠로 가르면 맞춤이 왼쪽이든 오른쪽이든 한 칸으로 같이 묶인다.
    ★ 딱 한 줄만 옆 칸까지 뻗은 것(긴 상호)으로 칸이 무너지지 않게,
      「거의 모든 줄이 비어 있는 띠」를 가르는 자리로 본다 — 한 줄은 못 이긴다 */
-var PDF_GAP_SHARE = 0.12;    /* 이 비율보다 적게 쓰이는 띠는 빈 띠로 본다 */
-var PDF_GAP_MIN = 4;         /* 빈 띠가 이보다 좁으면 글자 사이 틈이다 (pt) */
+var PDF_GAP_SHARE = 0.12; /* 이 비율보다 적게 쓰이는 띠는 빈 띠로 본다 */
+var PDF_GAP_MIN = 4; /* 빈 띠가 이보다 좁으면 글자 사이 틈이다 (pt) */
 function pdfColumnsByGap(lines) {
-  var min = null, max = null;
+  var min = null,
+    max = null;
   lines.forEach(function (l) {
     l.items.forEach(function (it) {
-      var a = it.x, b = it.x + (it.w || 0);
+      var a = it.x,
+        b = it.x + (it.w || 0);
       if (min === null || a < min) min = a;
       if (max === null || b > max) max = b;
     });
   });
   if (min === null || max - min < 10) return null;
-  min = Math.floor(min); max = Math.ceil(max);
-  var n = max - min, hit = new Array(n), i;
+  min = Math.floor(min);
+  max = Math.ceil(max);
+  var n = max - min,
+    hit = new Array(n),
+    i;
   for (i = 0; i < n; i++) hit[i] = 0;
   lines.forEach(function (l) {
     var 썼다 = {};
     l.items.forEach(function (it) {
-      var a = Math.max(min, Math.floor(it.x)), b = Math.min(max, Math.ceil(it.x + (it.w || 0)));
+      var a = Math.max(min, Math.floor(it.x)),
+        b = Math.min(max, Math.ceil(it.x + (it.w || 0)));
       for (var k = a; k < b; k++) 썼다[k - min] = 1;
     });
-    Object.keys(썼다).forEach(function (k) { hit[+k]++; });
+    Object.keys(썼다).forEach(function (k) {
+      hit[+k]++;
+    });
   });
   var 문턱 = Math.max(1, Math.floor(lines.length * PDF_GAP_SHARE));
-  var cols = [], 시작 = null, 빈칸 = 0;
+  var cols = [],
+    시작 = null,
+    빈칸 = 0;
   for (i = 0; i <= n; i++) {
-    var 참 = (i < n) && (hit[i] >= 문턱);
+    var 참 = i < n && hit[i] >= 문턱;
     if (참) {
       if (시작 === null) 시작 = i;
       빈칸 = 0;
@@ -153,7 +186,8 @@ function pdfColumnsByGap(lines) {
       빈칸++;
       if (빈칸 >= PDF_GAP_MIN || i === n) {
         cols.push({ x1: min + 시작, x2: min + i - 빈칸 });
-        시작 = null; 빈칸 = 0;
+        시작 = null;
+        빈칸 = 0;
       }
     }
   }
@@ -184,10 +218,12 @@ function pdfColumnsByHeader(line) {
     return 돈이름.indexOf(n) !== -1 || 돈이름.indexOf(nzOuter(a.s)) !== -1;
   }
   /* 머리글 사이의 자를 자리를 먼저 다 정한다. 그래야 양쪽 칸이 딱 맞물린다 */
-  var cut = [], i;
+  var cut = [],
+    i;
   for (i = 0; i + 1 < its.length; i++) {
-    var a = its[i], 뒤 = its[i + 1];
-    var 가운데 = ((a.x + (a.w || 0)) + 뒤.x) / 2;
+    var a = its[i],
+      뒤 = its[i + 1];
+    var 가운데 = (a.x + (a.w || 0) + 뒤.x) / 2;
     cut.push(돈칸인가(a) ? Math.max(가운데, 뒤.x - 2) : 가운데);
   }
   var cols = [];
@@ -195,28 +231,33 @@ function pdfColumnsByHeader(line) {
     var b = its[i];
     var x1 = i > 0 ? cut[i - 1] : b.x - 2;
     var x2 = i + 1 < its.length ? cut[i] : b.x + (b.w || 0) + 2;
-    if (!(x2 > x1)) return null;          /* 머리글이 서로 겹쳐 있으면 못 쓴다 */
+    if (!(x2 > x1)) return null; /* 머리글이 서로 겹쳐 있으면 못 쓴다 */
     cols.push({ x1: x1, x2: x2, name: b.s });
   }
   return cols;
 }
 function pdfBuild(lines, hi, cols) {
   var grid = lines.map(function (l, li) {
-    var row = [], c;
+    var row = [],
+      c;
     for (c = 0; c < cols.length; c++) row.push('');
     /* ★ 머리글 줄만은 차례로 놓는다. 수가 같으면 차례가 곧 짝이다 */
     if (li === hi && l.items.length === cols.length) {
-      l.items.forEach(function (it, k) { row[k] = it.s; });
+      l.items.forEach(function (it, k) {
+        row[k] = it.s;
+      });
       return row;
     }
     l.items.forEach(function (it) {
       var k = pdfColOf(cols, it);
-      row[k] = row[k] ? (row[k] + ' ' + it.s) : it.s;
+      row[k] = row[k] ? row[k] + ' ' + it.s : it.s;
     });
     return row;
   });
   if (hi >= 0) {
-    cols.forEach(function (c, k) { c.name = grid[hi][k]; });
+    cols.forEach(function (c, k) {
+      c.name = grid[hi][k];
+    });
     pdfPeelNumbers(grid, hi, cols);
     pdfFixDates(grid, hi, cols);
   }
@@ -238,8 +279,9 @@ function pdfBuild(lines, hi, cols) {
      보낸다. pdfPeelNumbers 가 금액을 오른쪽에서 떼어내는 것과 같은 방식이다.
    ★ 날짜 칸이 없는 형식(부호 한 열짜리 등)은 이 방법을 안 쓴다 — null 을 돌려주고
      지금까지의 y 묶기가 그대로 후보로 남는다 */
-var PDF_DATE_ANCHOR = /^(20\d{2})[.\-\/]?(0[1-9]|1[0-2])[.\-\/]?(0[1-9]|[12]\d|3[01])(\s*\d{1,2}:\d{2}(:\d{2})?)?/;
-var PDF_ROW_TOL = 12;        /* 닻 아래 이만큼(pt)까지는 같은 행의 이어진 줄로 본다 */
+var PDF_DATE_ANCHOR =
+  /^(20\d{2})[.\-\/]?(0[1-9]|1[0-2])[.\-\/]?(0[1-9]|[12]\d|3[01])(\s*\d{1,2}:\d{2}(:\d{2})?)?/;
+var PDF_ROW_TOL = 12; /* 닻 아래 이만큼(pt)까지는 같은 행의 이어진 줄로 본다 */
 function pdfDateColOf(cols) {
   var want = COLSPEC.at.map(nz);
   for (var i = 0; i < cols.length; i++) {
@@ -258,19 +300,22 @@ function pdfDateColOf(cols) {
      그래야 계좌번호나 「계좌 2」 같은 것을 금액으로 잘못 떼지 않는다 */
 function pdfUnits(s) {
   var u = 0;
-  for (var i = 0; i < s.length; i++) u += (s.charCodeAt(i) > 127 ? 2 : 1);
+  for (var i = 0; i < s.length; i++) u += s.charCodeAt(i) > 127 ? 2 : 1;
   return u;
 }
 function pdfCutAt(it, 머리글자) {
   /* 앞쪽 머리글자 길이만큼을 떼어 두 조각으로 나눈다 */
   var 전체 = pdfUnits(it.s) || 1;
   var 폭 = (it.w || 0) * (pdfUnits(머리글자) / 전체);
-  return [{ s: 머리글자, x: it.x, y: it.y, w: 폭 },
-          { s: it.s.slice(머리글자.length), x: it.x + 폭, y: it.y, w: (it.w || 0) - 폭 }];
+  return [
+    { s: 머리글자, x: it.x, y: it.y, w: 폭 },
+    { s: it.s.slice(머리글자.length), x: it.x + 폭, y: it.y, w: (it.w || 0) - 폭 }
+  ];
 }
 /* 꼬리에 붙은 금액을 떼어낸다. 여러 개가 붙어 있으면 여러 번 떼어낸다 */
 function pdfSplitTail(it) {
-  var out = [it], 안전 = 0;
+  var out = [it],
+    안전 = 0;
   while (안전++ < 4) {
     var 끝 = out[out.length - 1];
     var m = /^(.*[^\d,\s])\s*([-−+]?\d{1,3}(?:,\d{3})+)$/.exec(끝.s);
@@ -297,29 +342,48 @@ function pdfPeelHeads(grid, hi, cols) {
   });
   for (var r = hi + 1; r < grid.length; r++) {
     for (var k = 0; k < 돈칸.length; k++) {
-      var c = 돈칸[k], v = String(grid[r][c] == null ? '' : grid[r][c]);
+      var c = 돈칸[k],
+        v = String(grid[r][c] == null ? '' : grid[r][c]);
       var m = /^([-−+]?\d[\d,]*)\s+(\S[\s\S]*)$/.exec(v);
       if (!m) continue;
-      if (!/[^\d,\-−+.\s]/.test(m[2])) continue;   /* 뒤도 수뿐이면 두 금액이다 — 안 건드린다 */
+      if (!/[^\d,\-−+.\s]/.test(m[2])) continue; /* 뒤도 수뿐이면 두 금액이다 — 안 건드린다 */
       grid[r][c] = m[1];
       var R = c + 1;
-      if (R < grid[r].length) grid[r][R] = grid[r][R] ? (m[2] + ' ' + grid[r][R]) : m[2];
+      if (R < grid[r].length) grid[r][R] = grid[r][R] ? m[2] + ' ' + grid[r][R] : m[2];
     }
   }
 }
 function pdfRowsByDate(lines, hi, cols) {
   var dc = pdfDateColOf(cols);
   if (dc < 0) return null;
-  var rows = [], 현재 = null, 현재y = null, c;
-  function 새행() { var r = [], k; for (k = 0; k < cols.length; k++) r.push(''); return r; }
-  function 넣기(row, k, s) { row[k] = row[k] ? (row[k] + ' ' + s) : s; }
+  var rows = [],
+    현재 = null,
+    현재y = null,
+    c;
+  function 새행() {
+    var r = [],
+      k;
+    for (k = 0; k < cols.length; k++) r.push('');
+    return r;
+  }
+  function 넣기(row, k, s) {
+    row[k] = row[k] ? row[k] + ' ' + s : s;
+  }
   for (var i = hi + 1; i < lines.length; i++) {
     var its = lines[i].items;
-    var 날짜있나 = false, j;
-    for (j = 0; j < its.length; j++) if (PDF_DATE_ANCHOR.test(its[j].s)) { 날짜있나 = true; break; }
+    var 날짜있나 = false,
+      j;
+    for (j = 0; j < its.length; j++)
+      if (PDF_DATE_ANCHOR.test(its[j].s)) {
+        날짜있나 = true;
+        break;
+      }
     /* 닻에서 너무 멀리 떨어진 줄(쪽 바닥의 안내·쪽번호)은 어느 행에도 안 붙인다 */
-    if (!날짜있나 && (현재 === null || 현재y === null ||
-        Math.abs(현재y - lines[i].y) > PDF_ROW_TOL)) continue;
+    if (
+      !날짜있나 &&
+      (현재 === null || 현재y === null || Math.abs(현재y - lines[i].y) > PDF_ROW_TOL)
+    )
+      continue;
     for (j = 0; j < its.length; j++) {
       var it = its[j];
       var m = PDF_DATE_ANCHOR.exec(it.s);
@@ -336,7 +400,7 @@ function pdfRowsByDate(lines, hi, cols) {
         나머지.s = 나머지.s.replace(/^\s+/, '');
         if (!나머지.s) continue;
       } else {
-        if (현재 === null) continue;      /* 첫 거래 앞의 조각(계좌 안내)은 표에 안 넣는다 */
+        if (현재 === null) continue; /* 첫 거래 앞의 조각(계좌 안내)은 표에 안 넣는다 */
         나머지 = it;
       }
       pdfSplitTail(나머지).forEach(function (조각) {
@@ -352,7 +416,9 @@ function pdfRowsByDate(lines, hi, cols) {
   var 위 = [];
   for (var u = 0; u < hi; u++) {
     var r2 = 새행();
-    lines[u].items.forEach(function (it) { 넣기(r2, pdfColOf(cols, it), it.s); });
+    lines[u].items.forEach(function (it) {
+      넣기(r2, pdfColOf(cols, it), it.s);
+    });
     위.push(r2);
   }
   /* 머리글 줄 — extractRows 가 칸 이름을 거기서 읽는다 */
@@ -362,15 +428,23 @@ function pdfRowsByDate(lines, hi, cols) {
   /* ★ 92-4차. 행을 나눈 뒤에도 한 번 더 훑는다 —
      자리로 못 가른 것(한 칸 안에서 「상호 12,345,678」로 붙은 것)은
      92차의 pdfPeelNumbers 가 오른쪽 끝에서 떼어낸다. 그 로직은 그대로 쓴다 */
-  pdfPeelHeads(grid, 위.length, cols);      /* 수 + 글자 → 글자를 오른쪽으로 */
-  pdfPeelNumbers(grid, 위.length, cols);    /* 글자 + 수 → 수만 남긴다 (92차 그대로) */
+  pdfPeelHeads(grid, 위.length, cols); /* 수 + 글자 → 글자를 오른쪽으로 */
+  pdfPeelNumbers(grid, 위.length, cols); /* 글자 + 수 → 수만 남긴다 (92차 그대로) */
   pdfFixDates(grid, 위.length, cols);
   return grid;
 }
 function pdfTables(lines) {
-  var hi = -1, i;
+  var hi = -1,
+    i;
   for (i = 0; i < lines.length && hi < 0; i++) {
-    if (headerLooksReal(lines[i].items.map(function (x) { return x.s; }))) hi = i;
+    if (
+      headerLooksReal(
+        lines[i].items.map(function (x) {
+          return x.s;
+        })
+      )
+    )
+      hi = i;
   }
   /* ★ 92-2차 ①. 쪽마다 되풀이되는 열 머리글을 걷어낸다.
      국민 명세서는 35쪽이고 쪽마다 「거래일시 적요 … 잔액」이 다시 나온다 (35번).
@@ -383,14 +457,18 @@ function pdfTables(lines) {
   if (hi >= 0) {
     lines = lines.filter(function (l, k) {
       if (k <= hi) return true;
-      return !headerLooksReal(l.items.map(function (x) { return x.s; }));
+      return !headerLooksReal(
+        l.items.map(function (x) {
+          return x.s;
+        })
+      );
     });
   }
   var out = [];
-  var 머리 = (hi >= 0) ? pdfColumnsByHeader(lines[hi]) : null;
+  var 머리 = hi >= 0 ? pdfColumnsByHeader(lines[hi]) : null;
   /* 빈 띠는 머리글 아래(표의 몸통)에서만 잰다 — 머리글 글자와 그 칸의 값이
      서로 반대쪽 끝에 붙어 있으면 한 칸이 둘로 갈린다 */
-  var 띠 = pdfColumnsByGap((hi >= 0) ? lines.slice(hi + 1) : lines);
+  var 띠 = pdfColumnsByGap(hi >= 0 ? lines.slice(hi + 1) : lines);
   /* ★ 92-3차. 거래일시를 닻으로 삼아 만든 표를 첫 후보로 둔다.
      y 로 묶은 표도 그대로 후보에 남긴다 — 어느 쪽이 맞는지는 읽어봐야 안다.
      고르는 것은 92-2차의 잣대다(은행 총액 일치 → 잔액 사슬 → 덜 뽑은 것에 벌점) */
@@ -401,9 +479,14 @@ function pdfTables(lines) {
   if (머리) out.push(pdfBuild(lines, hi, 머리));
   if (띠) out.push(pdfBuild(lines, hi, 띠));
   /* 둘 다 못 가르면 조각을 그대로 놓고 넘긴다. 판정은 findHeader 가 한다 */
-  if (!out.length) out.push(lines.map(function (l) {
-    return l.items.map(function (x) { return x.s; });
-  }));
+  if (!out.length)
+    out.push(
+      lines.map(function (l) {
+        return l.items.map(function (x) {
+          return x.s;
+        });
+      })
+    );
   return out;
 }
 /* ── 92-2차 ③ · 은행이 적어준 총액을 찾는다 ──────────────────────────
@@ -425,7 +508,7 @@ function pdfTotals(lines) {
     var n = /([\d][\d,]{3,})/.exec(뒤);
     if (!n) return null;
     var v = toNum(n[1]);
-    return (v === null || v <= 0) ? null : v;
+    return v === null || v <= 0 ? null : v;
   }
   /* ★ 라벨이 나오는 자리를 전부 모아 본다.
      쪽마다 되풀이되는 명세서라면 값이 늘 같아야 한다 —
@@ -435,26 +518,41 @@ function pdfTotals(lines) {
   function 모으기(라벨) {
     var 값 = [];
     for (var i = 0; i < lines.length; i++) {
-      var 글 = lines[i].items.map(function (x) { return x.s; }).join(' ');
-      var 이어 = 글 + ' ' + (lines[i + 1]
-        ? lines[i + 1].items.map(function (x) { return x.s; }).join(' ') : '');
+      var 글 = lines[i].items
+        .map(function (x) {
+          return x.s;
+        })
+        .join(' ');
+      var 이어 =
+        글 +
+        ' ' +
+        (lines[i + 1]
+          ? lines[i + 1].items
+              .map(function (x) {
+                return x.s;
+              })
+              .join(' ')
+          : '');
       var v = 수찾기(글, 라벨);
       if (v === null) v = 수찾기(이어, 라벨);
       if (v !== null && 값.indexOf(v) === -1) 값.push(v);
-      if (값.length > 1) return null;          /* 서로 다르다 — 못 믿는다 */
+      if (값.length > 1) return null; /* 서로 다르다 — 못 믿는다 */
     }
     return 값.length === 1 ? 값[0] : null;
   }
-  var out = 모으기(TOTAL_OUT), into = 모으기(TOTAL_IN);
-  return (out === null && into === null) ? null : { out: out, in: into };
+  var out = 모으기(TOTAL_OUT),
+    into = 모으기(TOTAL_IN);
+  return out === null && into === null ? null : { out: out, in: into };
 }
 /* 뽑은 거래의 나간 돈·들어온 돈 합계. 총액 검산의 우리 쪽 값이다 */
 function pdfSums(rows) {
-  var o = 0, i2 = 0;
+  var o = 0,
+    i2 = 0;
   (rows || []).forEach(function (r) {
     var v = r.amount;
     if (typeof v !== 'number') return;
-    if (v < 0) o += -v; else i2 += v;
+    if (v < 0) o += -v;
+    else i2 += v;
   });
   return { out: o, in: i2 };
 }
@@ -467,36 +565,49 @@ function pdfTotalsOk(총, 합) {
 }
 /* 문서 전체를 훑어 줄을 모은다. 쪽 차례 그대로 이어 붙인다 */
 function pdfGrid(doc) {
-  var 쪽 = [], i;
+  var 쪽 = [],
+    i;
   for (i = 1; i <= doc.numPages; i++) 쪽.push(i);
-  var 글자수 = 0, lines = [];
-  return 쪽.reduce(function (pr, n) {
-    return pr.then(function () {
-      return doc.getPage(n).then(function (page) {
-        return page.getTextContent().then(function (tc) {
-          var items = [];
-          (tc.items || []).forEach(function (it) {
-            var s = String(it.str == null ? '' : it.str).trim();
-            if (!s) return;
-            글자수 += s.length;
-            var t = it.transform || [];
-            items.push({ s: s, x: +t[4] || 0, y: +t[5] || 0, w: +it.width || 0 });
+  var 글자수 = 0,
+    lines = [];
+  return 쪽
+    .reduce(function (pr, n) {
+      return pr.then(function () {
+        return doc.getPage(n).then(function (page) {
+          return page.getTextContent().then(function (tc) {
+            var items = [];
+            (tc.items || []).forEach(function (it) {
+              var s = String(it.str == null ? '' : it.str).trim();
+              if (!s) return;
+              글자수 += s.length;
+              var t = it.transform || [];
+              items.push({ s: s, x: +t[4] || 0, y: +t[5] || 0, w: +it.width || 0 });
+            });
+            lines = lines.concat(pdfLines(items));
           });
-          lines = lines.concat(pdfLines(items));
         });
       });
-    });
-  }, Promise.resolve()).then(function () {
-    /* 총액은 머리글을 걷어내기 전에, 줄 그대로에서 읽는다 */
-    /* ★ 113차 ①②. 조회 기간과 쪽 꼬리도 같은 자리에서 읽는다 —
+    }, Promise.resolve())
+    .then(function () {
+      /* 총액은 머리글을 걷어내기 전에, 줄 그대로에서 읽는다 */
+      /* ★ 113차 ①②. 조회 기간과 쪽 꼬리도 같은 자리에서 읽는다 —
        표로 자르고 나면 머리말이 없어져 기간을 찾을 수 없다 */
-    var 글줄 = lines.map(function (L) {
-      return L.items.map(function (x) { return x.s; }).join(' ');
+      var 글줄 = lines.map(function (L) {
+        return L.items
+          .map(function (x) {
+            return x.s;
+          })
+          .join(' ');
+      });
+      return {
+        chars: 글자수,
+        totals: pdfTotals(lines),
+        grids: pdfTables(lines),
+        headLines: 글줄.slice(0, 40).concat(글줄.slice(-12)),
+        pageFoot: pdfPageFoot(글줄),
+        pages: doc.numPages
+      };
     });
-    return { chars: 글자수, totals: pdfTotals(lines), grids: pdfTables(lines),
-             headLines: 글줄.slice(0, 40).concat(글줄.slice(-12)),
-             pageFoot: pdfPageFoot(글줄), pages: doc.numPages };
-  });
 }
 /* ★ 113차 ②다. 「n / m」 꼬리에서 m 을 읽는다. 꼬리는 문서 끝에 있다.
    ★ 이 값만으로 판단하지 않는다 — 토스 1쪽짜리에서 「1/11」이 잡혔다.
@@ -513,4 +624,3 @@ function pdfWorkbook(grid) {
   var ws = window.XLSX.utils.aoa_to_sheet(grid);
   return { SheetNames: ['PDF'], Sheets: { PDF: ws } };
 }
-

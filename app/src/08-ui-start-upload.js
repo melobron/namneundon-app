@@ -12,38 +12,51 @@ function el(tag, cls, txt) {
    ★ 새 모양을 여기 하나만 둔다 — 붙이는 자리가 여럿이라 흩어 놓으면
      또 자리마다 다른 말이 된다 (49차 — 같은 것은 한 모양으로) */
 function foldChip(open, 무엇) {
-  return el('span', 'foldchip',
-    (무엇 ? 무엇 + ' ' : '') + (open ? '접기 ▴' : '자세히 ▾'));
+  return el('span', 'foldchip', (무엇 ? 무엇 + ' ' : '') + (open ? '접기 ▴' : '자세히 ▾'));
 }
 function upShow(which) {
   /* ★ 101차 ①. up-duedate 를 이 목록에 같이 넣는다 — 여기 없으면
      upShow('up-duedate') 가 다른 화면만 감추고 정작 이 화면은 안 켠다 */
-  ['up-trade', 'up-pick', 'up-files', 'up-name', 'up-owner', 'up-cats', 'up-onboard',
-   'up-duedate', 'up-done'].forEach(function (id) {
-    document.getElementById(id).hidden = (id !== which);
+  [
+    'up-trade',
+    'up-pick',
+    'up-files',
+    'up-name',
+    'up-owner',
+    'up-cats',
+    'up-onboard',
+    'up-duedate',
+    'up-done'
+  ].forEach(function (id) {
+    document.getElementById(id).hidden = id !== which;
   });
   var topImage = document.getElementById('topimage');
-  if (topImage) topImage.hidden = (which !== 'up-done');
+  if (topImage) topImage.hidden = which !== 'up-done';
   /* 단계만 바꾸고 창을 안 열면 사장님 눈에는 아무 일도 안 일어난다.
      'up-done' 은 결과를 본 화면에 그리는 자리라 창을 열지 않는다 */
   if (which === 'up-done') return;
   openUpPanel();
   var box = document.getElementById('up');
-  if (box) box.scrollTop = 0;      /* 아래에서 눌렀어도 새 화면은 위부터 */
+  if (box) box.scrollTop = 0; /* 아래에서 눌렀어도 새 화면은 위부터 */
   window.scrollTo(0, 0);
 }
-function upStat(html) { document.getElementById('upstat').innerHTML = html; }
+function upStat(html) {
+  document.getElementById('upstat').innerHTML = html;
+}
 /* ── 119차 업로드 안내 · 읽은 뒤에는 처음 올리기 안내를 접는다 ──────────
    실제 휴대폰에서 거래내역을 읽은 뒤에도 큰 올리기 상자가 남아, 대표님이
    파일을 못 읽은 것으로 보셨다. 확인 카드 단계(showBreakCards)에서만 켠다.
    파일을 고르기만 했거나 읽기에 실패한 화면에서는 켜지 않는다.
    ★ 요약은 startFromBanks 가 쓴 그 줄(#upstat)을 그대로 쓴다. 건수를 새 자리에 또 적지 않는다.
    ★ 추가 올리기는 요약 안의 작은 [거래내역 추가하기] 하나로 둔다 */
-var ADD_FROM_READ = false;       /* [거래내역 추가하기]로 파일 고르기를 열었는가 */
+var ADD_FROM_READ = false; /* [거래내역 추가하기]로 파일 고르기를 열었는가 */
 function upReadState(on) {
   var pick = document.getElementById('up-pick');
   if (pick) pick.classList[on ? 'add' : 'remove']('upread');
-  if (!on) { ADD_FROM_READ = false; return; }
+  if (!on) {
+    ADD_FROM_READ = false;
+    return;
+  }
   var st = document.getElementById('upstat');
   if (!st) return;
   var old = st.querySelector('.upaddrow');
@@ -58,7 +71,7 @@ function upReadState(on) {
     useScreen('거래내역 추가하기');
     ADD_FROM_READ = true;
     var inp = document.getElementById('upinput');
-    inp.value = '';                 /* 같은 파일을 다시 고를 수 있게 비운다 */
+    inp.value = ''; /* 같은 파일을 다시 고를 수 있게 비운다 */
     inp.click();
   });
   row.appendChild(add);
@@ -81,8 +94,13 @@ function addFromRead() {
 function upFocus(id) {
   var e = document.getElementById(id);
   if (!e || !e.firstChild) return;
-  try { e.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
-  catch (x) { try { e.scrollIntoView(true); } catch (y) { } }
+  try {
+    e.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  } catch (x) {
+    try {
+      e.scrollIntoView(true);
+    } catch (y) {}
+  }
 }
 
 /* ── 62차 ②④ · 업종 고르기 화면 ─────────────────────────────
@@ -120,24 +138,34 @@ function upFocus(id) {
      여기서 넣는 것은 목록에 이름을 띄우는 것뿐이고 금액은 한 푼도 안 옮긴다 */
 function savedStores() {
   var list = [];
-  try { list = savedSummary().keys.slice(); } catch (e) { return []; }
+  try {
+    list = savedSummary().keys.slice();
+  } catch (e) {
+    return [];
+  }
   try {
     var have = {};
-    list.forEach(function (k) { have[k.name] = k; });
+    list.forEach(function (k) {
+      have[k.name] = k;
+    });
     for (var i = 0; i < localStorage.length; i++) {
       var dk = localStorage.key(i);
       if (!dk || dk.indexOf(DATA_KEY) !== 0) continue;
       var name = dk.slice(DATA_KEY.length);
-      var o = loadData(name);         /* 모양이 아니면 눌러도 못 여니 안 띄운다 */
+      var o = loadData(name); /* 모양이 아니면 눌러도 못 여니 안 띄운다 */
       if (!o) continue;
-      if (have[name]) { have[name].day = o.저장일 || ''; continue; }
+      if (have[name]) {
+        have[name].day = o.저장일 || '';
+        continue;
+      }
       var k = { key: storeKey(name), name: name, n: 0, day: o.저장일 || '' };
       have[name] = k;
       list.push(k);
     }
-  } catch (e) { }                     /* 거래내역을 못 훑어도 분류 매장은 그대로 띄운다 */
+  } catch (e) {} /* 거래내역을 못 훑어도 분류 매장은 그대로 띄운다 */
   return list.sort(function (a, b) {
-    var da = a.day || '', db = b.day || '';
+    var da = a.day || '',
+      db = b.day || '';
     if (da !== db) return da < db ? 1 : -1;
     return b.n - a.n;
   });
@@ -173,7 +201,7 @@ function drawStart() {
   PICKED_STORE = null;
   host.innerHTML = '';
   host.hidden = false;
-  showDemoBehind(false);          /* 예시 숫자가 한 글자도 안 보이게 */
+  showDemoBehind(false); /* 예시 숫자가 한 글자도 안 보이게 */
 
   var box = el('div', 'startcard');
   /* ★ 71차 ③. 로고를 눌러 여기로 오실 수 있게 됐다. 그러면 돌아갈 길도 있어야 한다.
@@ -195,13 +223,18 @@ function drawStart() {
        저장에 실패해 아래 매장 목록에 없는 자료도 여기로는 돌아간다 (새로고침 뒤는 아니다) */
     var 내결과 = el('button', 'b on backview', '내 결과로 돌아가기');
     내결과.type = 'button';
-    내결과.addEventListener('click', function () { useScreen('내 결과로 돌아가기'); restoreMyUp(); });
+    내결과.addEventListener('click', function () {
+      useScreen('내 결과로 돌아가기');
+      restoreMyUp();
+    });
     box.appendChild(내결과);
   }
   var mine = savedStores();
   /* ★ 64-5차. 📗 대신 브랜드 마크를 둔다. 자리도 크기도 그대로다 (요청서 4·6) */
   var wmk = document.createElement('img');
-  wmk.className = 'welmark'; wmk.src = BRAND_MARK; wmk.alt = '';
+  wmk.className = 'welmark';
+  wmk.src = BRAND_MARK;
+  wmk.alt = '';
   box.appendChild(wmk);
   /* ★ 119차 문구 보정. 시간(10분)과 거래처 수(20곳)를 약속하지 않는다 */
   box.appendChild(el('div', 'welbig', '이번 달 번 돈과 쓴 돈을 확인하세요'));
@@ -221,7 +254,7 @@ function drawStart() {
     box.appendChild(el('div', 'tradehead', '전에 하시던 것'));
     var back = el('div', 'gostores');
     mine.forEach(function (k) {
-      var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+      var 이름 = k.name === '(기본)' ? '이름 없이 정해둔 것' : k.name;
       /* ★ 64-1. 여기에도 지우기를 둔다 — 매장 이름 화면(askName)에는 있는데
          시작 화면에는 없어서, 시험 삼아 만든 매장을 지울 길이 이 화면엔 없었다.
          모양과 자리 톤은 askName 의 것을 그대로 쓴다 (49차) */
@@ -229,8 +262,12 @@ function drawStart() {
       var b = el('button', 'gostore');
       b.type = 'button';
       b.appendChild(el('span', 'gsname', '〈' + 이름 + '〉 이어서 보기'));
-      b.appendChild(el('span', 'gssub', k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨'));
-      b.addEventListener('click', function () { goSavedStore(k); });
+      b.appendChild(
+        el('span', 'gssub', k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨')
+      );
+      b.addEventListener('click', function () {
+        goSavedStore(k);
+      });
       line.appendChild(b);
       /* ★ 115차. [지우기]를 「마지막 분석」 칸보다 먼저 붙인다.
          .gsrun 이 flex:1 0 100% 라 한 줄을 통째로 차지한다 —
@@ -244,7 +281,9 @@ function drawStart() {
       del.type = 'button';
       var ask = el('div', 'saveask');
       ask.hidden = true;
-      del.addEventListener('click', function () { ask.hidden = !ask.hidden; });
+      del.addEventListener('click', function () {
+        ask.hidden = !ask.hidden;
+      });
       line.appendChild(del);
       /* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
          ★ 윗줄은 상태고, 아랫줄과 단추는 고르실 수 있는 행동이다. 요구가 아니다 —
@@ -275,26 +314,44 @@ function drawStart() {
          ★ 경고색·아이콘·덧붙이는 설명을 안 넣는다 */
       var 분석날 = lastRunDay(k.name) || '';
       var run = el('div', 'gsrun');
-      run.appendChild(el('div', 'gsrunday', '최근 거래내역 추가: ' + (분석날
-        ? (daysSince(분석날) === 0
-            ? '오늘'
-            : (+분석날.slice(5, 7)) + '월 ' + (+분석날.slice(8, 10)) + '일')
-        : '기록 없음')));
+      run.appendChild(
+        el(
+          'div',
+          'gsrunday',
+          '최근 거래내역 추가: ' +
+            (분석날
+              ? daysSince(분석날) === 0
+                ? '오늘'
+                : +분석날.slice(5, 7) + '월 ' + +분석날.slice(8, 10) + '일'
+              : '기록 없음')
+        )
+      );
       if (분석날) {
         run.appendChild(el('div', 'gsrunsub', '새로운 거래내역이 있으면 추가할 수 있습니다.'));
         var 추가 = el('button', 'oslink gsrunbtn', '거래내역 추가');
         추가.type = 'button';
         추가.addEventListener('click', function () {
           goSavedStore(k);
-          try { openAddFiles(); } catch (e) { }
+          try {
+            openAddFiles();
+          } catch (e) {}
         });
         run.appendChild(추가);
       }
-      line.appendChild(run);        /* ★ 115차. 지우기 뒤에 붙는다 — 아랫줄로 간다 */
+      line.appendChild(run); /* ★ 115차. 지우기 뒤에 붙는다 — 아랫줄로 간다 */
       back.appendChild(line);
       /* ★ 실수로 146곳짜리를 날리면 되돌릴 길이 없다. 먼저 묻는다 */
-      ask.appendChild(el('div', 'addq',
-        '「' + 이름 + '」을 지울까요? ' + (k.n ? '정하신 거래처 ' + won(k.n) + '곳이' : '저장된 거래내역이') + ' 함께 지워집니다.'));
+      ask.appendChild(
+        el(
+          'div',
+          'addq',
+          '「' +
+            이름 +
+            '」을 지울까요? ' +
+            (k.n ? '정하신 거래처 ' + won(k.n) + '곳이' : '저장된 거래내역이') +
+            ' 함께 지워집니다.'
+        )
+      );
       var arow = el('div', 'addrow');
       var yes = el('button', 'b on', '지우기');
       yes.type = 'button';
@@ -308,8 +365,11 @@ function drawStart() {
       });
       var no = el('button', 'b', '취소');
       no.type = 'button';
-      no.addEventListener('click', function () { ask.hidden = true; });
-      arow.appendChild(yes); arow.appendChild(no);
+      no.addEventListener('click', function () {
+        ask.hidden = true;
+      });
+      arow.appendChild(yes);
+      arow.appendChild(no);
       ask.appendChild(arow);
       back.appendChild(ask);
     });
@@ -330,9 +390,16 @@ function drawStart() {
     box.appendChild(instbody);
   }
 
-  box.appendChild(el('div', 'tradehead', mine.length ? '새로 올리기' : '어떤 곳의 거래내역인가요?'));
-  box.appendChild(el('div', 'tradesub',
-    '고르시면 그 곳에 맞는 항목으로 시작합니다. 나중에 항목 관리에서 고치실 수 있습니다.'));
+  box.appendChild(
+    el('div', 'tradehead', mine.length ? '새로 올리기' : '어떤 곳의 거래내역인가요?')
+  );
+  box.appendChild(
+    el(
+      'div',
+      'tradesub',
+      '고르시면 그 곳에 맞는 항목으로 시작합니다. 나중에 항목 관리에서 고치실 수 있습니다.'
+    )
+  );
   box.appendChild(tradeTiles());
 
   /* ★ 64-2차 3. 밑줄 글자라 묻혔다. 박스 단추로 올린다 —
@@ -375,7 +442,10 @@ function restoreMyUp() {
 /* 시작 화면을 접고 그 뒤(예시·결과)를 되살린다 */
 function leaveStart() {
   var host = document.getElementById('welcome');
-  if (host) { host.hidden = true; host.innerHTML = ''; }
+  if (host) {
+    host.hidden = true;
+    host.innerHTML = '';
+  }
   showDemoBehind(true);
 }
 /* ★ 63-13. 「이어서 보기」 — 그 매장을 열고, 파일이 사라졌다는 안내를 여기서 한다.
@@ -384,14 +454,20 @@ function goSavedStore(k) {
   useScreen('이어서 보기');
   /* ★ 119차. 예시 전환 보정 — 예시로 가기 전에 보던 그 매장이면 맡겨 둔 자료를 그대로 되돌린다 */
   var 이름 = k.name === '(기본)' ? null : k.name;
-  if (MY_UP && (MY_UP.store || null) === 이름) { restoreMyUp(); return; }
+  if (MY_UP && (MY_UP.store || null) === 이름) {
+    restoreMyUp();
+    return;
+  }
   MY_UP = null;
   var saved = loadPicks(k.name === '(기본)' ? null : k.name);
   if (saved && saved.업종 && TRADES[saved.업종]) setTrade(saved.업종);
   leaveStart();
   /* ★ 91차 ②. 거래내역이 이 기기에 남아 있으면 파일을 다시 안 올려도 된다.
      「사라졌습니다」는 정말 사라졌을 때만 할 말이다 — 남아 있으면 바로 보여드린다 */
-  if (openSavedData(k.name)) { PICKED_STORE = null; return; }
+  if (openSavedData(k.name)) {
+    PICKED_STORE = null;
+    return;
+  }
   /* ★ 112차 ③. 여기서부터는 파일을 올려야 이어진다.
      고르신 매장을 붙들어 둔다 — drawUpMine 이 같은 목록을 또 그리지 않고
      이 매장 이름·안내·파일 고르기를 맨 위에 세운다 */
@@ -408,7 +484,9 @@ function goSavedStore(k) {
   openUpPanel();
   openPick();
   drawA2HS();
-  loadSheetJS().catch(function (e) { upStat('<b>' + e.message + '</b>'); });
+  loadSheetJS().catch(function (e) {
+    upStat('<b>' + e.message + '</b>');
+  });
 }
 /* 예시를 보다가 「내 거래내역 올려보기」를 누르면 시작 화면으로 돌아온다 */
 function backToStart() {
@@ -433,27 +511,41 @@ function drawInstallTip() {
     var ios = isIOS();
     var br = ios ? '사파리' : '크롬';
     box.appendChild(el('div', 'instbig', br + ro(br) + ' 먼저 열어주세요'));
-    box.appendChild(el('div', 'instsub',
-      '카톡 안에서 정하시면 다음에 안 남습니다. ' + br + ro(br) + ' 여시면 그대로 이어집니다.'));
+    box.appendChild(
+      el(
+        'div',
+        'instsub',
+        '카톡 안에서 정하시면 다음에 안 남습니다. ' + br + ro(br) + ' 여시면 그대로 이어집니다.'
+      )
+    );
     if (!ios && isAndroid()) {
       var go2 = el('button', 'b on', '크롬으로 열기');
       go2.type = 'button';
       go2.addEventListener('click', function () {
         var u = location.href.replace(/^https?:\/\//, '');
-        location.href = 'intent://' + u + '#Intent;scheme=' +
-          location.protocol.replace(':', '') + ';package=com.android.chrome;end';
+        location.href =
+          'intent://' +
+          u +
+          '#Intent;scheme=' +
+          location.protocol.replace(':', '') +
+          ';package=com.android.chrome;end';
       });
       box.appendChild(go2);
     }
-    box.appendChild(el('div', 'instwhy', ios
-      ? '오른쪽 아래 [⋯] → 「Safari로 열기」'
-      : '오른쪽 위 메뉴 → 「다른 브라우저로 열기」 → Chrome'));
+    box.appendChild(
+      el(
+        'div',
+        'instwhy',
+        ios
+          ? '오른쪽 아래 [⋯] → 「Safari로 열기」'
+          : '오른쪽 위 메뉴 → 「다른 브라우저로 열기」 → Chrome'
+      )
+    );
     wrap.appendChild(box);
     return wrap;
   }
   box.appendChild(el('div', 'instbig', '먼저 홈 화면에 추가하고 시작하세요'));
-  box.appendChild(el('div', 'instsub',
-    '앱처럼 열 수 있고, 분류하신 항목이 이 앱에 남습니다.'));
+  box.appendChild(el('div', 'instsub', '앱처럼 열 수 있고, 분류하신 항목이 이 앱에 남습니다.'));
   /* ★ 64-4차 1. 크롬 메뉴 이름이 판마다 다르다. 둘 다 적는다 —
      하나만 적으면 그 이름이 없는 판에서는 못 찾으신다.
      ★ 「설치 및 바로가기 만들기」의 「설치」는 화면 금지어지만,
@@ -481,7 +573,9 @@ function drawInstallTip() {
     var 예비 = el('div', 'instwhy');
     예비.hidden = true;
     예비.textContent = 손안내;
-    접기.addEventListener('click', function () { 예비.hidden = !예비.hidden; });
+    접기.addEventListener('click', function () {
+      예비.hidden = !예비.hidden;
+    });
     box.appendChild(접기);
     box.appendChild(예비);
   } else {
@@ -501,8 +595,13 @@ function openTrade() {
   var host = document.getElementById('up-trade');
   host.innerHTML = '';
   host.appendChild(el('div', 'tradehead', '어떤 곳의 거래내역인가요?'));
-  host.appendChild(el('div', 'tradesub',
-    '고르시면 그 곳에 맞는 항목으로 시작합니다. 나중에 항목 관리에서 고치실 수 있습니다.'));
+  host.appendChild(
+    el(
+      'div',
+      'tradesub',
+      '고르시면 그 곳에 맞는 항목으로 시작합니다. 나중에 항목 관리에서 고치실 수 있습니다.'
+    )
+  );
   host.appendChild(tradeTiles());
   upShow('up-trade');
 }
@@ -521,7 +620,9 @@ function tradeTiles() {
     b.appendChild(el('div', 'tilename', name));
     /* 식당에는 아무 표시가 없다 */
     if (t.준비중) b.appendChild(el('div', 'tilesoon', '준비 중'));
-    b.addEventListener('click', function () { pickTrade(name); });
+    b.addEventListener('click', function () {
+      pickTrade(name);
+    });
     grid.appendChild(b);
   });
   return grid;
@@ -535,7 +636,9 @@ function pickTrade(name) {
   openUpPanel();
   openPick();
   drawA2HS();
-  loadSheetJS().catch(function (e) { upStat('<b>' + e.message + '</b>'); });
+  loadSheetJS().catch(function (e) {
+    upStat('<b>' + e.message + '</b>');
+  });
 }
 /* ★ 62차 ②. 업종별 고지 — 예시는 식당 자료로 만든 것이다.
    ★ 치과·병원에는 한 줄 더. 원장님 통화에서 확인된 한계다 */
@@ -544,11 +647,21 @@ function tradeNotice(host) {
   if (name === TRADE_DEFAULT) return;
   var t = TRADES[name];
   var box = el('div', 'upmust');
-  box.appendChild(el('div', null,
-    '예시는 식당 자료로 만든 것입니다. 파일을 올리면 ' + name + ' 항목으로 나옵니다.'));
+  box.appendChild(
+    el(
+      'div',
+      null,
+      '예시는 식당 자료로 만든 것입니다. 파일을 올리면 ' + name + ' 항목으로 나옵니다.'
+    )
+  );
   if (t.카드고지) {
-    box.appendChild(el('div', null,
-      '카드로 결제하신 지출은 카드 대금 한 줄로만 잡힙니다. 세부 내용은 나뉘지 않습니다.'));
+    box.appendChild(
+      el(
+        'div',
+        null,
+        '카드로 결제하신 지출은 카드 대금 한 줄로만 잡힙니다. 세부 내용은 나뉘지 않습니다.'
+      )
+    );
   }
   host.appendChild(box);
 }
@@ -567,7 +680,7 @@ function tradeNotice(host) {
      보여야 할 것을 맨 위로 올리고, 안 볼 것(같은 목록)을 치운다.
    ★ 목록이 사라지므로 매장이 다섯이든 스물이든 첫 화면 높이가 같다 */
 var PICKED_STORE = null;
-var UPDROP_HOME = null;        /* #updrop 의 제자리. 처음 한 번만 재 둔다 */
+var UPDROP_HOME = null; /* #updrop 의 제자리. 처음 한 번만 재 둔다 */
 /* 파일 고르는 자리를 고른 매장 바로 아래로 올린다. 안 고르셨으면 제자리로 되돌린다.
    ★ 자바스크립트는 id 로만 찾으니 차례가 바뀌어도 아무 데도 안 깨진다 (49차·106차 ③) */
 function updropAfter(afterEl) {
@@ -576,7 +689,7 @@ function updropAfter(afterEl) {
   if (!UPDROP_HOME) UPDROP_HOME = { parent: drop.parentNode, next: drop.nextSibling };
   var 부모 = afterEl ? afterEl.parentNode : UPDROP_HOME.parent;
   var 앞 = afterEl ? afterEl.nextSibling : UPDROP_HOME.next;
-  if (!부모 || drop.nextSibling === 앞 && drop.parentNode === 부모) return;
+  if (!부모 || (drop.nextSibling === 앞 && drop.parentNode === 부모)) return;
   부모.insertBefore(drop, 앞);
 }
 function drawUpMine() {
@@ -586,7 +699,7 @@ function drawUpMine() {
   /* 고르신 매장이 있으면 그 매장 이름과 안내만 맨 위에 둔다. 목록은 안 그린다 */
   if (PICKED_STORE) {
     var k = PICKED_STORE;
-    var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+    var 이름 = k.name === '(기본)' ? '이름 없이 정해둔 것' : k.name;
     var sbox = el('div', 'upstore');
     var shead = el('div', 'upstorehead');
     shead.appendChild(el('div', 'upstorename', 이름));
@@ -596,34 +709,47 @@ function drawUpMine() {
       useScreen('매장 변경');
       PICKED_STORE = null;
       closeUpPanel();
-      drawStart();                 /* 매장 고르는 화면으로 돌아간다 */
+      drawStart(); /* 매장 고르는 화면으로 돌아간다 */
     });
     shead.appendChild(chg);
     sbox.appendChild(shead);
-    sbox.appendChild(el('div', 'upstoresub', k.n
-      ? '저장된 거래처 분류 ' + won(k.n) + '곳을 이어서 사용합니다.'
-      : '이 매장에 정해두신 것을 이어서 사용합니다.'));
+    sbox.appendChild(
+      el(
+        'div',
+        'upstoresub',
+        k.n
+          ? '저장된 거래처 분류 ' + won(k.n) + '곳을 이어서 사용합니다.'
+          : '이 매장에 정해두신 것을 이어서 사용합니다.'
+      )
+    );
     sbox.appendChild(el('div', 'upstoresub', '분석할 거래내역 파일을 올려주세요.'));
     host.appendChild(sbox);
-    updropAfter(host);             /* 파일 고르는 자리를 바로 아래로 */
-    drawImportStart();             /* ★ 119차. 불러오기 자리도 파일 고르는 자리를 따라간다 */
+    updropAfter(host); /* 파일 고르는 자리를 바로 아래로 */
+    drawImportStart(); /* ★ 119차. 불러오기 자리도 파일 고르는 자리를 따라간다 */
     return;
   }
-  updropAfter(null);               /* 제자리로 */
-  drawImportStart();                 /* ★ 119차 */
+  updropAfter(null); /* 제자리로 */
+  drawImportStart(); /* ★ 119차 */
   var mine = [];
-  try { mine = savedStores(); } catch (e) { return; }
+  try {
+    mine = savedStores();
+  } catch (e) {
+    return;
+  }
   if (!mine.length) return;
   host.appendChild(el('div', 'tradehead', '전에 하시던 것'));
   var back = el('div', 'gostores');
   mine.forEach(function (k) {
-    var 이름 = (k.name === '(기본)') ? '이름 없이 정해둔 것' : k.name;
+    var 이름 = k.name === '(기본)' ? '이름 없이 정해둔 것' : k.name;
     var b = el('button', 'gostore');
     b.type = 'button';
     b.appendChild(el('span', 'gsname', '〈' + 이름 + '〉 이어서 보기'));
-    b.appendChild(el('span', 'gssub',
-      k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨'));
-    b.addEventListener('click', function () { goSavedStore(k); });
+    b.appendChild(
+      el('span', 'gssub', k.n ? '거래처 ' + won(k.n) + '곳 정해두심' : '거래내역 저장됨')
+    );
+    b.addEventListener('click', function () {
+      goSavedStore(k);
+    });
     back.appendChild(b);
   });
   host.appendChild(back);
@@ -634,15 +760,18 @@ function drawUpMine() {
    창을 닫았다 열어도 아무도 되살리지 않는다 */
 function openPick() {
   document.getElementById('uptitle').textContent = '내 거래내역 올려보기';
-  document.getElementById('upbad').innerHTML = '';   /* 지난 파일의 확인 카드 */
-  upStat('');                                        /* 지난 파일의 안내문 */
-  upReadState(false);                /* ★ 119차 업로드 안내. 새로 고르는 화면이라 안내를 펼친다 */
-  redrawBankHelp();                                  /* 46차 ① 은행별 안내 */
+  document.getElementById('upbad').innerHTML = ''; /* 지난 파일의 확인 카드 */
+  upStat(''); /* 지난 파일의 안내문 */
+  upReadState(false); /* ★ 119차 업로드 안내. 새로 고르는 화면이라 안내를 펼친다 */
+  redrawBankHelp(); /* 46차 ① 은행별 안내 */
   /* ★ 62차 ②. 업종별 고지 — 예시는 식당 자료다 */
   var tn = document.getElementById('up-tradenote');
-  if (tn) { tn.innerHTML = ''; tradeNotice(tn); }
-  drawUpMine();                      /* ★ 100차 ①. 창을 열 때마다 최신 목록으로 */
-  drawImportStart();                 /* ★ 119차. 분류 파일 불러오기 */
+  if (tn) {
+    tn.innerHTML = '';
+    tradeNotice(tn);
+  }
+  drawUpMine(); /* ★ 100차 ①. 창을 열 때마다 최신 목록으로 */
+  drawImportStart(); /* ★ 119차. 분류 파일 불러오기 */
   upShow('up-pick');
 }
 
@@ -667,10 +796,16 @@ document.getElementById('upopen').addEventListener('click', function () {
   lg.setAttribute('role', 'button');
   lg.tabIndex = 0;
   lg.setAttribute('title', '첫 화면으로');
-  var 집 = function () { closeUpPanel(); drawStart(); };
+  var 집 = function () {
+    closeUpPanel();
+    drawStart();
+  };
   lg.addEventListener('click', 집);
   lg.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); 집(); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      집();
+    }
   });
 })();
 
@@ -690,7 +825,9 @@ document.getElementById('upopen').addEventListener('click', function () {
   img.removeAttribute('id');
   img.alt = '';
   b.appendChild(img);
-  b.addEventListener('click', function () { closeUpPanel(); drawStart(); });
+  b.addEventListener('click', function () {
+    closeUpPanel();
+    drawStart();
+  });
   top.insertBefore(b, top.firstChild);
 })();
-
