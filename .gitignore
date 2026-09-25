@@ -29,3 +29,6 @@ npm-debug.log*
 .env
 .env.*
 .dev.vars
+
+# Obsidian 으로 docs 를 볼 때 생기는 설정 폴더
+.obsidian/
