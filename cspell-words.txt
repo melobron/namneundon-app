@@ -604,3 +604,4 @@ ytab
 ytabhead
 ywrap
 htmlvalidate
+assetsignore
