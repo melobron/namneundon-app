@@ -1,6 +1,17 @@
 /* ══ 금액 데이터 끝 ══ */
 
 /* 마이너스는 하이픈이 아니라 빼기 기호로 — 화면 어디서나 같게 보이게 */
+/* ★ 2026-09-25 보안. 파일 이름·은행 이름처럼 밖에서 온 글자를 HTML 문자열에 넣을 때 쓴다.
+   파일 이름이 <img src=x onerror=…>.xlsx 이면 그대로 넣는 순간 스크립트가 돈다.
+   (el() 로 만드는 곳은 textContent 라 괜찮다 — innerHTML 에 넣는 곳만 이것을 거친다) */
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function won(n) {
   return n.toLocaleString('ko-KR').replace('-', '−');
 }
