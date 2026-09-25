@@ -1,7 +1,0 @@
-// 옛 앱 주소를 새 주소로 보내는 Worker. 배포: npm run deploy:legacy
-{
-  "name": "aged-rain-dbc4",
-  "account_id": "38950986f7a45785abaee1821078b111",
-  "main": "redirect.js",
-  "compatibility_date": "2026-09-25"
-}

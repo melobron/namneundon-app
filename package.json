@@ -14,8 +14,7 @@
     "test:update": "playwright test --update-snapshots",
     "test:prod": "BASE_URL=https://app.namneundon.com playwright test",
     "deploy:app": "wrangler deploy",
-    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main",
-    "deploy:legacy": "wrangler deploy --config legacy/wrangler.jsonc"
+    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

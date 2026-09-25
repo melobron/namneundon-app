@@ -5,7 +5,7 @@
 | 무엇 | 저장소 폴더 | Cloudflare | 주소 | 올리는 명령 |
 |---|---|---|---|---|
 | **앱** | `app/` | Worker `namneundon-app` (설정: `wrangler.jsonc`) | **`app.namneundon.com`** | `npm run deploy:app` |
-| 앱 (옛) | `legacy/` | Worker `aged-rain-dbc4` | `aged-rain-dbc4.ykang2356.workers.dev` → 새 주소로 301 이동 | `npm run deploy:legacy` |
+| 앱 (옛) | — | Worker `aged-rain-dbc4` | `aged-rain-dbc4.ykang2356.workers.dev` → 새 주소로 301 이동 | 저장소에서는 지웠다 (2026-09-25). Cloudflare 의 Worker 는 계속 돈다 |
 | 랜딩 | `landing/` | Pages `namneundon` (Git 연결 없음) | `namneundon.com`, `www.namneundon.com` | `npm run deploy:landing` |
 | ? | — | Pages `namneundon-cards2` | `namneundon-cards2.pages.dev` | 용도 확인 필요 |
 
@@ -17,7 +17,6 @@
 |---|---|
 | `app/`, `wrangler.jsonc` | 안전망 테스트 → 앱 배포 → `app.namneundon.com` 에서 다시 테스트 |
 | `landing/` | 랜딩 배포 → 「시작하기」가 앱 주소인지 확인 |
-| `legacy/` | 옛 주소 Worker 배포 |
 | 그 밖 (문서 등) | 아무것도 안 한다 |
 
 테스트가 실패하면 배포하지 않는다. GitHub → Actions → 「자동 배포」에서 결과를 본다.
@@ -75,7 +74,7 @@ BASE_URL=https://app.namneundon.com npx playwright test   # 배포된 곳 검사
 
 1. `npm run deploy:app` — `app.namneundon.com` 연결 → `BASE_URL=https://app.namneundon.com npx playwright test`
 2. `npm run deploy:landing` — 랜딩 「시작하기」가 새 주소로
-3. `npm run deploy:legacy` — 옛 주소 → 새 주소 301 이동
+3. 옛 주소 → 새 주소 301 이동 (Worker `aged-rain-dbc4`, 코드는 PR #4 의 `legacy/redirect.js`)
 
 되돌리기: 옛 주소 `npx wrangler rollback --name aged-rain-dbc4` (직전 판 = 요한이 올린 119차 앱 `775ff2a7`),
 랜딩은 Cloudflare 대시보드 → Pages `namneundon` → Deployments 에서 이전 배포를 Rollback.

@@ -1,0 +1,26 @@
+# 의존성 자동 업데이트 — 새 버전·보안 패치가 나오면 PR 을 만들어 준다.
+# PR 에서도 안전망 테스트가 돈다. 통과하면 합치기만 하면 된다.
+version: 2
+updates:
+  - package-ecosystem: npm          # package.json (개발 도구)
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    groups:                         # 자잘한 업데이트는 한 PR 로 묶는다
+      dev-tools:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "의존성"
+  - package-ecosystem: github-actions   # .github/workflows 의 actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"

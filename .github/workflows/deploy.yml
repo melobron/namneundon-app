@@ -24,7 +24,6 @@ jobs:
     outputs:
       app: ${{ steps.filter.outputs.app }}
       landing: ${{ steps.filter.outputs.landing }}
-      legacy: ${{ steps.filter.outputs.legacy }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -36,8 +35,6 @@ jobs:
               - 'wrangler.jsonc'
             landing:
               - 'landing/**'
-            legacy:
-              - 'legacy/**'
 
   test:
     needs: changes
@@ -97,18 +94,3 @@ jobs:
       - name: 랜딩이 앱 주소를 가리키는지
         run: curl -fsS https://namneundon.com/ | grep -q "APP_URL   = 'https://app.namneundon.com'"
 
-  deploy-legacy:
-    needs: changes
-    if: needs.changes.outputs.legacy == 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run deploy:legacy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
