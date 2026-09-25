@@ -96,7 +96,8 @@ files.forEach((f, idx) => {
       fnScan.set(st.id.name, st.body);
     } else if (st.type === 'VariableDeclaration') {
       st.declarations.forEach((d) => {
-        if (!nameFile.has(d.id.name)) nameFile.set(d.id.name, idx);
+        // 앱은 var a = …, b = … 만 쓴다 (var [a, b] = … 같은 풀어 쓰기는 없다)
+        if (d.id.type === 'Identifier' && !nameFile.has(d.id.name)) nameFile.set(d.id.name, idx);
         if (d.init) runs.push([idx, d.init, st.loc.start.line]);
       });
     } else runs.push([idx, st, st.loc.start.line]);

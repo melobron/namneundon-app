@@ -1,0 +1,15 @@
+// 타입 검사 — 앱(app/src). 19개 파일이 전역을 나눠 쓰는 일반 <script> 라서 한 묶음으로 본다.
+// 도입(2026-09-25) 때 오류가 있어 기준선을 둔다: tools/typecheck-app.mjs
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": ["app/src/*.js"]
+}

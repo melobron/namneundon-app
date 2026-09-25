@@ -8,8 +8,17 @@
   },
   "scripts": {
     "setup": "npm ci && playwright install chromium && npm run check",
+    "prepare": "husky",
     "serve": "node tests/serve.mjs",
     "check": "node tools/check-load-order.mjs",
+    "lint": "npm run format:check && npm run lint:js && npm run lint:css && npm run lint:html && npm run lint:spell && npm run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:js": "eslint . --max-warnings 51",
+    "lint:css": "stylelint \"app/**/*.css\" --max-warnings 110",
+    "lint:html": "html-validate app/index.html landing/index.html landing/404.html --max-warnings 12",
+    "lint:spell": "cspell --no-progress \"**/*.{js,mjs,json,jsonc,md,yml,yaml,css,html}\"",
+    "typecheck": "tsc -p tsconfig.json && node tools/typecheck-app.mjs",
     "test": "npm run check && playwright test",
     "test:update": "playwright test --update-snapshots",
     "test:prod": "BASE_URL=https://app.namneundon.com playwright test",
@@ -33,5 +42,12 @@
     "stylelint-config-standard": "^40.0.0",
     "typescript": "^7.0.2",
     "wrangler": "^4.139.0"
+  },
+  "lint-staged": {
+    "*.{js,mjs,json,jsonc,md,yml,yaml,css}": "prettier --write",
+    "*.{js,mjs}": "eslint",
+    "*.css": "stylelint",
+    "*.html": "html-validate",
+    "*": "cspell --no-progress --no-must-find-files"
   }
 }

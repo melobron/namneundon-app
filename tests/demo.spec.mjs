@@ -24,7 +24,9 @@ test('예시 결과 화면 — 달마다 · 1년 · 그래프 · 자세히', asy
 
   // 달마다 — 결과 화면을 그리는 가장 큰 함수(drawResultInner)가 달마다 다른 갈래를 탄다
   const select = page.locator('select:visible').first();
-  const values = await select.locator('option').evaluateAll((os) => os.map((o) => o.value));
+  const values = await select
+    .locator('option')
+    .evaluateAll((os) => os.map((o) => /** @type {HTMLOptionElement} */ (o).value));
   for (const v of values) {
     await select.selectOption(v);
     expect(await screenText(page)).toMatchSnapshot(`result-month-${v}.txt`);
