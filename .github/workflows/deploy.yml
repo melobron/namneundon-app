@@ -1,0 +1,114 @@
+# main 에 합쳐지면 자동 배포한다.
+#   ① 안전망 테스트 → ② 바뀐 것만 Cloudflare 에 올린다 → ③ 운영 주소에서 다시 테스트
+# 테스트가 실패하면 올리지 않는다. 문서만 바뀌면 아무것도 올리지 않는다.
+#
+# 필요한 비밀 값 (GitHub → Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN — 만드는 법은 docs/deploy.md
+name: 자동 배포
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # Actions 화면에서 손으로 다시 돌릴 수 있게
+
+concurrency:
+  group: deploy             # 배포가 겹치지 않게 한 번에 하나씩
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 38950986f7a45785abaee1821078b111
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      landing: ${{ steps.filter.outputs.landing }}
+      legacy: ${{ steps.filter.outputs.legacy }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'app/**'
+              - 'wrangler.jsonc'
+            landing:
+              - 'landing/**'
+            legacy:
+              - 'legacy/**'
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+
+  deploy-app:
+    needs: [changes, test]
+    if: needs.changes.outputs.app == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # 운영 주소에서 한 번 더 — 올라간 것이 테스트한 것과 같은지
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:prod
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: prod-test-results
+          path: test-results/
+          retention-days: 7
+
+  deploy-landing:
+    needs: changes
+    if: needs.changes.outputs.landing == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run deploy:landing -- --commit-hash=${{ github.sha }} --commit-message="$(git log -1 --pretty=%s)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: 랜딩이 앱 주소를 가리키는지
+        run: curl -fsS https://namneundon.com/ | grep -q "APP_URL   = 'https://app.namneundon.com'"
+
+  deploy-legacy:
+    needs: changes
+    if: needs.changes.outputs.legacy == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run deploy:legacy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

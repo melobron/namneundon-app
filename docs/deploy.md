@@ -9,7 +9,37 @@
 | 랜딩 | `landing/` | Pages `namneundon` (Git 연결 없음) | `namneundon.com`, `www.namneundon.com` | `npm run deploy:landing` |
 | ? | — | Pages `namneundon-cards2` | `namneundon-cards2.pages.dev` | 용도 확인 필요 |
 
-## 처음 한 번
+## 자동 배포 (main 에 합치면)
+
+`.github/workflows/deploy.yml` 이 한다. 사람은 PR 을 합치기만 한다.
+
+| 바뀐 곳 | 하는 일 |
+|---|---|
+| `app/`, `wrangler.jsonc` | 안전망 테스트 → 앱 배포 → `app.namneundon.com` 에서 다시 테스트 |
+| `landing/` | 랜딩 배포 → 「시작하기」가 앱 주소인지 확인 |
+| `legacy/` | 옛 주소 Worker 배포 |
+| 그 밖 (문서 등) | 아무것도 안 한다 |
+
+테스트가 실패하면 배포하지 않는다. GitHub → Actions → 「자동 배포」에서 결과를 본다.
+
+### 처음 한 번: Cloudflare 토큰 넣기
+
+1. Cloudflare 대시보드 → 오른쪽 위 프로필 → **My Profile → API Tokens → Create Token**
+2. **Edit Cloudflare Workers** 템플릿 → Use template
+3. Permissions 에 한 줄 더: **Account · Cloudflare Pages · Edit**
+4. Account Resources: **Ykang2356@gmail.com's Account** / Zone Resources: **namneundon.com**
+5. Continue → Create Token → 나온 토큰을 **복사만** 한다 (다시 볼 수 없다)
+6. 터미널에서 (붙여넣기 칸이 나온다):
+
+```bash
+gh secret set CLOUDFLARE_API_TOKEN
+```
+
+7. GitHub → Settings → Environments 에 `production` 이 생긴다. 여기서 「배포 전 승인」을 켤 수도 있다 (비공개 저장소 무료 요금제에서는 안 될 수 있다).
+
+토큰은 절대 파일에 적거나 채팅에 붙이지 않는다.
+
+## 손으로 배포 (처음 한 번 설정)
 
 ```bash
 npm install
