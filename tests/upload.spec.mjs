@@ -3,9 +3,16 @@
 // ★ 마지막 단계는 「저장된 자료를 되살렸을 때 숫자가 같은가」다.
 //   리팩토링하다 저장 형식이 바뀌면 사장님이 정해둔 분류가 사라진다 — 가장 큰 사고다.
 import { test, expect } from '@playwright/test';
-import { openApp, screenText, collectNumbers, asJson, demoAsBankXlsx, storageDump } from './helpers.mjs';
+import {
+  openApp,
+  screenText,
+  collectNumbers,
+  asJson,
+  demoAsBankXlsx,
+  storageDump
+} from './helpers.mjs';
 
-const ANSWERS = 20;   // 이만큼 정하면 「결과 보기」가 나온다 (119차 기준 94% 정리)
+const ANSWERS = 20; // 이만큼 정하면 「결과 보기」가 나온다 (119차 기준 94% 정리)
 
 test('업로드부터 결과, 복원까지', async ({ page }) => {
   const errors = await openApp(page);
@@ -34,7 +41,9 @@ test('업로드부터 결과, 복원까지', async ({ page }) => {
       return (q && DEMO_PICKS[q.name]) || '기타';
     });
     const btn = page.locator(`${up} button:visible`, { hasText: new RegExp(`^${want}$`) });
-    await (await btn.count() ? btn : page.locator(`${up} button:visible`, { hasText: /^기타$/ })).first().click();
+    await ((await btn.count()) ? btn : page.locator(`${up} button:visible`, { hasText: /^기타$/ }))
+      .first()
+      .click();
   }
   expect(await screenText(page, up)).toMatchSnapshot('4-onboard-done.txt');
 
@@ -42,7 +51,9 @@ test('업로드부터 결과, 복원까지', async ({ page }) => {
   // 처음이면 목표일을 한 번 묻는다
   const dueAsk = await screenText(page, up);
   expect(dueAsk).toMatchSnapshot('5-due-ask.txt');
-  const dueBtn = page.locator(`${up} button:visible`).filter({ hasText: /^(확인|이대로 보기|결과 보기|다음)$/ });
+  const dueBtn = page
+    .locator(`${up} button:visible`)
+    .filter({ hasText: /^(확인|이대로 보기|결과 보기|다음)$/ });
   if (await dueBtn.count()) await dueBtn.first().click();
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
 
@@ -56,9 +67,12 @@ test('업로드부터 결과, 복원까지', async ({ page }) => {
   await expect(page.getByRole('button', { name: '예시 먼저 보기' })).toBeVisible();
   await page.locator('#splash').waitFor({ state: 'detached' });
   expect(await screenText(page)).toMatchSnapshot('7-start-with-saved.txt');
-  await page.getByRole('button', { name: /테스트식당/ }).first().click();
+  await page
+    .getByRole('button', { name: /테스트식당/ })
+    .first()
+    .click();
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
-  expect(asJson(await collectNumbers(page))).toBe(numbers);   // 되살린 숫자 = 저장 전 숫자
+  expect(asJson(await collectNumbers(page))).toBe(numbers); // 되살린 숫자 = 저장 전 숫자
 
   expect(errors).toEqual([]);
 });

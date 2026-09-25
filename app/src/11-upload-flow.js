@@ -1,6 +1,6 @@
 function handleFiles(fileList) {
   var files = [].slice.call(fileList);
-  var 보탬 = addFromRead();        /* ★ 119차 업로드 안내. 읽은 계좌 위에 보탠다 */
+  var 보탬 = addFromRead(); /* ★ 119차 업로드 안내. 읽은 계좌 위에 보탠다 */
   document.getElementById('upbad').innerHTML = '';
   /* ★ 45차 ①. 파일을 받는 순간 창부터 연다.
      예전에는 읽기가 끝나야(SheetJS 를 받아오는 데 500ms쯤) 창이 열렸다.
@@ -9,106 +9,145 @@ function handleFiles(fileList) {
      읽다가 실패해도 이 창은 열려 있으므로 실패 문구가 반드시 보인다 */
   openUpPanel();
   upStat('<b>' + files.length + '개 파일</b> 읽는 중…');
-  loadSheetJS().then(function () {
-    /* ★ 92차 ①. PDF 가 섞여 있을 때만 PDF 도구를 가져온다.
+  loadSheetJS()
+    .then(function () {
+      /* ★ 92차 ①. PDF 가 섞여 있을 때만 PDF 도구를 가져온다.
        엑셀만 올리신 분은 지금까지와 똑같이 한 파일도 더 안 받는다.
        ★ 표를 엑셀 시트로 바꿔 넣으므로 PDF 길에서도 XLSX 가 먼저 있어야 한다 */
-    return files.some(isPdfFile) ? loadPdfJS() : null;
-  }).then(function () {
-    return files.reduce(function (pr, f) {
-      return pr.then(function (acc) {
-        return readAnyOne(f).then(function (one) { acc.push(one); return acc; });
-      });
-    }, Promise.resolve([]));
-  }).then(function (list) {
-    list.forEach(function (one) {
-      if (one.fail) {
-        /* ★ 50차 ②. 열 이름을 목록 화면까지 들고 간다 —
+      return files.some(isPdfFile) ? loadPdfJS() : null;
+    })
+    .then(function () {
+      return files.reduce(function (pr, f) {
+        return pr.then(function (acc) {
+          return readAnyOne(f).then(function (one) {
+            acc.push(one);
+            return acc;
+          });
+        });
+      }, Promise.resolve([]));
+    })
+    .then(function (list) {
+      list.forEach(function (one) {
+        if (one.fail) {
+          /* ★ 50차 ②. 열 이름을 목록 화면까지 들고 간다 —
            그게 있어야 「왜 못 읽었나」를 그 자리에서 펼 수 있다 */
-        PENDING.push({ name: one.name, bad: failWhy(one.fail, one.pdfBank),
-                       why: one.fail, found: one.found, pdfBank: one.pdfBank || null });
-        /* ★ 92차 ⑤. PDF 는 왜 못 읽었는지를 기록에 남긴다 —
+          PENDING.push({
+            name: one.name,
+            bad: failWhy(one.fail, one.pdfBank),
+            why: one.fail,
+            found: one.found,
+            pdfBank: one.pdfBank || null
+          });
+          /* ★ 92차 ⑤. PDF 는 왜 못 읽었는지를 기록에 남긴다 —
            어느 은행 양식을 먼저 넣어야 하는지 알 길이 이것뿐이다.
            파일 이름은 안 남긴다 (지금까지의 원칙 그대로) */
-        if (String(one.fail).indexOf('pdf_') === 0) useFail(one.fail);
-        return;
-      }
-      /* 같은 파일 이름이면 안 받는다 */
-      if (PENDING.some(function (b) { return !b.bad && b.file === one.name; })) {
-        PENDING.push({ name: one.name, bad: '같은 파일을 두 번 올리셨습니다' });
-        return;
-      }
-      /* 이름이 달라도 절반 넘게 겹치면 안 받는다. 자동으로 지우지는 않는다 */
-      var ov = overlapWith(PENDING.filter(function (b) { return !b.bad; }), one);
-      if (ov > 0.5) {
-        PENDING.push({ name: one.name,
-                       bad: '이미 올리신 것과 ' + Math.round(ov * 100) + '% 겹칩니다' });
-        return;
-      }
-      one.file = one.name;
-      one.found = bankOf(one.name, one.sheet, one.bankHint);       /* 못 찾으면 null — 목록 화면에서 여쭙는다 */
-      /* ★ 45차 ⑥. 못 찾았으면 지난번에 넣어주신 이름이 있는지 본다.
+          if (String(one.fail).indexOf('pdf_') === 0) useFail(one.fail);
+          return;
+        }
+        /* 같은 파일 이름이면 안 받는다 */
+        if (
+          PENDING.some(function (b) {
+            return !b.bad && b.file === one.name;
+          })
+        ) {
+          PENDING.push({ name: one.name, bad: '같은 파일을 두 번 올리셨습니다' });
+          return;
+        }
+        /* 이름이 달라도 절반 넘게 겹치면 안 받는다. 자동으로 지우지는 않는다 */
+        var ov = overlapWith(
+          PENDING.filter(function (b) {
+            return !b.bad;
+          }),
+          one
+        );
+        if (ov > 0.5) {
+          PENDING.push({
+            name: one.name,
+            bad: '이미 올리신 것과 ' + Math.round(ov * 100) + '% 겹칩니다'
+          });
+          return;
+        }
+        one.file = one.name;
+        one.found = bankOf(
+          one.name,
+          one.sheet,
+          one.bankHint
+        ); /* 못 찾으면 null — 목록 화면에서 여쭙는다 */
+        /* ★ 45차 ⑥. 못 찾았으면 지난번에 넣어주신 이름이 있는지 본다.
          자동으로 잡은 이름은 절대 안 덮는다 */
-      if (!one.found) {
-        var 지난이름 = bankNameAnyStore(bankNameKey(one));
-        if (지난이름) one.typed = 지난이름;
-      }
-      one.bank = one.typed || one.found ||
-                 ('계좌 ' + (PENDING.filter(function (b) { return !b.bad; }).length + 1));
-      var ms = {};
-      one.rows.forEach(function (r) { ms[monthOf(r.at)] = 1; });
-      var mk = Object.keys(ms).sort();
-      one.from = mk[0] || null;
-      one.to = mk[mk.length - 1] || null;
-      PENDING.push(one);
-    });
-    upStat('');
-    pdfForget();                 /* 92차 ③. 넣으신 여섯 자리를 여기서 버린다 */
-    drawFileList();
-  }).catch(function (e) {
-    pdfForget();
-    /* ★ 102차 추가 ②. 「암호 걸린 엑셀」을 「엑셀이 아님」과 갈라놓는다 (2026-09-19 실물 확인).
+        if (!one.found) {
+          var 지난이름 = bankNameAnyStore(bankNameKey(one));
+          if (지난이름) one.typed = 지난이름;
+        }
+        one.bank =
+          one.typed ||
+          one.found ||
+          '계좌 ' +
+            (PENDING.filter(function (b) {
+              return !b.bad;
+            }).length +
+              1);
+        var ms = {};
+        one.rows.forEach(function (r) {
+          ms[monthOf(r.at)] = 1;
+        });
+        var mk = Object.keys(ms).sort();
+        one.from = mk[0] || null;
+        one.to = mk[mk.length - 1] || null;
+        PENDING.push(one);
+      });
+      upStat('');
+      pdfForget(); /* 92차 ③. 넣으신 여섯 자리를 여기서 버린다 */
+      drawFileList();
+    })
+    .catch(function (e) {
+      pdfForget();
+      /* ★ 102차 추가 ②. 「암호 걸린 엑셀」을 「엑셀이 아님」과 갈라놓는다 (2026-09-19 실물 확인).
        케이뱅크 「입출금내역 내보내기」가 이 파일을 준다. 진짜 xlsx 인데 암호가 걸려 있어서,
        notxlsx 로 묶으면 「엑셀로 다시 받으세요」라고 말하게 되고 —
        사장님이 그대로 하면 똑같은 파일이 또 나온다 (50차 ③과 같은 자리다).
        ★ SheetJS 0.20.3 은 암호를 넣어줘도 못 연다(실측). 이번에 푸는 것이 아니라,
          막다른 길에서 갈 길을 알려주는 것이 하는 일의 전부다 */
-    var 말 = String(e && e.message || '');
-    var 잠김 = /password|encrypt/i.test(말);
-    var 왜 = 잠김 ? 'xlsx_locked'
-                  : (/XLSX|zip|Unsupported|Corrupt/i.test(말) ? 'notxlsx' : 'unknown');
-    useFail(왜);
-    /* 어느 은행인지 — 은행 안내에서 고르신 것이 먼저고, 없으면 파일 이름에서 찾는다.
+      var 말 = String((e && e.message) || '');
+      var 잠김 = /password|encrypt/i.test(말);
+      var 왜 = 잠김
+        ? 'xlsx_locked'
+        : /XLSX|zip|Unsupported|Corrupt/i.test(말)
+          ? 'notxlsx'
+          : 'unknown';
+      useFail(왜);
+      /* 어느 은행인지 — 은행 안내에서 고르신 것이 먼저고, 없으면 파일 이름에서 찾는다.
        둘 다 없으면 은행 이름 없이 일반 안내로 간다. 아는 만큼만 말한다 */
-    var 은행 = UP_HELP.bank;
-    for (var fi = 0; fi < files.length && !은행; fi++) 은행 = bankOf(files[fi].name, null, null);
-    upStat('');
-    var box = el('div', 'upbad');
-    box.appendChild(el('h4', null, '읽지 못했습니다'));
-    /* ★ 102차 추가 ②. 아는 실패는 우리말로 바꿔 말한다.
+      var 은행 = UP_HELP.bank;
+      for (var fi = 0; fi < files.length && !은행; fi++) 은행 = bankOf(files[fi].name, null, null);
+      upStat('');
+      var box = el('div', 'upbad');
+      box.appendChild(el('h4', null, '읽지 못했습니다'));
+      /* ★ 102차 추가 ②. 아는 실패는 우리말로 바꿔 말한다.
        ★ 정정. 「모르는 실패」일 때만 원문을 남긴다.
        엑셀이 아닌 파일은 「엑셀 파일이 아닙니다 — 은행 앱에서 엑셀(.xlsx)로
        다시 받아주세요」로 이미 정확히 안내된다. 영어 원문은 대표님이 읽을 것이 아니고,
        마스터 ■2-1 #5(쉬운 말)에도 걸린다.
        단서가 필요하면 화면에 있는 카카오채널로 파일을 받아보면 된다 */
-    if (왜 === 'unknown') box.appendChild(el('div', 'upbadrow', e.message));
-    /* 'unknown' 은 failWhy 도 '읽지 못했습니다 — …' 라 위 h4 와 같은 말이 두 번 된다.
+      if (왜 === 'unknown') box.appendChild(el('div', 'upbadrow', e.message));
+      /* 'unknown' 은 failWhy 도 '읽지 못했습니다 — …' 라 위 h4 와 같은 말이 두 번 된다.
        그때만 지금까지처럼 FIX_TIP 한 줄로 둔다 */
-    box.appendChild(el('div', 'upbadrow',
-      (왜 === 'unknown' ? FIX_TIP : failWhy(왜, 은행)) + '.'));
-    /* ★ 119차 업로드 안내. 추가로 고른 파일만 못 읽었다. 이미 읽은 거래와 확인 카드로
+      box.appendChild(
+        el('div', 'upbadrow', (왜 === 'unknown' ? FIX_TIP : failWhy(왜, 은행)) + '.')
+      );
+      /* ★ 119차 업로드 안내. 추가로 고른 파일만 못 읽었다. 이미 읽은 거래와 확인 카드로
        돌아가고, 못 읽은 까닭은 카드 위에 적는다 */
-    if (보탬 && UP && UP.breaks && UP.breaks.length) {
-      PENDING = [];
-      showBreakCards();
-      var 카드 = document.getElementById('upbad');
-      카드.insertBefore(box, 카드.firstChild);
-      return;
-    }
-    document.getElementById('upbad').innerHTML = '';
-    document.getElementById('upbad').appendChild(box);
-    upFocus('upbad');            /* ★ 106차 ③. 오류 문구도 못 보고 지나치면 뜻이 없다 */
-  });
+      if (보탬 && UP && UP.breaks && UP.breaks.length) {
+        PENDING = [];
+        showBreakCards();
+        var 카드 = document.getElementById('upbad');
+        카드.insertBefore(box, 카드.firstChild);
+        return;
+      }
+      document.getElementById('upbad').innerHTML = '';
+      document.getElementById('upbad').appendChild(box);
+      upFocus('upbad'); /* ★ 106차 ③. 오류 문구도 못 보고 지나치면 뜻이 없다 */
+    });
 }
 /* ★ 45차 ①. 「읽지 못했습니다」로 끝내지 않는다. 무엇을 하면 되는지까지 적는다.
    은행이 확장자만 .xls 로 붙여 CSV·HTML 을 주는 일이 흔하다 —
@@ -121,10 +160,12 @@ function failWhy(w, bank) {
      ★ 은행 이름은 짧은 열쇠('케이')로 올 때도, 보이는 이름('케이뱅크')으로 올 때도 있다.
        bankOf 는 보이는 이름을 주고 UP_HELP.bank 는 짧은 열쇠를 준다. 둘 다 받는다 */
   if (w === 'xlsx_locked') {
-    return '암호가 걸린 엑셀이라 아직 못 읽습니다 — '
-         + ((bank === '케이' || bank === '케이뱅크')
-            ? '케이뱅크 앱에서 전체 메뉴 → 「고객센터」 → 「증명서 발급」 → 「거래내역증명서」로 받아주세요'
-            : '같은 은행 앱에서 거래내역증명서(PDF)로 받아주시면 읽어드리겠습니다');
+    return (
+      '암호가 걸린 엑셀이라 아직 못 읽습니다 — ' +
+      (bank === '케이' || bank === '케이뱅크'
+        ? '케이뱅크 앱에서 전체 메뉴 → 「고객센터」 → 「증명서 발급」 → 「거래내역증명서」로 받아주세요'
+        : '같은 은행 앱에서 거래내역증명서(PDF)로 받아주시면 읽어드리겠습니다')
+    );
   }
   if (w === 'notxlsx') return '엑셀 파일이 아닙니다 — ' + FIX_TIP;
   /* ★ 50차 ③. 머리글은 다 맞는데 줄이 0건인 파일이 있다.
@@ -133,11 +174,14 @@ function failWhy(w, bank) {
      시키는 대로 해도 똑같은 파일이 또 나온다 */
   if (w === 'empty') return '이 파일에는 거래가 한 건도 없습니다';
   if (w === 'norows') return '읽을 수 있는 표를 못 찾았습니다 — ' + FIX_TIP;
-  if (w === 'nohead') return '거래내역 표를 못 찾았습니다 — 기간을 정해 「거래내역 조회」에서 받아주세요';
+  if (w === 'nohead')
+    return '거래내역 표를 못 찾았습니다 — 기간을 정해 「거래내역 조회」에서 받아주세요';
   /* ★ 92차 ⑤. PDF 는 못 읽어도 여기서 끝내지 않는다.
      할 수 있는 것(엑셀)과, 우리가 이 양식을 받을 길(카카오채널)을 같이 말한다 */
-  if (w === 'pdf_locked') return '비밀번호를 안 넣으셔서 못 열었습니다 — 다시 올려주시면 한 번 더 여쭙겠습니다';
-  if (w === 'pdf_image') return '이 PDF 는 글자가 없는 사진이라 읽을 수 없어요 — 엑셀(.xlsx)로 올려주시거나, 카카오채널로 문의해주시면 도와드리겠습니다';
+  if (w === 'pdf_locked')
+    return '비밀번호를 안 넣으셔서 못 열었습니다 — 다시 올려주시면 한 번 더 여쭙겠습니다';
+  if (w === 'pdf_image')
+    return '이 PDF 는 글자가 없는 사진이라 읽을 수 없어요 — 엑셀(.xlsx)로 올려주시거나, 카카오채널로 문의해주시면 도와드리겠습니다';
   /* ★ 94차 ③. 나머지 셋은 은행을 알아봤는지, 그 은행이 폰에서 되는지에 따라
      해야 할 말이 다르다. 한 문장으로 뭉뚱그리면 절반은 틀린 말이 된다 */
   if (w === 'pdf_no_header' || w === 'pdf_open' || w === 'pdf_total') return pdfAskWhy(w, bank);
@@ -147,13 +191,19 @@ function failWhy(w, bank) {
    2026-09-18 은행 고객센터에 직접 전화해서 확인한 것이다. 추측으로 늘리지 않는다.
    나중에 통화로 바뀌면 이 두 줄만 고치면 안내가 전부 따라 바뀐다.
    ★ 개인사업자 통장도 개인계좌와 같은 앱을 쓴다 — 따로 가르지 않는다 */
-var PHONE_OK   = ['국민', '신한', '우리', '새마을금고'];      /* 폰 앱에서 파일이 나온다 */
+var PHONE_OK = ['국민', '신한', '우리', '새마을금고']; /* 폰 앱에서 파일이 나온다 */
 var PHONE_NONE = ['하나', '농협', '기업', 'JT친애', '예가람']; /* PC 인터넷뱅킹에서만 나온다 */
 /* 화면에는 사람이 부르는 이름을 쓴다. 'JT친애' 라고 적으면 무슨 말인지 모르신다 */
 var BANK_FULL = {
-  '국민': '국민은행', '신한': '신한은행', '우리': '우리은행', '새마을금고': '새마을금고',
-  '하나': '하나은행', '농협': '농협은행', '기업': '기업은행',
-  'JT친애': 'JT친애저축은행', '예가람': '예가람저축은행'
+  국민: '국민은행',
+  신한: '신한은행',
+  우리: '우리은행',
+  새마을금고: '새마을금고',
+  하나: '하나은행',
+  농협: '농협은행',
+  기업: '기업은행',
+  JT친애: 'JT친애저축은행',
+  예가람: '예가람저축은행'
 };
 /* 받침이 있으면 「은」, 없으면 「는」. 「하나은행은」 / 「새마을금고는」 */
 /* ★ 109차 ②. 단추 이름이 상황마다 달라지면 조사도 같이 달라진다.
@@ -163,33 +213,49 @@ var BANK_FULL = {
 function 을를(s) {
   var c = String(s || '').charCodeAt(String(s).length - 1) - 0xac00;
   if (!(c >= 0 && c <= 11171)) return '를';
-  return (c % 28) ? '을' : '를';
+  return c % 28 ? '을' : '를';
 }
 function 은는(s) {
   var c = String(s || '').charCodeAt(String(s).length - 1) - 0xac00;
   if (!(c >= 0 && c <= 11171)) return '는';
-  return (c % 28) ? '은' : '는';
+  return c % 28 ? '은' : '는';
 }
 /* ★ 94차 ③. 사장님은 자기 은행이 폰에서 되는지 모르신다.
    그걸 알려드리는 것 자체가 값이다 — 되는 은행께는 「알려주시면 맞춰드린다」,
    안 되는 은행께는 「PC 에서 엑셀로 받으시라」가 맞는 말이다.
    은행을 못 알아봤으면 둘 다 말하지 않는다 */
 function pdfAskWhy(w, bank) {
-  var 이름 = bank ? (BANK_FULL[bank] || bank) : null;
+  var 이름 = bank ? BANK_FULL[bank] || bank : null;
   if (이름 && PHONE_NONE.indexOf(bank) !== -1) {
     /* 우리가 이 양식을 넣어드려도 이분들껜 소용이 없다 — 폰에서 파일 자체가 안 나온다.
        그래서 세 경우 모두 할 수 있는 길 하나만 정확히 알려드린다 */
-    return 이름 + 은는(이름) + ' 폰 앱에서 거래내역 파일이 안 나옵니다 — PC 인터넷뱅킹에서 엑셀(.xlsx)로 받으시면 바로 읽어드립니다';
+    return (
+      이름 +
+      은는(이름) +
+      ' 폰 앱에서 거래내역 파일이 안 나옵니다 — PC 인터넷뱅킹에서 엑셀(.xlsx)로 받으시면 바로 읽어드립니다'
+    );
   }
   if (이름 && PHONE_OK.indexOf(bank) !== -1) {
     /* 폰으로 받으실 수 있는데 우리가 못 읽는 것뿐이다. 엑셀로 가시라고 하면 안 된다 */
-    if (w === 'pdf_no_header') return 이름 + ' PDF 는 아직 안 읽혀요 — 카카오채널로 알려주시면 바로 맞춰서 읽어드리겠습니다';
-    if (w === 'pdf_open') return '이 ' + 이름 + ' PDF 를 여는 데 실패했습니다 — 카카오채널로 알려주시면 바로 확인해서 읽어드리겠습니다';
-    return '이 ' + 이름 + ' PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 카카오채널로 알려주시면 바로 맞춰드리겠습니다';
+    if (w === 'pdf_no_header')
+      return 이름 + ' PDF 는 아직 안 읽혀요 — 카카오채널로 알려주시면 바로 맞춰서 읽어드리겠습니다';
+    if (w === 'pdf_open')
+      return (
+        '이 ' +
+        이름 +
+        ' PDF 를 여는 데 실패했습니다 — 카카오채널로 알려주시면 바로 확인해서 읽어드리겠습니다'
+      );
+    return (
+      '이 ' +
+      이름 +
+      ' PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 카카오채널로 알려주시면 바로 맞춰드리겠습니다'
+    );
   }
   /* 은행을 못 알아봤다. 어느 쪽인지 모르니 둘 다 열어두고 은행 이름을 여쭌다 */
-  if (w === 'pdf_no_header') return '이 은행 PDF 는 아직 안 읽혀요 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 이 은행도 준비하겠습니다';
-  if (w === 'pdf_open') return '이 PDF 를 여는 데 실패했습니다 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 확인하겠습니다';
+  if (w === 'pdf_no_header')
+    return '이 은행 PDF 는 아직 안 읽혀요 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 이 은행도 준비하겠습니다';
+  if (w === 'pdf_open')
+    return '이 PDF 를 여는 데 실패했습니다 — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 확인하겠습니다';
   /* ★ 92-2차 ③. 못 읽은 것이 아니라 「읽었는데 은행이 적은 합계와 안 맞는다」는 뜻이다.
      그대로 보여드리면 틀린 숫자가 되므로 여기서 멈춘다 */
   return '이 PDF 를 끝까지 못 읽었습니다 (은행이 적은 합계와 안 맞습니다) — 엑셀(.xlsx)로 올리시면 바로 되고, 카카오채널로 은행 이름만 알려주시면 맞춰두겠습니다';
@@ -236,16 +302,21 @@ function drawFileList() {
   if (UP_HELP.open !== 펼침) {
     UP_HELP.open = 펼침;
     if (!펼침) UP_HELP.bank = null;
-    try { redrawBankHelp(); } catch (e) { }
+    try {
+      redrawBankHelp();
+    } catch (e) {}
   }
   document.getElementById('uptitle').textContent = '올리신 파일';
   upShow('up-files');
   var host = document.getElementById('up-files');
   host.innerHTML = '';
-  var ok = PENDING.filter(function (b) { return !b.bad; });
+  var ok = PENDING.filter(function (b) {
+    return !b.bad;
+  });
   host.appendChild(el('div', 'obhead', '올리신 파일'));
-  host.appendChild(el('div', 'obsub',
-    '건수와 기간을 한 번 봐주세요. 계좌가 더 있으면 이어서 올리시면 됩니다.'));
+  host.appendChild(
+    el('div', 'obsub', '건수와 기간을 한 번 봐주세요. 계좌가 더 있으면 이어서 올리시면 됩니다.')
+  );
 
   var list = el('div', 'flist');
   PENDING.forEach(function (b, i) {
@@ -257,8 +328,13 @@ function drawFileList() {
       /* ★ 50차 ②·③. 왜 못 읽었는지 그 자리에서 편다. 파일마다 따로 펴진다 —
          둘을 올렸는데 하나만 못 읽을 수 있다 */
       if (b.why === 'empty') {
-        nm.appendChild(el('div', 'fmeta',
-          '은행에서 조회 기간을 정하고 「조회」를 누른 뒤에 내려받아주세요. 기간은 1년으로 잡으시면 됩니다.'));
+        nm.appendChild(
+          el(
+            'div',
+            'fmeta',
+            '은행에서 조회 기간을 정하고 「조회」를 누른 뒤에 내려받아주세요. 기간은 1년으로 잡으시면 됩니다.'
+          )
+        );
       } else if (String(b.why).indexOf('pdf_') === 0) {
         /* ★ 92차 ⑤. PDF 는 「왜 못 읽었나」(열 이름)를 펼 것이 없다 —
            대신 우리에게 말을 거실 자리를 둔다.
@@ -281,14 +357,15 @@ function drawFileList() {
         nm.appendChild(wb2);
         if (wopen) {
           var wbox = el('div', 'whybox');
-          unreadableBody(wbox, b.found);      /* 45차에 만든 것을 그대로 부른다 */
+          unreadableBody(wbox, b.found); /* 45차에 만든 것을 그대로 부른다 */
           nm.appendChild(wbox);
         }
       }
     } else {
       nm.appendChild(el('div', 'fbank', b.bank));
-      nm.appendChild(el('div', 'fmeta',
-        won(b.rows.length) + '건 · ' + monLabel(b.from) + ' ~ ' + monLabel(b.to)));
+      nm.appendChild(
+        el('div', 'fmeta', won(b.rows.length) + '건 · ' + monLabel(b.from) + ' ~ ' + monLabel(b.to))
+      );
       /* ★ 40차 1번(나). 모든 계좌의 이름을 고칠 수 있어야 한다.
          예전에는 못 찾은 계좌에만 입력칸이 나왔다 —
          틀리게 잡힌 쪽이 더 위험한데 그쪽은 고칠 길이 없었다.
@@ -307,11 +384,11 @@ function drawFileList() {
         inp.type = 'text';
         inp.className = 'nminput fbankin';
         inp.maxLength = 12;
-        inp.placeholder = b.found || ('계좌 ' + (i + 1));
+        inp.placeholder = b.found || '계좌 ' + (i + 1);
         inp.value = b.typed || '';
         inp.addEventListener('input', function () {
           b.typed = inp.value.trim();
-          b.bank = b.typed || b.found || ('계좌 ' + (i + 1));
+          b.bank = b.typed || b.found || '계좌 ' + (i + 1);
           var lab = row.querySelector('.fbank');
           if (lab) lab.textContent = b.bank;
         });
@@ -345,7 +422,7 @@ function drawFileList() {
   add.type = 'button';
   add.addEventListener('click', function () {
     var inp = document.getElementById('upinput');
-    inp.value = '';                 /* 같은 파일을 다시 고를 수 있게 비운다 */
+    inp.value = ''; /* 같은 파일을 다시 고를 수 있게 비운다 */
     inp.click();
   });
   var go = el('button', 'b on', '이 파일들로 시작하기');
@@ -361,18 +438,30 @@ function drawFileList() {
   if (!ok.length) {
     /* ★ 50차 ③. 전부 「거래 0건」이면 다시 받으라는 말은 거짓말이다.
        제대로 된 .xlsx 이고 시키는 대로 해도 똑같은 파일이 또 나온다 */
-    var 전부빔 = PENDING.length > 0 && PENDING.every(function (b2) { return b2.why === 'empty'; });
+    var 전부빔 =
+      PENDING.length > 0 &&
+      PENDING.every(function (b2) {
+        return b2.why === 'empty';
+      });
     if (전부빔) {
-      host.appendChild(el('div', 'obcov',
-        '올리신 파일에 거래가 한 건도 없습니다.'));
-      host.appendChild(el('div', 'obcov',
-        '은행에서 조회 기간을 정하고 「조회」를 누른 뒤에 내려받아주세요. 기간은 1년으로 잡으시면 됩니다.'));
+      host.appendChild(el('div', 'obcov', '올리신 파일에 거래가 한 건도 없습니다.'));
+      host.appendChild(
+        el(
+          'div',
+          'obcov',
+          '은행에서 조회 기간을 정하고 「조회」를 누른 뒤에 내려받아주세요. 기간은 1년으로 잡으시면 됩니다.'
+        )
+      );
     } else {
-      host.appendChild(el('div', 'obcov',
-        '읽을 수 있는 파일이 없습니다. ' + FIX_TIP + '.'));
-      host.appendChild(el('div', 'obcov',
-        '은행이 확장자만 .xls 로 붙여 다른 형식을 주는 일이 있습니다. ' +
-        '내려받을 때 「엑셀」이나 「xlsx」를 고르시면 됩니다.'));
+      host.appendChild(el('div', 'obcov', '읽을 수 있는 파일이 없습니다. ' + FIX_TIP + '.'));
+      host.appendChild(
+        el(
+          'div',
+          'obcov',
+          '은행이 확장자만 .xls 로 붙여 다른 형식을 주는 일이 있습니다. ' +
+            '내려받을 때 「엑셀」이나 「xlsx」를 고르시면 됩니다.'
+        )
+      );
     }
   }
 }
@@ -392,11 +481,19 @@ var ADD_KEEP = null;
 var RESTORING = null;
 function openAddFiles() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
-  ADD_KEEP = { store: UP.store, owner: UP.owner, trade: UP.trade,
-               dueDay: UP.dueDay || null, known: UP.known || null };
+  ADD_KEEP = {
+    store: UP.store,
+    owner: UP.owner,
+    trade: UP.trade,
+    dueDay: UP.dueDay || null,
+    known: UP.known || null
+  };
   /* 이미 읽어둔 계좌를 목록에 그대로 올려둔다 — 무엇 위에 보태는지 보여야 한다.
      ★ 이 계좌들은 이름이 이미 정해져 있다. 다시 번호를 붙이지 않는다 */
-  PENDING = UP.banks.map(function (b) { b.kept = true; return b; });
+  PENDING = UP.banks.map(function (b) {
+    b.kept = true;
+    return b;
+  });
   openUpPanel();
   document.getElementById('upbad').innerHTML = '';
   upStat('');
@@ -415,9 +512,14 @@ function openSavedData(name) {
   var banks = banksFromData(o);
   if (!banks.length) return false;
   var 예전 = UP;
-  leaveStart();                     /* 시작 화면을 접고 결과 자리를 되살린다 */
-  ADD_KEEP = { store: o.store || null, owner: o.owner || null,
-               trade: o.trade || null, dueDay: o.dueDay || null, known: null };
+  leaveStart(); /* 시작 화면을 접고 결과 자리를 되살린다 */
+  ADD_KEEP = {
+    store: o.store || null,
+    owner: o.owner || null,
+    trade: o.trade || null,
+    dueDay: o.dueDay || null,
+    known: null
+  };
   RESTORING = o;
   try {
     startFromBanks(banks, [], []);
@@ -426,7 +528,9 @@ function openSavedData(name) {
     RESTORING = null;
     ADD_KEEP = null;
     UP = 예전;
-    try { drawStart(); } catch (e2) { }
+    try {
+      drawStart();
+    } catch (e2) {}
     return false;
   }
   return true;
@@ -438,26 +542,42 @@ function openLastData() {
   return openSavedData(name);
 }
 function startPending() {
-  MY_UP = null;                   /* ★ 119차. 새 파일로 가면 맡겨 둔 매장은 놓는다 */
-  var banks = PENDING.filter(function (b) { return !b.bad; });
+  MY_UP = null; /* ★ 119차. 새 파일로 가면 맡겨 둔 매장은 놓는다 */
+  var banks = PENDING.filter(function (b) {
+    return !b.bad;
+  });
   if (!banks.length) return;
   /* 같은 은행 이름이 둘이면 갈라 부른다.
      ★ 71차 ②. 이미 이름이 붙은 계좌(보태기로 들고 온 것)에는 다시 번호를 안 붙인다 —
        두 번 돌면 「국민 1 1」이 된다. 새로 온 것만 비어 있는 번호를 찾아 붙인다 */
   var 쓴이름 = {};
-  banks.forEach(function (b) { if (b.kept) 쓴이름[b.bank] = 1; });
+  banks.forEach(function (b) {
+    if (b.kept) 쓴이름[b.bank] = 1;
+  });
   var cnt = {};
-  banks.forEach(function (b) { if (!b.kept) cnt[b.bank] = (cnt[b.bank] || 0) + 1; });
+  banks.forEach(function (b) {
+    if (!b.kept) cnt[b.bank] = (cnt[b.bank] || 0) + 1;
+  });
   banks.forEach(function (b) {
     if (b.kept) return;
-    if (!쓴이름[b.bank] && cnt[b.bank] < 2) { 쓴이름[b.bank] = 1; return; }
-    var n = 1, 후보 = b.bank + ' ' + n;
-    while (쓴이름[후보]) { n++; 후보 = b.bank + ' ' + n; }
+    if (!쓴이름[b.bank] && cnt[b.bank] < 2) {
+      쓴이름[b.bank] = 1;
+      return;
+    }
+    var n = 1,
+      후보 = b.bank + ' ' + n;
+    while (쓴이름[후보]) {
+      n++;
+      후보 = b.bank + ' ' + n;
+    }
     b.bank = 후보;
     쓴이름[후보] = 1;
   });
-  var dup = PENDING.filter(function (b) { return b.bad; })
-                   .map(function (b) { return b.name + ' (' + b.bad + ')'; });
+  var dup = PENDING.filter(function (b) {
+    return b.bad;
+  }).map(function (b) {
+    return b.name + ' (' + b.bad + ')';
+  });
   PENDING = [];
   startFromBanks(banks, dup, []);
 }
@@ -467,7 +587,7 @@ function startPending() {
 function startFromBanks(banks, dup, overlap) {
   /* ★ 105차 ④. 이 판에서 거래가 실제로 늘었는가 — 아래 겹치기 거르기의 결과로 판단한다.
      예시(demo)는 안 센다. 되살린 판(RESTORING)은 올린 것이 아니다 */
-  var 이전줄수 = (UP && !UP.demo && UP.rows) ? UP.rows.length : 0;
+  var 이전줄수 = UP && !UP.demo && UP.rows ? UP.rows.length : 0;
   var rows = [];
   /* ★ 71차 ②-5. 같은 거래는 한 번만 센다.
      파일을 보태다 보면 기간이 겹친다 — 1~8월 파일에 6~12월 파일을 얹으면
@@ -480,7 +600,8 @@ function startFromBanks(banks, dup, overlap) {
        그래서 파일 안에서의 몇 번째인지까지 열쇠에 넣는다 —
        겹치는 것은 파일과 파일 사이에서만 지운다.
      ★ 계산은 안 건드린다. 여기서 하는 일은 「같은 줄을 두 번 넣지 않기」뿐이다 */
-  var 본줄 = {}, 겹친건수 = 0;
+  var 본줄 = {},
+    겹친건수 = 0;
   banks.forEach(function (b, i) {
     b.idx = i;
     var 안에서 = {};
@@ -488,7 +609,10 @@ function startFromBanks(banks, dup, overlap) {
       var 속 = sameRowKey(r) + '|' + (r.payee == null ? '' : r.payee);
       안에서[속] = (안에서[속] || 0) + 1;
       var 열쇠 = 속 + '#' + 안에서[속];
-      if (본줄[열쇠]) { 겹친건수++; return; }
+      if (본줄[열쇠]) {
+        겹친건수++;
+        return;
+      }
       본줄[열쇠] = 1;
       r.acc = i;
       rows.push(r);
@@ -501,21 +625,42 @@ function startFromBanks(banks, dup, overlap) {
   });
   var allBreaks = [];
   banks.forEach(function (b) {
-    b.breaks.forEach(function (x) { x.bank = b.bank; allBreaks.push(x); });
+    b.breaks.forEach(function (x) {
+      x.bank = b.bank;
+      allBreaks.push(x);
+    });
   });
   var 올림 = !RESTORING;
-  UP = { file: banks.map(function (b) { return b.file; }).join(' · '),
-         demo: false,
-         __새거래: 올림 && rows.length > 이전줄수,
-         banks: banks,
-         sheet: banks[0].sheet, header: banks[0].header,
-         balName: banks[0].balName, balTried: banks[0].balTried,
-         rows: rows,
-         opening: banks.reduce(function (s, b) { return s + b.opening; }, 0),
-         closing: banks.reduce(function (s, b) { return s + b.closing; }, 0),
-         breaks: allBreaks, patched: 0, unsure: 0,
-         moved: banks.reduce(function (s, b) { return s + b.moved; }, 0),
-         store: null, dupFiles: dup, overlapFiles: overlap };
+  UP = {
+    file: banks
+      .map(function (b) {
+        return b.file;
+      })
+      .join(' · '),
+    demo: false,
+    __새거래: 올림 && rows.length > 이전줄수,
+    banks: banks,
+    sheet: banks[0].sheet,
+    header: banks[0].header,
+    balName: banks[0].balName,
+    balTried: banks[0].balTried,
+    rows: rows,
+    opening: banks.reduce(function (s, b) {
+      return s + b.opening;
+    }, 0),
+    closing: banks.reduce(function (s, b) {
+      return s + b.closing;
+    }, 0),
+    breaks: allBreaks,
+    patched: 0,
+    unsure: 0,
+    moved: banks.reduce(function (s, b) {
+      return s + b.moved;
+    }, 0),
+    store: null,
+    dupFiles: dup,
+    overlapFiles: overlap
+  };
   UP.겹친건수 = 겹친건수;
   /* ★ 71차 ②. 파일을 보태서 온 길이면 매장을 다시 묻지 않는다.
      매장 이름은 저장 열쇠(fc.picks.<매장>)를 만드는 값이라, 여기서 잃으면
@@ -532,19 +677,27 @@ function startFromBanks(banks, dup, overlap) {
 
   var bits = [];
   if (banks.length > 1) {
-    bits.push(banks.map(function (b) {
-      return '<b>' + b.bank + '</b> ' + won(b.rows.length) + '건';
-    }).join(' · '));
+    bits.push(
+      banks
+        .map(function (b) {
+          return '<b>' + b.bank + '</b> ' + won(b.rows.length) + '건';
+        })
+        .join(' · ')
+    );
   } else {
     /* ★ 119차 업로드 안내. 읽은 뒤 맨 위에 서는 요약이라 은행과 건수로 적는다.
        시트 이름·헤더 행은 대표님이 확인할 값이 아니다 (계좌가 둘 이상일 때와 같은 모양) */
     bits.push('<b>' + banks[0].bank + '</b> 거래 <b>' + won(rows.length) + '건</b>');
   }
-  if (UP.moved) bits.push('순서가 뒤바뀐 <b>' + won(UP.moved) + '건</b>을 잔액에 맞게 다시 놓았습니다');
-  dup.forEach(function (t) { bits.push('건너뛴 파일 — ' + t); });
+  if (UP.moved)
+    bits.push('순서가 뒤바뀐 <b>' + won(UP.moved) + '건</b>을 잔액에 맞게 다시 놓았습니다');
+  dup.forEach(function (t) {
+    bits.push('건너뛴 파일 — ' + t);
+  });
   overlap.forEach(function (o) {
-    bits.push('건너뛴 파일 — ' + o.name + ' (이미 올리신 것과 ' +
-              Math.round(o.pct * 100) + '% 겹칩니다)');
+    bits.push(
+      '건너뛴 파일 — ' + o.name + ' (이미 올리신 것과 ' + Math.round(o.pct * 100) + '% 겹칩니다)'
+    );
   });
   upStat(bits.join('<br>'));
   var ms = monthList();
@@ -577,7 +730,7 @@ function afterFiles() {
        ★ 112차 ②. 줄마다 붙은 residual·patched·unsure·byStated·picked 가 그대로 왔으니
          건수는 그 줄에서 다시 센다. 저장된 건수를 믿고 쓰면 옛 저장본에서 어긋난다.
          ★ zeroed 만은 줄에서 못 세는 옛 저장본이 있어 저장된 값을 먼저 깔고 간다 */
-    UP.zeroed  = +저장분.zeroed  || 0;
+    UP.zeroed = +저장분.zeroed || 0;
     recountBreaks();
     UP.tileTrade = tradeNow();
     startOnboard();
@@ -592,8 +745,12 @@ function afterFiles() {
   if (ADD_KEEP) {
     ADD_KEEP = null;
     UP.tileTrade = tradeNow();
-    try { startOnboard(); }
-    catch (e) { UP.known = null; askName(); }
+    try {
+      startOnboard();
+    } catch (e) {
+      UP.known = null;
+      askName();
+    }
     openUpPanel();
     return;
   }
@@ -607,17 +764,25 @@ function afterFiles() {
     UP.known = null;
     UP.tileTrade = tradeNow();
     UP.store = 고른.name === '(기본)' ? null : 고른.name;
-    UP.trade = (저장된.업종 && TRADES[저장된.업종]) ? 저장된.업종 : tradeNow();
+    UP.trade = 저장된.업종 && TRADES[저장된.업종] ? 저장된.업종 : tradeNow();
     setTrade(UP.trade);
     try {
-      if (Object.prototype.hasOwnProperty.call(저장된, 'owner')) { UP.owner = 저장된.owner || null; startOnboard(); }
-      else askOwner();
-    } catch (e) { askName(); }
+      if (Object.prototype.hasOwnProperty.call(저장된, 'owner')) {
+        UP.owner = 저장된.owner || null;
+        startOnboard();
+      } else askOwner();
+    } catch (e) {
+      askName();
+    }
     openUpPanel();
     return;
   }
   var hit = null;
-  try { hit = storeForBanks(UP.banks); } catch (e) { hit = null; }
+  try {
+    hit = storeForBanks(UP.banks);
+  } catch (e) {
+    hit = null;
+  }
   UP.known = hit;
   /* 타일에서 고르신 업종. 되살릴 때 「다른 병원으로 하기」라고 부르려고 들고 있는다 */
   UP.tileTrade = tradeNow();
@@ -632,7 +797,7 @@ function afterFiles() {
     UP.known = null;
     askName();
   }
-  openUpPanel();                 /* 어느 갈래로 갔든 창은 열려 있어야 한다 */
+  openUpPanel(); /* 어느 갈래로 갔든 창은 열려 있어야 한다 */
 }
 
 /* 「이 계좌는 〈시험치과〉로 저장돼 있어 치과 항목으로 엽니다」
@@ -646,16 +811,28 @@ function askKnownStore(hit) {
   upShow('up-name');
   var host = document.getElementById('up-name');
   host.innerHTML = '';
-  host.appendChild(el('div', 'obsub',
-    '파일을 읽었습니다. ' + won(UP.rows.length) + '건 · ' + monthSpan()));
-  var 이름 = hit.name || ('내 ' + BIZ.곳);
-  host.appendChild(el('div', 'obhead',
-    '이 계좌는 〈' + 이름 + '〉' + ro(이름) + ' 저장돼 있어 ' + hit.업종 + ' 항목으로 엽니다.'));
+  host.appendChild(
+    el('div', 'obsub', '파일을 읽었습니다. ' + won(UP.rows.length) + '건 · ' + monthSpan())
+  );
+  var 이름 = hit.name || '내 ' + BIZ.곳;
+  host.appendChild(
+    el(
+      'div',
+      'obhead',
+      '이 계좌는 〈' + 이름 + '〉' + ro(이름) + ' 저장돼 있어 ' + hit.업종 + ' 항목으로 엽니다.'
+    )
+  );
   /* 정해둔 곳이 없는 매장도 여기 온다 (이름만 짓고 나가신 경우).
      그때 「0곳을 그대로 씁니다」라고 하면 안 한 일을 했다고 말하는 것이 된다 */
-  host.appendChild(el('div', 'obcov', hit.n
-    ? '지난번에 정하신 거래처 ' + won(hit.n) + '곳을 그대로 씁니다.'
-    : '지난번에 정해두신 거래처는 없습니다. 이어서 정하시면 됩니다.'));
+  host.appendChild(
+    el(
+      'div',
+      'obcov',
+      hit.n
+        ? '지난번에 정하신 거래처 ' + won(hit.n) + '곳을 그대로 씁니다.'
+        : '지난번에 정해두신 거래처는 없습니다. 이어서 정하시면 됩니다.'
+    )
+  );
 
   var acts = el('div', 'obdoneacts');
   var ok = el('button', 'b on', '이어서 하기');
@@ -667,8 +844,10 @@ function askKnownStore(hit) {
        성함을 저장통에 답해 두셨으면(건너뛰기로 답하신 것도 답이다)
        그 답을 얹고 바로 거래처 확인으로 간다.
        옛 판이 남긴 것처럼 그 답이 아예 없는 것만 묻는다 */
-    if (hit.owner답함) { UP.owner = hit.owner; startOnboard(); }
-    else askOwner();
+    if (hit.owner답함) {
+      UP.owner = hit.owner;
+      startOnboard();
+    } else askOwner();
   });
   /* 같은 파일을 다른 매장으로 쓰시는 분이 있을 수 있다. 길을 막지 않는다.
      ★ 여기 이름은 「타일에서 누르신 업종」이다 — 병원 타일을 누르고 오셨으면
@@ -682,16 +861,18 @@ function askKnownStore(hit) {
     UP.accounts = tradeCats(타일).concat(TRADES[타일].더함);
     UP.baseCats = tradeCats(타일);
     UP.keepSet = tradeKeep(타일);
-    UP.hidden = TRADES[타일].감춤.map(function (c) { return TRADES[타일].바꿈[c] || c; });
+    UP.hidden = TRADES[타일].감춤.map(function (c) {
+      return TRADES[타일].바꿈[c] || c;
+    });
     askName();
   });
-  acts.appendChild(ok); acts.appendChild(other);
+  acts.appendChild(ok);
+  acts.appendChild(other);
   host.appendChild(acts);
 }
 
-
 /* 검산이 깨지면 숫자를 보여주지 않는다. 어디가 깨졌는지 보여주고 사장님이 정한다. */
-var BREAK_MAX = 0.01;   /* 검산 실패가 이 비율을 넘으면 숫자를 아예 안 보여준다 */
+var BREAK_MAX = 0.01; /* 검산 실패가 이 비율을 넘으면 숫자를 아예 안 보여준다 */
 
 /* ★ 39차 1번. 문턱은 계좌별로 잰다 — startFromBanks 와 잣대를 맞춘다.
    합계로 재면 계좌 하나가 통째로 망가져도 다른 계좌가 크면 비율에 묻힌다 */
@@ -701,8 +882,9 @@ function breaksOver() {
       return b.rows.length && b.breaks.length / b.rows.length >= BREAK_MAX;
     });
   }
-  return (UP.rows.length && UP.breaks.length / UP.rows.length >= BREAK_MAX)
-    ? [{ bank: null, rows: UP.rows, breaks: UP.breaks }] : [];
+  return UP.rows.length && UP.breaks.length / UP.rows.length >= BREAK_MAX
+    ? [{ bank: null, rows: UP.rows, breaks: UP.breaks }]
+    : [];
 }
 /* ── 39차 2번 ── 잔액이 안 움직인 줄은 아예 묻지 않는다.
    부산 실파일 맨 첫 줄이 그렇다 — 통장을 만든 날(신규일 2026-03-25) 남는 줄이고,
@@ -711,14 +893,15 @@ function breaksOver() {
    묻지 않고 0원으로 두고, 확인 카드 개수에서도 뺀다 */
 function autoZeroBreaks() {
   if (!UP.breaks || !UP.breaks.length) return 0;
-  var keep = [], n = 0;
+  var keep = [],
+    n = 0;
   UP.breaks.forEach(function (b) {
     var r = b.row;
-    if (r.amount === null && (r.balance - b.prev) === 0) {
+    if (r.amount === null && r.balance - b.prev === 0) {
       r.amount = 0;
       r.residual = 0;
       r.patched = true;
-      r.stated = null;                         /* 파일에 금액이 없던 줄이다 */
+      r.stated = null; /* 파일에 금액이 없던 줄이다 */
       /* ★ 40차 3번. 안 묻는 것과 안 알리는 것은 다르다.
          손댔으면 남긴다. 「잔액으로 채워 넣은 것」과는 뜻이 달라 따로 센다.
          ★ 112차 ②. 줄에도 표시를 남긴다 — recountBreaks 와 되살린 카드가
@@ -726,7 +909,7 @@ function autoZeroBreaks() {
       r.zeroed = true;
       UP.zeroed = (UP.zeroed || 0) + 1;
       n++;
-      return;                                  /* 카드를 안 만든다 */
+      return; /* 카드를 안 만든다 */
     }
     keep.push(b);
   });
@@ -753,7 +936,11 @@ function breakKey(r) {
   return r.at.slice(0, 10) + '|' + String(r.payee || '') + '|' + (r.excelRow || 0);
 }
 function breakLoad() {
-  try { return JSON.parse(lsGet(BREAK_KEY) || '{}') || {}; } catch (e) { return {}; }
+  try {
+    return JSON.parse(lsGet(BREAK_KEY) || '{}') || {};
+  } catch (e) {
+    return {};
+  }
 }
 function breakSave(r, pick) {
   var o = breakLoad();
@@ -764,15 +951,26 @@ function showBreaks() {
   autoZeroBreaks();
   /* 전에 답하신 것은 그 답을 그대로 채워 둔다.
      목록에서 빼지는 않는다 — applyBreaks 가 이 목록을 돌며 실제로 반영한다 */
-  var 답 = breakLoad(), 되살림 = 0;
+  var 답 = breakLoad(),
+    되살림 = 0;
   (UP.breaks || []).forEach(function (b) {
     var v = 답[breakKey(b.row)];
-    if (v) { b.pick = v; 되살림++; }
+    if (v) {
+      b.pick = v;
+      되살림++;
+    }
   });
   UP.breakBack = 되살림;
   /* 다 답해 두셨으면 물을 것이 없다. 카드를 아예 안 띄운다 */
-  if (UP.breaks.length && 되살림 === UP.breaks.length) { applyBreaks(); return; }
-  if (!UP.breaks.length) { document.getElementById('upbad').innerHTML = ''; afterFiles(); return; }
+  if (UP.breaks.length && 되살림 === UP.breaks.length) {
+    applyBreaks();
+    return;
+  }
+  if (!UP.breaks.length) {
+    document.getElementById('upbad').innerHTML = '';
+    afterFiles();
+    return;
+  }
   var over = breaksOver();
   if (over.length) showBreakError(over);
   else showBreakCards();
@@ -787,25 +985,39 @@ function showBreaks() {
      무엇을 하면 되는지(기간을 한 번에 잡아 다시 내려받기)를 적는다 */
 function showBreakError(over) {
   upShow('up-pick');
-  upReadState(false);            /* ★ 119차 업로드 안내. 못 쓰는 파일이라 올리기 안내를 그대로 둔다 */
+  upReadState(false); /* ★ 119차 업로드 안내. 못 쓰는 파일이라 올리기 안내를 그대로 둔다 */
   useFail('balance');
   var host = document.getElementById('upbad');
   host.innerHTML = '';
   var box = el('div', 'upbad');
   box.appendChild(el('h4', null, '이 파일로는 계산이 맞지 않습니다'));
 
-  var list = (over && over.length) ? over : null;
+  var list = over && over.length ? over : null;
   if (list) {
     list.forEach(function (b) {
-      box.appendChild(el('div', 'errb',
-        (b.bank ? b.bank + ' ' : '') + '거래 ' + won(b.rows.length) + '건 가운데 ' +
-        won(b.breaks.length) + '건에서, 앞 줄 잔액에 이 줄 금액을 더한 값이 ' +
-        '다음 줄 잔액과 달랐습니다. 저희가 잘못 읽었을 수도 있습니다.'));
+      box.appendChild(
+        el(
+          'div',
+          'errb',
+          (b.bank ? b.bank + ' ' : '') +
+            '거래 ' +
+            won(b.rows.length) +
+            '건 가운데 ' +
+            won(b.breaks.length) +
+            '건에서, 앞 줄 잔액에 이 줄 금액을 더한 값이 ' +
+            '다음 줄 잔액과 달랐습니다. 저희가 잘못 읽었을 수도 있습니다.'
+        )
+      );
     });
   }
-  box.appendChild(el('div', 'errb',
-    '거래내역을 기간을 나눠 여러 번 내려받으셨다면, 중간이 빠졌을 수 있습니다. ' +
-    '은행 앱에서 기간을 한 번에 잡아 다시 내려받아 올려주시면 대개 맞아떨어집니다.'));
+  box.appendChild(
+    el(
+      'div',
+      'errb',
+      '거래내역을 기간을 나눠 여러 번 내려받으셨다면, 중간이 빠졌을 수 있습니다. ' +
+        '은행 앱에서 기간을 한 번에 잡아 다시 내려받아 올려주시면 대개 맞아떨어집니다.'
+    )
+  );
 
   var acts = el('div', 'upacts');
 
@@ -827,7 +1039,7 @@ function showBreakError(over) {
     PENDING.forEach(function (b, i) {
       /* startFromBanks 가 같은 이름 갈라 부르며 「신한은행 1」처럼 꼬리를 붙였다.
          목록으로 돌아갈 때는 원래 이름으로 되돌려 놓는다 — 안 그러면 꼬리가 쌓인다 */
-      b.bank = b.typed || b.found || ('계좌 ' + (i + 1));
+      b.bank = b.typed || b.found || '계좌 ' + (i + 1);
       b.idx = i;
     });
     UP = null;
@@ -875,7 +1087,9 @@ function showBreakError(over) {
     det.hidden = !det.hidden;
     more.textContent = det.hidden ? '어긋난 줄 보기 ▾' : '접기 ▴';
     if (!det.childNodes.length) {
-      UP.breaks.slice(0, 20).forEach(function (b) { det.appendChild(breakRow(b)); });
+      UP.breaks.slice(0, 20).forEach(function (b) {
+        det.appendChild(breakRow(b));
+      });
       if (UP.breaks.length > 20) {
         det.appendChild(el('div', 'errn', '외 ' + won(UP.breaks.length - 20) + '건 더 있습니다.'));
       }
@@ -884,16 +1098,23 @@ function showBreakError(over) {
   box.appendChild(more);
   box.appendChild(det);
   host.appendChild(box);
-  upFocus('upbad');              /* ★ 106차 ③ */
+  upFocus('upbad'); /* ★ 106차 ③ */
 }
 
 function breakRow(b) {
   var r = b.row;
   var d = el('div', 'upbadrow');
   d.appendChild(el('div', null, r.at + ' · ' + r.payee + ' (엑셀 ' + r.excelRow + '행)'));
-  d.appendChild(el('div', null, '앞 잔액 ' + won(b.prev) + '원 → 이 거래 후 ' + won(r.balance) + '원'));
-  d.appendChild(el('div', null, '적힌 금액 ' +
-    (r.amount === null ? '없음' : won(r.amount) + '원') + ' · ' + b.why));
+  d.appendChild(
+    el('div', null, '앞 잔액 ' + won(b.prev) + '원 → 이 거래 후 ' + won(r.balance) + '원')
+  );
+  d.appendChild(
+    el(
+      'div',
+      null,
+      '적힌 금액 ' + (r.amount === null ? '없음' : won(r.amount) + '원') + ' · ' + b.why
+    )
+  );
   return d;
 }
 
@@ -908,8 +1129,9 @@ function breakRow(b) {
    ★ 머리는 갈래와 상관없이 같다. 본문과 숫자만 갈래를 탄다.
    ★ 판단할 숫자는 문장에 안 묻는다 — .ckamt 로 따로 세운다 (108차 ③과 같은 자리) */
 function ckCardBody(card, r, 본문, 숫자들, 꼬리) {
-  card.appendChild(el('div', 'ckq',
-    (+r.at.slice(5, 7)) + '월 ' + (+r.at.slice(8, 10)) + '일 · ' + showName(r.payee)));
+  card.appendChild(
+    el('div', 'ckq', +r.at.slice(5, 7) + '월 ' + +r.at.slice(8, 10) + '일 · ' + showName(r.payee))
+  );
   card.appendChild(el('div', 'cka', 본문));
   (숫자들 || []).forEach(function (n) {
     var amt = el('div', 'ckamt');
@@ -922,7 +1144,7 @@ function ckCardBody(card, r, 본문, 숫자들, 꼬리) {
 /* 방향과 금액을 한 덩이로 — 두 카드가 같은 말로 쓴다 */
 /* ★ 112차 ②. 0원에는 방향이 없다. 「출금 0원」은 없는 말이다 */
 function 금액글(v) {
-  return (v === 0 ? '' : (v > 0 ? '입금 ' : '출금 ')) + won(Math.abs(v)) + '원';
+  return (v === 0 ? '' : v > 0 ? '입금 ' : '출금 ') + won(Math.abs(v)) + '원';
 }
 /* ★ 112차 ②㉮. 단추 이름은 「맞음」이 아니라 「반영」이다 —
    고르는 일이 무엇인지 이름에 적는다. 입금·출금 방향도 실제값으로 함께 적는다 */
@@ -955,26 +1177,38 @@ function ckBtns(card, picks, cur, onPick) {
   picks.forEach(function (p) {
     var btn = el('button', 'b' + (cur === p[0] ? ' on' : ''), p[1]);
     btn.type = 'button';
-    btn.addEventListener('click', function () { onPick(p[0]); });
+    btn.addEventListener('click', function () {
+      onPick(p[0]);
+    });
     btns.appendChild(btn);
   });
   card.appendChild(btns);
-  if (picks.some(function (p) { return p[0] === 'unknown'; })) {
+  if (
+    picks.some(function (p) {
+      return p[0] === 'unknown';
+    })
+  ) {
     card.appendChild(el('div', 'cknote', CK_빼는설명));
   }
 }
 function gapCardBody(card, r, delta) {
-  ckCardBody(card, r, '파일에 거래 금액이 없습니다.',
-    [['잔액 차이로 추정한 금액', 금액글(delta)]]);
+  ckCardBody(card, r, '파일에 거래 금액이 없습니다.', [['잔액 차이로 추정한 금액', 금액글(delta)]]);
   return delta > 0;
 }
 /* ★ 112차 ②. 어긋남 카드의 몸통. 올릴 때와 되살릴 때가 같은 말을 해야 한다 */
 function diffCardBody(card, r, stated, delta, prev) {
-  ckCardBody(card, r, '거래 금액과 잔액 변화가 일치하지 않습니다.',
-    [['거래내역에 적힌 금액', 금액글(stated)],
-     ['잔액이 움직인 금액', 금액글(delta)]],
-    prev === null ? null
-      : '계좌 잔액은 ' + won(prev) + '원에서 ' + won(r.balance) + '원으로 바뀌었습니다.');
+  ckCardBody(
+    card,
+    r,
+    '거래 금액과 잔액 변화가 일치하지 않습니다.',
+    [
+      ['거래내역에 적힌 금액', 금액글(stated)],
+      ['잔액이 움직인 금액', 금액글(delta)]
+    ],
+    prev === null
+      ? null
+      : '계좌 잔액은 ' + won(prev) + '원에서 ' + won(r.balance) + '원으로 바뀌었습니다.'
+  );
 }
 /* ── 112차 ② · 확인 카드가 만드는 네 상태 ──────────────────────────
    예전에는 「900,000원이 맞음」과 「나중에 확인」이 applyBreaks 의 같은 가지로 떨어져
@@ -999,20 +1233,26 @@ function applyPick(r, pick, delta, picked) {
      ★ 옛 저장본에는 이 칸이 없다. 그때는 residual 이 남아 있던 줄만
        amount 가 곧 파일 금액이었다 — patched 였던 줄은 알 길이 없으니 없는 것으로 둔다 */
   if (r.stated === undefined) r.stated = r.patched ? null : r.amount;
-  var st = (r.stated === null || r.stated === undefined) ? null : r.stated;
+  var st = r.stated === null || r.stated === undefined ? null : r.stated;
   if (pick === 'stated' && st !== null) {
     r.amount = st;
-    r.residual = delta - st;               /* 설명 안 되는 차액만 따로 뺀다 */
-    r.patched = false; r.byStated = true; r.unsure = false;
+    r.residual = delta - st; /* 설명 안 되는 차액만 따로 뺀다 */
+    r.patched = false;
+    r.byStated = true;
+    r.unsure = false;
   } else if (pick === 'unknown') {
     /* ★ ㉯. 거래 전체를 계산에서 뺀다. 잔액이 움직인 만큼이 통째로 차액이 된다 */
     r.amount = 0;
     r.residual = delta;
-    r.patched = false; r.byStated = false; r.unsure = true;
+    r.patched = false;
+    r.byStated = false;
+    r.unsure = true;
   } else {
-    r.amount = delta;                      /* 잔액이 움직인 금액을 반영한다 */
+    r.amount = delta; /* 잔액이 움직인 금액을 반영한다 */
     r.residual = 0;
-    r.patched = true; r.byStated = false; r.unsure = false;
+    r.patched = true;
+    r.byStated = false;
+    r.unsure = false;
   }
   r.picked = !!picked;
 }
@@ -1024,17 +1264,28 @@ function zeroRow(r) {
 }
 /* 건수는 줄에서 다시 센다. 예전처럼 ++ 로 쌓으면 다시 고르실 때 두 번 세어진다 */
 function recountBreaks() {
-  var p = 0, u = 0, s = 0, a = 0;
+  var p = 0,
+    u = 0,
+    s = 0,
+    a = 0;
   ((UP && UP.rows) || []).forEach(function (r) {
     if (zeroRow(r)) return;
     if (r.unsure) u++;
     else if (r.byStated) s++;
-    else if (r.patched) { p++; if (!r.picked) a++; }
+    else if (r.patched) {
+      p++;
+      if (!r.picked) a++;
+    }
   });
-  UP.patched = p; UP.unsure = u; UP.byStated = s; UP.autoPatched = a;
+  UP.patched = p;
+  UP.unsure = u;
+  UP.byStated = s;
+  UP.autoPatched = a;
 }
 /* 확인 카드를 거쳐 온 줄인가 — 되살린 카드에 세울 목록이다 */
-function ckRow(r) { return !zeroRow(r) && (r.patched || r.unsure || r.byStated); }
+function ckRow(r) {
+  return !zeroRow(r) && (r.patched || r.unsure || r.byStated);
+}
 /* ★ 107차 ②. 확인 카드를 거쳐 온 거래를 다시 열어 본다.
    한 번 넘어가면 「아닙니다」를 고를 길이 아예 없었다 — 결과 화면의 그 줄은 알림뿐이었다.
    ★ applyBreaks 가 끝나면 UP.breaks 는 비어 있다. 정한 금액이 잔액과 맞아
@@ -1047,30 +1298,39 @@ function showPatchedCards() {
   var list = UP.rows.filter(ckRow);
   if (!list.length) return false;
   upShow('up-pick');
-  upReadState(false);            /* ★ 119차 업로드 안내. 이 화면은 이번 수정 밖이라 예전 모양 그대로 */
+  upReadState(false); /* ★ 119차 업로드 안내. 이 화면은 이번 수정 밖이라 예전 모양 그대로 */
   var host = document.getElementById('upbad');
   host.innerHTML = '';
   var box = el('div', 'upbad');
   /* ★ 108차 ①. 「채워 넣은」은 앱이 한 일이고 「확인이 필요한」은 사장님이 할 일이다.
      제목은 사장님이 할 일로 적는다 */
   box.appendChild(el('h4', null, '금액 확인이 필요한 거래 ' + won(list.length) + '건'));
-  box.appendChild(el('div', 'errb',
-    '거래내역에서 금액이 빠졌거나 계좌 잔액과 안 맞는 거래입니다. 다시 고르실 수 있습니다.'));
+  box.appendChild(
+    el(
+      'div',
+      'errb',
+      '거래내역에서 금액이 빠졌거나 계좌 잔액과 안 맞는 거래입니다. 다시 고르실 수 있습니다.'
+    )
+  );
   list.forEach(function (r) {
     var card = el('div', 'ckcard');
     /* ★ amount + residual 은 어느 상태에서도 잔액이 움직인 금액 그대로다 */
     var delta = amtOf(r) || 0;
-    var st = (r.stated === null || r.stated === undefined) ? null : r.stated;
+    var st = r.stated === null || r.stated === undefined ? null : r.stated;
     if (st === null) gapCardBody(card, r, delta);
     else diffCardBody(card, r, st, delta, null);
-    var cur = r.unsure ? 'unknown' : (r.byStated ? 'stated' : 'gap');
-    ckBtns(card, ckPickList(st, delta), cur, function (pick) { repickRow(r, pick); });
+    var cur = r.unsure ? 'unknown' : r.byStated ? 'stated' : 'gap';
+    ckBtns(card, ckPickList(st, delta), cur, function (pick) {
+      repickRow(r, pick);
+    });
     box.appendChild(card);
   });
   var acts = el('div', 'upacts');
   var back = el('button', 'b on', '결과로 돌아가기');
   back.type = 'button';
-  back.addEventListener('click', function () { showResult(); });
+  back.addEventListener('click', function () {
+    showResult();
+  });
   acts.appendChild(back);
   box.appendChild(acts);
   host.appendChild(box);
@@ -1082,18 +1342,23 @@ function showPatchedCards() {
    ★ 답은 저장통에도 남긴다 (64차 ⑨) — 같은 파일을 다시 올려도 이 답이 따라온다 */
 function repickRow(r, pick) {
   applyPick(r, pick, amtOf(r) || 0, true);
-  try { breakSave(r, pick); } catch (e) { }
+  try {
+    breakSave(r, pick);
+  } catch (e) {}
   recountBreaks();
   UP.__due = null;
-  try { savePicks(); } catch (e) { }
+  try {
+    savePicks();
+  } catch (e) {}
   if (!showPatchedCards()) showResult();
 }
 /* ★ 109차 ②. 확인 카드가 어느 갈래인지. 카드를 그릴 때 쓰는 잣대다 */
 function breakKind(b) {
-  var r = b.row, delta = r.balance - b.prev;
-  if (r.amount === null && delta === 0) return 'first';   /* 앞 잔액이 없다 */
-  if (r.amount === null) return 'gap';                    /* 금액 칸이 비었다 */
-  return 'diff';                                          /* 금액과 잔액이 어긋난다 */
+  var r = b.row,
+    delta = r.balance - b.prev;
+  if (r.amount === null && delta === 0) return 'first'; /* 앞 잔액이 없다 */
+  if (r.amount === null) return 'gap'; /* 금액 칸이 비었다 */
+  return 'diff'; /* 금액과 잔액이 어긋난다 */
 }
 /* 몇 건 안 되면 사장님께 물어본다 — 자동으로 고치지 않는다 */
 function showBreakCards() {
@@ -1103,17 +1368,23 @@ function showBreakCards() {
      ★ 파일 개수 문제가 아니라 「검산 깨진 거래가 있을 때」다.
        부산 파일 하나만 올려도(검산 1건) 똑같이 막혔다 */
   upShow('up-pick');
-  upReadState(true);             /* ★ 119차 업로드 안내. 읽었으니 처음 올리기 안내를 접는다 */
+  upReadState(true); /* ★ 119차 업로드 안내. 읽었으니 처음 올리기 안내를 접는다 */
   /* ★ 64-9. 답도 정하신 내용이다 — 저장통에 남긴다 */
-  function 답하기(b, pick) { b.pick = pick; breakSave(b.row, pick); showBreakCards(); }
+  function 답하기(b, pick) {
+    b.pick = pick;
+    breakSave(b.row, pick);
+    showBreakCards();
+  }
   var host = document.getElementById('upbad');
   host.innerHTML = '';
   var box = el('div', 'upbad');
-  var 남은 = UP.breaks.filter(function (b) { return !b.pick; }).length;
-  box.appendChild(el('h4', null,
-    '확인이 필요한 거래가 ' + won(남은) + '건 있습니다'));
-  box.appendChild(el('div', 'errb',
-    '거래내역에서 금액이 빠졌거나 계좌 잔액과 안 맞는 거래입니다. 확인해주세요.'));
+  var 남은 = UP.breaks.filter(function (b) {
+    return !b.pick;
+  }).length;
+  box.appendChild(el('h4', null, '확인이 필요한 거래가 ' + won(남은) + '건 있습니다'));
+  box.appendChild(
+    el('div', 'errb', '거래내역에서 금액이 빠졌거나 계좌 잔액과 안 맞는 거래입니다. 확인해주세요.')
+  );
   /* ★ 107차 ③. 눌러봐야 아는 것을 미리 적는다. 늘 보인다 —
      예전에는 다 고르신 뒤(left === 0)에만 나와서, 고르는 동안에는 볼 수가 없었다.
      ★ 113차 ⓪. 여기서 「그 화면에 있는 빼는 단추 이름」을 모으던 일곱 줄은 지웠다.
@@ -1123,22 +1394,32 @@ function showBreakCards() {
        규칙이 필요 없어진 것이지 깨진 것이 아니다 */
 
   if (UP.breakBack) {
-    box.appendChild(el('div', 'errn',
-      '전에 확인해두신 ' + won(UP.breakBack) + '건은 다시 묻지 않습니다.'));
+    box.appendChild(
+      el('div', 'errn', '전에 확인해두신 ' + won(UP.breakBack) + '건은 다시 묻지 않습니다.')
+    );
   }
   UP.breaks.forEach(function (b) {
-    if (b.pick) return;                    /* ★ 64-9. 이미 답하신 건은 안 묻는다 */
-    var r = b.row, delta = r.balance - b.prev;
+    if (b.pick) return; /* ★ 64-9. 이미 답하신 건은 안 묻는다 */
+    var r = b.row,
+      delta = r.balance - b.prev;
     var card = el('div', 'ckcard');
     var picks;
 
     if (r.amount === null && delta === 0) {
       /* 첫 거래라 앞 잔액이 없다 — 금액도 방향도 알 길이 없다.
          ★ 109차 ③. 머리는 다른 카드와 같다. 판단할 숫자가 없는 갈래라 숫자 줄은 없다 */
-      ckCardBody(card, r, '거래 금액이 없고, 앞 잔액도 없어 방향을 정할 수 없습니다.', null,
-        '이 거래를 0원으로 두면 ' + won(r.balance) + '원부터 계산합니다.');
+      ckCardBody(
+        card,
+        r,
+        '거래 금액이 없고, 앞 잔액도 없어 방향을 정할 수 없습니다.',
+        null,
+        '이 거래를 0원으로 두면 ' + won(r.balance) + '원부터 계산합니다.'
+      );
       /* ★ 112차 ②㉯. 빼는 쪽 이름은 세 갈래가 다 같다 */
-      picks = [['gap', '0원으로 두고 계속'], ['unknown', CK_빼는이름]];
+      picks = [
+        ['gap', '0원으로 두고 계속'],
+        ['unknown', CK_빼는이름]
+      ];
     } else if (r.amount === null) {
       /* ① 금액 칸이 비어 있다 — 되살린 카드(showPatchedCards)와 같은 몸통을 쓴다 (108차 ⑤) */
       gapCardBody(card, r, delta);
@@ -1153,11 +1434,15 @@ function showBreakCards() {
       picks = ckPickList(r.amount, delta);
     }
 
-    ckBtns(card, picks, b.pick, function (pick) { 답하기(b, pick); });
+    ckBtns(card, picks, b.pick, function (pick) {
+      답하기(b, pick);
+    });
     box.appendChild(card);
   });
 
-  var left = UP.breaks.filter(function (b) { return !b.pick; }).length;
+  var left = UP.breaks.filter(function (b) {
+    return !b.pick;
+  }).length;
   /* ★ 119차 업로드 안내. 진행 단추 둘과 임시 반영 안내를 한 묶음으로 화면 아래에 붙여 둔다.
      카드가 둘만 돼도 폰(390)에서 단추가 화면 밖으로 내려가 찾기 어려웠다.
      단추·문구·동작은 그대로다. 자리만 따라 내려온다 */
@@ -1175,7 +1460,12 @@ function showBreakCards() {
        ★ 112차 ②㉲. 이것은 「사용자 확인 완료」가 아니다 — b.auto 로 표시해 둔다.
          applyPick 이 picked=false 로 적고, 저장통(breakSave)에도 안 남긴다.
          한 번 답한 것으로 남으면 다음에 올릴 때 여쭙지도 않게 된다 */
-    UP.breaks.forEach(function (b) { if (!b.pick) { b.pick = 'gap'; b.auto = true; } });
+    UP.breaks.forEach(function (b) {
+      if (!b.pick) {
+        b.pick = 'gap';
+        b.auto = true;
+      }
+    });
     applyBreaks();
   });
   acts.appendChild(later);
@@ -1198,10 +1488,14 @@ function showBreakCards() {
        ★ 위의 두 줄은 뜻이 다른 말이라 그대로 둔다 —
          하나는 「몇 건 남았나」, 하나는 「안 고르면 어떻게 되나」다 */
   if (left > 0) {
-    진행.appendChild(el('div', 'errn',
-      '확인할 거래가 ' + won(left) + '건 남았습니다. 나중에 다시 확인할 수 있습니다.'));
-    진행.appendChild(el('div', 'errn',
-      '선택하지 않은 거래는 추정 금액으로 임시 반영됩니다.'));
+    진행.appendChild(
+      el(
+        'div',
+        'errn',
+        '확인할 거래가 ' + won(left) + '건 남았습니다. 나중에 다시 확인할 수 있습니다.'
+      )
+    );
+    진행.appendChild(el('div', 'errn', '선택하지 않은 거래는 추정 금액으로 임시 반영됩니다.'));
   }
   host.appendChild(box);
   /* ★ 106차 ③. 38차 ⑧이 화면은 바꿔놨지만, 카드는 은행 안내 아래에 그려졌다.
@@ -1211,12 +1505,13 @@ function showBreakCards() {
 }
 
 function applyBreaks() {
-  ADD_FROM_READ = false;         /* ★ 119차 업로드 안내. 카드 단계를 떠난다 */
+  ADD_FROM_READ = false; /* ★ 119차 업로드 안내. 카드 단계를 떠난다 */
   /* ★ 112차 ②. 고른 것마다 상태가 다르다. 셈은 applyPick 한 군데에 있다 —
      예전에는 여기서 'stated' 와 'unknown' 이 같은 가지로 떨어져 결과가 똑같았다.
      ★ 건수는 ++ 로 쌓지 않고 나중에 recountBreaks 가 줄에서 다시 센다 (완료 기준 10) */
   UP.breaks.forEach(function (b) {
-    var r = b.row, delta = r.balance - b.prev;
+    var r = b.row,
+      delta = r.balance - b.prev;
     applyPick(r, b.pick, delta, !b.auto);
   });
   /* ★ 39차 1번. 계좌별로 따로 검산하고 다시 합친다.
@@ -1226,29 +1521,48 @@ function applyBreaks() {
      계좌를 둘 올리고 확인 카드가 한 건이라도 뜨면 무슨 버튼을 눌러도 막혔다.
      startFromBanks 에 이미 적혀 있던 규칙을 여기만 안 지키고 있었다 */
   if (UP.banks && UP.banks.length) {
-    var rows2 = [], allB = [], op = 0, cl = 0;
+    var rows2 = [],
+      allB = [],
+      op = 0,
+      cl = 0;
     UP.banks.forEach(function (bk) {
       var r2 = orderAndVerify(bk.rows);
-      bk.rows = r2.rows; bk.opening = r2.opening; bk.closing = r2.closing;
+      bk.rows = r2.rows;
+      bk.opening = r2.opening;
+      bk.closing = r2.closing;
       bk.breaks = r2.breaks;
-      op += r2.opening; cl += r2.closing;
-      r2.breaks.forEach(function (x) { x.bank = bk.bank; allB.push(x); });
-      r2.rows.forEach(function (r) { r.acc = bk.idx; rows2.push(r); });
+      op += r2.opening;
+      cl += r2.closing;
+      r2.breaks.forEach(function (x) {
+        x.bank = bk.bank;
+        allB.push(x);
+      });
+      r2.rows.forEach(function (r) {
+        r.acc = bk.idx;
+        rows2.push(r);
+      });
     });
     rows2.sort(function (a, b) {
       if (a.at !== b.at) return a.at < b.at ? -1 : 1;
       return a.acc - b.acc;
     });
-    UP.rows = rows2; UP.opening = op; UP.closing = cl; UP.breaks = allB;
+    UP.rows = rows2;
+    UP.opening = op;
+    UP.closing = cl;
+    UP.breaks = allB;
   } else {
     var res = orderAndVerify(UP.rows);
-    UP.rows = res.rows; UP.opening = res.opening; UP.closing = res.closing;
+    UP.rows = res.rows;
+    UP.opening = res.opening;
+    UP.closing = res.closing;
     UP.breaks = res.breaks;
   }
   /* ★ 112차 ②. 건수는 다시 세운 줄에서 다시 센다 — 몇 번을 고쳐 고르셔도 겹쳐 쌓이지 않는다 */
   recountBreaks();
-  if (UP.breaks.length) { showBreaks(); return; }   /* 그래도 안 맞으면 다시 멈춘다 */
+  if (UP.breaks.length) {
+    showBreaks();
+    return;
+  } /* 그래도 안 맞으면 다시 멈춘다 */
   document.getElementById('upbad').innerHTML = '';
   afterFiles();
 }
-

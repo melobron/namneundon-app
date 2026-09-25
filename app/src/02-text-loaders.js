@@ -1,32 +1,34 @@
 /* ══ 금액 데이터 끝 ══ */
 
 /* 마이너스는 하이픈이 아니라 빼기 기호로 — 화면 어디서나 같게 보이게 */
-function won(n) { return n.toLocaleString('ko-KR').replace('-', '−'); }
+function won(n) {
+  return n.toLocaleString('ko-KR').replace('-', '−');
+}
 
 /* 조사: 받침 없거나 'ㄹ'이면 "로", 아니면 "으로" (공과금으로 / 인건비로) */
 function ro(word) {
   var c = word.charCodeAt(word.length - 1);
-  if (c < 0xAC00 || c > 0xD7A3) return '로';
-  var jong = (c - 0xAC00) % 28;
-  return (jong === 0 || jong === 8) ? '로' : '으로';
+  if (c < 0xac00 || c > 0xd7a3) return '로';
+  var jong = (c - 0xac00) % 28;
+  return jong === 0 || jong === 8 ? '로' : '으로';
 }
 /* 받침이 있으면 '이', 없으면 '가' */
 function ga(word) {
   var c = word.charCodeAt(word.length - 1);
-  if (c < 0xAC00 || c > 0xD7A3) return '가';
-  return ((c - 0xAC00) % 28) === 0 ? '가' : '이';
+  if (c < 0xac00 || c > 0xd7a3) return '가';
+  return (c - 0xac00) % 28 === 0 ? '가' : '이';
 }
 /* 받침이 있으면 '은', 없으면 '는' */
 function neun(word) {
   var c = word.charCodeAt(word.length - 1);
-  if (c < 0xAC00 || c > 0xD7A3) return '는';
-  return ((c - 0xAC00) % 28) === 0 ? '는' : '은';
+  if (c < 0xac00 || c > 0xd7a3) return '는';
+  return (c - 0xac00) % 28 === 0 ? '는' : '은';
 }
 /* 받침이 있으면 '을', 없으면 '를' */
 function eul(word) {
   var c = word.charCodeAt(word.length - 1);
-  if (c < 0xAC00 || c > 0xD7A3) return '를';
-  return ((c - 0xAC00) % 28) === 0 ? '를' : '을';
+  if (c < 0xac00 || c > 0xd7a3) return '를';
+  return (c - 0xac00) % 28 === 0 ? '를' : '을';
 }
 
 /* ═══════════ 엑셀 업로드 ═══════════
@@ -48,7 +50,9 @@ function loadSheetJS() {
     var s = document.createElement('script');
     s.src = SHEETJS_SRC;
     s.onload = res;
-    s.onerror = function () { rej(new Error('엑셀 읽기 라이브러리를 불러오지 못했습니다')); };
+    s.onerror = function () {
+      rej(new Error('엑셀 읽기 라이브러리를 불러오지 못했습니다'));
+    };
     document.head.appendChild(s);
   });
   return sheetjsLoading;
@@ -67,18 +71,25 @@ function pdfWorkerPath() {
   try {
     if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions)
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-  } catch (e) { }
+  } catch (e) {}
 }
 function loadPdfJS() {
-  if (window.pdfjsLib) { pdfWorkerPath(); return Promise.resolve(); }
+  if (window.pdfjsLib) {
+    pdfWorkerPath();
+    return Promise.resolve();
+  }
   if (pdfjsLoading) return pdfjsLoading;
   pdfjsLoading = new Promise(function (res, rej) {
     var s = document.createElement('script');
     s.src = PDFJS_SRC;
-    s.onload = function () { pdfWorkerPath(); res(); };
-    s.onerror = function () { rej(new Error('PDF 읽기 도구를 불러오지 못했습니다')); };
+    s.onload = function () {
+      pdfWorkerPath();
+      res();
+    };
+    s.onerror = function () {
+      rej(new Error('PDF 읽기 도구를 불러오지 못했습니다'));
+    };
     document.head.appendChild(s);
   });
   return pdfjsLoading;
 }
-

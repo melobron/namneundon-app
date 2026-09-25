@@ -2,49 +2,130 @@
 /* nz()가 공백·괄호를 지우고 소문자로 만들어주니 「거래후 잔액」과 「거래후잔액」은
    같은 것으로 잡힌다. 여기 적는 건 표기 자체가 다른 것들이다 */
 var COLSPEC = {
-  at:      ['거래일시', '거래일자', '거래일', '거래날짜', '일자', '거래시간',
-            '날짜', '일시', '거래년월일', '처리일시', '처리일자',
-            '승인일시', '승인일자', '이체일시', '입출금일시',
-            '거래일자시간', '거래일시(원장)'],
-  memo:    ['적요', '내용', '기재내용', '거래내용', '거래기록사항', '통장기재내용', '비고',
-            '적요내용', '메모', '거래메모'],
-  payee:   ['의뢰인/수취인', '의뢰인', '수취인', '보내는분', '받는분', '상대방',
-            '입금자명', '받는사람', '보낸사람', '거래상대',
-            /* ★ 54차 ①. 기업은행은 「상대계좌예금주명」으로 준다 —
+  at: [
+    '거래일시',
+    '거래일자',
+    '거래일',
+    '거래날짜',
+    '일자',
+    '거래시간',
+    '날짜',
+    '일시',
+    '거래년월일',
+    '처리일시',
+    '처리일자',
+    '승인일시',
+    '승인일자',
+    '이체일시',
+    '입출금일시',
+    '거래일자시간',
+    '거래일시(원장)'
+  ],
+  memo: [
+    '적요',
+    '내용',
+    '기재내용',
+    '거래내용',
+    '거래기록사항',
+    '통장기재내용',
+    '비고',
+    '적요내용',
+    '메모',
+    '거래메모'
+  ],
+  payee: [
+    '의뢰인/수취인',
+    '의뢰인',
+    '수취인',
+    '보내는분',
+    '받는분',
+    '상대방',
+    '입금자명',
+    '받는사람',
+    '보낸사람',
+    '거래상대',
+    /* ★ 54차 ①. 기업은행은 「상대계좌예금주명」으로 준다 —
                「상대계좌예금주」와도 「예금주명」과도 정확히 안 맞아
                이름으로 못 찾고 pickPayeeCol 로 빠졌고, 거기서 값 종류가 제일 많은
                「거래내용」(송금 메모)이 뽑혔다. 「순정이정」·「순동정정」이 거래처가 되면
                같은 곳이 매달 다른 이름으로 와서 자동분류가 영영 안 된다.
                ★ 이 열이 빈 줄에서는 지금처럼 「거래내용」으로 내려간다 —
                  payee → memo → note 사다리가 이미 그 일을 한다 */
-            '거래상대방', '상대계좌예금주', '상대계좌예금주명', '예금주명', '상대방명',
-            /* ★ 79차. 경남은행 HTML에서는 거래처명이 「거래내역」 열에 들어 있다. */
-            '거래내역',
-            '의뢰인(수취인)', '받는분/보내는분',
-            /* ★ 92차 ④. 국민 PDF 가 「보낸분/받는분」으로 준다.
+    '거래상대방',
+    '상대계좌예금주',
+    '상대계좌예금주명',
+    '예금주명',
+    '상대방명',
+    /* ★ 79차. 경남은행 HTML에서는 거래처명이 「거래내역」 열에 들어 있다. */
+    '거래내역',
+    '의뢰인(수취인)',
+    '받는분/보내는분',
+    /* ★ 92차 ④. 국민 PDF 가 「보낸분/받는분」으로 준다.
                엑셀에서는 65차의 채움율(nameColByFill)이 이 열을 겨우 찾아냈다 —
                이름으로 알려주는 열을 이름으로 못 찾고 있었던 것이다.
                PDF 는 칸이 좌표로 갈리는 자리라 이름으로 못 박아두는 편이 안전하다 */
-            '보낸분/받는분', '보낸분', '상대'],
-  inAmt:   ['입금', '입금액', '입금액(원)', '맡기신금액', '입금금액', '입금(원)', '받은금액',
-            '입금금액(원)', '받으신금액', '입금액(₩)', '입금(₩)', '맡기신금액(원)'],
-  outAmt:  ['출금', '출금액', '출금액(원)', '찾으신금액', '출금금액', '출금(원)', '보낸금액',
-            '출금금액(원)', '보내신금액', '지급', '지급액', '지급금액', '출금액(₩)', '찾으신금액(원)'],
+    '보낸분/받는분',
+    '보낸분',
+    '상대'
+  ],
+  inAmt: [
+    '입금',
+    '입금액',
+    '입금액(원)',
+    '맡기신금액',
+    '입금금액',
+    '입금(원)',
+    '받은금액',
+    '입금금액(원)',
+    '받으신금액',
+    '입금액(₩)',
+    '입금(₩)',
+    '맡기신금액(원)'
+  ],
+  outAmt: [
+    '출금',
+    '출금액',
+    '출금액(원)',
+    '찾으신금액',
+    '출금금액',
+    '출금(원)',
+    '보낸금액',
+    '출금금액(원)',
+    '보내신금액',
+    '지급',
+    '지급액',
+    '지급금액',
+    '출금액(₩)',
+    '찾으신금액(원)'
+  ],
   balance: ['거래후잔액', '잔액', '잔액(원)', '거래후 잔액', '남은잔액', '잔액원'],
-  note:    ['출금계좌메모', '메모', '메모내용'],
+  note: ['출금계좌메모', '메모', '메모내용'],
   /* 카카오·토스처럼 한 열에 부호로 들어오는 형식 */
-  amount:  ['거래금액', '금액', '거래액', '출금/입금', '입출금액',
-            '거래금액(원)', '금액(원)', '입출금', '입출금액(원)'],
-  kind:    ['거래구분', '구분', '거래종류', '유형'],
+  amount: [
+    '거래금액',
+    '금액',
+    '거래액',
+    '출금/입금',
+    '입출금액',
+    '거래금액(원)',
+    '금액(원)',
+    '입출금',
+    '입출금액(원)'
+  ],
+  kind: ['거래구분', '구분', '거래종류', '유형'],
   /* 날짜와 시각이 두 칸으로 나뉜 은행이 있다 (신한·부산).
      at 목록에도 「거래시간」이 있지만 그건 한 칸에 다 든 은행용이라,
      같은 열이 둘 다로 잡히면 덮어쓰지 않는다 */
-  time:    ['거래시간', '시간', '거래시각', '시각', '처리시간', '거래시분초']
+  time: ['거래시간', '시간', '거래시각', '시각', '처리시간', '거래시분초']
 };
 /* 「(₩)」과 「(원)」이 서로 다르게 걸리면 안 된다.
    ★ 「원」 자체는 안 지운다 — 「원장」「원화」 같은 말이 통째로 뜻이 바뀐다.
    「(원)」은 괄호가 지워져 「잔액원」이 되고 그 꼴이 목록에 있어서 이미 걸린다 */
-function nz(s) { return String(s == null ? '' : s).replace(/[\s()（）₩¥]/g, '').toLowerCase(); }
+function nz(s) {
+  return String(s == null ? '' : s)
+    .replace(/[\s()（）₩¥]/g, '')
+    .toLowerCase();
+}
 /* ── 50차 ① · 괄호 안에 다른 말이 붙은 열 이름 ────────────────────
    우리은행은 「찾으신금액(출금)」·「맡기신금액(입금)」으로 준다.
    nz() 는 괄호 기호만 지우고 안의 글자는 남겨서 「찾으신금액출금」이 되고,
@@ -56,7 +137,7 @@ function nz(s) { return String(s == null ? '' : s).replace(/[\s()（）₩¥]/g,
      「출금가능잔액」이 출금액으로 잡힌다 (15차에 겪은 일) */
 function nzOuter(s) {
   var t = String(s == null ? '' : s);
-  t = t.replace(/[(（][^)）]*[)）]/g, '');   /* 괄호를 안째로 뗀다 */
+  t = t.replace(/[(（][^)）]*[)）]/g, ''); /* 괄호를 안째로 뗀다 */
   return nz(t);
 }
 
@@ -64,7 +145,8 @@ function nzOuter(s) {
    「일련번호」가 이름으로 걸려도 값이 날짜가 아니라 떨어진다.
    15차에서 가짜 「출금가능잔액」이 검산으로 떨어진 것과 같은 방식이다 */
 function colLooks(grid, h, c, kind) {
-  var seen = 0, ok = 0;
+  var seen = 0,
+    ok = 0;
   for (var r = h + 1; r < grid.length && seen < 20; r++) {
     var v = (grid[r] || [])[c];
     if (v === '' || v == null) continue;
@@ -87,7 +169,7 @@ function colLooks(grid, h, c, kind) {
       }
     } else if (toNum(v) !== null) ok++;
   }
-  return seen > 0 && ok * 2 >= seen;      /* 절반 이상 */
+  return seen > 0 && ok * 2 >= seen; /* 절반 이상 */
 }
 
 /* 이름은 넓게, 판정은 값으로. 「일련번호」는 여기 안 걸린다 */
@@ -100,7 +182,8 @@ var DATE_WIDE = /(일시|일자|날짜|년월일)$|^거래일$/;
 function headerLooksReal(row) {
   var atW = COLSPEC.at.map(nz);
   var amtW = COLSPEC.inAmt.concat(COLSPEC.outAmt, COLSPEC.amount).map(nz);
-  var 날짜 = false, 금액 = false;
+  var 날짜 = false,
+    금액 = false;
   for (var c = 0; c < row.length; c++) {
     var v = nz(row[c]);
     if (!v) continue;
@@ -151,7 +234,7 @@ function mapColumns(grid, h) {
     /* 1단계 — 지금까지 그대로. 걸리면 그대로 쓴다 */
     for (var c = 0; c < header.length; c++) {
       if (want.indexOf(nz(header[c])) === -1) continue;
-      if (CHECK[key] && !colLooks(grid, h, c, CHECK[key])) continue;   /* 값이 아니면 다음 후보 */
+      if (CHECK[key] && !colLooks(grid, h, c, CHECK[key])) continue; /* 값이 아니면 다음 후보 */
       map[key] = c;
       return;
     }
@@ -159,7 +242,7 @@ function mapColumns(grid, h) {
     for (var c3 = 0; c3 < header.length; c3++) {
       var raw = header[c3];
       var 안쪽 = nzOuter(raw);
-      if (!안쪽 || 안쪽 === nz(raw)) continue;      /* 괄호가 없던 열은 볼 것도 없다 */
+      if (!안쪽 || 안쪽 === nz(raw)) continue; /* 괄호가 없던 열은 볼 것도 없다 */
       if (want.indexOf(안쪽) === -1) continue;
       if (CHECK[key] && !colLooks(grid, h, c3, CHECK[key])) continue;
       map[key] = c3;
@@ -169,13 +252,19 @@ function mapColumns(grid, h) {
   /* 이름이 하나도 안 맞았을 때만, 값이 날짜인 열을 날짜로 쓴다 */
   if (map.at == null) {
     for (var c2 = 0; c2 < header.length; c2++) {
-      if (DATE_WIDE.test(nz(header[c2])) && colLooks(grid, h, c2, 'date')) { map.at = c2; break; }
+      if (DATE_WIDE.test(nz(header[c2])) && colLooks(grid, h, c2, 'date')) {
+        map.at = c2;
+        break;
+      }
     }
   }
   /* ★ 거래처 열을 이름으로 찾았으면 여기는 아예 안 탄다 — 하나·국민은 그대로다 */
   if (map.payee == null) {
     var pk = pickPayeeCol(grid, h, map);
-    if (pk) { map.payee = pk.col; map.payeePick = pk; }
+    if (pk) {
+      map.payee = pk.col;
+      map.payeePick = pk;
+    }
   }
   /* ★ 65차 ①. 거래처 열을 못 잡았거나 적요 계열로 내려앉았으면
      채움율로 진짜 이름 열을 찾아본다.
@@ -201,11 +290,13 @@ function mapColumns(grid, h) {
    이름 순서로 고르면 685건짜리 거래처가 하나 생긴다.
    그래서 목록을 늘리지 않고, 후보 열에 실제로 든 값이 몇 가지인지를 세서 고른다.
    15차에서 잔액 열을 검산으로 고른 것과 같은 방식이다 — 목록은 또 샌다 */
-var PAYEE_MIN_RATIO = 0.01;   /* 줄 수의 1%도 안 되면 거래처가 아니라 거래 방법이다 */
+var PAYEE_MIN_RATIO = 0.01; /* 줄 수의 1%도 안 되면 거래처가 아니라 거래 방법이다 */
 function pickPayeeCol(grid, h, map) {
   var header = grid[h] || [];
   var want = COLSPEC.memo.concat(COLSPEC.note).map(nz);
-  var lines = 0, r, row;
+  var lines = 0,
+    r,
+    row;
   for (r = h + 1; r < grid.length; r++) {
     row = grid[r] || [];
     if (map.at != null) {
@@ -216,12 +307,16 @@ function pickPayeeCol(grid, h, map) {
   var best = null;
   for (var c = 0; c < header.length; c++) {
     if (want.indexOf(nz(header[c])) === -1) continue;
-    var seen = {}, n = 0;
+    var seen = {},
+      n = 0;
     for (r = h + 1; r < grid.length; r++) {
       var v = (grid[r] || [])[c];
       v = String(v == null ? '' : v).trim();
-      if (v === '') continue;                       /* 빈 값은 세지 않는다 */
-      if (!seen['#' + v]) { seen['#' + v] = 1; n++; }
+      if (v === '') continue; /* 빈 값은 세지 않는다 */
+      if (!seen['#' + v]) {
+        seen['#' + v] = 1;
+        n++;
+      }
     }
     if (n < lines * PAYEE_MIN_RATIO) continue;
     /* 같은 개수면 왼쪽 열이 남는다 — 부등호를 > 로 둔다 */
@@ -248,9 +343,9 @@ function pickPayeeCol(grid, h, map) {
    ★ 은행이 열 이름으로 「여기가 거래처다」라고 알려준 파일은 안 건드린다 —
      하나은행이 그렇다. 적요 계열로 내려앉았을 때(pickPayeeCol)만 다시 본다.
      그래서 하나·신한·부산은 한 글자도 안 바뀐다 (지문으로 확인). */
-var NAME_FILL_MIN = 0.8;      /* 이름 열은 거의 다 차 있다 */
-var NAME_MIN_LINES = 20;      /* 줄이 너무 적으면 채움율이 뜻이 없다 */
-var NAME_UNIQ_MAX = 0.95;   /* 줄마다 다 다르면 일련번호다 */
+var NAME_FILL_MIN = 0.8; /* 이름 열은 거의 다 차 있다 */
+var NAME_MIN_LINES = 20; /* 줄이 너무 적으면 채움율이 뜻이 없다 */
+var NAME_UNIQ_MAX = 0.95; /* 줄마다 다 다르면 일련번호다 */
 function nameColByFill(grid, h, map, curCol) {
   var header = grid[h] || [];
   /* 이미 다른 자리로 쓰기로 한 열은 후보가 아니다.
@@ -260,9 +355,19 @@ function nameColByFill(grid, h, map, curCol) {
     if (typeof map[k] === 'number') used[map[k]] = 1;
   });
   var amtKeys = ['inAmt', 'outAmt', 'amount'];
-  var wide = header.length, c, r, row, v;
-  var fill = [], cnt = [], seen = [];
-  for (c = 0; c < wide; c++) { fill.push(0); cnt.push(0); seen.push({}); }
+  var wide = header.length,
+    c,
+    r,
+    row,
+    v;
+  var fill = [],
+    cnt = [],
+    seen = [];
+  for (c = 0; c < wide; c++) {
+    fill.push(0);
+    cnt.push(0);
+    seen.push({});
+  }
   /* 금액이 있는 줄만 센다 — 맨 아래 합계 줄·빈 줄이 채움율을 흐린다 */
   var lines = 0;
   for (r = h + 1; r < grid.length; r++) {
@@ -278,11 +383,14 @@ function nameColByFill(grid, h, map, curCol) {
       v = String(row[c] == null ? '' : row[c]).trim();
       if (v === '') continue;
       fill[c]++;
-      if (!seen[c]['#' + v]) { seen[c]['#' + v] = 1; cnt[c]++; }
+      if (!seen[c]['#' + v]) {
+        seen[c]['#' + v] = 1;
+        cnt[c]++;
+      }
     }
   }
   if (lines < NAME_MIN_LINES) return null;
-  var curN = (curCol != null && cnt[curCol] != null) ? cnt[curCol] : 0;
+  var curN = curCol != null && cnt[curCol] != null ? cnt[curCol] : 0;
   var best = null;
   for (c = 0; c < wide; c++) {
     if (used[c]) continue;
@@ -299,8 +407,7 @@ function nameColByFill(grid, h, map, curCol) {
     if (cnt[c] <= curN) continue;
     /* 같은 가짓수면 왼쪽 열이 남는다 — 부등호를 > 로 둔다 */
     if (!best || cnt[c] > best.n) {
-      best = { col: c, n: cnt[c], fill: fill[c], lines: lines,
-               name: String(header[c]).trim() };
+      best = { col: c, n: cnt[c], fill: fill[c], lines: lines, name: String(header[c]).trim() };
     }
   }
   return best;
@@ -309,7 +416,9 @@ function nameColByFill(grid, h, map, curCol) {
 /* 시각이 따로 오는 은행을 위해. 「05:48:54」·「054854」·54854·0.2422·Date 를 다 받는다 */
 function toClock(v) {
   if (v == null || v === '') return '';
-  var p = function (n) { return (n < 10 ? '0' : '') + n; };
+  var p = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
   var fmt = function (sec) {
     if (!isFinite(sec)) return '';
     sec = Math.round(sec);
@@ -318,7 +427,7 @@ function toClock(v) {
   };
   if (v instanceof Date) return p(v.getHours()) + ':' + p(v.getMinutes()) + ':' + p(v.getSeconds());
   if (typeof v === 'number') {
-    if (v > 0 && v < 1) return fmt(v * 86400);        /* 엑셀은 하루의 몇 분의 몇으로 담는다 */
+    if (v > 0 && v < 1) return fmt(v * 86400); /* 엑셀은 하루의 몇 분의 몇으로 담는다 */
     var i = Math.round(v);
     if (i < 0 || i > 235959) return '';
     return fmt(Math.floor(i / 10000) * 3600 + (Math.floor(i / 100) % 100) * 60 + (i % 100));
@@ -327,7 +436,9 @@ function toClock(v) {
   var m = t.match(/^(\d{1,2})\s*[:시]\s*(\d{1,2})(?:\s*[:분]\s*(\d{1,2}))?/);
   if (!m) m = t.match(/^(\d{2})(\d{2})(\d{2})$/);
   if (!m) return '';
-  var hh = +m[1], mi = +m[2], ss = +(m[3] || 0);
+  var hh = +m[1],
+    mi = +m[2],
+    ss = +(m[3] || 0);
   if (hh > 23 || mi > 59 || ss > 59) return '';
   return p(hh) + ':' + p(mi) + ':' + p(ss);
 }
@@ -335,16 +446,32 @@ function toClock(v) {
 function toStamp(v) {
   if (v == null || v === '') return '';
   if (v instanceof Date) {
-    var p = function (n) { return (n < 10 ? '0' : '') + n; };
-    return v.getFullYear() + '-' + p(v.getMonth() + 1) + '-' + p(v.getDate()) + ' ' +
-           p(v.getHours()) + ':' + p(v.getMinutes()) + ':' + p(v.getSeconds());
+    var p = function (n) {
+      return (n < 10 ? '0' : '') + n;
+    };
+    return (
+      v.getFullYear() +
+      '-' +
+      p(v.getMonth() + 1) +
+      '-' +
+      p(v.getDate()) +
+      ' ' +
+      p(v.getHours()) +
+      ':' +
+      p(v.getMinutes()) +
+      ':' +
+      p(v.getSeconds())
+    );
   }
   if (typeof v === 'number') {
     var ms = Math.round((v - 25569) * 86400 * 1000);
     var d = new Date(ms);
     return toStamp(new Date(d.getTime() + d.getTimezoneOffset() * 60000));
   }
-  return String(v).trim().replace(/\./g, '-').replace(/-(\d)(?!\d)/g, '-0$1');
+  return String(v)
+    .trim()
+    .replace(/\./g, '-')
+    .replace(/-(\d)(?!\d)/g, '-0$1');
 }
 function toNum(v) {
   if (v == null || v === '') return null;
@@ -355,7 +482,7 @@ function toNum(v) {
   return isFinite(n) ? Math.round(n) : null;
 }
 
-var IN_WORDS  = ['입금', '이체입금', '입금이체', '받음', '수입'];
+var IN_WORDS = ['입금', '이체입금', '입금이체', '받음', '수입'];
 /* 「이체」「지급」「결제」는 방향을 말해주지 않는다 —
    카드사가 보내주는 정산 입금도 「지급」「결제」로 찍힌다 */
 var OUT_WORDS = ['출금', '이체출금', '출금이체', '송금', '보냄', '지출'];
@@ -381,10 +508,10 @@ function resolveSigns(rows) {
     if (r.amount === null && r.mag != null) {
       if (prev !== null) {
         var d = r.balance - prev;
-        if (Math.abs(d) === r.mag) r.amount = d;      /* 잔액이 말한 대로 */
+        if (Math.abs(d) === r.mag) r.amount = d; /* 잔액이 말한 대로 */
         /* 잔액과 안 맞으면 거래구분이 뭐라 하든 확인 카드로 보낸다 */
       } else if (r.kindDir) {
-        r.amount = r.kindDir * r.mag;                 /* 앞 잔액이 없을 때만 */
+        r.amount = r.kindDir * r.mag; /* 앞 잔액이 없을 때만 */
       }
     }
     prev = r.balance;
@@ -393,18 +520,28 @@ function resolveSigns(rows) {
 
 /* 헤더 후보 — 못 읽는 파일일 때 사장님께 보여줄 열 이름 */
 function headerNames(grid, h) {
-  var row = (h >= 0 ? grid[h] : null);
+  var row = h >= 0 ? grid[h] : null;
   if (!row) {
     for (var r = 0; r < Math.min(grid.length, 30); r++) {
       var g = grid[r] || [];
-      var filled = g.filter(function (v) { return String(v).trim() !== ''; });
-      if (filled.length >= 3) { row = g; break; }
+      var filled = g.filter(function (v) {
+        return String(v).trim() !== '';
+      });
+      if (filled.length >= 3) {
+        row = g;
+        break;
+      }
     }
   }
   if (!row) return [];
-  return row.map(function (v) { return String(v).trim(); })
-            .filter(function (v) { return v !== ''; })
-            .slice(0, 12);
+  return row
+    .map(function (v) {
+      return String(v).trim();
+    })
+    .filter(function (v) {
+      return v !== '';
+    })
+    .slice(0, 12);
 }
 
 /* 잔액 열은 은행마다 이름이 다르다. 목록을 늘리는 방식은 계속 샌다 —
@@ -422,7 +559,7 @@ function balanceCandidates(header) {
 
 /* 잔액 열 하나를 정해두고 그 시트를 읽는다 */
 function buildRows(grid, h, map, balCol) {
-  var split = (map.inAmt != null || map.outAmt != null);
+  var split = map.inAmt != null || map.outAmt != null;
   /* 이 파일이 부호를 쓰는지 먼저 본다.
      한 건이라도 음수가 있으면 양수는 곧 입금이다 — 거래구분을 볼 필요가 없다 */
   var signed = false;
@@ -432,7 +569,8 @@ function buildRows(grid, h, map, balCol) {
       if (toNum(sv) < 0 || /^\s*[-−]/.test(String(sv))) signed = true;
     }
   }
-  var rows = [], needSign = false;
+  var rows = [],
+    needSign = false;
   /* ★ 113차 ②마. 「파싱 누락」을 앱이 스스로 센다.
      ★ 날짜가 없는 줄은 누락이 아니다 — 머리말·안내문·맨 아래 합계 행이 그렇다.
        날짜는 읽혔는데 잔액을 못 읽어 못 세운 줄만 센다. 그게 진짜 흘린 거래다 */
@@ -443,14 +581,22 @@ function buildRows(grid, h, map, balCol) {
     /* 날짜가 없는 줄은 여기서 빠진다 — 맨 아래 합계 행이 그렇다 */
     if (!/^\d{4}-\d{2}-\d{2}/.test(at)) continue;
     /* 시각이 따로 온 은행이면 붙인다. 안 붙이면 같은 날 거래 순서가 뒤섞인다 */
-    if (map.time != null && map.time !== map.at &&
-        (at.length <= 10 || at.slice(11, 19) === '00:00:00')) {
+    if (
+      map.time != null &&
+      map.time !== map.at &&
+      (at.length <= 10 || at.slice(11, 19) === '00:00:00')
+    ) {
       var ck = toClock(row[map.time]);
       if (ck) at = at.slice(0, 10) + ' ' + ck;
     }
     var bal = toNum(row[balCol]);
-    if (bal === null) { 버린++; continue; }     /* ★ 113차 ②마 */
-    var amt = null, mag = null, kd = 0;
+    if (bal === null) {
+      버린++;
+      continue;
+    } /* ★ 113차 ②마 */
+    var amt = null,
+      mag = null,
+      kd = 0;
     if (split) {
       var inA = map.inAmt != null ? toNum(row[map.inAmt]) : null;
       var outA = map.outAmt != null ? toNum(row[map.outAmt]) : null;
@@ -460,14 +606,14 @@ function buildRows(grid, h, map, balCol) {
          그대로 뒤집으면 부호가 두 번 뒤집혀 출금이 입금이 된다 —
          실측 128건에서 43건이 그랬다.
          그래서 크기만 취하고 방향은 칸으로만 정한다 */
-      amt = inA ? Math.abs(inA) : (outA ? -Math.abs(outA) : null);
+      amt = inA ? Math.abs(inA) : outA ? -Math.abs(outA) : null;
     } else {
       /* 한 열에 부호로 들어오는 형식 */
       var v = toNum(row[map.amount]);
       if (v !== null && v !== 0) {
         var raw = String(row[map.amount]);
         if (v < 0 || /^\s*[-−]/.test(raw)) amt = -Math.abs(v);
-        else if (signed) amt = Math.abs(v);      /* 부호를 쓰는 파일이면 양수는 입금 */
+        else if (signed) amt = Math.abs(v); /* 부호를 쓰는 파일이면 양수는 입금 */
         else {
           /* 방향은 잔액으로 먼저 본다 (resolveSigns).
              거래구분은 앞 잔액이 없을 때만 쓰는 예비 근거다 */
@@ -477,32 +623,46 @@ function buildRows(grid, h, map, balCol) {
         }
       }
     }
-    var payee = String(row[map.payee] != null ? row[map.payee] : '').trim() ||
-                String(row[map.memo] != null ? row[map.memo] : '').trim() ||
-                String(row[map.note] != null ? row[map.note] : '').trim() ||
-                '(이름 없음)';
+    var payee =
+      String(row[map.payee] != null ? row[map.payee] : '').trim() ||
+      String(row[map.memo] != null ? row[map.memo] : '').trim() ||
+      String(row[map.note] != null ? row[map.note] : '').trim() ||
+      '(이름 없음)';
     /* ★ 81차 ③. 적요를 담는 칸을 하나 더한다.
        추천이 거래처 이름만 봐서 「적요=급여 / 수취인=직원A」 같은 줄을 못 잡았다.
        ★ 기존 일곱 칸은 한 글자도 안 바꾼다 — 칸을 더하기만 한다.
          파서 지문은 rows·open·close·breaks·moved·rawnames 와 달별 합계만 재고
          rawnames 는 r.payee 가짓수라, 칸이 늘어도 그 값들은 안 움직인다.
        ★ 거래처 이름이 비었을 때 적요를 대신 쓰는 위 사다리는 그대로 둔다 */
-    rows.push({ at: at, payee: payee, amount: amt, mag: mag, kindDir: kd,
-                balance: bal, excelRow: r + 1,
-                memo: String(row[map.memo] != null ? row[map.memo] : '').trim() });
+    rows.push({
+      at: at,
+      payee: payee,
+      amount: amt,
+      mag: mag,
+      kindDir: kd,
+      balance: bal,
+      excelRow: r + 1,
+      memo: String(row[map.memo] != null ? row[map.memo] : '').trim()
+    });
   }
   if (needSign) resolveSigns(rows);
-  return { rows: rows, oneCol: !split, dropped: 버린 };   /* ★ 113차 ②마 */
+  return { rows: rows, oneCol: !split, dropped: 버린 }; /* ★ 113차 ②마 */
 }
 
 /* ★ 113차 ①. 조회 기간을 찾을 자리만 글자로 뽑는다 —
    머리글 위 전부와, 머리글 아래 몇 줄(우리 이메일 HTML 은 기간이 표 안에 있다).
    ★ 거래 줄 전체를 들고 있지 않는다. 기간은 거기 없다 */
 function gridHead(grid, h) {
-  var out = [], 끝 = Math.min(grid.length, Math.max(h, 0) + 4);
+  var out = [],
+    끝 = Math.min(grid.length, Math.max(h, 0) + 4);
   for (var i = 0; i < 끝; i++) {
-    var c = (grid[i] || []).map(function (x) { return String(x == null ? '' : x).trim(); })
-      .filter(function (x) { return x; });
+    var c = (grid[i] || [])
+      .map(function (x) {
+        return String(x == null ? '' : x).trim();
+      })
+      .filter(function (x) {
+        return x;
+      });
     if (c.length) out.push(c.join(' '));
   }
   return out;
@@ -515,11 +675,19 @@ function gridHead(grid, h) {
 function headLinesAll(wb) {
   var out = [];
   for (var i = 0; i < wb.SheetNames.length; i++) {
-    var g = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]],
-              { header: 1, raw: false, defval: '' });
+    var g = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
+      header: 1,
+      raw: false,
+      defval: ''
+    });
     for (var r = 0; r < Math.min(30, g.length); r++) {
-      var c = (g[r] || []).map(function (x) { return String(x == null ? '' : x).trim(); })
-        .filter(function (x) { return x; });
+      var c = (g[r] || [])
+        .map(function (x) {
+          return String(x == null ? '' : x).trim();
+        })
+        .filter(function (x) {
+          return x;
+        });
       if (c.length) out.push(c.join(' '));
     }
   }
@@ -532,8 +700,11 @@ function extractRows(wb) {
   /* 머리글 아래에 줄이 한 개도 없는가 — 조회를 안 하고 내려받으면 그렇게 나온다 */
   var 빈표 = false;
   for (var i = 0; i < wb.SheetNames.length; i++) {
-    var grid = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]],
-                 { header: 1, raw: true, defval: '' });
+    var grid = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
+      header: 1,
+      raw: true,
+      defval: ''
+    });
     var h = findHeader(grid);
     var names = headerNames(grid, h);
     if (names.length) seen = seen.concat(names);
@@ -548,19 +719,21 @@ function extractRows(wb) {
        ★ 그래서 머리글로 인정하는 조건을 이름 세 개가 아니라
          「날짜 이름과 금액 이름이 둘 다 있는 줄」로 못 박는다.
          그 아래에 값이 든 줄이 하나라도 있으면 empty 가 아니다 — 읽어보고 판단한다 */
-    if (h < 0 && emptyAfterHeader(grid)) { 빈표 = true; continue; }
+    if (h < 0 && emptyAfterHeader(grid)) {
+      빈표 = true;
+      continue;
+    }
     if (h < 0) continue;
     var map = mapColumns(grid, h);
     if (map.at == null) continue;
-    var split = (map.inAmt != null || map.outAmt != null);
+    var split = map.inAmt != null || map.outAmt != null;
     if (!split && map.amount == null) continue;
 
     var cand = balanceCandidates(grid[h]);
-    if (!cand.length) continue;                   /* 잔액이 없으면 읽지 않는다 */
-    형식맞음 = true;        /* 여기까지 왔으면 열은 다 있다. 남은 건 줄이 있느냐뿐 */
+    if (!cand.length) continue; /* 잔액이 없으면 읽지 않는다 */
+    형식맞음 = true; /* 여기까지 왔으면 열은 다 있다. 남은 건 줄이 있느냐뿐 */
     if (cand.length > BAL_MAX_TRY) {
-      console.warn('잔액 후보가 ' + cand.length + '개입니다. 앞 ' +
-                   BAL_MAX_TRY + '개만 봅니다.');
+      console.warn('잔액 후보가 ' + cand.length + '개입니다. 앞 ' + BAL_MAX_TRY + '개만 봅니다.');
       cand = cand.slice(0, BAL_MAX_TRY);
     }
 
@@ -569,49 +742,77 @@ function extractRows(wb) {
       var built = buildRows(grid, h, map, cand[k]);
       if (!built.rows.length) continue;
       /* 후보가 하나뿐이면 굳이 재보지 않는다 — 검산은 원래 자리에서 돈다 */
-      if (cand.length === 1) { best = { built: built, col: cand[k], breaks: null }; break; }
-      var res = orderAndVerify(built.rows.map(function (x) {
-        return { at: x.at, payee: x.payee, amount: x.amount, mag: x.mag,
-                 kindDir: x.kindDir, balance: x.balance, excelRow: x.excelRow };
-      }));
+      if (cand.length === 1) {
+        best = { built: built, col: cand[k], breaks: null };
+        break;
+      }
+      var res = orderAndVerify(
+        built.rows.map(function (x) {
+          return {
+            at: x.at,
+            payee: x.payee,
+            amount: x.amount,
+            mag: x.mag,
+            kindDir: x.kindDir,
+            balance: x.balance,
+            excelRow: x.excelRow
+          };
+        })
+      );
       var n = res.breaks.length;
       if (!best || n < best.breaks) best = { built: built, col: cand[k], breaks: n };
-      if (n === 0) break;                          /* 더 볼 것 없다 */
+      if (n === 0) break; /* 더 볼 것 없다 */
     }
     if (!best) continue;
 
     if (best.breaks !== null && best.breaks > 0) {
-      console.warn('잔액 후보 ' + cand.length + '개 중 가장 적게 어긋난 열을 골랐습니다 (' +
-                   best.breaks + '건).');
+      console.warn(
+        '잔액 후보 ' +
+          cand.length +
+          '개 중 가장 적게 어긋난 열을 골랐습니다 (' +
+          best.breaks +
+          '건).'
+      );
     }
-    return { rows: best.built.rows, sheet: wb.SheetNames[i], header: h + 1,
-             oneCol: best.built.oneCol,
-             /* ★ 113차 ①. 조회 기간은 머리글 위(엑셀)나 다른 표(우리 이메일 HTML)에 있다.
+    return {
+      rows: best.built.rows,
+      sheet: wb.SheetNames[i],
+      header: h + 1,
+      oneCol: best.built.oneCol,
+      /* ★ 113차 ①. 조회 기간은 머리글 위(엑셀)나 다른 표(우리 이메일 HTML)에 있다.
                 그래서 이 시트만이 아니라 시트를 다 훑은 것을 넘긴다 */
-             headLines: gridHead(grid, h).concat(headLinesAll(wb)),
-             dropped: best.built.dropped,       /* ★ 113차 ②마 */
-             bankHint: bankFromHead(grid, h),   /* 39차 4번 */
-             /* ★ 65차 ①. 채움율로 옮겨 잡았으면 그쪽 이름이 이긴다 —
+      headLines: gridHead(grid, h).concat(headLinesAll(wb)),
+      dropped: best.built.dropped /* ★ 113차 ②마 */,
+      bankHint: bankFromHead(grid, h) /* 39차 4번 */,
+      /* ★ 65차 ①. 채움율로 옮겨 잡았으면 그쪽 이름이 이긴다 —
                 「어느 열을 거래처로 봤는가」는 검증할 때 첫 번째로 볼 값이다 */
-             payeeName: map.payeeFill ? map.payeeFill.name
-                                      : (map.payeePick ? map.payeePick.name : null),
-             payeeKinds: map.payeeFill ? map.payeeFill.n
-                                       : (map.payeePick ? map.payeePick.n : null),
-             payeeFill: map.payeeFill
-                        ? Math.round(map.payeeFill.fill / map.payeeFill.lines * 1000) / 10
-                        : null,
-             timeName: map.time != null && map.time !== map.at
-                       ? String(grid[h][map.time] || '').trim() : null,
-             balName: String(grid[h][best.col] || '').trim(),
-             balTried: cand.length };
+      payeeName: map.payeeFill ? map.payeeFill.name : map.payeePick ? map.payeePick.name : null,
+      payeeKinds: map.payeeFill ? map.payeeFill.n : map.payeePick ? map.payeePick.n : null,
+      payeeFill: map.payeeFill
+        ? Math.round((map.payeeFill.fill / map.payeeFill.lines) * 1000) / 10
+        : null,
+      timeName:
+        map.time != null && map.time !== map.at ? String(grid[h][map.time] || '').trim() : null,
+      balName: String(grid[h][best.col] || '').trim(),
+      balTried: cand.length
+    };
   }
-  var uniq = [], m = {};
-  seen.forEach(function (v) { if (!m[v]) { m[v] = 1; uniq.push(v); } });
+  var uniq = [],
+    m = {};
+  seen.forEach(function (v) {
+    if (!m[v]) {
+      m[v] = 1;
+      uniq.push(v);
+    }
+  });
   /* 왜 못 읽었는지를 사용 기록에 남긴다. 열 이름만 보고 가른다 —
      파일 이름도 거래처도 금액도 안 남는다 */
   var why = 'nodate';
   for (var z = 0; z < uniq.length; z++) {
-    if (DATE_WIDE.test(nz(uniq[z])) || nz(uniq[z]).indexOf('거래일') !== -1) { why = 'noamt'; break; }
+    if (DATE_WIDE.test(nz(uniq[z])) || nz(uniq[z]).indexOf('거래일') !== -1) {
+      why = 'noamt';
+      break;
+    }
   }
   if (!uniq.length) why = 'norows';
   /* ★ 50차 ③. 열이 다 있는데 못 읽었다면 줄이 0건인 것이다.
@@ -619,4 +820,3 @@ function extractRows(wb) {
   if (형식맞음 || 빈표) why = 'empty';
   return { fail: true, found: uniq.slice(0, 12), why: why };
 }
-

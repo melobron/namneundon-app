@@ -2,22 +2,22 @@
 
 모두 Cloudflare 한 계정(`Ykang2356@gmail.com's Account`)에 있다. 서버 코드는 없고 정적 파일만 올린다.
 
-| 무엇 | 저장소 폴더 | Cloudflare | 주소 | 올리는 명령 |
-|---|---|---|---|---|
-| **앱** | `app/` | Worker `namneundon-app` (설정: `wrangler.jsonc`) | **`app.namneundon.com`** | `npm run deploy:app` |
-| 앱 (옛) | — | Worker `aged-rain-dbc4` | `aged-rain-dbc4.ykang2356.workers.dev` → 새 주소로 301 이동 | 저장소에서는 지웠다 (2026-09-25). Cloudflare 의 Worker 는 계속 돈다 |
-| 랜딩 | `landing/` | Pages `namneundon` (Git 연결 없음) | `namneundon.com`, `www.namneundon.com` | `npm run deploy:landing` |
-| ? | — | Pages `namneundon-cards2` | `namneundon-cards2.pages.dev` | 용도 확인 필요 |
+| 무엇    | 저장소 폴더 | Cloudflare                                       | 주소                                                        | 올리는 명령                                                         |
+| ------- | ----------- | ------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| **앱**  | `app/`      | Worker `namneundon-app` (설정: `wrangler.jsonc`) | **`app.namneundon.com`**                                    | `npm run deploy:app`                                                |
+| 앱 (옛) | —           | Worker `aged-rain-dbc4`                          | `aged-rain-dbc4.ykang2356.workers.dev` → 새 주소로 301 이동 | 저장소에서는 지웠다 (2026-09-25). Cloudflare 의 Worker 는 계속 돈다 |
+| 랜딩    | `landing/`  | Pages `namneundon` (Git 연결 없음)               | `namneundon.com`, `www.namneundon.com`                      | `npm run deploy:landing`                                            |
+| ?       | —           | Pages `namneundon-cards2`                        | `namneundon-cards2.pages.dev`                               | 용도 확인 필요                                                      |
 
 ## 자동 배포 (main 에 합치면)
 
 `.github/workflows/deploy.yml` 이 한다. 사람은 PR 을 합치기만 한다.
 
-| 바뀐 곳 | 하는 일 |
-|---|---|
+| 바뀐 곳                  | 하는 일                                                         |
+| ------------------------ | --------------------------------------------------------------- |
 | `app/`, `wrangler.jsonc` | 안전망 테스트 → 앱 배포 → `app.namneundon.com` 에서 다시 테스트 |
-| `landing/` | 랜딩 배포 → 「시작하기」가 앱 주소인지 확인 |
-| 그 밖 (문서 등) | 아무것도 안 한다 |
+| `landing/`               | 랜딩 배포 → 「시작하기」가 앱 주소인지 확인                     |
+| 그 밖 (문서 등)          | 아무것도 안 한다                                                |
 
 테스트가 실패하면 배포하지 않는다. GitHub → Actions → 「자동 배포」에서 결과를 본다.
 

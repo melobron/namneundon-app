@@ -1,20 +1,57 @@
 /* ── 미리 아는 패턴만 자동 분류. 나머지는 추측하지 않는다 ── */
-var CARD_WORDS = ['비씨', 'bc', '현대카드', '삼성', '신한카드', '롯데', 'kb', '하나', 'nh', '국민카드'];
+var CARD_WORDS = [
+  '비씨',
+  'bc',
+  '현대카드',
+  '삼성',
+  '신한카드',
+  '롯데',
+  'kb',
+  '하나',
+  'nh',
+  '국민카드'
+];
 /* 뜻이 하나뿐인 표기만 자동으로 잡는다.
    「건강」「연금」처럼 짧아서 다른 가게 이름에도 걸릴 말은 추천으로만 쓴다 (HINTS) */
-var TAX_WORDS  = ['국세', '국고', '지방세',
-                  '부가가치세', '종합소득세', '원천세', '세무서', '국세청',
-                  '홈택스', '위택스',
-                  /* 「지방소득세」에는 「지방세」라는 글자가 없다 (지방·소득·세). */
-                  '지방소득세',
-                  /* 이 둘도 세금인데 목록에 없어서 안 잡히고 있었다 */
-                  '주민세', '자동차세'];
+var TAX_WORDS = [
+  '국세',
+  '국고',
+  '지방세',
+  '부가가치세',
+  '종합소득세',
+  '원천세',
+  '세무서',
+  '국세청',
+  '홈택스',
+  '위택스',
+  /* 「지방소득세」에는 「지방세」라는 글자가 없다 (지방·소득·세). */
+  '지방소득세',
+  /* 이 둘도 세금인데 목록에 없어서 안 잡히고 있었다 */
+  '주민세',
+  '자동차세'
+];
 /* ★ 75차. 세금과 보험은 사용 목적이 다르므로 기본 항목부터 나눈다. */
-var INSURANCE_WORDS = ['사회보험', '4대보험', '사대보험',
-                       '국민연금', '국민건강', '건강보험', '고용보험', '산재보험', '합산보험료',
-                       '국민연금공단', '건강보험공단', '근로복지공단',
-                       '화재보험', '삼성화재', 'db손해', 'kb손해',
-                       '현대해상', '메리츠화재', '삼성화'];
+var INSURANCE_WORDS = [
+  '사회보험',
+  '4대보험',
+  '사대보험',
+  '국민연금',
+  '국민건강',
+  '건강보험',
+  '고용보험',
+  '산재보험',
+  '합산보험료',
+  '국민연금공단',
+  '건강보험공단',
+  '근로복지공단',
+  '화재보험',
+  '삼성화재',
+  'db손해',
+  'kb손해',
+  '현대해상',
+  '메리츠화재',
+  '삼성화'
+];
 /* ★ 81차 ④. 단독 「세무」를 더한다 (개발자 확정) — 세무회계·세무기장·세무사·세무법인이 다 걸린다.
    ★ 이 목록은 taxLike 도 본다. 그래서 이 한 줄이 집계를 움직인다 —
      「○○세무회계」처럼 작은 곳이 36차 F 규칙에 걸려 묻지도 않고
@@ -26,15 +63,37 @@ var INSURANCE_WORDS = ['사회보험', '4대보험', '사대보험',
 var BOOKKEEPING_WORDS = ['기장료', '세무기장', '세무사', '세무법인', '회계법인', '세무'];
 /* 7개 매장 실측: 예전 목록은 공과금 금액의 80.6%만 잡았다.
    도시가스 회사 이름과 요금 표기를 넣어 나머지를 메운다 */
-var UTIL_WORDS = ['한전', '한국전력', '전기요금', '전기료', '전기세',
-                  '도시가스', '가스공사', '가스요금', '가스비',
-                  '예스코', '서울가스', '코원에너지', '삼천리', '대성에너지',
-                  '경동도시가스', '귀뚜라미에너지', '인천도시가스', '부산도시가스',
-                  '에너지서비스',
-                  '상수도', '상하수도', '수도요금', '수도료', '수도세'];
+var UTIL_WORDS = [
+  '한전',
+  '한국전력',
+  '전기요금',
+  '전기료',
+  '전기세',
+  '도시가스',
+  '가스공사',
+  '가스요금',
+  '가스비',
+  '예스코',
+  '서울가스',
+  '코원에너지',
+  '삼천리',
+  '대성에너지',
+  '경동도시가스',
+  '귀뚜라미에너지',
+  '인천도시가스',
+  '부산도시가스',
+  '에너지서비스',
+  '상수도',
+  '상하수도',
+  '수도요금',
+  '수도료',
+  '수도세'
+];
 /* 「수도2306○○」처럼 년월이 이름 가운데 있는 것.
    앞자리 제한만으로는 「수도권물류」가 걸리므로 뒤에 숫자가 오는 것만 잡는다 */
-function startsUtil(t) { return /^수도\d/.test(t); }
+function startsUtil(t) {
+  return /^수도\d/.test(t);
+}
 
 function autoCategory(name, net) {
   var t = nz(name);
@@ -43,12 +102,14 @@ function autoCategory(name, net) {
      지금은 나간 돈이라 매출로 안 가지만, 환급이 한 번 들어오면 그 순간 매출이 된다.
      「삼성화재」는 뜻이 하나뿐이고 「삼성」은 여럿이다. 좁은 쪽을 먼저 본다 */
   for (var j = 0; j < TAX_WORDS.length; j++) if (t.indexOf(TAX_WORDS[j]) !== -1) return '세금';
-  for (var h = 0; h < INSURANCE_WORDS.length; h++) if (t.indexOf(INSURANCE_WORDS[h]) !== -1) return '보험';
+  for (var h = 0; h < INSURANCE_WORDS.length; h++)
+    if (t.indexOf(INSURANCE_WORDS[h]) !== -1) return '보험';
   if (net > 0) {
     for (var i = 0; i < CARD_WORDS.length; i++) if (t.indexOf(CARD_WORDS[i]) !== -1) return '매출';
     if (/^[a-z가-힣]{1,4}\d{6,}$/.test(t) || /^\d{6,}[a-z]{1,3}$/.test(t)) return '매출';
   }
-  for (var k = 0; k < UTIL_WORDS.length; k++) if (t.indexOf(UTIL_WORDS[k]) !== -1) return '전기·가스·수도';
+  for (var k = 0; k < UTIL_WORDS.length; k++)
+    if (t.indexOf(UTIL_WORDS[k]) !== -1) return '전기·가스·수도';
   if (startsUtil(t)) return '전기·가스·수도';
   return null;
 }
@@ -57,7 +118,7 @@ function autoCategory(name, net) {
    2303국민연금 / 2404국민연금이 매달 다른 거래처로 잡히면
    사장님이 찍어둔 항목이 다음 달에 재사용되지 않는다 */
 function okYear(y) {
-  return y.length === 2 ? true : (+y >= 2000 && +y <= 2099);
+  return y.length === 2 ? true : +y >= 2000 && +y <= 2099;
 }
 function okBase(b) {
   /* 글자가 하나도 없는 이름이나 숫자에 붙은 조각은 묶지 않는다 */
@@ -80,11 +141,41 @@ function stripYm(name) {
 
 /* ── 거래처명 다듬기 ──
    같은 곳이 표기만 달라 갈리는 걸 막는다. 원본 표기는 카드에 그대로 남긴다 */
-var BANK_PREFIX = ['농협', '기업', '우리', '신한', '국민', '하나', '수협', '씨티',
-                   '새마을', '신협', '우체국', '카카오', '토스', '케이'];
+var BANK_PREFIX = [
+  '농협',
+  '기업',
+  '우리',
+  '신한',
+  '국민',
+  '하나',
+  '수협',
+  '씨티',
+  '새마을',
+  '신협',
+  '우체국',
+  '카카오',
+  '토스',
+  '케이'
+];
 /* 은행 이름 뒤에 이것만 남으면 그건 금융회사 이름이지 접두어가 아니다 */
-var BANK_KEEP = ['카드', '은행', '증권', '보험', '생명', '화재', '캐피탈', '저축',
-                 '페이', '정산', '결제', '수수료', '금융', '투자', '자산', '상호'];
+var BANK_KEEP = [
+  '카드',
+  '은행',
+  '증권',
+  '보험',
+  '생명',
+  '화재',
+  '캐피탈',
+  '저축',
+  '페이',
+  '정산',
+  '결제',
+  '수수료',
+  '금융',
+  '투자',
+  '자산',
+  '상호'
+];
 var CORP_HEAD = ['주식회사', '㈜', '(주)', '유한회사', '(유)'];
 
 function canonName(name) {
@@ -94,11 +185,14 @@ function canonName(name) {
     var p = BANK_PREFIX[i];
     if (t.indexOf(p) !== 0) continue;
     var rest = t.slice(p.length).trim();
-    if (rest.length < 2) break;                  /* 너무 짧으면 그냥 둔다 */
-    if (BANK_KEEP.indexOf(rest) !== -1) break;   /* 국민카드·농협은행 */
+    if (rest.length < 2) break; /* 너무 짧으면 그냥 둔다 */
+    if (BANK_KEEP.indexOf(rest) !== -1) break; /* 국민카드·농협은행 */
     var corp = false;
     for (var j = 0; j < CORP_HEAD.length; j++) {
-      if (rest.indexOf(CORP_HEAD[j]) === 0) { corp = true; break; }
+      if (rest.indexOf(CORP_HEAD[j]) === 0) {
+        corp = true;
+        break;
+      }
     }
     /* 사람 이름은 3~4자만. 2자까지 열면 「국민카드」가 「카드」가 된다 */
     var person = /^[가-힣]{3,4}$/.test(rest);
@@ -128,12 +222,26 @@ function canonName(name) {
    42차 1번과 똑같은 구조다. 실파일 두 개에서 7곳 → 3곳, 13개월 7,515만원.
    ★ 「환불」·「취소」는 절대 떼지 않는다. 매출과 반대 방향이라 따로 봐야 한다.
    ★ 화면에 보이는 이름은 원문 그대로다. 묶는 열쇠만 다듬는다 */
-var CORP_TAG = ['(주)', '（주）', '㈜', '주식회사', '(유)', '（유）', '유한회사',
-                '(사)', '재단법인', '사단법인', '합자회사', '(합)'];
-var SP_WIDE = String.fromCharCode(0x3000);   /* 전각 공백 — 은행 파일에 실제로 들어온다 */
+var CORP_TAG = [
+  '(주)',
+  '（주）',
+  '㈜',
+  '주식회사',
+  '(유)',
+  '（유）',
+  '유한회사',
+  '(사)',
+  '재단법인',
+  '사단법인',
+  '합자회사',
+  '(합)'
+];
+var SP_WIDE = String.fromCharCode(0x3000); /* 전각 공백 — 은행 파일에 실제로 들어온다 */
 function stripCorp(name) {
   var t = String(name);
-  CORP_TAG.forEach(function (w) { t = t.split(w).join(''); });
+  CORP_TAG.forEach(function (w) {
+    t = t.split(w).join('');
+  });
   /* ★ 띄어쓰기를 뗀다. 전각 공백(U+3000)도 같이 —
      은행 파일에 전각 공백이 실제로 들어온다.
      ★ 여기에는 백슬래시가 든 글자 부류를 안 쓴다. 한 번 백슬래시가 먹혀
@@ -142,20 +250,25 @@ function stripCorp(name) {
        그래서 지울 글자를 눈에 보이게 적어 둔다 */
   t = t.split(' ').join('').split(SP_WIDE).join('');
   t = t.trim();
-  if (t.length < 2) return null;         /* 다 지워지면 안 묶는다 */
+  if (t.length < 2) return null; /* 다 지워지면 안 묶는다 */
   if (!/[^0-9]/.test(t)) return null;
   return t;
 }
 function stripLongNum(name) {
-  var t = String(name).replace(/[0-9]{4,}/g, ' ').replace(/s+/g, ' ').trim();
+  var t = String(name)
+    .replace(/[0-9]{4,}/g, ' ')
+    .replace(/s+/g, ' ')
+    .trim();
   if (t.length < 2) return null;
-  if (!/[^0-9]/.test(t)) return null;          /* 숫자만 남으면 안 묶는다 */
+  if (!/[^0-9]/.test(t)) return null; /* 숫자만 남으면 안 묶는다 */
   return t;
 }
 
 /* 이름을 먼저 다듬고, 그 결과에 년월 묶기를 건다. 순서가 반대면 둘 다 놓친다 */
 function buildMergeMap(rows) {
-  var canon = {}, seen = {}, map = {};
+  var canon = {},
+    seen = {},
+    map = {};
   rows.forEach(function (r) {
     if (canon[r.payee] === undefined) canon[r.payee] = canonName(r.payee);
   });
@@ -167,7 +280,7 @@ function buildMergeMap(rows) {
   rows.forEach(function (r) {
     var c = canon[r.payee];
     var s = stripYm(c);
-    var final = (s && Object.keys(seen[s.base]).length >= 2) ? s.base : c;
+    var final = s && Object.keys(seen[s.base]).length >= 2 ? s.base : c;
     if (final !== r.payee) map[r.payee] = final;
   });
   /* ★ 42차 2번. 여기까지 온 이름에서 긴 숫자를 뗀다.
@@ -183,7 +296,7 @@ function buildMergeMap(rows) {
     var cur = map[r.payee] || canon[r.payee];
     var t = stripLongNum(cur);
     if (!t || t === cur) return;
-    if (Object.keys(byStrip[t]).length < 2) return;   /* 두 곳 이상일 때만 */
+    if (Object.keys(byStrip[t]).length < 2) return; /* 두 곳 이상일 때만 */
     map[r.payee] = t;
   });
   /* ★ 45차 ④. 그다음에 꼬리표와 띄어쓰기를 뗀다. 숫자를 먼저 떼야
@@ -204,44 +317,70 @@ function buildMergeMap(rows) {
     if (!t) return;
     if (Object.keys(byCorp[t]).length < 2) return;
     /* 가장 긴 원문을 대표 이름으로 쓴다 — 통장과 대조할 때 알아보기 쉽다 */
-    var names = Object.keys(byCorp[t]).sort(function (a, b) { return b.length - a.length; });
+    var names = Object.keys(byCorp[t]).sort(function (a, b) {
+      return b.length - a.length;
+    });
     map[r.payee] = names[0];
   });
   return map;
 }
-function keyOf(r) { return (UP && UP.merge && UP.merge[r.payee]) || r.payee; }
+function keyOf(r) {
+  return (UP && UP.merge && UP.merge[r.payee]) || r.payee;
+}
 
 function groupPayees(rows) {
   var m = {};
   rows.forEach(function (r) {
     var k = keyOf(r);
-    var g = m[k] || (m[k] = { name: k, n: 0, net: 0, abs: 0, last: '',
-                              raw: {}, months: {}, amts: [],
-                              inSum: 0, inN: 0, inMax: 0,
-                              outSum: 0, outN: 0, inDays: [], outDays: [],
-                              inAmts: [], outAmts: [],
-                              inMonths: {}, outMonths: {},
-                              inLast: '', outLast: '',
-                              /* ★ 81차 ③. 이 거래처의 적요들 — 낱말 검사에만 쓴다.
+    var g =
+      m[k] ||
+      (m[k] = {
+        name: k,
+        n: 0,
+        net: 0,
+        abs: 0,
+        last: '',
+        raw: {},
+        months: {},
+        amts: [],
+        inSum: 0,
+        inN: 0,
+        inMax: 0,
+        outSum: 0,
+        outN: 0,
+        inDays: [],
+        outDays: [],
+        inAmts: [],
+        outAmts: [],
+        inMonths: {},
+        outMonths: {},
+        inLast: '',
+        outLast: '',
+        /* ★ 81차 ③. 이 거래처의 적요들 — 낱말 검사에만 쓴다.
                                  저장(pickPayload)은 칸을 하나하나 적어 만드는 방식이라
                                  여기 무엇을 더해도 fc.picks 로는 안 새어 나간다 */
-                              memos: {} });
-    g.n++; g.net += r.amount; g.abs += Math.abs(r.amount);
+        memos: {}
+      });
+    g.n++;
+    g.net += r.amount;
+    g.abs += Math.abs(r.amount);
     if (r.amount > 0) {
-      g.inSum += r.amount; g.inN++;
+      g.inSum += r.amount;
+      g.inN++;
       if (r.amount > g.inMax) g.inMax = r.amount;
       g.inDays.push(+r.at.slice(8, 10));
       g.inAmts.push(r.amount);
       g.inMonths[monthOf(r.at)] = 1;
       if (r.at > g.inLast) g.inLast = r.at;
     } else {
-      g.outSum += -r.amount; g.outN++;
+      g.outSum += -r.amount;
+      g.outN++;
       g.outDays.push(+r.at.slice(8, 10));
       g.outAmts.push(-r.amount);
       g.outMonths[monthOf(r.at)] = 1;
       if (r.at > g.outLast) g.outLast = r.at;
     }
-    g.raw[r.payee] = 1;                 /* 통장과 대조할 수 있게 원본 표기를 남긴다 */
+    g.raw[r.payee] = 1; /* 통장과 대조할 수 있게 원본 표기를 남긴다 */
     /* ★ 81차 ③. 몇 번 찍힌 적요인지 같이 센다 — 자주 나온 적요를 먼저 본다 */
     if (r.memo) g.memos[r.memo] = (g.memos[r.memo] || 0) + 1;
     g.months[monthOf(r.at)] = 1;
@@ -252,14 +391,18 @@ function groupPayees(rows) {
     var g = m[k];
     g.rawList = Object.keys(g.raw);
     /* ★ 81차 ③. 자주 찍힌 적요부터 본다. 같은 수면 파일에 나온 차례 그대로다 */
-    g.memoList = Object.keys(g.memos).sort(function (a, b) { return g.memos[b] - g.memos[a]; });
+    g.memoList = Object.keys(g.memos).sort(function (a, b) {
+      return g.memos[b] - g.memos[a];
+    });
     g.monthN = Object.keys(g.months).length;
     /* 35차 B. 한 거래처에 들어온 돈과 나간 돈이 섞여 있으면 방향마다 따로 묻는다.
        한쪽만 있는 곳은 지금까지처럼 한 번만 묻는다 — 실파일 213곳 중 섞인 곳은 11곳뿐이다 */
     g.mixed = g.inN > 0 && g.outN > 0;
     return g;
   });
-  list.sort(function (a, b) { return b.abs - a.abs; });
+  list.sort(function (a, b) {
+    return b.abs - a.abs;
+  });
   list.forEach(gAutoInit);
   return list;
 }
@@ -268,11 +411,12 @@ function groupPayees(rows) {
 function gAutoInit(g) {
   if (g.mixed) {
     /* 방향마다 따로 짐작한다. net 부호로 한 번에 짐작하면 반대쪽이 뜻이 뒤집힌다 */
-    g.catIn  = autoCategory(g.name, 1);
+    g.catIn = autoCategory(g.name, 1);
     g.catOut = autoCategory(g.name, -1);
     g.autoIn = !!g.catIn;
     g.autoOut = !!g.catOut;
-    g.cat = null; g.auto = false;
+    g.cat = null;
+    g.auto = false;
   } else {
     g.cat = autoCategory(g.name, g.net);
     g.auto = !!g.cat;
@@ -294,9 +438,17 @@ function gAutoFor(g, isIn) {
 }
 function gSetCat(g, isIn, cat, auto) {
   if (g.mixed) {
-    if (isIn) { g.catIn = cat; g.autoIn = !!auto; }
-    else      { g.catOut = cat; g.autoOut = !!auto; }
-  } else { g.cat = cat; g.auto = !!auto; }
+    if (isIn) {
+      g.catIn = cat;
+      g.autoIn = !!auto;
+    } else {
+      g.catOut = cat;
+      g.autoOut = !!auto;
+    }
+  } else {
+    g.cat = cat;
+    g.auto = !!auto;
+  }
 }
 /* ★ 63-4. sideSplits 는 없앴다 — 방향이 뜻을 가르는 항목이라고 되묻던 함수인데,
    이제 한 거래처에 항목 하나만 고르므로 되물을 일이 없다.
@@ -309,8 +461,8 @@ function gDone(g) {
 /* 아직 안 정한 쪽이 어디인가 — 섞인 곳은 나간 돈부터 묻는다 (건수가 많은 쪽이다) */
 function gPendingSide(g) {
   if (!g.mixed) return null;
-  if (!g.catOut) return false;          /* false = 나간 돈 */
-  if (!g.catIn) return true;            /* true  = 들어온 돈 */
+  if (!g.catOut) return false; /* false = 나간 돈 */
+  if (!g.catIn) return true; /* true  = 들어온 돈 */
   return null;
 }
 /* 그 거래처에 찍힌 항목 전부 (섞인 곳은 둘) */
@@ -326,7 +478,7 @@ function gCats(g) {
    하나만 보여주면 나머지 한쪽이 조용히 사라진 것처럼 보인다 */
 function gShowCat(g) {
   var cs = gCats(g);
-  return cs.length ? cs.join(" · ") : null;
+  return cs.length ? cs.join(' · ') : null;
 }
 /* 아직 안 정한 금액 — 섞인 곳은 안 정한 쪽 금액만 센다 */
 function gOpenAbs(g) {
@@ -340,19 +492,37 @@ function gOpenAbs(g) {
 function applySaved(g, c) {
   if (!c) return false;
   if (typeof c === 'string') {
-    if (g.mixed) { g.catIn = c; g.autoIn = false; g.catOut = c; g.autoOut = false; }
-    else { g.cat = c; g.auto = false; }
+    if (g.mixed) {
+      g.catIn = c;
+      g.autoIn = false;
+      g.catOut = c;
+      g.autoOut = false;
+    } else {
+      g.cat = c;
+      g.auto = false;
+    }
     return true;
   }
   if (typeof c !== 'object') return false;
   var did = false;
   if (g.mixed) {
-    if (c['입금']) { g.catIn = c['입금']; g.autoIn = false; did = true; }
-    if (c['출금']) { g.catOut = c['출금']; g.autoOut = false; did = true; }
+    if (c['입금']) {
+      g.catIn = c['입금'];
+      g.autoIn = false;
+      did = true;
+    }
+    if (c['출금']) {
+      g.catOut = c['출금'];
+      g.autoOut = false;
+      did = true;
+    }
   } else {
     var one = c['입금'] || c['출금'];
-    if (one) { g.cat = one; g.auto = false; did = true; }
+    if (one) {
+      g.cat = one;
+      g.auto = false;
+      did = true;
+    }
   }
   return did;
 }
-

@@ -15,12 +15,12 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:4173',
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
-    viewport: { width: 390, height: 844 },   // 사장님들이 주로 쓰는 휴대폰 너비
-    trace: 'retain-on-failure',
+    viewport: { width: 390, height: 844 }, // 사장님들이 주로 쓰는 휴대폰 너비
+    trace: 'retain-on-failure'
   },
   webServer: {
     command: 'node tests/serve.mjs',
     url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-  },
+    reuseExistingServer: !process.env.CI
+  }
 });

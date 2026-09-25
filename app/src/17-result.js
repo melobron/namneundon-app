@@ -1,14 +1,20 @@
 function drawResult(months) {
   var y = window.pageYOffset;
-  var xs = [], ws = document.querySelectorAll('#up-result .ywrap'), i;
+  var xs = [],
+    ws = document.querySelectorAll('#up-result .ywrap'),
+    i;
   for (i = 0; i < ws.length; i++) xs.push(ws[i].scrollLeft);
   drawResultInner(months);
-  try { fixWhyTails(); } catch (e) { }
+  try {
+    fixWhyTails();
+  } catch (e) {}
   ws = document.querySelectorAll('#up-result .ywrap');
   for (i = 0; i < ws.length && i < xs.length; i++) ws[i].scrollLeft = xs[i];
   if (window.pageYOffset !== y) window.scrollTo(0, y);
   /* ★ 105차 ④. 결과가 실제로 그려진 뒤다. 여기가 「분석이 끝난 날」이다 */
-  try { markLastRun(); } catch (e) { }
+  try {
+    markLastRun();
+  } catch (e) {}
 }
 /* ★ 77차. 진행 안내와 행동 단추를 한 문장으로 합친다.
    새 파일에서 생긴 곳으로 오해하지 않도록 「아직 안 정한 곳」이라고 부른다. */
@@ -26,7 +32,9 @@ function drawResultInner(months) {
   var host = document.getElementById('up-result');
   host.innerHTML = '';
   /* ★ 116차 통합. 그리기 전에 예측 입력이 바뀌었는지 본다 (dueFresh) */
-  try { dueFresh(); } catch (e) { }
+  try {
+    dueFresh();
+  } catch (e) {}
 
   var all = months;
 
@@ -37,13 +45,19 @@ function drawResultInner(months) {
   var nb = el('button', 'rstorebtn', storeName());
   nb.type = 'button';
   nb.title = '눌러서 ' + BIZ.곳 + ' 이름과 성함 고치기';
-  nb.addEventListener('click', function () { useScreen('이름 고치기'); openNames(); });
+  nb.addEventListener('click', function () {
+    useScreen('이름 고치기');
+    openNames();
+  });
   nameRow.appendChild(nb);
   /* ★ 76-2-1차. 매장명 글자 형식은 유지하고 중복 「수정」 단추는 없앤다.
      매장명 자체를 누르면 기존 이름·성함 편집 화면이 그대로 열린다. */
   var mng = el('button', 'rstoreedit', '항목 관리');
   mng.type = 'button';
-  mng.addEventListener('click', function () { useScreen('항목 관리'); openCats(); });
+  mng.addEventListener('click', function () {
+    useScreen('항목 관리');
+    openCats();
+  });
   nameRow.appendChild(mng);
   /* ★ 91차 ③. 한 달치를 더 얹는 자리. 예전에는 머리의 「파일 더 올리기」뿐이라
      결과를 보시던 자리에서는 보탤 길이 안 보였다.
@@ -57,7 +71,10 @@ function drawResultInner(months) {
       useScreen('거래내역 추가');
       if (!openAddFiles()) return;
       var inp = document.getElementById('upinput');
-      if (inp) { inp.value = ''; inp.click(); }
+      if (inp) {
+        inp.value = '';
+        inp.click();
+      }
     });
     nameRow.appendChild(more);
   }
@@ -85,16 +102,22 @@ function drawResultInner(months) {
   }
   /* 자료가 짧으면 견줄 것도 예상할 것도 없다. 왜 안 나오는지 알려준다 */
   if (months.length < 3) {
-    host.appendChild(el('div', 'shortnote',
-      '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.'));
+    host.appendChild(
+      el('div', 'shortnote', '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.')
+    );
   }
   /* ★ 82차 ④. ○○ 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
      개업 초기라 매입이 몰린 시기였다. 사실만 적는다 —
      「나중엔 좋아집니다」 같은 앞일은 단정하지 않는다.
      ★ 여섯 달 미만일 때만이다. 자료가 넉넉하면 이 줄은 아예 안 나온다 */
   if (months.length && months.length < SHORT_SPAN_MONTHS) {
-    host.appendChild(el('div', 'shortnote',
-      won(months.length) + '개월치입니다. 달마다 들쭉날쭉해 평균이 아직 안 잡힐 수 있습니다.'));
+    host.appendChild(
+      el(
+        'div',
+        'shortnote',
+        won(months.length) + '개월치입니다. 달마다 들쭉날쭉해 평균이 아직 안 잡힐 수 있습니다.'
+      )
+    );
   }
 
   /* ── 툴바 두 줄 ──
@@ -104,10 +127,10 @@ function drawResultInner(months) {
   /* ★ 71차 ⑤-2. 한 해 화면에는 「보는 해 ▾」가 온다.
      자리도 모양도 한 달 화면의 「보는 달 ▾」과 같게 둔다 — 같은 문법이라야
      두 화면이 한 앱으로 읽힌다. 자료가 있는 해만 목록에 넣는다 */
-  var yearView = (UP.view === 'year');
+  var yearView = UP.view === 'year';
   /* ★ 76-1차 긴급 수정. 관리 영역을 옮길 때 함께 빠졌던 값이다.
      월 화면은 보고 있는 달의 미분류 거래처 수, 1년 화면은 전체 미분류 수를 쓴다. */
-  var restN = yearView ? unsetCount() : (monthNumbers(UP.month).unkGroups || 0);
+  var restN = yearView ? unsetCount() : monthNumbers(UP.month).unkGroups || 0;
   var row1 = el('div', 'rselrow');
   if (yearView) {
     var ypick = document.createElement('select');
@@ -140,7 +163,7 @@ function drawResultInner(months) {
     UP.month = pick.value;
     /* 38차 6번. 펼친 상태는 그 달 안에서만 기억한다 — 이미 그렇게 되어 있다 */
     UP.open = {};
-    UP.ckPin = {};      /* 달을 바꾸면 그때 다시 센다 */
+    UP.ckPin = {}; /* 달을 바꾸면 그때 다시 센다 */
     drawResult(months);
   });
   if (!yearView) {
@@ -149,13 +172,16 @@ function drawResultInner(months) {
   }
 
   var mode = el('div', 'rmode');
-  [['month', '한 달'], ['year', '1년']].forEach(function (p) {
+  [
+    ['month', '한 달'],
+    ['year', '1년']
+  ].forEach(function (p) {
     var b = el('button', UP.view === p[0] ? 'on' : '', p[1]);
     b.type = 'button';
     b.addEventListener('click', function () {
-      var 바뀜 = (p[0] !== UP.view);
+      var 바뀜 = p[0] !== UP.view;
       if (바뀜) useScreen(p[0] === 'year' ? '1년치' : '한 달');
-      if (바뀜) UP.ckPin = {};   /* 화면을 옮기면 다시 센다 */
+      if (바뀜) UP.ckPin = {}; /* 화면을 옮기면 다시 센다 */
       UP.view = p[0];
       drawResult(months);
       /* ★ 56차. 보기를 바꾸는 것은 「옮기려는 것」이라 위부터 본다.
@@ -182,8 +208,7 @@ function drawResultInner(months) {
   if (expect !== d.close) {
     var bad = el('div', 'upbad');
     bad.appendChild(el('h4', null, '계산을 확인해주세요'));
-    bad.appendChild(el('div', 'errb',
-      '거래 합계와 파일의 월말 계좌 잔액이 다릅니다.'));
+    bad.appendChild(el('div', 'errb', '거래 합계와 파일의 월말 계좌 잔액이 다릅니다.'));
     var calc = el('div', 'upbadcalc');
     function calcRow(label, value) {
       var row = el('div', 'upbadcalcrow');
@@ -197,12 +222,17 @@ function drawResultInner(months) {
 
     var trades = el('div', 'upbadtrades');
     trades.hidden = true;
-    var monthRows = (UP && UP.rows ? UP.rows : []).filter(function (r) {
-      return r.at && r.at.slice(0, 7) === UP.month;
-    }).slice().sort(function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; });
+    var monthRows = (UP && UP.rows ? UP.rows : [])
+      .filter(function (r) {
+        return r.at && r.at.slice(0, 7) === UP.month;
+      })
+      .slice()
+      .sort(function (a, b) {
+        return a.at < b.at ? 1 : a.at > b.at ? -1 : 0;
+      });
     monthRows.forEach(function (r) {
       var tr = el('div', 'upbadtrade');
-      tr.appendChild(el('span', 'at', (+r.at.slice(5, 7)) + '월 ' + (+r.at.slice(8, 10)) + '일'));
+      tr.appendChild(el('span', 'at', +r.at.slice(5, 7) + '월 ' + +r.at.slice(8, 10) + '일'));
       tr.appendChild(el('span', 'payee', r.payee || '이름 없음'));
       tr.appendChild(el('span', 'amt num', wonSign(r.amount || 0) + '원'));
       trades.appendChild(tr);
@@ -243,9 +273,9 @@ function drawResultInner(months) {
   /* ★ 36차. 음수를 아스키 하이픈으로 내면 화면에서 마이너스로 안 읽히고
      색 규칙(나간 돈·적자는 빨강)에도 안 걸린다. 부호를 떼어 따로 돌려준다 */
   function pctOf(n) {
-    if (d.blocked) return null;               /* 못정한가 많으면 비율도 뜻이 없다 */
+    if (d.blocked) return null; /* 못정한가 많으면 비율도 뜻이 없다 */
     if (!(d.sales > 0)) return null;
-    var p = Math.round(n / d.sales * 100);
+    var p = Math.round((n / d.sales) * 100);
     return { txt: (p < 0 ? '−' : '') + Math.abs(p) + '%', minus: p < 0 };
   }
   function line(label, value, cls, pctTxt) {
@@ -277,7 +307,8 @@ function drawResultInner(months) {
     row.appendChild(el('div', 'v num', value));
     row.appendChild(el('div', 'p num', pct || ''));
     row.addEventListener('click', function () {
-      if (UP.open[key]) delete UP.open[key]; else UP.open[key] = true;
+      if (UP.open[key]) delete UP.open[key];
+      else UP.open[key] = true;
       drawResult(months);
     });
     host.appendChild(row);
@@ -290,7 +321,7 @@ function drawResultInner(months) {
   function keepRow(name, amount, partKey, isIn) {
     var skipOnly = partKey === SKIP_PART;
     var cat = skipOnly ? baseName(ASK_SKIP_CAT) : partKey;
-    if (partKey === XFER_PART) cat = XFER_PART;   /* 이체는 줄 단위로 거른다 */
+    if (partKey === XFER_PART) cat = XFER_PART; /* 이체는 줄 단위로 거른다 */
     var key = 'keep:' + partKey + ':' + (isIn ? 'in' : 'out');
     var open = !!UP.open[key];
     var row = el('div', 'orow tapx');
@@ -303,12 +334,15 @@ function drawResultInner(months) {
     row.appendChild(el('div', 'v num', won(amount)));
     row.appendChild(el('div', 'p num', ''));
     row.addEventListener('click', function () {
-      if (UP.open[key]) delete UP.open[key]; else UP.open[key] = true;
+      if (UP.open[key]) delete UP.open[key];
+      else UP.open[key] = true;
       drawResult(months);
     });
     host.appendChild(row);
-    if (open) drawKeepDetail(host, d, cat, isIn, skipOnly,
-                             function () { drawResult(months); });
+    if (open)
+      drawKeepDetail(host, d, cat, isIn, skipOnly, function () {
+        drawResult(months);
+      });
   }
   /* 눌러서 그 안의 거래처를 펼쳐 보는 줄 */
   function tapLine(cat, label, value, cls, pctTxt, now, before, upIsGood, sub) {
@@ -320,7 +354,8 @@ function drawResultInner(months) {
     row.appendChild(el('div', 'v num' + (cls ? ' ' + cls : ''), value));
     row.appendChild(el('div', 'p num', pctTxt || ''));
     row.addEventListener('click', function () {
-      if (UP.open[cat]) delete UP.open[cat]; else UP.open[cat] = true;
+      if (UP.open[cat]) delete UP.open[cat];
+      else UP.open[cat] = true;
       drawResult(months);
     });
     host.appendChild(row);
@@ -347,13 +382,14 @@ function drawResultInner(months) {
      기본은 짧게, 누르면 금액까지 보여준다 */
   var pm = prevMonth(UP.month, months);
   /* 진행 중인 달이면 지난달도 같은 날짜까지만 잘라서 견준다 */
-  var pCut = (pm && running) ? Math.min(lastDay, monthDays(pm)) : null;
+  var pCut = pm && running ? Math.min(lastDay, monthDays(pm)) : null;
   var pd = pm ? monthNumbers(pm, pCut) : null;
   var pLab = '';
   if (pm) {
     var pmN = +pm.slice(5, 7);
     if (!pCut) pLab = pmN + '월 전체';
-    else if (pCut < lastDay) pLab = pmN + '월 같은 기간(1~' + pCut + '일, 그 달은 ' + pCut + '일까지)';
+    else if (pCut < lastDay)
+      pLab = pmN + '월 같은 기간(1~' + pCut + '일, 그 달은 ' + pCut + '일까지)';
     else pLab = pmN + '월 같은 기간(1~' + pCut + '일)';
   }
   if (!UP.cmpOpen) UP.cmpOpen = {};
@@ -361,7 +397,8 @@ function drawResultInner(months) {
     var open = UP.cmpOpen[key];
     var s = el('div', 'cmprow tapx ' + c.cls, open ? c.full : c.short);
     s.addEventListener('click', function () {
-      if (open) delete UP.cmpOpen[key]; else UP.cmpOpen[key] = true;
+      if (open) delete UP.cmpOpen[key];
+      else UP.cmpOpen[key] = true;
       drawResult(months);
     });
     return s;
@@ -370,7 +407,9 @@ function drawResultInner(months) {
   function groupLine(dd, cat) {
     var list = catPayees(dd, cat);
     var n = 0;
-    list.forEach(function (e) { n += e.n; });
+    list.forEach(function (e) {
+      n += e.n;
+    });
     return list.length + '곳 · ' + n + '건';
   }
 
@@ -396,8 +435,9 @@ function drawResultInner(months) {
   var mLeft = manualLeft(months);
   var chead = el('div', 'pnlhead');
   var ph1 = el('div', 'ph1');
-  ph1.appendChild(document.createTextNode(full ? mm + '월 한 달'
-    : mm + '월 1일 ~ ' + lastD + '일'));
+  ph1.appendChild(
+    document.createTextNode(full ? mm + '월 한 달' : mm + '월 1일 ~ ' + lastD + '일')
+  );
   ph1.appendChild(el('span', 'phcount', '(거래 ' + won(d.rows.length) + '건)'));
   chead.appendChild(ph1);
   if (!full) chead.appendChild(el('div', 'ph2', '아직 ' + leftDays + '일 남았습니다'));
@@ -427,9 +467,13 @@ function drawResultInner(months) {
      매달 자리가 바뀌면 지난달과 견줄 수가 없다 — 「식자재가 어디 갔지」가 된다.
      UP.accounts 가 이미 사장님이 보시는 항목 차례다. 그 차례를 그대로 쓴다 */
   var catOrder = (UP.accounts || []).slice();
-  var keys = Object.keys(d.cats).filter(function (k) { return k !== UNSET; })
+  var keys = Object.keys(d.cats)
+    .filter(function (k) {
+      return k !== UNSET;
+    })
     .sort(function (a, b) {
-      var ia = catOrder.indexOf(a), ib = catOrder.indexOf(b);
+      var ia = catOrder.indexOf(a),
+        ib = catOrder.indexOf(b);
       if (ia === -1) ia = 999;
       if (ib === -1) ib = 999;
       if (ia !== ib) return ia - ib;
@@ -437,24 +481,29 @@ function drawResultInner(months) {
     });
   /* 분모는 매출 하나로 통일한다. 항목을 다 더하면 「나간 돈」의 매출 대비 %와 같아야
      하므로, 반올림 오차는 가장 큰 항목이 떠안는다 */
-  var costPct = d.sales > 0 ? Math.round(d.outTotal / d.sales * 100) : 0;
+  var costPct = d.sales > 0 ? Math.round((d.outTotal / d.sales) * 100) : 0;
   var pctOff = ratioMuted(d) || d.sales <= 0;
   var allKeys = keys.slice();
   if (d.cats[UNSET]) allKeys.push(UNSET);
   var catPct = (function () {
-    var out = {}, sum = 0;
+    var out = {},
+      sum = 0;
     allKeys.forEach(function (k) {
-      out[k] = d.sales > 0 ? Math.round(d.cats[k] / d.sales * 100) : 0;
+      out[k] = d.sales > 0 ? Math.round((d.cats[k] / d.sales) * 100) : 0;
       sum += out[k];
     });
     var gap = costPct - sum;
     if (gap !== 0 && allKeys.length) {
-      var big = allKeys.slice().sort(function (a, b) { return d.cats[b] - d.cats[a]; })[0];
+      var big = allKeys.slice().sort(function (a, b) {
+        return d.cats[b] - d.cats[a];
+      })[0];
       out[big] += gap;
     }
     return out;
   })();
-  function catPctOf(k) { return pctOff ? '' : catPct[k] + '%'; }
+  function catPctOf(k) {
+    return pctOff ? '' : catPct[k] + '%';
+  }
 
   /* 「나간 돈 75% 증가」의 차이가 전부 사장님 인출일 때가 있다.
      비교 줄의 분모는 안 건드리고, 제외분을 뺀 %를 한 줄 덧붙인다.
@@ -468,15 +517,19 @@ function drawResultInner(months) {
     var nowNet = side === 'in' ? dd.sales + dd.otherIn : dd.cost;
     var preNet = side === 'in' ? prev.sales + prev.otherIn : prev.cost;
     if (!preAll || !preNet) return '';
-    var a = nowAll / preAll - 1, b = nowNet / preNet - 1;
-    var flip = (a >= 0) !== (b >= 0);
+    var a = nowAll / preAll - 1,
+      b = nowNet / preNet - 1;
+    var flip = a >= 0 !== b >= 0;
     if (!flip && Math.abs(a - b) < 0.03) return '';
     /* ★ 42차 3번. 여기도 세 자리 %가 나왔다 */
     var mv2 = moveTxt(preNet, nowNet);
     if (!mv2) return '';
-    var tail = mv2.txt === null ? '거의 다 줄었습니다'
-             : (mv2.배 ? mv2.txt + '로 늘었습니다'
-                       : mv2.txt + ' ' + (b >= 0 ? '증가' : '감소'));
+    var tail =
+      mv2.txt === null
+        ? '거의 다 줄었습니다'
+        : mv2.배
+          ? mv2.txt + '로 늘었습니다'
+          : mv2.txt + ' ' + (b >= 0 ? '증가' : '감소');
     return (side === 'in' ? '매출과 그 밖의 입금만 보면 ' : '사업에 쓴 돈만 보면 ') + tail;
   }
 
@@ -515,7 +568,12 @@ function drawResultInner(months) {
     var lab = el('div', 'lab', label);
     lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
     if (note) lab.appendChild(el('span', 'gcount', note));
-    if (whyId) lab.appendChild(whyMark(whyId, function () { drawResult(months); }));
+    if (whyId)
+      lab.appendChild(
+        whyMark(whyId, function () {
+          drawResult(months);
+        })
+      );
     row.appendChild(lab);
     row.appendChild(el('div', 'v num', value));
     row.addEventListener('click', function () {
@@ -538,7 +596,8 @@ function drawResultInner(months) {
           읽는 자라, 그 줄들보다 먼저 보여야 뜻이 선다 */
   var 회색모음 = null;
   function 회색줄(node) {
-    if (회색모음) 회색모음.push(node); else host.appendChild(node);
+    if (회색모음) 회색모음.push(node);
+    else host.appendChild(node);
   }
   function 회색펴기(side) {
     var 줄들 = 회색모음 || [];
@@ -553,10 +612,13 @@ function drawResultInner(months) {
       drawResult(months);
     });
     host.appendChild(b);
-    if (열림) 줄들.forEach(function (n) { host.appendChild(n); });
+    if (열림)
+      줄들.forEach(function (n) {
+        host.appendChild(n);
+      });
   }
   function drawSideParts(side) {
-    if (d.blocked) return;                    /* 안 정한 게 많으면 숫자를 안 보여준다 */
+    if (d.blocked) return; /* 안 정한 게 많으면 숫자를 안 보여준다 */
     if (side === 'in') {
       /* 이 둘을 더하면 윗줄이다 */
       /* ★ 51차 ①. 여기가 안 열렸다. subRow 는 바로 옆에 있는데
@@ -576,18 +638,25 @@ function drawResultInner(months) {
           drawInDetail(host, d);
         });
         /* ★ 87차 ②. 회색 줄은 모아서 「자세히」 뒤로 넣는다 (회색펴기가 낸다) */
-        회색줄(el('div', 'subnote',
-          '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'));
+        회색줄(
+          el(
+            'div',
+            'subnote',
+            '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'
+          )
+        );
         /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다.
            ★ 붉은 줄은 안 접는다. 짚어드리는 말이라 접으면 뜻이 없다 */
-        if (d.sales > 0 && d.otherIn / d.sales > 0.10) {
-          host.appendChild(el('div', 'subnote warn',
-            '매출로 정하지 않으신 입금이 큽니다. 확인해보세요'));
+        if (d.sales > 0 && d.otherIn / d.sales > 0.1) {
+          host.appendChild(
+            el('div', 'subnote warn', '매출로 정하지 않으신 입금이 큽니다. 확인해보세요')
+          );
         }
       }
       if (d.salesOut) {
-        회색줄(el('div', 'subnote',
-          '매출 환불 ' + won(d.salesOut) + '원은 이미 매출에서 뺐습니다'));
+        회색줄(
+          el('div', 'subnote', '매출 환불 ' + won(d.salesOut) + '원은 이미 매출에서 뺐습니다')
+        );
       }
       if (pd) {
         var ci = cmpLine(d.sales + d.otherIn, pd.sales + pd.otherIn, pLab, true);
@@ -600,28 +669,55 @@ function drawResultInner(months) {
        항목마다 분모를 쓰면 아홉 줄이 두 배가 된다. 머리줄 아래 한 번만 적는다.
        ★ 비율을 못 내는 달에는 왜 없는지를 그 자리에 적는다 —
          빈 칸만 남기면 「왜 안 나오지」가 된다 */
-    host.appendChild(el('div', 'subnote', d.sales > 0
-      ? '아래 %는 매출 ' + won(d.sales) + '원 기준입니다'
-      : '아직 다 정하지 않아 비율을 내지 않았습니다'));
+    host.appendChild(
+      el(
+        'div',
+        'subnote',
+        d.sales > 0
+          ? '아래 %는 매출 ' + won(d.sales) + '원 기준입니다'
+          : '아직 다 정하지 않아 비율을 내지 않았습니다'
+      )
+    );
     /* 나간 쪽 — 항목별.
        ★ 43차. 금액 큰 순이 아니라 늘 같은 순서다.
          매달 자리가 바뀌면 지난달과 견줄 수가 없다 */
     keys.forEach(function (k) {
-      subRow(k, k, won(d.cats[k]), null, function () {
-        drawDetail(host, d, k);
-      }, pctCell(d.cats[k]));
+      subRow(
+        k,
+        k,
+        won(d.cats[k]),
+        null,
+        function () {
+          drawDetail(host, d, k);
+        },
+        pctCell(d.cats[k])
+      );
     });
     /* 원가율 — 「제일 보고 싶은 건 원가」라고 하셨다.
        원칙 4대로 분모 금액을 같이 적는다 */
     var food = (d.cats[baseName('식자재')] || 0) + (d.cats[baseName('주류·음료')] || 0);
     if (food > 0 && d.sales > 0) {
       /* ★ 62차 ②. 업종마다 이름도 재료도 다르다. 1년치 표와 같은 이름을 쓴다 (49차) */
-      var 재료이름 = baseName('식자재') +
-        (isHidden(baseName('주류·음료')) ? '' : '·' + baseName('주류·음료'));
+      var 재료이름 =
+        baseName('식자재') + (isHidden(baseName('주류·음료')) ? '' : '·' + baseName('주류·음료'));
       /* ★ 87차 ②. 나간 쪽 회색 줄도 「자세히」 안으로 — 두 자리의 모양을 맞춘다 */
-      회색줄(el('div', 'subnote',
-        tradeInfo().비율이름 + ' ' + pctStr(food / d.sales) + ' ' +
-        '(' + 재료이름 + ' ' + won(food) + '원 ÷ 매출 ' + won(d.sales) + '원)'));
+      회색줄(
+        el(
+          'div',
+          'subnote',
+          tradeInfo().비율이름 +
+            ' ' +
+            pctStr(food / d.sales) +
+            ' ' +
+            '(' +
+            재료이름 +
+            ' ' +
+            won(food) +
+            '원 ÷ 매출 ' +
+            won(d.sales) +
+            '원)'
+        )
+      );
     }
     if (pd) {
       var co = cmpLine(d.cost, pd.cost, pLab, false);
@@ -645,13 +741,15 @@ function drawResultInner(months) {
     if (!dtxt) {
       /* ★ 83차 ④-3. 진행 중인 달에는 날짜 없는 값을 안 받는다 */
       if (진행) return { 말: '이 달은 아직 진행 중입니다. 며칠인지 적어주세요.' };
-      return { day: 0 };                 /* 0 = 날짜 없이 이 달 전체 */
+      return { day: 0 }; /* 0 = 날짜 없이 이 달 전체 */
     }
     var dd = +dtxt;
     if (dd < 1 || dd > 끝날) {
-      return { 말: 진행
-        ? ('오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.')
-        : (monNum(m) + '은 ' + 끝날 + '일까지입니다.') };
+      return {
+        말: 진행
+          ? '오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.'
+          : monNum(m) + '은 ' + 끝날 + '일까지입니다.'
+      };
     }
     return { day: dd };
   }
@@ -678,18 +776,22 @@ function drawResultInner(months) {
       box.appendChild(nameInp);
     }
     var amt = document.createElement('input');
-    amt.type = 'text'; amt.inputMode = 'numeric';
-    amt.className = 'maninput'; amt.placeholder = '금액';
+    amt.type = 'text';
+    amt.inputMode = 'numeric';
+    amt.className = 'maninput';
+    amt.placeholder = '금액';
     if (opt.금액) amt.value = won(opt.금액);
-    moneyLive(amt);                       /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+    moneyLive(amt); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
     var 금액칸 = el('div', 'fixgrp');
     금액칸.appendChild(amt);
     /* ★ 85차 ②. 「원」은 칸 바깥에 글자로 둔다 — 안에 넣으면 지울 때 같이 지워진다 */
     금액칸.appendChild(el('span', 'fixlab', '원'));
     box.appendChild(금액칸);
     var day = document.createElement('input');
-    day.type = 'number'; day.className = 'maninput cashdayin';
-    day.min = 1; day.max = opt.끝날;
+    day.type = 'number';
+    day.className = 'maninput cashdayin';
+    day.min = 1;
+    day.max = opt.끝날;
     if (opt.날) day.value = opt.날;
     /* ★ 85차 ③. 앞에 지금 보고 있는 달, 뒤에 「일」. 달을 옮기면 앞의 달도 같이 바뀐다 */
     var 날짜칸 = el('div', 'fixgrp');
@@ -697,32 +799,52 @@ function drawResultInner(months) {
     날짜칸.appendChild(day);
     날짜칸.appendChild(el('span', 'fixlab', '일'));
     box.appendChild(날짜칸);
-    box.appendChild(el('div', 'cashhint', opt.진행
-      ? ('오늘까지만 넣을 수 있습니다 (1~' + opt.끝날 + '일)')
-      : '비워도 됩니다 — 비우면 이 달 전체로 칩니다'));
+    box.appendChild(
+      el(
+        'div',
+        'cashhint',
+        opt.진행
+          ? '오늘까지만 넣을 수 있습니다 (1~' + opt.끝날 + '일)'
+          : '비워도 됩니다 — 비우면 이 달 전체로 칩니다'
+      )
+    );
     var msg = el('div', 'subnote', '');
     var ok = el('button', 'upbtn on', '넣기');
     ok.type = 'button';
     ok.addEventListener('click', function () {
       var nm = nameInp ? String(nameInp.value).trim() : null;
-      if (nameInp && !nm) { msg.textContent = '항목 이름을 적어주세요.'; return; }
-      var v = moneyRead(amt.value);       /* ★ 85차 ②. 예전 식 그대로다 — 콤마는 걷힌다 */
-      if (!v) { msg.textContent = '금액을 적어주세요.'; return; }
+      if (nameInp && !nm) {
+        msg.textContent = '항목 이름을 적어주세요.';
+        return;
+      }
+      var v = moneyRead(amt.value); /* ★ 85차 ②. 예전 식 그대로다 — 콤마는 걷힌다 */
+      if (!v) {
+        msg.textContent = '금액을 적어주세요.';
+        return;
+      }
       var 잰것 = 날짜재기(m, opt.진행, opt.끝날, String(day.value).replace(/[^0-9]/g, ''));
-      if (잰것.말) { msg.textContent = 잰것.말; return; }
+      if (잰것.말) {
+        msg.textContent = 잰것.말;
+        return;
+      }
       opt.넣기(nm, v, 잰것.day);
       drawResult(months);
     });
     /* ★ 86차 ④. 「취소」가 아니라 「닫기」다 — 넣은 것을 무르는 것이 아니라 칸을 접는 것이다 */
     var no = el('button', 'upbtn plain', '닫기');
     no.type = 'button';
-    no.addEventListener('click', function () { opt.닫기(); drawResult(months); });
+    no.addEventListener('click', function () {
+      opt.닫기();
+      drawResult(months);
+    });
     box.appendChild(ok);
     box.appendChild(no);
     box.appendChild(msg);
     host.appendChild(box);
     /* 이어서 바로 치실 수 있게 — 화면은 안 움직인다 */
-    try { (nameInp || amt).focus({ preventScroll: true }); } catch (e) { }
+    try {
+      (nameInp || amt).focus({ preventScroll: true });
+    } catch (e) {}
   }
   /* 날짜별로 적으신 한 줄 — [수정] [지우기] (86차 ⑤) */
   function 날줄(m, id, x, 열쇠, 고치기) {
@@ -731,7 +853,10 @@ function drawResultInner(months) {
     r.appendChild(el('div', 'v num', won(x.amt)));
     var ed = el('button', 'chbtn', '수정');
     ed.type = 'button';
-    ed.addEventListener('click', function () { 고치기(열쇠); drawResult(months); });
+    ed.addEventListener('click', function () {
+      고치기(열쇠);
+      drawResult(months);
+    });
     r.appendChild(ed);
     var del = el('button', 'chbtn', '지우기');
     del.type = 'button';
@@ -755,8 +880,9 @@ function drawResultInner(months) {
     if (진행) {
       if (달합) {
         /* 끝난 뒤에 세겠다는 것을 밝힌다 — 조용히 빼면 숫자가 안 맞아 보인다 */
-        host.appendChild(el('div', 'subnote',
-          '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다'));
+        host.appendChild(
+          el('div', 'subnote', '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다')
+        );
       }
       return;
     }
@@ -768,7 +894,7 @@ function drawResultInner(months) {
     inp.className = 'maninput';
     inp.value = 달합 ? won(달합) : '';
     inp.placeholder = '0';
-    moneyLive(inp);                       /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+    moneyLive(inp); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
     inp.addEventListener('change', function () {
       manualSet(m, id, moneyRead(inp.value));
       drawResult(months);
@@ -790,9 +916,11 @@ function drawResultInner(months) {
     var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
     var 달합 = manualAmt(m, CASH_ID);
     var 날들 = manualDays(m, CASH_ID);
-    var 합 = (진행 ? 0 : 달합) + 날들.reduce(function (s, it) {
-      return s + ((진행 && it.day > 끝날) ? 0 : (+it.amt || 0));
-    }, 0);
+    var 합 =
+      (진행 ? 0 : 달합) +
+      날들.reduce(function (s, it) {
+        return s + (진행 && it.day > 끝날 ? 0 : +it.amt || 0);
+      }, 0);
     var open = !!UP.open.__cash;
     var row = el('div', 'orow manrow tapx');
     var lab = el('div', 'lab', '　' + CASH_NAME);
@@ -813,17 +941,23 @@ function drawResultInner(months) {
       if (고침 === 열쇠) {
         /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 금액과 날짜가 채워진 채로 */
         drawEntryBox({
-          금액: it.amt, 날: it.day, 끝날: 끝날, 진행: 진행,
+          금액: it.amt,
+          날: it.day,
+          끝날: 끝날,
+          진행: 진행,
           넣기: function (nm, v, 날) {
             넣어두기(m, CASH_ID, v, 날, it);
             UP.open.__cashEdit = '';
           },
-          닫기: function () { UP.open.__cashEdit = ''; }
+          닫기: function () {
+            UP.open.__cashEdit = '';
+          }
         });
         return;
       }
       날줄(m, CASH_ID, it, 열쇠, function (k) {
-        UP.open.__cashEdit = k; UP.open.__cashAdd = false;
+        UP.open.__cashEdit = k;
+        UP.open.__cashAdd = false;
       });
     });
     /* 날짜 없이 달로만 적으신 것 — 끝난 달에서만 받는다 (83차 ④-3) */
@@ -832,9 +966,14 @@ function drawResultInner(months) {
        그래야 「넣기」 뒤에도 상자가 그대로 남는다 */
     if (UP.open.__cashAdd && !고침) {
       drawEntryBox({
-        끝날: 끝날, 진행: 진행,
-        넣기: function (nm, v, 날) { 넣어두기(m, CASH_ID, v, 날, null); },
-        닫기: function () { UP.open.__cashAdd = false; }
+        끝날: 끝날,
+        진행: 진행,
+        넣기: function (nm, v, 날) {
+          넣어두기(m, CASH_ID, v, 날, null);
+        },
+        닫기: function () {
+          UP.open.__cashAdd = false;
+        }
       });
     } else if (!고침) {
       var add = el('button', 'oblink', '＋ 추가');
@@ -871,9 +1010,11 @@ function drawResultInner(months) {
       var 날들 = manualDays(m, it.id);
       var 달합 = manualAmt(m, it.id);
       /* ★ 87차 ③. 오른쪽에 그 항목의 합계. 세는 자는 현금매출과 한 글자도 같다 */
-      var 합 = (진행 ? 0 : 달합) + 날들.reduce(function (s, x) {
-        return s + ((진행 && x.day > 끝날) ? 0 : (+x.amt || 0));
-      }, 0);
+      var 합 =
+        (진행 ? 0 : 달합) +
+        날들.reduce(function (s, x) {
+          return s + (진행 && x.day > 끝날 ? 0 : +x.amt || 0);
+        }, 0);
       /* ★ 87차 ③. 위 항목들(인건비·월세·…)과 같은 줄 모양이다 —
          혼자만 늘 펼쳐져 있어서 눈에 걸렸다. 처음에는 접혀 있다 */
       var 열쇠 = 'manopen:' + it.id;
@@ -889,25 +1030,31 @@ function drawResultInner(months) {
         drawResult(months);
       });
       host.appendChild(head);
-      if (!폄) return;                   /* 접으면 날짜 줄도 수정·지우기도 안 보인다 */
+      if (!폄) return; /* 접으면 날짜 줄도 수정·지우기도 안 보인다 */
       날들.forEach(function (x) {
         var 열쇠 = it.id + '|' + x.day + '|' + x.amt;
         if (고침 === 열쇠) {
           /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 이미 채워진 채로 */
           drawEntryBox({
-            금액: x.amt, 날: x.day, 끝날: 끝날, 진행: 진행,
+            금액: x.amt,
+            날: x.day,
+            끝날: 끝날,
+            진행: 진행,
             넣기: function (nm, v, 날) {
               넣어두기(m, it.id, v, 날, x);
               UP.open.__outEdit = '';
             },
-            닫기: function () { UP.open.__outEdit = ''; }
+            닫기: function () {
+              UP.open.__outEdit = '';
+            }
           });
           return;
         }
         날줄(m, it.id, x, 열쇠, function (k) {
           /* 고치는 동안 그 항목이 접혀 사라지면 고칠 칸도 같이 사라진다 */
           UP.open['manopen:' + it.id] = true;
-          UP.open.__outEdit = k; UP.open.__outAdd = false;
+          UP.open.__outEdit = k;
+          UP.open.__outAdd = false;
         });
       });
       /* 옛 저장분 — 날짜 없이 달로만 적으신 것. 있을 때만 보인다 (규칙 7) */
@@ -917,21 +1064,28 @@ function drawResultInner(months) {
       var del = el('div', 'manitemdel');
       var rm = el('button', 'chbtn', '항목 지우기');
       rm.type = 'button';
-      rm.addEventListener('click', function () { manualRemove(it.id); drawResult(months); });
+      rm.addEventListener('click', function () {
+        manualRemove(it.id);
+        drawResult(months);
+      });
       del.appendChild(rm);
       host.appendChild(del);
     });
-    if (고침) return;                    /* 고치는 중에는 새로 넣는 칸을 안 연다 */
+    if (고침) return; /* 고치는 중에는 새로 넣는 칸을 안 연다 */
     if (UP.open.__outAdd) {
       drawEntryBox({
-        이름칸: true, 끝날: 끝날, 진행: 진행,
+        이름칸: true,
+        끝날: 끝날,
+        진행: 진행,
         넣기: function (nm, v, 날) {
           /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 */
           var id = manualFind(nm, 'out') || manualAdd(nm, 'out');
           넣어두기(m, id, v, 날, null);
-          UP.open.__manJust = id;        /* ★ 87차 ③. 방금 넣은 것은 펼쳐서 보여드린다 */
+          UP.open.__manJust = id; /* ★ 87차 ③. 방금 넣은 것은 펼쳐서 보여드린다 */
         },
-        닫기: function () { UP.open.__outAdd = false; }
+        닫기: function () {
+          UP.open.__outAdd = false;
+        }
       });
       return;
     }
@@ -953,7 +1107,11 @@ function drawResultInner(months) {
     row.appendChild(el('div', 'msign', side === 'out' ? '−' : ''));
     var lab = el('div', 'lab', label + (d.blocked && isFull ? ' — 직접 넣기' : ''));
     lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
-    lab.appendChild(whyMark(side, function () { drawResult(months); }));
+    lab.appendChild(
+      whyMark(side, function () {
+        drawResult(months);
+      })
+    );
     row.appendChild(lab);
     row.appendChild(el('div', 'v num', d.blocked ? '' : won(value)));
     row.addEventListener('click', function () {
@@ -978,8 +1136,11 @@ function drawResultInner(months) {
     if (side === 'in') drawCashRow(isFull);
     /* ★ 86차 ⑨. 나간 쪽은 무엇을 적을지 미리 알 수 없어 항목 이름도 대표님이 적으신다.
        날짜 규칙은 들어온 쪽과 똑같다 — 그래서 진행 중인 달에도 이 자리가 열린다 */
-    if (side === 'out') { drawOutManual(isFull); return; }
-    if (!isFull) return;               /* 진행 중인 달에는 적는 칸을 안 연다 (규칙 2) */
+    if (side === 'out') {
+      drawOutManual(isFull);
+      return;
+    }
+    if (!isFull) return; /* 진행 중인 달에는 적는 칸을 안 연다 (규칙 2) */
     /* ★ 86차 ⑧. 들어온 쪽 「＋ 항목 추가」를 없앤다 — 직접 넣는 길을
        「현금매출을 날짜별로」 하나로 좁힌다. 그 자리에 비슷한 단추가 둘이었다.
        ★ 단추만 없앤다. 이미 만들어 두신 항목은 그대로 줄로 보이고 금액 칸도 있고
@@ -1004,7 +1165,10 @@ function drawResultInner(months) {
       r2.appendChild(inp);
       var del = el('button', 'chbtn', '지우기');
       del.type = 'button';
-      del.addEventListener('click', function () { manualRemove(it.id); drawResult(months); });
+      del.addEventListener('click', function () {
+        manualRemove(it.id);
+        drawResult(months);
+      });
       r2.appendChild(del);
       host.appendChild(r2);
     });
@@ -1027,7 +1191,11 @@ function drawResultInner(months) {
      전월 라벨을 덮어썼다. 그래서 아래 cmpLine 이 그것을 글자로 찍어
      화면에 [object HTMLDivElement] 가 나왔다 (55차부터 · 예시 여덟 달 중 다섯 달) */
   var profLab = el('div', 'lab', '계좌 순이익');
-  profLab.appendChild(whyMark('profit', function () { drawResult(months); }));
+  profLab.appendChild(
+    whyMark('profit', function () {
+      drawResult(months);
+    })
+  );
   res.appendChild(profLab);
   /* ★ 41차 1번 (나). 진행 중인 달은 더 정해도 안 나온다 — 달이 끝나야 나온다.
    ★ 64-3차. 그런데 「달이 끝나면」은 「기다리면 된다」로 읽힌다 —
@@ -1040,7 +1208,7 @@ function drawResultInner(months) {
   var runNow = isRunning(UP.month, months);
   if (d.blocked) {
     res.classList.add('waiting');
-    var 안정한탓 = (d.uOut > 0 || d.uIn > 0);
+    var 안정한탓 = d.uOut > 0 || d.uIn > 0;
     if (안정한탓) {
       /* ★ 85차 ①. 여기까지는 문장일 뿐 갈 곳이 없었다. 흰 상자로 감싸 눌리게 한다.
          ★ 갈 곳은 이미 있는 것을 그대로 쓴다 — resultNewButton 이 하는 일과 같다.
@@ -1064,7 +1232,7 @@ function drawResultInner(months) {
          순이익 칸에서는 여전히 확정된 적자에만 쓴다 —
          안 정한 것이 남아 있으면 적자든 흑자든 호박이다 */
     res.classList.toggle('minus', d.profit < 0 && !unsetAmt);
-    res.classList.add(unsetAmt ? 'est' : (d.profit < 0 ? 'minus' : 'fixed'));
+    res.classList.add(unsetAmt ? 'est' : d.profit < 0 ? 'minus' : 'fixed');
     res.appendChild(el('div', 'v num', won(d.profit)));
   }
   host.appendChild(res);
@@ -1078,8 +1246,13 @@ function drawResultInner(months) {
   var 분류탓 = d.blocked && (d.uOut > 0 || d.uIn > 0);
   if (분류탓) {
     host.appendChild(el('div', 'resbase', '거래 분류에 따라 계좌 순이익이 달라집니다.'));
-    host.appendChild(el('div', 'resbase',
-      '분류에 따른 범위: ' + won(Math.round(d.lo)) + '원 ~ ' + won(Math.round(d.hi)) + '원'));
+    host.appendChild(
+      el(
+        'div',
+        'resbase',
+        '분류에 따른 범위: ' + won(Math.round(d.lo)) + '원 ~ ' + won(Math.round(d.hi)) + '원'
+      )
+    );
   }
   if (d.blocked && !runNow && !분류탓) {
     host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'));
@@ -1088,18 +1261,24 @@ function drawResultInner(months) {
     /* ★ 64-3차. 윗줄이 「조금만 더 정하면」이라고 했는데 여기서 「아직 N일치라」라고 하면
        한 화면이 두 까닭을 말한다. 안 정한 돈이 까닭이면 그 말을 그대로 잇는다 */
     if (!분류탓) {
-      host.appendChild(el('div', 'resbase',
-        (+UP.month.slice(5, 7)) + '월은 아직 ' + lastD + '일치라 흑자인지 적자인지 아직 못 정합니다'));
+      host.appendChild(
+        el(
+          'div',
+          'resbase',
+          +UP.month.slice(5, 7) + '월은 아직 ' + lastD + '일치라 흑자인지 적자인지 아직 못 정합니다'
+        )
+      );
     }
     var goM = viewableMonth(months, UP.month);
     if (goM) {
       var gb = el('div', 'resbase');
-      gb.appendChild(document.createTextNode(
-        (+goM.slice(5, 7)) + '월은 보실 수 있습니다 '));
-      var gbtn = el('button', 'upbtn est', (+goM.slice(5, 7)) + '월 보기');
+      gb.appendChild(document.createTextNode(+goM.slice(5, 7) + '월은 보실 수 있습니다 '));
+      var gbtn = el('button', 'upbtn est', +goM.slice(5, 7) + '월 보기');
       gbtn.type = 'button';
       gbtn.addEventListener('click', function () {
-        UP.month = goM; UP.open = {}; UP.ckPin = {};
+        UP.month = goM;
+        UP.open = {};
+        UP.ckPin = {};
         drawResult(months);
       });
       gb.appendChild(gbtn);
@@ -1162,9 +1341,13 @@ function drawResultInner(months) {
   /* ★ 43차. 계좌 잔액을 이 칸으로 데려온다.
      통장에 찍힌 그대로라 안 바뀐다 — 순이익과 달리 확정값이다. 파랑(--now)으로 갈라 쓴다.
      펼치면 월초·들어온·나간·월말이 나온다. 계좌 검산은 거기서 그대로 돈다 */
-  boxRow('__bal', (full ? (+UP.month.slice(5, 7)) + '월 말' : '현재') + ' 계좌 잔액',
-    won(d.close), null, function () {
-      host.appendChild(calcRow('　' + (+UP.month.slice(5, 7)) + '월 1일', won(d.open)));
+  boxRow(
+    '__bal',
+    (full ? +UP.month.slice(5, 7) + '월 말' : '현재') + ' 계좌 잔액',
+    won(d.close),
+    null,
+    function () {
+      host.appendChild(calcRow('　' + +UP.month.slice(5, 7) + '월 1일', won(d.open)));
       host.appendChild(calcRow('　들어온 돈', won(d.inTotal)));
       host.appendChild(calcRow('　나간 돈', won(d.outTotal)));
       host.appendChild(calcRow('　' + (full ? '월말' : '현재'), won(d.close)));
@@ -1179,27 +1362,50 @@ function drawResultInner(months) {
         if (per.length) host.appendChild(el('div', 'subnote', per.join(' · ')));
       }
       /* 이 뺄셈이 「들어온 돈 − 나간 돈」과 안 맞으면 그 달에 확인 안 된 거래가 있다 */
-      var diff2 = d.close - d.open, flow2 = d.inTotal - d.outTotal;
+      var diff2 = d.close - d.open,
+        flow2 = d.inTotal - d.outTotal;
       if (diff2 !== flow2) {
-        host.appendChild(el('div', 'subnote warn',
-          '확인이 필요한 거래 때문에 ' + won(Math.abs(diff2 - flow2)) +
-          '원이 들어온 돈·나간 돈에 안 잡혀 있습니다'));
+        host.appendChild(
+          el(
+            'div',
+            'subnote warn',
+            '확인이 필요한 거래 때문에 ' +
+              won(Math.abs(diff2 - flow2)) +
+              '원이 들어온 돈·나간 돈에 안 잡혀 있습니다'
+          )
+        );
       }
-    }, 'balrow2', full ? 'bal' : 'balnow');
+    },
+    'balrow2',
+    full ? 'bal' : 'balnow'
+  );
   var keepTot = (d.keepIn || 0) + (d.keepOut || 0);
   if (keepTot) {
-    boxRow('__keep', '사업 외 용도', won(keepTot), null, function () {
-      /* ★ 36차. 한 줄 한 줄이 펼쳐지고, 펼친 거래처 줄마다 [항목 바꾸기]가 붙는다 */
-      var rows = [];
-      Object.keys(d.keepOutParts).forEach(function (k) {
-        rows.push({ k: k, isIn: false, name: keepSideName(k, '출금'), v: d.keepOutParts[k] });
-      });
-      Object.keys(d.keepInParts).forEach(function (k) {
-        rows.push({ k: k, isIn: true, name: keepSideName(k, '입금'), v: d.keepInParts[k] });
-      });
-      rows.sort(function (a, b) { return b.v - a.v; })
-        .forEach(function (r) { keepRow(r.name, r.v, r.k, r.isIn); });
-    }, 'sidebox', 'keep');
+    boxRow(
+      '__keep',
+      '사업 외 용도',
+      won(keepTot),
+      null,
+      function () {
+        /* ★ 36차. 한 줄 한 줄이 펼쳐지고, 펼친 거래처 줄마다 [항목 바꾸기]가 붙는다 */
+        var rows = [];
+        Object.keys(d.keepOutParts).forEach(function (k) {
+          rows.push({ k: k, isIn: false, name: keepSideName(k, '출금'), v: d.keepOutParts[k] });
+        });
+        Object.keys(d.keepInParts).forEach(function (k) {
+          rows.push({ k: k, isIn: true, name: keepSideName(k, '입금'), v: d.keepInParts[k] });
+        });
+        rows
+          .sort(function (a, b) {
+            return b.v - a.v;
+          })
+          .forEach(function (r) {
+            keepRow(r.name, r.v, r.k, r.isIn);
+          });
+      },
+      'sidebox',
+      'keep'
+    );
   }
   /* 앱이 질문을 생략한 작은 거래는 계산상 「아직 안 정한 돈」이 아니다.
      임시로 사업 외 용도에 둔 값이지만, 다시 확인할 돈이라는 사용자 흐름은 같다.
@@ -1211,42 +1417,64 @@ function drawResultInner(months) {
      ★ 카드가 낸 보류를 그대로 쓴다 — 두 자리가 따로 세면 또 어긋난다 */
   if (DUE_HOLD_NOW) {
     var 보류것 = DUE_HOLD_NOW;
-    boxRow('__hold', '예상 잔액 표시를 보류한 거래 (출금 ' + won(보류것.건수) + '건)',
-      won(보류것.합), null, function () {
-        host.appendChild(el('div', 'subnote',
-          '예상 지출을 계산할 때 쓰는 과거 비교 날짜에 있던 거래입니다. ' +
-          '아직 안 정한 거래라 예상 지출에 들어가지 않았습니다.'));
-        host.appendChild(el('div', 'subnote',
-          '분류 후 예상 잔액 표시 여부를 다시 확인합니다.'));
-        host.appendChild(el('div', 'subnote',
-          '자료 부족 같은 다른 조건이 남아 있을 수 있습니다.'));
+    boxRow(
+      '__hold',
+      '예상 잔액 표시를 보류한 거래 (출금 ' + won(보류것.건수) + '건)',
+      won(보류것.합),
+      null,
+      function () {
+        host.appendChild(
+          el(
+            'div',
+            'subnote',
+            '예상 지출을 계산할 때 쓰는 과거 비교 날짜에 있던 거래입니다. ' +
+              '아직 안 정한 거래라 예상 지출에 들어가지 않았습니다.'
+          )
+        );
+        host.appendChild(el('div', 'subnote', '분류 후 예상 잔액 표시 여부를 다시 확인합니다.'));
+        host.appendChild(el('div', 'subnote', '자료 부족 같은 다른 조건이 남아 있을 수 있습니다.'));
         drawHoldDetail(host, 보류것, months);
-      }, 'sidebox unsetbox holdrow', null);
+      },
+      'sidebox unsetbox holdrow',
+      null
+    );
   }
   if (unsetAmt) {
-    var 작은거래표시 = sk.n
-      ? ('작은 거래 ' + won(sk.n) + '곳 · ' + won(sk.sum) + '원 별도')
-      : null;
-    boxRow('__unset', '아직 안 정한 돈 (거래 ' + won(d.unknownN) + '건)', won(unsetAmt), 작은거래표시, function () {
-      drawSkippedSmall(true);
-      if (d.uOut) host.appendChild(calcRow('　나간 돈', won(d.uOut)));
-      if (d.uIn)  host.appendChild(calcRow('　들어온 돈', won(d.uIn)));
-      host.appendChild(el('div', 'subnote', '이 돈은 매출에도 지출에도 넣지 않았습니다'));
-      /* ★ 82차 ⑥. 펼친 자리에서는 왜 여기 두는 편이 나은지까지 말한다.
+    var 작은거래표시 = sk.n ? '작은 거래 ' + won(sk.n) + '곳 · ' + won(sk.sum) + '원 별도' : null;
+    boxRow(
+      '__unset',
+      '아직 안 정한 돈 (거래 ' + won(d.unknownN) + '건)',
+      won(unsetAmt),
+      작은거래표시,
+      function () {
+        drawSkippedSmall(true);
+        if (d.uOut) host.appendChild(calcRow('　나간 돈', won(d.uOut)));
+        if (d.uIn) host.appendChild(calcRow('　들어온 돈', won(d.uIn)));
+        host.appendChild(el('div', 'subnote', '이 돈은 매출에도 지출에도 넣지 않았습니다'));
+        /* ★ 82차 ⑥. 펼친 자리에서는 왜 여기 두는 편이 나은지까지 말한다.
          ○○ 약사가 「사업·개인이 섞인 카드」를 억지로 의약품 매입으로 찍으셨다 —
          개인이 쓴 돈이 지출로 들어가 순이익이 실제보다 나쁘게 나왔다 */
-      host.appendChild(el('div', 'subnote',
-        '사업과 개인이 섞인 카드처럼 한쪽으로 정할 수 없는 것은 여기 두는 것이 맞습니다.'));
-      /* ★ 43차 4단계. 여기서 바로 정하실 수 있게 한다 */
-      drawUnsetDetail(host, d, months);
-    }, 'sidebox unsetbox', 'unset');
+        host.appendChild(
+          el(
+            'div',
+            'subnote',
+            '사업과 개인이 섞인 카드처럼 한쪽으로 정할 수 없는 것은 여기 두는 것이 맞습니다.'
+          )
+        );
+        /* ★ 43차 4단계. 여기서 바로 정하실 수 있게 한다 */
+        drawUnsetDetail(host, d, months);
+      },
+      'sidebox unsetbox',
+      'unset'
+    );
     /* ★ 82차 ⑥. 이번 통화에서 가장 값어치 있는 발견 —
        앱은 설계대로 혼용 카드를 안 나누고 여기 뒀는데, ○○ 약사가 그것을
        「덜 끝난 숙제」로 느껴 하나하나 억지로 채우셨다. 그래서 숫자가 틀어졌다.
        화면이 사용자로 하여금 정확도를 스스로 망가뜨리게 만들고 있었다.
        ★ 0으로 만들라고 재촉하지 않는다는 것을 펼치지 않아도 보이게 둔다 */
-    host.appendChild(el('div', 'unsetok',
-      '다 채우지 않으셔도 됩니다. 확실하지 않은 것은 여기 두는 편이 낫습니다.'));
+    host.appendChild(
+      el('div', 'unsetok', '다 채우지 않으셔도 됩니다. 확실하지 않은 것은 여기 두는 편이 낫습니다.')
+    );
   }
 
   /* ── 36차 F-3·4·5 ── 안 묻고 넘긴 것을 반드시 화면에 드러낸다.
@@ -1260,16 +1488,20 @@ function drawResultInner(months) {
     if (inUnset) {
       s1.appendChild(document.createTextNode('앱이 넘긴 작은 거래 · '));
     }
-    s1.appendChild(document.createTextNode(
-      monthSpan() + ' · ' + won(sk.n) + '곳 · '));
+    s1.appendChild(document.createTextNode(monthSpan() + ' · ' + won(sk.n) + '곳 · '));
     s1.appendChild(el('b', null, won(sk.sum) + '원'));
     var outAll = 0;
-    (UP.payees || []).forEach(function (g) { outAll += g.outSum; });
+    (UP.payees || []).forEach(function (g) {
+      outAll += g.outSum;
+    });
     if (outAll > 0) {
       s1.appendChild(document.createTextNode('(나간 돈의 ' + pctStr(sk.sum / outAll) + ')'));
     }
-    s1.appendChild(document.createTextNode(
-      '은 묻지 않고 「' + sayCat(ASK_SKIP_CAT) + '」' + ro(sayCat(ASK_SKIP_CAT)) + ' 두었습니다'));
+    s1.appendChild(
+      document.createTextNode(
+        '은 묻지 않고 「' + sayCat(ASK_SKIP_CAT) + '」' + ro(sayCat(ASK_SKIP_CAT)) + ' 두었습니다'
+      )
+    );
     s1.appendChild(foldChip(skOpen));
     s1.addEventListener('click', function () {
       UP.open.__skip = !UP.open.__skip;
@@ -1281,12 +1513,21 @@ function drawResultInner(months) {
          여기만 「그 달」이었다. 온보딩을 거의 안 한 상태에서는 1726%까지 갔다.
        ★ 세 자리 %는 어떤 경우에도 뜻이 없다. 분모보다 크면 비율을 안 쓰고 금액만 말한다 */
     var costSpan = costAllSpan();
-    if (costSpan > 0 && sk.sum / costSpan > 0.10) {
+    if (costSpan > 0 && sk.sum / costSpan > 0.1) {
       var big = sk.sum >= costSpan;
-      sr.appendChild(el('div', 'sk2', big
-        ? ('같은 기간 사업에 쓴 돈 ' + won(costSpan) + '원보다 큰 금액입니다. 한 번 펼쳐보세요')
-        : ('같은 기간 사업에 쓴 돈 ' + won(costSpan) + '원의 ' +
-           pctStr(sk.sum / costSpan) + '입니다. 한 번 펼쳐보세요')));
+      sr.appendChild(
+        el(
+          'div',
+          'sk2',
+          big
+            ? '같은 기간 사업에 쓴 돈 ' + won(costSpan) + '원보다 큰 금액입니다. 한 번 펼쳐보세요'
+            : '같은 기간 사업에 쓴 돈 ' +
+                won(costSpan) +
+                '원의 ' +
+                pctStr(sk.sum / costSpan) +
+                '입니다. 한 번 펼쳐보세요'
+        )
+      );
     }
     host.appendChild(sr);
     /* F-4. 펼치면 금액 큰 순으로 보여준다. 정하기는 한 단추로 분류 화면에서 이어 한다. */
@@ -1302,20 +1543,29 @@ function drawResultInner(months) {
       goSmallWrap.appendChild(goSmall);
       host.appendChild(goSmallWrap);
       var box = el('div', 'dtl');
-      UP.skipped.slice().sort(function (a, b) { return b.outSum - a.outSum; })
-        .slice(0, 40).forEach(function (g) {
+      UP.skipped
+        .slice()
+        .sort(function (a, b) {
+          return b.outSum - a.outSum;
+        })
+        .slice(0, 40)
+        .forEach(function (g) {
           var row = el('div', 'drow');
           var nm = el('div', 'dnm');
           nm.appendChild(document.createTextNode(showName(g.name)));
-          nm.appendChild(el('div', 'dspan',
-            sideSpan(g, false) + ' · ' + g.outN + '건'));
+          nm.appendChild(el('div', 'dspan', sideSpan(g, false) + ' · ' + g.outN + '건'));
           row.appendChild(nm);
           row.appendChild(el('div', 'dv num', won(g.outSum)));
           box.appendChild(row);
         });
       if (UP.skipped.length > 40) {
-        box.appendChild(el('div', 'subnote',
-          '금액이 큰 40곳만 보여드립니다 (전부 ' + won(UP.skipped.length) + '곳)'));
+        box.appendChild(
+          el(
+            'div',
+            'subnote',
+            '금액이 큰 40곳만 보여드립니다 (전부 ' + won(UP.skipped.length) + '곳)'
+          )
+        );
       }
       host.appendChild(box);
     }
@@ -1329,62 +1579,91 @@ function drawResultInner(months) {
   if (UP.banks && UP.banks.length > 1) {
     var pairs = findTransfers();
     var onN = 0;
-    pairs.forEach(function (p) { if (xferOn(p.out)) onN++; });
+    pairs.forEach(function (p) {
+      if (xferOn(p.out)) onN++;
+    });
     if (pairs.length) {
       var xsum = 0;
-      pairs.forEach(function (p) { xsum += p.amount; });
+      pairs.forEach(function (p) {
+        xsum += p.amount;
+      });
       /* ★ 45차 ⑤. 여덟 건이 펼쳐진 채로 나와 결과 화면을 길게 만들었다.
          43차 원칙(숫자와 설명 최소화)이 이 줄에도 걸린다. 접어 둔다 —
          머리줄이 건수와 금액을 이미 말하므로 접혀 있어도 숨기는 게 아니다 */
       var xOpen = !!UP.open.__xfer;
       var xb = el('div', 'xferbox');
       var xh = el('div', 'xfhead tapx');
-      xh.appendChild(document.createTextNode(
-        '계좌끼리 옮긴 것으로 보이는 거래가 ' + won(pairs.length) + '건 있습니다'));
+      xh.appendChild(
+        document.createTextNode(
+          '계좌끼리 옮긴 것으로 보이는 거래가 ' + won(pairs.length) + '건 있습니다'
+        )
+      );
       xh.appendChild(foldChip(xOpen));
       xh.addEventListener('click', function () {
         UP.open.__xfer = !UP.open.__xfer;
         drawResult(months);
       });
       xb.appendChild(xh);
-      xb.appendChild(el('div', 'xfsub',
-        monthSpan() + ' · 모두 ' + won(xsum) + '원. ' +
-        '한 계좌에서 나가 다른 계좌로 들어온 같은 돈이라면 매출·지출에서 뺍니다.'));
+      xb.appendChild(
+        el(
+          'div',
+          'xfsub',
+          monthSpan() +
+            ' · 모두 ' +
+            won(xsum) +
+            '원. ' +
+            '한 계좌에서 나가 다른 계좌로 들어온 같은 돈이라면 매출·지출에서 뺍니다.'
+        )
+      );
       var xl = el('div', 'dtl');
-      if (xOpen) pairs.forEach(function (p) {
-        var on = xferOn(p.out);
-        var row = el('div', 'drow');
-        var nm = el('div', 'dnm');
-        nm.appendChild(document.createTextNode(
-          dayText(p.out.at) + ' · ' + bankName(p.out.acc) + ' 나감 → ' +
-          bankName(p.into.acc) + ' 들어옴'));
-        nm.appendChild(el('div', 'dspan',
-          showName(p.out.payee) + ' → ' + showName(p.into.payee)));
-        row.appendChild(nm);
-        row.appendChild(el('div', 'dv num', won(p.amount)));
-        var ch = el('div', 'dch');
-        var bt = el('button', 'chbtn' + (on ? ' on' : ''), on ? '뺐습니다' : '이 건은 아닙니다');
-        bt.type = 'button';
-        bt.addEventListener('click', function () {
-          if (on) dropXfer(p); else takeXfer([p]);
-          drawResult(months);
+      if (xOpen)
+        pairs.forEach(function (p) {
+          var on = xferOn(p.out);
+          var row = el('div', 'drow');
+          var nm = el('div', 'dnm');
+          nm.appendChild(
+            document.createTextNode(
+              dayText(p.out.at) +
+                ' · ' +
+                bankName(p.out.acc) +
+                ' 나감 → ' +
+                bankName(p.into.acc) +
+                ' 들어옴'
+            )
+          );
+          nm.appendChild(
+            el('div', 'dspan', showName(p.out.payee) + ' → ' + showName(p.into.payee))
+          );
+          row.appendChild(nm);
+          row.appendChild(el('div', 'dv num', won(p.amount)));
+          var ch = el('div', 'dch');
+          var bt = el('button', 'chbtn' + (on ? ' on' : ''), on ? '뺐습니다' : '이 건은 아닙니다');
+          bt.type = 'button';
+          bt.addEventListener('click', function () {
+            if (on) dropXfer(p);
+            else takeXfer([p]);
+            drawResult(months);
+          });
+          ch.appendChild(bt);
+          row.appendChild(ch);
+          xl.appendChild(row);
         });
-        ch.appendChild(bt);
-        row.appendChild(ch);
-        xl.appendChild(row);
-      });
       var xa = el('div', 'addrow');
       if (onN < pairs.length) {
         var yes = el('button', 'b on', won(pairs.length) + '건 다 빼기');
         yes.type = 'button';
-        yes.addEventListener('click', function () { takeXfer(pairs); drawResult(months); });
+        yes.addEventListener('click', function () {
+          takeXfer(pairs);
+          drawResult(months);
+        });
         xa.appendChild(yes);
       }
       if (onN) {
         var undo = el('button', 'b', '되돌리기');
         undo.type = 'button';
         undo.addEventListener('click', function () {
-          pairs.forEach(dropXfer); drawResult(months);
+          pairs.forEach(dropXfer);
+          drawResult(months);
         });
         xa.appendChild(undo);
       }
@@ -1399,16 +1678,48 @@ function drawResultInner(months) {
      밝혀두지 않으면 「3월에 갑자기 1천만원이 늘었다」로 보인다.
      ★ 파일 이름을 그대로 쓰지 않는다 — 사장님 이름·계좌번호가 화면에 나온다 */
   if (UP.banks && UP.banks.length > 1) {
-    var starts = UP.banks.map(function (b) { return b.from; }).filter(Boolean).sort();
+    var starts = UP.banks
+      .map(function (b) {
+        return b.from;
+      })
+      .filter(Boolean)
+      .sort();
     if (starts.length > 1 && starts[0] !== starts[starts.length - 1]) {
-      var early = UP.banks.filter(function (b) { return b.from === starts[0]; });
-      var late = UP.banks.filter(function (b) { return b.from !== starts[0]; });
-      var lastEarly = late.map(function (b) { return b.from; }).sort()[0];
-      host.appendChild(el('div', 'xfnote',
-        monLabel(starts[0]) + ' ~ ' + monLabel(prevMonthOf(lastEarly)) + '은 ' +
-        early.map(function (b) { return b.bank; }).join('·') + '만 있습니다. ' +
-        late.map(function (b) { return b.bank; }).join('·') + '은 ' +
-        monLabel(lastEarly) + '부터입니다.'));
+      var early = UP.banks.filter(function (b) {
+        return b.from === starts[0];
+      });
+      var late = UP.banks.filter(function (b) {
+        return b.from !== starts[0];
+      });
+      var lastEarly = late
+        .map(function (b) {
+          return b.from;
+        })
+        .sort()[0];
+      host.appendChild(
+        el(
+          'div',
+          'xfnote',
+          monLabel(starts[0]) +
+            ' ~ ' +
+            monLabel(prevMonthOf(lastEarly)) +
+            '은 ' +
+            early
+              .map(function (b) {
+                return b.bank;
+              })
+              .join('·') +
+            '만 있습니다. ' +
+            late
+              .map(function (b) {
+                return b.bank;
+              })
+              .join('·') +
+            '은 ' +
+            monLabel(lastEarly) +
+            '부터입니다.'
+        )
+      );
     }
   }
 
@@ -1418,9 +1729,21 @@ function drawResultInner(months) {
   if (proj) {
     /* 예상 금액은 최대 30%까지 틀린다. 방향만 말하고 금액은 안 쓴다 */
     var pbox = el('div', 'projbox');
-    pbox.appendChild(el('div', null,
-      '이대로 가면 ' + proj.mm + '월 매출은 ' + proj.prevM + '월 전체 ' +
-      won(proj.prev) + '원보다 ' + (proj.up ? '늘어날' : '줄어들') + ' 것으로 보입니다'));
+    pbox.appendChild(
+      el(
+        'div',
+        null,
+        '이대로 가면 ' +
+          proj.mm +
+          '월 매출은 ' +
+          proj.prevM +
+          '월 전체 ' +
+          won(proj.prev) +
+          '원보다 ' +
+          (proj.up ? '늘어날' : '줄어들') +
+          ' 것으로 보입니다'
+      )
+    );
     host.appendChild(pbox);
   }
 
@@ -1434,8 +1757,7 @@ function drawResultInner(months) {
   host.appendChild(card);
 
   if (mLeft) {
-    host.appendChild(el('div', 'manleft',
-      '직접 넣으실 달이 ' + won(mLeft) + '개 남았습니다'));
+    host.appendChild(el('div', 'manleft', '직접 넣으실 달이 ' + won(mLeft) + '개 남았습니다'));
   }
 
   /* ── 카드 아래 ── 순이익을 어떻게 읽어야 하는지 */
@@ -1452,8 +1774,9 @@ function drawResultInner(months) {
        거기서는 흑자·적자 자체가 안 정해진다. 「지금 몇 %」라는 사실만 적는다 */
     var np = nowPct(d);
     if (np !== null) {
-      host.appendChild(el('div', 'nowpct',
-        '지금 ' + np + '% — 거래처 ' + won(d.unkGroups) + '곳을 정하면 100%'));
+      host.appendChild(
+        el('div', 'nowpct', '지금 ' + np + '% — 거래처 ' + won(d.unkGroups) + '곳을 정하면 100%')
+      );
     }
   } else {
     if (pd && !pd.blocked) {
@@ -1484,9 +1807,14 @@ function drawResultInner(months) {
            lo = 0 < hi    안 정한 것을 전부 지출로 보면 순이익이 정확히 0원이다
            lo < 0 = hi    전부 매출로 봐도 순이익이 정확히 0원이다
          ★ 갈래 조건(d.lo >= 0)은 그대로 둔다. 판단이 아니라 표현만 고친다 */
-      b2.appendChild(el('div', null,
-        '지금 자료에서는 아직 안 정한 거래를 어느 쪽으로 정해도 계좌 순이익이 0원 ' +
-        (d.lo >= 0 ? '이상입니다.' : '이하입니다.')));
+      b2.appendChild(
+        el(
+          'div',
+          null,
+          '지금 자료에서는 아직 안 정한 거래를 어느 쪽으로 정해도 계좌 순이익이 0원 ' +
+            (d.lo >= 0 ? '이상입니다.' : '이하입니다.')
+        )
+      );
       /* ★ 115차 ②-4. 「금액만 … 사이에서 달라집니다」를 갈래를 따져 뺀다.
          일괄로 지우면 안 된다 — 갈래마다 카드가 말해주는 것이 다르다.
            uOut>0 · uIn=0   카드에 순이익(=hi)과 errline 의 lo 가 다 있다 → 완전한 중복. 뺀다
@@ -1542,16 +1870,21 @@ function drawResultInner(months) {
   /* ★ 112차 ②. 어느 상태에서 와도 그 카드로 돌아갈 수 있어야 한다 —
      예전에는 patched 한 갈래만 길이 있었다 */
   var ck있 = (UP.rows || []).some(ckRow);
-  var 되돌 = (ck있 && !UP.demo) ? el('button', 'oslink', '다시 보기') : null;
+  var 되돌 = ck있 && !UP.demo ? el('button', 'oslink', '다시 보기') : null;
   if (되돌) {
     되돌.type = 'button';
-    되돌.addEventListener('click', function () { showPatchedCards(); });
+    되돌.addEventListener('click', function () {
+      showPatchedCards();
+    });
   }
   /* ★ 112차 ②㉰. 「파일 금액 반영」은 거래 금액을 고르신 것이다.
      「거래 금액도 모르는 것」과 한 덩어리로 세지 않는다 — 남은 것은 잔액 차이 하나다 */
   if (UP.byStated) {
-    lines.push('파일에 적힌 금액으로 반영한 거래 ' + UP.byStated +
-               '건 · 잔액 차이는 확인 필요로 따로 두었습니다');
+    lines.push(
+      '파일에 적힌 금액으로 반영한 거래 ' +
+        UP.byStated +
+        '건 · 잔액 차이는 확인 필요로 따로 두었습니다'
+    );
   }
   /* ★ 112차 ②㉯. 거래 전체가 매출·지출에서 빠진 것들이다. 미응답과 다른 말로 적는다 */
   if (UP.unsure) {
@@ -1560,12 +1893,16 @@ function drawResultInner(months) {
   /* ★ 112차 ②. 이 줄은 맨 아래로 내린다 — 안 물은 줄이라 「다시 보기」에 안 뜬다.
      위에 두면 그 단추가 이 줄에 붙어 「눌러도 그 거래가 없다」가 된다 */
   if (UP.zeroed) {
-    lines.push('금액 칸이 비어 있지만 잔액도 안 움직인 거래 ' + won(UP.zeroed) +
-               '건은 0원으로 두었습니다');
+    lines.push(
+      '금액 칸이 비어 있지만 잔액도 안 움직인 거래 ' + won(UP.zeroed) + '건은 0원으로 두었습니다'
+    );
   }
   lines.forEach(function (t, i) {
     var row = el('div', null, t);
-    if (i === 0 && 되돌) { row.appendChild(document.createTextNode(' ')); row.appendChild(되돌); }
+    if (i === 0 && 되돌) {
+      row.appendChild(document.createTextNode(' '));
+      row.appendChild(되돌);
+    }
     foot.appendChild(row);
   });
   if (lines.length) host.appendChild(foot);
@@ -1586,8 +1923,11 @@ function drawResultInner(months) {
     } else {
       sv.appendChild(el('b', null, '거래내역을 이 브라우저에 저장하지 못했습니다.'));
       sv.appendChild(document.createElement('br'));
-      sv.appendChild(document.createTextNode(
-        '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 올려야 합니다.'));
+      sv.appendChild(
+        document.createTextNode(
+          '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 올려야 합니다.'
+        )
+      );
     }
     if (!PICK_SAVED) {
       sv.appendChild(document.createElement('br'));
@@ -1608,7 +1948,9 @@ function drawResultInner(months) {
 /* ── 확인이 필요한 것 ──
    숫자만 보여주고 판단을 사장님께 떠넘기지 않는다. 이상하면 우리가 먼저 말한다.
    막지는 않는다 — 진짜 그런 매장도 있으니 알려주고 고르게 한다 */
-function warnOk(m, id) { return UP.okWarn && UP.okWarn[m + '|' + id]; }
+function warnOk(m, id) {
+  return UP.okWarn && UP.okWarn[m + '|' + id];
+}
 function setWarnOk(m, id, on) {
   if (!UP.okWarn) UP.okWarn = {};
   if (on) UP.okWarn[m + '|' + id] = 1;
@@ -1617,8 +1959,11 @@ function setWarnOk(m, id, on) {
 
 /* 카드 목록을 먼저 뽑아둔다 — 제목 아래 요약 줄에서도 개수가 필요하다 */
 function collectChecks(d, months) {
-  var m = UP.month, cards = [];
-  ratioWarnings(d, m, months).forEach(function (w) { cards.push({ kind: 'ratio', w: w }); });
+  var m = UP.month,
+    cards = [];
+  ratioWarnings(d, m, months).forEach(function (w) {
+    cards.push({ kind: 'ratio', w: w });
+  });
   /* ★ 112차 ②㉰. 두 갈래를 가른다.
        unsure — 거래 금액을 모른다. 거래 전체가 매출·지출에서 빠졌다
        resid  — 파일 금액으로 반영했고, 잔액 차이만 아직 설명이 안 됐다
@@ -1627,13 +1972,19 @@ function collectChecks(d, months) {
     if (r.unsure) cards.push({ kind: 'unsure', row: r });
     else if (r.byStated) cards.push({ kind: 'resid', row: r });
   });
-  newPayees(d, m, months).forEach(function (p) { cards.push({ kind: 'new', p: p }); });
-  grownPayees(d, m, months).forEach(function (p) { cards.push({ kind: 'grow', p: p }); });
+  newPayees(d, m, months).forEach(function (p) {
+    cards.push({ kind: 'new', p: p });
+  });
+  grownPayees(d, m, months).forEach(function (p) {
+    cards.push({ kind: 'grow', p: p });
+  });
   return cards;
 }
 function checksLeft(cards) {
   var m = UP.month;
-  return cards.filter(function (c) { return !warnOk(m, checkId(c)); }).length;
+  return cards.filter(function (c) {
+    return !warnOk(m, checkId(c));
+  }).length;
 }
 
 /* 사장님이 손보는 중에 카드가 사라지면 하던 일을 잃는다.
@@ -1641,14 +1992,21 @@ function checksLeft(cards) {
    사장님은 아직 일을 안 끝내셨다.
    한 번 펼친 카드는 조건이 깨져도 그 자리에 두고, 카드 안에 한 줄만 단다.
    달을 바꾸거나 다른 화면으로 갔다 오면 그때 다시 센다 */
-function ckPinned() { return (UP.ckPin = UP.ckPin || {}); }
-function ckPin(m, c) { ckPinned()[m + '|' + checkId(c)] = c; }
+function ckPinned() {
+  return (UP.ckPin = UP.ckPin || {});
+}
+function ckPin(m, c) {
+  ckPinned()[m + '|' + checkId(c)] = c;
+}
 
 function drawChecks(host, d, months, cards) {
   var m = UP.month;
   /* 조건이 풀려 목록에서 빠진 카드라도, 펼쳐두신 것이면 되살려 붙인다 */
-  var live = {}, pinBack = [];
-  cards.forEach(function (c) { live[checkId(c)] = 1; });
+  var live = {},
+    pinBack = [];
+  cards.forEach(function (c) {
+    live[checkId(c)] = 1;
+  });
   Object.keys(ckPinned()).forEach(function (k) {
     var p = k.split('|');
     if (p[0] !== m) return;
@@ -1663,8 +2021,12 @@ function drawChecks(host, d, months, cards) {
   var box = el('div', 'checks');
   /* 「확인이 필요합니다」에는 아직 안 본 것만 센다.
      확인이 끝난 건 따로 묶어 접어둔다 */
-  var todo = cards.filter(function (c) { return !warnOk(m, checkId(c)); });
-  var done = cards.filter(function (c) { return warnOk(m, checkId(c)); });
+  var todo = cards.filter(function (c) {
+    return !warnOk(m, checkId(c));
+  });
+  var done = cards.filter(function (c) {
+    return warnOk(m, checkId(c));
+  });
   var left = todo.length;
   if (left) {
     /* ★ 86차 ⑦. 위에 있던 「확인할 게 N가지 있습니다」 상자가 여기로 왔다.
@@ -1706,36 +2068,49 @@ function drawChecks(host, d, months, cards) {
       };
       dh.addEventListener('click', flip);
       dh.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          flip();
+        }
       });
       box.appendChild(dh);
     }
-    if (warnOk(m, checkId(c)) && !UP.doneOpen) return;   /* 접혀 있으면 안 그린다 */
+    if (warnOk(m, checkId(c)) && !UP.doneOpen) return; /* 접혀 있으면 안 그린다 */
     var card = el('div', 'ckcard');
-    var id, title, body, cat = null;
+    var id,
+      title,
+      body,
+      cat = null;
 
     if (c.kind === 'ratio') {
-      id = c.w.id; title = c.w.title; body = c.w.body; cat = c.w.cat;
+      id = c.w.id;
+      title = c.w.title;
+      body = c.w.body;
+      cat = c.w.cat;
       var top = cat ? topPayee(d, cat) : null;
-      if (top) body += '  가장 큰 거래처: ' + showName(top.name) + ' ' + won(Math.abs(top.sum)) + '원';
+      if (top)
+        body += '  가장 큰 거래처: ' + showName(top.name) + ' ' + won(Math.abs(top.sum)) + '원';
     } else if (c.kind === 'unsure' || c.kind === 'resid') {
       /* ★ 112차 ②㉰. 두 갈래가 서로 다른 말을 해야 한다 */
       id = checkId(c);
-      var 날 = (+c.row.at.slice(5, 7)) + '월 ' + (+c.row.at.slice(8, 10)) + '일 ' +
-               showName(c.row.payee);
-      var 파일금액 = (c.row.stated === null || c.row.stated === undefined)
-        ? null : c.row.stated;
+      var 날 =
+        +c.row.at.slice(5, 7) + '월 ' + +c.row.at.slice(8, 10) + '일 ' + showName(c.row.payee);
+      var 파일금액 = c.row.stated === null || c.row.stated === undefined ? null : c.row.stated;
       if (c.kind === 'unsure') {
         title = 날 + ' 거래를 확인 필요로 분류하셨습니다.';
-        body = (파일금액 === null
-          ? '파일에 거래 금액이 없습니다. '
-          : '파일 금액 ' + won(Math.abs(파일금액)) + '원. ') +
+        body =
+          (파일금액 === null
+            ? '파일에 거래 금액이 없습니다. '
+            : '파일 금액 ' + won(Math.abs(파일금액)) + '원. ') +
           '이 거래는 매출·지출 계산에서 제외했습니다.';
       } else {
         title = 날 + ' 거래는 파일에 적힌 금액으로 반영했습니다.';
-        body = '파일 금액 ' + won(Math.abs(파일금액 === null ? c.row.amount : 파일금액)) +
-               '원 · 잔액 차이 ' + won(Math.abs(c.row.residual)) +
-               '원은 아직 설명되지 않았습니다. 매출·지출에는 넣지 않았습니다.';
+        body =
+          '파일 금액 ' +
+          won(Math.abs(파일금액 === null ? c.row.amount : 파일금액)) +
+          '원 · 잔액 차이 ' +
+          won(Math.abs(c.row.residual)) +
+          '원은 아직 설명되지 않았습니다. 매출·지출에는 넣지 않았습니다.';
       }
     } else if (c.kind === 'new') {
       id = 'new:' + c.p.name;
@@ -1743,10 +2118,9 @@ function drawChecks(host, d, months, cards) {
          찍으신 항목을 같이 보여드리면 그 물음이 안 생긴다 */
       var gNew = UP.byName[c.p.name];
       var cNew = gNew ? gCats(gNew).join(' · ') : '';
-      title = '처음 보는 거래처가 있습니다 — ' + showName(c.p.name) +
-              (cNew ? ' (' + cNew + ')' : '');
-      body = (+UP.month.slice(5, 7)) + '월 ' + wonSign(c.p.net) +
-             '원. 지난달에는 없던 곳입니다.';
+      title =
+        '처음 보는 거래처가 있습니다 — ' + showName(c.p.name) + (cNew ? ' (' + cNew + ')' : '');
+      body = +UP.month.slice(5, 7) + '월 ' + wonSign(c.p.net) + '원. 지난달에는 없던 곳입니다.';
     } else {
       id = 'grow:' + c.p.name;
       /* ★ 42차 3번. 「5705% 늘었습니다」를 배수로. 금액 두 개는 바로 아랫줄에 있다 */
@@ -1754,11 +2128,23 @@ function drawChecks(host, d, months, cards) {
          바로 아랫줄에 「3월 → 4월」이 있지만 제목만 읽고 지나가신다.
          견준 대상을 제목 안에 넣는다 — 아랫줄 금액 줄은 그대로 둔다 */
       var mv3 = moveTxt(c.p.was, c.p.amt);
-      title = showName(c.p.name) + ' 금액이 지난달에 비해 ' +
-              (!mv3 || mv3.txt === null ? '늘었습니다'
-                : (mv3.배 ? mv3.txt + '로 늘었습니다' : mv3.txt + ' 늘었습니다'));
-      body = (+prevMonth(UP.month, months).slice(5, 7)) + '월 ' + wonSign(c.p.wasNet) +
-             '원 → ' + (+UP.month.slice(5, 7)) + '월 ' + wonSign(c.p.net) + '원';
+      title =
+        showName(c.p.name) +
+        ' 금액이 지난달에 비해 ' +
+        (!mv3 || mv3.txt === null
+          ? '늘었습니다'
+          : mv3.배
+            ? mv3.txt + '로 늘었습니다'
+            : mv3.txt + ' 늘었습니다');
+      body =
+        +prevMonth(UP.month, months).slice(5, 7) +
+        '월 ' +
+        wonSign(c.p.wasNet) +
+        '원 → ' +
+        +UP.month.slice(5, 7) +
+        '월 ' +
+        wonSign(c.p.net) +
+        '원';
     }
 
     /* 이미 답한 카드는 접어두되 되돌릴 수 있게 남긴다 */
@@ -1798,7 +2184,7 @@ function drawChecks(host, d, months, cards) {
     ok.addEventListener('click', function () {
       useCard('맞습니다');
       setWarnOk(m, id, true);
-      UP.lastOk = { m: m, id: id };   /* 38차 3번. 되돌릴 수 있게 기억한다 */
+      UP.lastOk = { m: m, id: id }; /* 38차 3번. 되돌릴 수 있게 기억한다 */
       drawResult(months);
     });
     btns.appendChild(ok);
@@ -1836,12 +2222,17 @@ function drawChecks(host, d, months, cards) {
     }
     function openFix(draw) {
       fixDraw = draw;
-      if (!panel.hidden) { panel.hidden = true; return; }
+      if (!panel.hidden) {
+        panel.hidden = true;
+        return;
+      }
       showFix(draw);
     }
 
     if (c.kind === 'ratio' && c.w.find) {
-      fixDraw = function () { drawFindFor(panel, d, c.w.find); };
+      fixDraw = function () {
+        drawFindFor(panel, d, c.w.find);
+      };
       var fb = el('button', 'b on', c.w.find + '부터 찾아보기');
       fb.type = 'button';
       fb.addEventListener('click', function () {
@@ -1855,14 +2246,20 @@ function drawChecks(host, d, months, cards) {
       });
       btns.appendChild(fb);
     } else if (cat) {
-      fixDraw = function () { drawCatFix(panel, d, cat); };
+      fixDraw = function () {
+        drawCatFix(panel, d, cat);
+      };
       var fix = el('button', 'b on', '다시 정할게요');
       fix.type = 'button';
-      fix.addEventListener('click', function () { openFix(fixDraw); });
+      fix.addEventListener('click', function () {
+        openFix(fixDraw);
+      });
       btns.appendChild(fix);
     } else if (c.kind === 'new' || c.kind === 'grow') {
-      fixDraw = function () { drawPayeeFix(panel, d, c.p.name); };
-      var see = el('button', 'b on', '항목 확인');   /* 38차 2번. 기록 키는 그대로 둔다 */
+      fixDraw = function () {
+        drawPayeeFix(panel, d, c.p.name);
+      };
+      var see = el('button', 'b on', '항목 확인'); /* 38차 2번. 기록 키는 그대로 둔다 */
       see.type = 'button';
       see.addEventListener('click', function () {
         if (panel.hidden) useCard('확인해볼게요');
@@ -1871,13 +2268,26 @@ function drawChecks(host, d, months, cards) {
       btns.appendChild(see);
     } else if (c.kind === 'unsure' || c.kind === 'resid') {
       fixDraw = function () {
-        panel.appendChild(el('div', 'cka',
-          '거래내역 ' + c.row.excelRow + '행 · ' + c.row.at + ' · ' + showName(c.row.payee)));
+        panel.appendChild(
+          el(
+            'div',
+            'cka',
+            '거래내역 ' + c.row.excelRow + '행 · ' + c.row.at + ' · ' + showName(c.row.payee)
+          )
+        );
         /* ★ amount + residual 은 이 거래가 잔액을 움직인 금액이다 (네 상태 모두) */
-        panel.appendChild(el('div', 'cka',
-          '계좌 잔액은 ' + won(c.row.balance - (c.row.amount + c.row.residual)) +
-          '원에서 ' + won(c.row.balance) + '원이 되었습니다. ' +
-          '계좌 거래내역에서 이 거래를 확인해보세요.'));
+        panel.appendChild(
+          el(
+            'div',
+            'cka',
+            '계좌 잔액은 ' +
+              won(c.row.balance - (c.row.amount + c.row.residual)) +
+              '원에서 ' +
+              won(c.row.balance) +
+              '원이 되었습니다. ' +
+              '계좌 거래내역에서 이 거래를 확인해보세요.'
+          )
+        );
         drawPayeeFix(panel, d, c.row.payee);
       };
       var see2 = el('button', 'b on', '항목 확인');
@@ -1892,7 +2302,9 @@ function drawChecks(host, d, months, cards) {
       if (!UP.demo) {
         var again2 = el('button', 'b', '금액 다시 고르기');
         again2.type = 'button';
-        again2.addEventListener('click', function () { showPatchedCards(); });
+        again2.addEventListener('click', function () {
+          showPatchedCards();
+        });
         btns.appendChild(again2);
       }
     }
@@ -1908,15 +2320,15 @@ function drawChecks(host, d, months, cards) {
 /* 사장님이 찍은 것과 앱이 넣은 것이 같은 검정색이면 구분이 안 간다.
    빨강은 이 앱에서 적자라 호박색을 쓴다 */
 function autoTag(g) {
-  var au = g && (g.mixed ? (g.autoIn || g.autoOut) : g.auto);
-  return (gDone(g) && au) ? el('span', 'autotag', '(앱이 넣음)') : null;
+  var au = g && (g.mixed ? g.autoIn || g.autoOut : g.auto);
+  return gDone(g) && au ? el('span', 'autotag', '(앱이 넣음)') : null;
 }
 
 function checkId(c) {
-  if (c.kind === 'ratio')  return c.w.id;
+  if (c.kind === 'ratio') return c.w.id;
   if (c.kind === 'unsure') return 'unsure:' + c.row.excelRow;
-  if (c.kind === 'resid')  return 'resid:' + c.row.excelRow;   /* ★ 112차 ②㉰ */
-  if (c.kind === 'new')    return 'new:' + c.p.name;
+  if (c.kind === 'resid') return 'resid:' + c.row.excelRow; /* ★ 112차 ②㉰ */
+  if (c.kind === 'new') return 'new:' + c.p.name;
   return 'grow:' + c.p.name;
 }
 
@@ -1930,13 +2342,18 @@ function steadyScore(g) {
   else if (g.monthN >= 3) s += 1;
   if (g.amts && g.amts.length >= 3) {
     var sum = 0;
-    g.amts.forEach(function (a) { sum += a; });
-    var mean = sum / g.amts.length, v = 0;
-    g.amts.forEach(function (a) { v += (a - mean) * (a - mean); });
+    g.amts.forEach(function (a) {
+      sum += a;
+    });
+    var mean = sum / g.amts.length,
+      v = 0;
+    g.amts.forEach(function (a) {
+      v += (a - mean) * (a - mean);
+    });
     var cv = mean ? Math.sqrt(v / g.amts.length) / mean : 9;
     if (cv < 0.3) s += 1;
   }
-  if (g.n <= 3) s -= 2;              /* 단발성은 힌트가 안 된다 — 뒤로 */
+  if (g.n <= 3) s -= 2; /* 단발성은 힌트가 안 된다 — 뒤로 */
   return s;
 }
 
@@ -1949,29 +2366,47 @@ var FIND_PAGE = 12;
 /* 저장만 하고 화면은 안 건드린다 */
 function setCatQuiet(g, name) {
   if (UP.accounts.indexOf(name) === -1) UP.accounts.push(name);
-  if (g.mixed) { gSetCat(g, true, name, false); gSetCat(g, false, name, false); }
-  else { g.cat = name; g.auto = false; }
+  if (g.mixed) {
+    gSetCat(g, true, name, false);
+    gSetCat(g, false, name, false);
+  } else {
+    g.cat = name;
+    g.auto = false;
+  }
   var i = UP.queue.indexOf(g);
   if (i >= UP.pos) UP.queue.splice(i, 1);
   savePicks();
 }
 function unsetCatQuiet(g) {
-  if (g.mixed) { gSetCat(g, true, null, false); gSetCat(g, false, null, false); }
-  else { g.cat = null; g.auto = false; }
+  if (g.mixed) {
+    gSetCat(g, true, null, false);
+    gSetCat(g, false, null, false);
+  } else {
+    g.cat = null;
+    g.auto = false;
+  }
   savePicks();
 }
 
 /* 찾기 — 다듬은 이름끼리 견준다. 공백·대소문자는 무시한다 */
-function findKey(s) { return canonName(String(s || '')).replace(/\s+/g, '').toLowerCase(); }
+function findKey(s) {
+  return canonName(String(s || ''))
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
 
 function drawFindFor(panel, d, cat) {
   if (!panel._st) panel._st = { q: '', amt: false, shown: FIND_PAGE, picked: {} };
   var st = panel._st;
   panel.innerHTML = '';
 
-  panel.appendChild(el('div', 'cka',
-    '매달 비슷한 금액이 나간 곳을 위로 올렸습니다. ' + cat + ga(cat) +
-    ' 여기 있을 수 있습니다.'));
+  panel.appendChild(
+    el(
+      'div',
+      'cka',
+      '매달 비슷한 금액이 나간 곳을 위로 올렸습니다. ' + cat + ga(cat) + ' 여기 있을 수 있습니다.'
+    )
+  );
 
   /* ── 찾기 칸 ── 목록에 없으면 사장님은 찾을 방법이 없다 */
   var bar = el('div', 'findbar');
@@ -1981,8 +2416,11 @@ function drawFindFor(panel, d, cat) {
   inp.placeholder = '거래처 이름으로 찾기';
   inp.value = st.q;
   bar.appendChild(inp);
-  var sortB = el('button', 'chbtn' + (st.amt ? ' on' : ''),
-                 st.amt ? '원래 순서로' : '금액순으로 보기');
+  var sortB = el(
+    'button',
+    'chbtn' + (st.amt ? ' on' : ''),
+    st.amt ? '원래 순서로' : '금액순으로 보기'
+  );
   sortB.type = 'button';
   bar.appendChild(sortB);
   panel.appendChild(bar);
@@ -1996,39 +2434,55 @@ function drawFindFor(panel, d, cat) {
 
   function list() {
     /* 이번에 찍은 것도 자리를 지킨다 — 빠지면 되돌릴 수가 없다 */
-    var all = UP.payees.filter(function (g) { return !gDone(g) || st.picked[g.name]; });
+    var all = UP.payees.filter(function (g) {
+      return !gDone(g) || st.picked[g.name];
+    });
     var q = findKey(st.q);
-    if (q) all = all.filter(function (g) { return findKey(g.name).indexOf(q) !== -1; });
-    all.sort(st.amt
-      ? function (a, b) { return b.abs - a.abs; }
-      : function (a, b) {
-          var s = steadyScore(b) - steadyScore(a);
-          return s !== 0 ? s : b.abs - a.abs;
-        });
+    if (q)
+      all = all.filter(function (g) {
+        return findKey(g.name).indexOf(q) !== -1;
+      });
+    all.sort(
+      st.amt
+        ? function (a, b) {
+            return b.abs - a.abs;
+          }
+        : function (a, b) {
+            var s = steadyScore(b) - steadyScore(a);
+            return s !== 0 ? s : b.abs - a.abs;
+          }
+    );
     return all;
   }
 
   function render() {
     var all = list();
     var n = 0;
-    Object.keys(st.picked).forEach(function () { n++; });
+    Object.keys(st.picked).forEach(function () {
+      n++;
+    });
     count.textContent = n ? '이번에 ' + n + '곳 정하셨습니다' : '';
     count.hidden = !n;
 
     box.innerHTML = '';
     if (!all.length) {
-      box.appendChild(el('div', 'cka', st.q
-        ? '그런 이름으로 아직 안 정한 거래처가 없습니다. 이미 다른 항목으로 정하셨을 수 있습니다.'
-        : '아직 안 정한 거래처가 없습니다.'));
+      box.appendChild(
+        el(
+          'div',
+          'cka',
+          st.q
+            ? '그런 이름으로 아직 안 정한 거래처가 없습니다. 이미 다른 항목으로 정하셨을 수 있습니다.'
+            : '아직 안 정한 거래처가 없습니다.'
+        )
+      );
       moreWrap.innerHTML = '';
       return;
     }
     all.slice(0, st.shown).forEach(function (g) {
       var row = el('div', 'drow');
       var nm = el('div', 'dnm');
-      var au2 = g.mixed ? (g.autoIn || g.autoOut) : g.auto;
-      if (gDone(g)) nm.appendChild(
-        el('span', au2 ? 'mark auto' : 'mark mine', au2 ? '⚙' : '✓'));
+      var au2 = g.mixed ? g.autoIn || g.autoOut : g.auto;
+      if (gDone(g)) nm.appendChild(el('span', au2 ? 'mark auto' : 'mark mine', au2 ? '⚙' : '✓'));
       else nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
       nm.appendChild(document.createTextNode(gShowCat(g) ? gShowCat(g) + ' ' : ''));
       var tg1 = autoTag(g);
@@ -2062,14 +2516,18 @@ function drawFindFor(panel, d, cat) {
         var other = el('button', 'chbtn', '다른 항목');
         other.type = 'button';
         other.addEventListener('click', function () {
-          if (!menu.hidden) { menu.hidden = true; return; }
+          if (!menu.hidden) {
+            menu.hidden = true;
+            return;
+          }
           drawChangeMenu(menu, g, function (name) {
             st.picked[g.name] = 1;
             render();
           });
           menu.hidden = false;
         });
-        ch.appendChild(btn); ch.appendChild(other);
+        ch.appendChild(btn);
+        ch.appendChild(other);
       }
       row.appendChild(ch);
       box.appendChild(row);
@@ -2081,7 +2539,10 @@ function drawFindFor(panel, d, cat) {
     if (left > 0) {
       var more = el('button', 'chbtn wide', '더 보기 (' + won(left) + '곳 남음)');
       more.type = 'button';
-      more.addEventListener('click', function () { st.shown += FIND_PAGE; render(); });
+      more.addEventListener('click', function () {
+        st.shown += FIND_PAGE;
+        render();
+      });
       moreWrap.appendChild(more);
     }
   }
@@ -2106,7 +2567,7 @@ function drawPayeeFix(panel, d, name) {
   var box = el('div', 'dtl');
   var row = el('div', 'drow');
   var nm = el('div', 'dnm');
-  var au3 = g.mixed ? (g.autoIn || g.autoOut) : g.auto;
+  var au3 = g.mixed ? g.autoIn || g.autoOut : g.auto;
   if (!gDone(g)) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
   else nm.appendChild(el('span', au3 ? 'mark auto' : 'mark mine', au3 ? '⚙' : '✓'));
   nm.appendChild(document.createTextNode(showName(name) + ' · ' + (gShowCat(g) || UNSET) + ' '));
@@ -2115,16 +2576,18 @@ function drawPayeeFix(panel, d, name) {
   if (isCut(name)) nm.appendChild(el('div', 'namecut', '은행에서 이름이 잘려 들어왔습니다'));
   /* 카드는 8월 이야기를 하는데 여기에 여덟 달 합계가 나오면 사장님이 놀라신다.
      그 달 금액을 앞에, 전 기간은 작은 글씨로 뒤에 */
-  var mSum = 0, mN = 0;
+  var mSum = 0,
+    mN = 0;
   UP.rows.forEach(function (r) {
     if (keyOf(r) !== name || monthOf(r.at) !== UP.month) return;
-    mSum += r.amount; mN++;
+    mSum += r.amount;
+    mN++;
   });
-  nm.appendChild(el('div', 'dspan',
-    payeeSpan(g) + ' 통틀어 ' + g.n + '건 · ' + wonSign(g.net)));
+  nm.appendChild(el('div', 'dspan', payeeSpan(g) + ' 통틀어 ' + g.n + '건 · ' + wonSign(g.net)));
   row.appendChild(nm);
-  row.appendChild(el('div', 'dv num',
-    mN ? spanWord(UP.month, null) + ' ' + wonSign(mSum) : wonSign(g.net)));
+  row.appendChild(
+    el('div', 'dv num', mN ? spanWord(UP.month, null) + ' ' + wonSign(mSum) : wonSign(g.net))
+  );
   var ch = el('div', 'dch');
   var btn = el('button', 'chbtn', '항목 바꾸기');
   btn.type = 'button';
@@ -2135,7 +2598,10 @@ function drawPayeeFix(panel, d, name) {
   menu.hidden = true;
   box.appendChild(menu);
   btn.addEventListener('click', function () {
-    if (!menu.hidden) { menu.hidden = true; return; }
+    if (!menu.hidden) {
+      menu.hidden = true;
+      return;
+    }
     drawChangeMenu(menu, g);
     menu.hidden = false;
   });
@@ -2150,8 +2616,9 @@ function drawCatFix(panel, d, cat) {
     panel.appendChild(el('div', 'cka', '이 항목으로 정하신 거래처가 없습니다.'));
     return;
   }
-  panel.appendChild(el('div', 'cka',
-    '「' + cat + '」' + ro(cat) + ' 정하신 거래처입니다. 눌러서 바꾸세요.'));
+  panel.appendChild(
+    el('div', 'cka', '「' + cat + '」' + ro(cat) + ' 정하신 거래처입니다. 눌러서 바꾸세요.')
+  );
   var box = el('div', 'dtl');
   list.slice(0, 12).forEach(function (e) {
     var row = el('div', 'drow');
@@ -2170,11 +2637,13 @@ function drawCatFix(panel, d, cat) {
     menu.hidden = true;
     box.appendChild(menu);
     btn.addEventListener('click', function () {
-      if (!menu.hidden) { menu.hidden = true; return; }
+      if (!menu.hidden) {
+        menu.hidden = true;
+        return;
+      }
       drawChangeMenu(menu, UP.byName[e.name]);
       menu.hidden = false;
     });
   });
   panel.appendChild(box);
 }
-
