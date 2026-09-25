@@ -11,7 +11,8 @@ export default defineConfig({
   fullyParallel: true,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
-    baseURL: 'http://localhost:4173',
+    // BASE_URL 을 주면 배포된 사이트를 검사한다: BASE_URL=https://app.namneundon.com npx playwright test
+    baseURL: process.env.BASE_URL || 'http://localhost:4173',
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
     viewport: { width: 390, height: 844 },   // 사장님들이 주로 쓰는 휴대폰 너비

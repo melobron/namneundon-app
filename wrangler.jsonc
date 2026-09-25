@@ -1,0 +1,11 @@
+// 앱 배포 설정 — Cloudflare Workers (정적 파일만. 서버 코드 없음)
+// app/ 폴더를 그대로 올린다. 캐시 규칙은 app/_headers 를 따른다.
+// 배포: npx wrangler deploy
+{
+  "name": "namneundon-app",
+  "account_id": "38950986f7a45785abaee1821078b111",
+  "compatibility_date": "2026-09-23",
+  "assets": {
+    "directory": "./app"
+  }
+}
