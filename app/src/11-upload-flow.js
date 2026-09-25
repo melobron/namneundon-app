@@ -680,23 +680,27 @@ function startFromBanks(banks, dup, overlap) {
     bits.push(
       banks
         .map(function (b) {
-          return '<b>' + b.bank + '</b> ' + won(b.rows.length) + '건';
+          return '<b>' + escHtml(b.bank) + '</b> ' + won(b.rows.length) + '건';
         })
         .join(' · ')
     );
   } else {
     /* ★ 119차 업로드 안내. 읽은 뒤 맨 위에 서는 요약이라 은행과 건수로 적는다.
        시트 이름·헤더 행은 대표님이 확인할 값이 아니다 (계좌가 둘 이상일 때와 같은 모양) */
-    bits.push('<b>' + banks[0].bank + '</b> 거래 <b>' + won(rows.length) + '건</b>');
+    bits.push('<b>' + escHtml(banks[0].bank) + '</b> 거래 <b>' + won(rows.length) + '건</b>');
   }
   if (UP.moved)
     bits.push('순서가 뒤바뀐 <b>' + won(UP.moved) + '건</b>을 잔액에 맞게 다시 놓았습니다');
   dup.forEach(function (t) {
-    bits.push('건너뛴 파일 — ' + t);
+    bits.push('건너뛴 파일 — ' + escHtml(t));
   });
   overlap.forEach(function (o) {
     bits.push(
-      '건너뛴 파일 — ' + o.name + ' (이미 올리신 것과 ' + Math.round(o.pct * 100) + '% 겹칩니다)'
+      '건너뛴 파일 — ' +
+        escHtml(o.name) +
+        ' (이미 올리신 것과 ' +
+        Math.round(o.pct * 100) +
+        '% 겹칩니다)'
     );
   });
   upStat(bits.join('<br>'));

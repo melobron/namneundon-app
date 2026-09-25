@@ -485,7 +485,7 @@ function goSavedStore(k) {
   openPick();
   drawA2HS();
   loadSheetJS().catch(function (e) {
-    upStat('<b>' + e.message + '</b>');
+    upStat('<b>' + escHtml(e.message) + '</b>');
   });
 }
 /* 예시를 보다가 「내 거래내역 올려보기」를 누르면 시작 화면으로 돌아온다 */
@@ -637,7 +637,7 @@ function pickTrade(name) {
   openPick();
   drawA2HS();
   loadSheetJS().catch(function (e) {
-    upStat('<b>' + e.message + '</b>');
+    upStat('<b>' + escHtml(e.message) + '</b>');
   });
 }
 /* ★ 62차 ②. 업종별 고지 — 예시는 식당 자료로 만든 것이다.
