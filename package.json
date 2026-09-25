@@ -1,21 +1,25 @@
 {
   "name": "namneundon-app",
   "private": true,
-  "description": "남는돈 — 개발 도구 설정. 앱 자체는 빌드 없이 index.html 그대로 배포된다",
+  "description": "남는돈 — 은행 거래내역으로 사업 자금 흐름을 보여주는 웹앱. app/(앱)·landing/(소개)을 빌드 없이 Cloudflare 에 그대로 올린다. 이 파일은 개발 도구(테스트·배포) 설정이다",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "setup": "npm ci && playwright install chromium && npm run check",
     "serve": "node tests/serve.mjs",
     "check": "node tools/check-load-order.mjs",
-    "test": "node tools/check-load-order.mjs && playwright test",
+    "test": "npm run check && playwright test",
     "test:update": "playwright test --update-snapshots",
+    "test:prod": "BASE_URL=https://app.namneundon.com playwright test",
     "deploy:app": "wrangler deploy",
-    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main",
-    "deploy:legacy": "wrangler deploy --config legacy/wrangler.jsonc"
+    "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "acorn": "^8.18.0",
     "acorn-walk": "^8.3.5",
-    "wrangler": "^4.136.3"
+    "wrangler": "^4.139.0"
   }
 }

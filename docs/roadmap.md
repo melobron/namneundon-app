@@ -22,7 +22,7 @@
 | ~~A-3~~ | ~~자료 옮기기 페이지~~ | — | 실사용자 없음 → 생략 (2026-09-25) |
 | ✅ A-4 | 랜딩 「시작하기」를 새 주소로 | Claude | 2026-09-25 |
 | ✅ A-5 | 옛 주소 → 새 주소 301 이동 | Claude | 2026-09-25 |
-| A-6 | GitHub → Cloudflare 자동 배포 (main 에 합치면 바로 반영) | 지원 (대시보드 클릭) | Workers & Pages → `namneundon-app` → Settings → Build → Connect GitHub. 랜딩도 같은 방식 |
+| A-6 | GitHub → Cloudflare 자동 배포 | Claude → 지원 | `deploy.yml` 준비 완료. **Cloudflare 토큰을 GitHub Secret 에 넣으면 켜진다** (docs/deploy.md) |
 | A-7 | main 보호 — **GitHub Pro 를 쓰지 않기로 함 (2026-09-25)**. 비공개 저장소 무료 요금제는 보호 규칙이 적용되지 않는다 → 「main 에 직접 push 하지 않고 PR 로만, CI 통과 뒤 합치기」를 약속으로 지킨다 | 지원 | |
 | A-8 | 미리보기 배포 `preview-repo.namneundon-ahv.pages.dev` 지우기 | 지원 | 확인용이었다 |
 | A-9 | `namneundon-cards2` 가 무엇인지 확인, 안 쓰면 정리 | 요한에게 물어보기 | |
