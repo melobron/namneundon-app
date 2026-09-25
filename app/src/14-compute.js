@@ -164,7 +164,16 @@ function monthNumbers(m, cutDay) {
      계좌가 둘이면 한 계좌만 잡히고 다른 계좌가 통째로 빠진다.
      검산(open + inTotal - outTotal = close)이 첫 달부터 깨져 숫자가 아예 안 나온다 */
   var open = monthOpenBalance(m, rows);
-  var close = monthCloseBalance(m, rows);
+  /* ★ 2026-09-25. 잘라 계산하면(cutDay) 월말도 그 날까지의 잔액이다.
+     예전에는 월초만 자른 기간으로 잡고 월말은 그 달 전체로 잡아 검산이 어긋났다
+     (「지난달 같은 기간」 비교). 그 자리는 close 를 안 써서 화면에는 드러나지 않았다 */
+  var close;
+  if (cutDay) {
+    close = balanceAt(m, cutDay);
+    if (close === null) close = 0;
+  } else {
+    close = monthCloseBalance(m);
+  }
   var unkRatio = volume > 0 ? unknown / volume : 0;
   /* 안 정한 거래가 어디로 가느냐에 따라 순이익이 움직일 수 있는 폭.
      고정 10% 같은 선은 근거가 없어서, 흑자·적자 판정이 뒤집히는지로 본다 */
