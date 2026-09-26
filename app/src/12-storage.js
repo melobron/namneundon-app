@@ -918,7 +918,6 @@ function loadPicks(name) {
   return null;
 }
 
-var CASH_NAME = '현금매출';
 /* { v:2, items: [{id, name, side}],
      amounts: { '2023-07': { id: 금액 } },      ← 달 단위. 옛 판 그대로다
      days:    { '2023-07': [{id, day, amt}] } } ← 83차 ②. 날짜 있는 것만 여기

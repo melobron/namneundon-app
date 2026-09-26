@@ -13,65 +13,14 @@ function syncCloseLabel() {
   if (b) b.textContent = 내결과있나() ? '내 결과로 돌아가기' : '← 첫 화면으로';
 }
 
-/* ── 41차 1번 (가) · 결과를 처음 열 때 어느 달을 보여드리는가 ──
-   예전에는 진행 중인 달로 갔다. 그 달은 원래 절반짜리라 안 정한 돈의 몫이 커서
-   막히기 쉽다 — 「이제 보실 수 있습니다」 다음 화면이 「셀 수 없습니다」가 됐다.
-   ★ 20곳 찍은 실파일에서 13달 중 10달은 이미 숫자가 나오는데,
-     하필 막힌 셋 중 하나를 첫 화면으로 열고 있었다. 계산이 아니라 순서 문제였다.
-   ★ 사장님이 제일 먼저 궁금해하시는 것도 「지난달 얼마 남았나」다.
-     끝난 달 가운데 가장 최근 달을 연다. 그 달마저 막혔으면
-     숫자가 나오는 가장 최근 달까지 물러난다 — 첫 화면은 숫자여야 한다 */
-/* ★ 59차 ④. 화면을 처음 열면 진행 중인 달로 뜬다 —
-   「지금 어떤 상태인가」를 먼저 보여주려는 것이다.
-   예전에는 진행 중인 달을 아예 걸러내서 7월로 떴다.
- ★ 그냥 바꾸면 안 된다. 진행 중인 달이 blocked 인 경우가 실제로 있다 —
-   실파일 둘을 스무 곳만 정한 상태에서 2026-08 이 그렇다.
-   그대로 두면 첫 화면에 「달이 끝나면 나옵니다」만 뜨고 숫자가 하나도 안 보인다.
-   그래서 blocked 이면 지금처럼 끝난 달 중 숫자가 나오는 가장 최근 달로 물러난다 */
-/* ★ 64-2차 1. 늘 가장 최근 달이다. 물러나기를 없앴다.
-   「8월까지 자료를 올렸는데 7월이 보이면 당황합니다」 —
-   막힌 달이면 그 화면의 「조금만 더 정하면 나옵니다」와
-   「N월은 보실 수 있습니다 [N월 보기]」(41차)가 갈 길을 알려준다.
-   59차 ④의 「빈 화면 금지」는 그 유도로 갈음한다 */
-function defaultMonth(months) {
-  if (!months || !months.length) return null;
-  return months[months.length - 1];
-}
-/* 지금 보는 달 말고, 숫자가 나오는 가장 최근 달 (없으면 null) */
+/* 계산은 core/result.js 의 viewableMonthIn — 지금 매장(UP)을 넘긴다 */
 function viewableMonth(months, notThis) {
-  if (!months || !months.length) return null;
-  for (var i = months.length - 1; i >= 0; i--) {
-    if (months[i] === notThis) continue;
-    var d = monthNumbers(months[i], isRunning(months[i], months) ? lastDayIn(months[i]) : null);
-    if (!d.blocked) return months[i];
-  }
-  return null;
+  return viewableMonthIn(UP, months, notThis);
 }
 
-/* ★ 101차 ①. 지난 3달에 일자별로 제일 큰 돈이 나간 날.
-   기본값을 여기서 잡아 대표님은 확인만 하시면 되게 한다.
-   ★ domOutflow 는 이미 있는 함수다. 새로 세지 않는다 */
+/* 계산은 core/result.js 의 bigOutDayIn — 지금 매장(UP)을 넘긴다 */
 function bigOutDay(months, m) {
-  var dom;
-  try {
-    dom = domOutflow(months, m, FC_MIN_MONTHS);
-  } catch (e) {
-    return null;
-  }
-  if (!dom || dom.n < FC_MIN_MONTHS) return null;
-  var best = null,
-    bestV = 0;
-  /* ★ 103차 ③. 고르실 수 있는 날과 같은 범위로 넓힌다. 묻는 값과 권하는 값의
-     범위가 다르면 말일에 몰리는 대표님께는 영영 엉뚱한 날을 권하게 된다.
-     domOutflow 의 avg 는 「그 날이 있던 달 수」로 이미 나눠져 있어 29~31 도 셀 수 있다 */
-  for (var d = 1; d <= 31; d++) {
-    var v = dom.avg[d] || 0;
-    if (v > bestV) {
-      bestV = v;
-      best = d;
-    }
-  }
-  return best;
+  return bigOutDayIn(UP, months, m);
 }
 /* ★ 101차 ①. 이 매장에 한 번만 묻는다. 한 번 답하시면 다시 안 묻는다 —
    카드를 펼치면 언제든 바꾸실 수 있다 */
@@ -180,31 +129,9 @@ function showResult() {
   drawResult(months);
 }
 
-function monthLabel(m) {
-  return m.replace('-', '년 ') + '월';
-}
-/* 1년치 표 각주가 이미 「진행 중」이라고 쓴다. 말을 하나로 맞춘다 */
+/* 계산은 core/result.js 의 monthLabelRIn — 지금 매장(UP)을 넘긴다 */
 function monthLabelR(m, months) {
-  return monthLabel(m) + (isRunning(m, months) ? ' (진행 중)' : '');
-}
-/* ── 47차 ② · 지금 몇 %인가 ────────────────────────────────
-   46차에 만든 「N% → 100%」는 뒤집히지 않은 달에만 나왔다.
-   실파일 둘·97곳 찍은 상태에서 13달 중 11달이 blocked 라 %가 없었다 —
-   얼마나 더 정확해지는지 알려주자던 줄인데 정확도가 낮을수록 안 보였다.
-   ★ 두 자리가 같은 계산을 쓰게 한 곳에서 낸다.
-     한 화면에 68%와 71%가 다른 식으로 나오면 안 된다.
-   ★ 반올림해서 99.6%가 100%로 보이면 안 된다 — 내림에 99% 상한 */
-function nowPct(d) {
-  if (!d || !(d.volume > 0)) return null;
-  var p = Math.floor((1 - d.unknown / d.volume) * 100);
-  if (p > 99) p = 99;
-  if (p < 0) p = 0;
-  return p;
-}
-/* 순이익 범위를 말하는 자리는 원 단위가 필요 없다. 만원으로 줄여 쓴다 */
-function manwon(v) {
-  var m = Math.round(v / 10000);
-  return (m < 0 ? '−' : '') + won(Math.abs(m)) + '만원';
+  return monthLabelRIn(UP, m, months);
 }
 /* + 는 파랑, − 는 빨강. 이 앱 어디서나 같다 */
 /* ★ 111차 ④. 화면 금액은 원 단위다. 색 규칙은 manwonB 와 같다 —
@@ -216,17 +143,6 @@ function manwonB(v) {
   return el('b', v < 0 ? 'sgn-minus' : 'sgn-plus', manwon(v));
 }
 
-/* ── 85차 ② · 치는 동안 콤마가 붙는 금액 칸 ──────────────────────
-   지금은 5000000 이라고 치신다. 0이 몇 개인지 세야 한다.
-   ★ 저장되는 값은 지금과 한 자리도 안 다르다 — 콤마는 보이기만 하는 것이다.
-     읽는 자(moneyRead)는 예전에 자리마다 흩어져 있던 그 식 그대로다 —
-     숫자 아닌 글자를 걷어내고 반올림한다. 그래서 대표님이 콤마를 직접
-     치셔도 예전처럼 그대로 받는다.
-   ★ 다 치고 딴 데를 눌러야 붙으면 세는 수고가 그대로다.
-     그래서 change 가 아니라 input 에 붙인다 */
-function moneyRead(v) {
-  return Math.max(0, Math.round(+String(v).replace(/[^0-9]/g, '') || 0));
-}
 function moneyLive(inp) {
   inp.addEventListener('input', function () {
     /* 앞의 0은 걷어낸다 — 「007」이 그대로 남으면 콤마 자리가 어긋난다 */
@@ -248,23 +164,14 @@ function moneyLive(inp) {
   });
 }
 
-/* 거래내역의 마지막 거래 시각 — 언제까지의 숫자인지 위에 크게 적는다 */
+/* 계산은 core/result.js 의 asOfTextIn — 지금 매장(UP)을 넘긴다 */
 function asOfText() {
-  var at = '';
-  UP.rows.forEach(function (r) {
-    if (r.at > at) at = r.at;
-  });
-  if (!at) return '';
-  /* 시·분은 안 쓴다. 사장님이 대조하는 단위는 날짜이고,
-     이 줄이 길어지면 순이익이 첫 화면에서 밀린다 */
-  return +at.slice(0, 4) + '년 ' + +at.slice(5, 7) + '월 ' + +at.slice(8, 10) + '일';
+  return asOfTextIn(UP);
 }
 
-/* 아직 항목을 안 정한 거래처 수 */
+/* 계산은 core/result.js 의 unsetCountIn — 지금 매장(UP)을 넘긴다 */
 function unsetCount() {
-  return UP.payees.filter(function (g) {
-    return !gDone(g);
-  }).length;
+  return unsetCountIn(UP);
 }
 
 /* 결과 화면에서 항목을 바꾸면 그 거래처 전체에 적용된다 */
@@ -285,9 +192,9 @@ function setCat(g, name) {
   drawResult(monthList());
 }
 
-/* 감춘 항목은 고르는 자리에만 안 나온다. 이미 찍힌 거래는 그대로 남는다 */
+/* 계산은 core/result.js 의 isHiddenIn — 지금 매장(UP)을 넘긴다 */
 function isHidden(name) {
-  return (UP.hidden || []).indexOf(name) !== -1;
+  return isHiddenIn(UP, name);
 }
 
 function drawChangeMenu(box, g, after) {
@@ -1572,10 +1479,9 @@ function drawImportStart() {
   host.appendChild(row);
 }
 
-/* 「기타」의 지금 이름 — 사장님이 이름을 바꿨을 수도 있다 */
+/* 계산은 core/result.js 의 etcNameIn — 지금 매장(UP)을 넘긴다 */
 function etcName() {
-  var i = UP_CATS.indexOf('기타');
-  return (UP.baseCats && UP.baseCats[i]) || '기타';
+  return etcNameIn(UP);
 }
 
 /* 계산은 core/compute.js 의 catPayeesIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
@@ -1583,46 +1489,13 @@ function catPayees(d, cat) {
   return catPayeesIn(UP, d, cat);
 }
 
-/* ── 36차 ── 사업과 무관한 항목의 거래처 목록.
-   ★ 한 번 잘못 찍으면 되돌릴 길이 「처음부터 다시 정하기」뿐이었다 —
-     keep 항목만 펼침이 없어서 [항목 바꾸기]에 닿을 수가 없었다.
-   방향으로도 갈라야 한다. 같은 항목이 들어온 쪽과 나간 쪽에 다 있을 수 있다.
-   skipOnly 는 「앱이 넘긴 작은 거래」(F)만 따로 볼 때 쓴다 */
+/* 계산은 core/result.js 의 keepPayeesIn — 지금 매장(UP)을 넘긴다 */
 function keepPayees(d, cat, isIn, skipOnly) {
-  var m = {};
-  d.rows.forEach(function (r) {
-    if (r.amount > 0 !== isIn) return;
-    /* 36차 4단계. 이체는 줄 단위라 항목으로 안 거른다 */
-    if (cat === XFER_PART) {
-      if (!xferOn(r)) return;
-    } else {
-      if (xferOn(r)) return;
-      if (catOf(r) !== cat) return;
-      var g0 = UP.byName[keyOf(r)];
-      var sk = !!(g0 && g0.askSkip);
-      if (skipOnly ? !sk : sk) return;
-    }
-    var k = keyOf(r);
-    var e = m[k] || (m[k] = { name: k, n: 0, sum: 0 });
-    e.n++;
-    e.sum += Math.abs(r.amount);
-  });
-  return Object.keys(m)
-    .map(function (k) {
-      return m[k];
-    })
-    .sort(function (a, b) {
-      return b.sum - a.sum;
-    });
+  return keepPayeesIn(UP, d, cat, isIn, skipOnly);
 }
-/* 그 항목에 든 거래처가 몇 곳·몇 건인지 — 다른 항목 줄과 같은 꼬리표 */
+/* 계산은 core/result.js 의 keepCountIn — 지금 매장(UP)을 넘긴다 */
 function keepCount(d, cat, isIn, skipOnly) {
-  var l = keepPayees(d, cat, isIn, skipOnly),
-    n = 0;
-  l.forEach(function (e) {
-    n += e.n;
-  });
-  return l.length ? won(l.length) + '곳 · ' + won(n) + '건' : '';
+  return keepCountIn(UP, d, cat, isIn, skipOnly);
 }
 /* 펼친 목록. 「그 밖의 입금」과 같은 모양으로 맞춘다 —
    거래처 줄마다 [항목 바꾸기]가 붙는다 */

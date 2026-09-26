@@ -17,6 +17,31 @@ const APP = new URL('../app/', import.meta.url);
 const html = readFileSync(new URL('index.html', APP), 'utf8');
 const files = [...html.matchAll(/<script src="(src\/[^"]+)"><\/script>/g)].map((m) => m[1]);
 
+// 매개변수로 받은 화면 요소를 다루는 것 — 전역 이름(document 등)을 안 써도 화면에 닿는다
+// (예: moneyLive(inp) 의 inp.addEventListener, drawDueAsk2(days) 의 days.querySelectorAll)
+const DOM_METHODS = new Set([
+  'addEventListener',
+  'removeEventListener',
+  'querySelector',
+  'querySelectorAll',
+  'getElementsByTagName',
+  'getElementsByClassName',
+  'appendChild',
+  'removeChild',
+  'insertBefore',
+  'replaceChild',
+  'setAttribute',
+  'removeAttribute',
+  'setSelectionRange',
+  'scrollIntoView',
+  'getBoundingClientRect',
+  'focus',
+  'blur',
+  'click'
+]);
+// 쓰면 화면이 바뀌는 속성 (hidden · checked 같은 이름은 자료에도 흔해서 뺐다)
+const DOM_PROPS = new Set(['innerHTML', 'textContent', 'className', 'classList', 'style']);
+
 // 브라우저에서만 있는 것
 const BROWSER = new Set([
   'document',
@@ -137,6 +162,8 @@ function scan(fnNode) {
     // 대입의 왼쪽(X = …)은 Identifier 로 방문되지 않아 따로 본다.
     // X.a = … · X[k] = … 처럼 전역 객체의 속을 바꾸는 것도 그 전역을 상태로 만든다
     AssignmentExpression(n) {
+      for (let m = n.left; m && m.type === 'MemberExpression'; m = m.object)
+        if (!m.computed && DOM_PROPS.has(m.property.name)) refs.add('＄화면:' + m.property.name);
       if (rootName(n.left) === 'UP' && n.left.type === 'MemberExpression') refs.add('＄UP쓰기');
       const root = rootName(n.left);
       if (root && !locals.has(root)) {
@@ -155,6 +182,8 @@ function scan(fnNode) {
     },
     CallExpression(n) {
       const c = n.callee;
+      if (c.type === 'MemberExpression' && !c.computed && DOM_METHODS.has(c.property.name))
+        refs.add('＄화면:' + c.property.name);
       // X.push(…) 처럼 전역 배열·객체를 고치는 메서드
       if (c.type === 'MemberExpression' && !c.computed && MUTATE.has(c.property.name)) {
         if (rootName(c.object) === 'UP') refs.add('＄UP쓰기');
@@ -203,6 +232,10 @@ function impure(name, seen = new Set()) {
     }
     if (r === '＄UP쓰기') {
       reason = 'UP 를 고친다';
+      break;
+    }
+    if (r.startsWith('＄화면:')) {
+      reason = `화면 요소를 다룬다 (.${r.slice(4)})`;
       break;
     }
     if (r === '＄난수') {
