@@ -1837,6 +1837,11 @@ function drawDueGraph(host, c, cv, pts) {
      여기서는 둘이 따로 선다 — 겹쳐 보이는 것과 자료가 하나인 것은 다르다 */
   var 고른날 = host.__고른날;
   var det = el('div', 'fcdet');
+  drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det);
+  host.appendChild(det);
+}
+/* drawDueGraph 에서 뺀 부분 (B-4) */
+function drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det) {
   if (고른날 == null) {
     det.appendChild(el('div', 'fcdethint', '그래프에서 날짜를 누르면 그날 잔액을 봅니다.'));
   } else {
@@ -1895,8 +1900,8 @@ function drawDueGraph(host, c, cv, pts) {
     });
     det.appendChild(끄기);
   }
-  host.appendChild(det);
 }
+
 /* 날을 고르면 이 함수가 제 자리를 다시 그린다. 고른 날은 host 에 붙어 있어
      innerHTML 을 비워도 살아남는다 */
 function 그리기다시(host, c, cv, pts) {
@@ -2112,37 +2117,7 @@ function drawDueCard(host, months) {
      ★ 날짜가 같아도 금액이 다르면 반드시 갈라 적는다.
        하나는 「입금 전」 최저이고 하나는 그날 끝 잔액이다. 뜻이 다르다 */
   var 겹침 = !!(cv && cv.최저날수 === dayNum(c.목표) && cv.최저 === c.예상);
-  /* ★ 111차 ①. 자료 기준일 잔액은 예상이 아니라 자료에 적힌 실제 값이다.
-     「최저 예상 잔액」이라고 부르지 않는다. 이름과 금액을 윗줄에, 뜻을 아랫줄에 둔다.
-     ★ 111차 ④㉮. 금액을 원 단위로 적는다. 폰에서 두 줄이 되는 것을 허용한다 —
-       한 줄에 맞추려고 글씨를 줄이거나 뜻을 생략하지 않는다.
-     ★ 같은 잔액이 이미 결과 상자에 보이면 금액을 두 번 세우지 않고 뜻만 적는다 */
-  if (cv && !겹침) {
-    var 같은값 = 기준날인가 && cv.최저 === c.예상;
-    var low = el('div', 'duelow');
-    var lowlab = el('div', 'duelab');
-    lowlab.appendChild(
-      document.createTextNode(
-        cv.모자람 > 0
-          ? cv.최저날 + '에 모자랄 수 있습니다'
-          : 기준날인가
-            ? '자료 기준일 잔액'
-            : cv.최저날 + ' 최저 예상 잔액 · 입금 전'
-      )
-    );
-    low.appendChild(lowlab);
-    if (!같은값) {
-      low.appendChild(
-        el('div', 'duepct money' + 색, won(cv.모자람 > 0 ? cv.모자람 : cv.최저) + '원')
-      );
-    }
-    box.appendChild(low);
-    if (기준날인가) {
-      box.appendChild(
-        el('div', 'duewhy dueas', '분석 기간에는 이보다 낮아지지 않을 것으로 예상됩니다')
-      );
-    }
-  }
+  drawDueLowestLine(c, cv, 색, box, 기준날인가, 겹침);
   /* ★ 114차 ①. 그래프를 여는 단추. 카드에 그림을 상시로 두지 않는다.
      ★ 자리는 예상 잔액 요약과 최저 줄이 있는 이 영역이고,
        if (open) 밖이라 카드가 접혀 있어도 바로 닿는다 (완료 기준 1).
@@ -2368,4 +2343,38 @@ function drawDueCard(host, months) {
     box.appendChild(pbtn);
   }
   host.appendChild(box);
+}
+/* drawDueCard 에서 뺀 부분 (B-4) */
+function drawDueLowestLine(c, cv, 색, box, 기준날인가, 겹침) {
+  /* ★ 111차 ①. 자료 기준일 잔액은 예상이 아니라 자료에 적힌 실제 값이다.
+     「최저 예상 잔액」이라고 부르지 않는다. 이름과 금액을 윗줄에, 뜻을 아랫줄에 둔다.
+     ★ 111차 ④㉮. 금액을 원 단위로 적는다. 폰에서 두 줄이 되는 것을 허용한다 —
+       한 줄에 맞추려고 글씨를 줄이거나 뜻을 생략하지 않는다.
+     ★ 같은 잔액이 이미 결과 상자에 보이면 금액을 두 번 세우지 않고 뜻만 적는다 */
+  if (cv && !겹침) {
+    var 같은값 = 기준날인가 && cv.최저 === c.예상;
+    var low = el('div', 'duelow');
+    var lowlab = el('div', 'duelab');
+    lowlab.appendChild(
+      document.createTextNode(
+        cv.모자람 > 0
+          ? cv.최저날 + '에 모자랄 수 있습니다'
+          : 기준날인가
+            ? '자료 기준일 잔액'
+            : cv.최저날 + ' 최저 예상 잔액 · 입금 전'
+      )
+    );
+    low.appendChild(lowlab);
+    if (!같은값) {
+      low.appendChild(
+        el('div', 'duepct money' + 색, won(cv.모자람 > 0 ? cv.모자람 : cv.최저) + '원')
+      );
+    }
+    box.appendChild(low);
+    if (기준날인가) {
+      box.appendChild(
+        el('div', 'duewhy dueas', '분석 기간에는 이보다 낮아지지 않을 것으로 예상됩니다')
+      );
+    }
+  }
 }

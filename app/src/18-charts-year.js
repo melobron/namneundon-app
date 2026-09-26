@@ -317,6 +317,36 @@ function drawProfitChart(host, months, cols, 진행달) {
   })
     ? RUN_PAD
     : 0;
+  drawProfitBars(진행달, n, pts, lo, hi, stepA, U순이익, wrap, 진행덧);
+
+  /* ── 그림 2 · 월말 계좌 잔액 ── */
+  var bLo = 0,
+    bHi = 0;
+  pts.forEach(function (p) {
+    if (p.없음) return;
+    bLo = Math.min(bLo, p.close);
+    bHi = Math.max(bHi, p.close);
+  });
+  if (bHi === bLo) bHi = bLo + 1;
+  var rgB = axisRange(bLo, bHi);
+  var blo = rgB.lo,
+    bhi = rgB.hi,
+    stepB = rgB.step;
+  var box2 = el('div', 'chbox');
+  /* ★ 112차 ①. 위 그림(U순이익)과 다른 변수다. 잔액은 자릿수가 달라 단위도 다르다 —
+     둘을 억지로 맞추지 않는다 */
+  var U월잔액 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi))); /* ★ 111차 ④㉰ */
+  /* ★ 60차 ③ (용어규칙 10). 진행 중인 달의 잔액은 「월말」이 아니라 그날까지의 값이다 */
+  box2.appendChild(
+    chHead('월말 계좌 잔액 (' + U월잔액.name + ')', [['know', '— 계좌 잔액']], null)
+  );
+  var wrap2 = el('div', 'chone');
+  box2.appendChild(wrap2);
+  host.appendChild(box2);
+  drawBalanceLine(진행달, n, pts, 진행덧, blo, bhi, stepB, U월잔액, wrap2);
+}
+/* drawProfitChart 에서 뺀 부분 (B-4) */
+function drawProfitBars(진행달, n, pts, lo, hi, stepA, U순이익, wrap, 진행덧) {
   fitChart(wrap, CH_H1 + 진행덧, function (svg, W) {
     var ticks = axisTicks(lo, hi, stepA);
     var LEFT = axisLeft(ticks),
@@ -554,31 +584,10 @@ function drawProfitChart(host, months, cols, 진행달) {
       svg.appendChild(r);
     });
   });
+}
 
-  /* ── 그림 2 · 월말 계좌 잔액 ── */
-  var bLo = 0,
-    bHi = 0;
-  pts.forEach(function (p) {
-    if (p.없음) return;
-    bLo = Math.min(bLo, p.close);
-    bHi = Math.max(bHi, p.close);
-  });
-  if (bHi === bLo) bHi = bLo + 1;
-  var rgB = axisRange(bLo, bHi);
-  var blo = rgB.lo,
-    bhi = rgB.hi,
-    stepB = rgB.step;
-  var box2 = el('div', 'chbox');
-  /* ★ 112차 ①. 위 그림(U순이익)과 다른 변수다. 잔액은 자릿수가 달라 단위도 다르다 —
-     둘을 억지로 맞추지 않는다 */
-  var U월잔액 = axisUnit(Math.max(Math.abs(blo), Math.abs(bhi))); /* ★ 111차 ④㉰ */
-  /* ★ 60차 ③ (용어규칙 10). 진행 중인 달의 잔액은 「월말」이 아니라 그날까지의 값이다 */
-  box2.appendChild(
-    chHead('월말 계좌 잔액 (' + U월잔액.name + ')', [['know', '— 계좌 잔액']], null)
-  );
-  var wrap2 = el('div', 'chone');
-  box2.appendChild(wrap2);
-  host.appendChild(box2);
+/* drawProfitChart 에서 뺀 부분 (B-4) */
+function drawBalanceLine(진행달, n, pts, 진행덧, blo, bhi, stepB, U월잔액, wrap2) {
   fitChart(wrap2, CH_H3 + 진행덧, function (svg, W) {
     var ticks = axisTicks(blo, bhi, stepB);
     var LEFT = axisLeft(ticks),
@@ -679,6 +688,7 @@ function drawProfitChart(host, months, cols, 진행달) {
     });
   });
 }
+
 /* ── 66-8차 ③ · 1년치 요약 한 줄 ──────────────────────────────────
    여기 있던 「N월은 순이익이 났는데 계좌는 …」은 한 달짜리 이야기라
    1년치 구역에서 뺐다. 그 달 화면에서 할 말이다.
@@ -1652,6 +1662,102 @@ function drawYear(host, allMonths) {
     }
   );
   그룹줄(months, 번돈줄, 'in', true);
+  drawYearInRows(row, anyOtherIn);
+  var 쓴돈줄 = row(
+    '사업에 쓴 돈',
+    'yrout',
+    function (c) {
+      return { txt: won(c.cost) };
+    },
+    function (l) {
+      return {
+        txt: won(
+          meanOf(l, function (c) {
+            return c.cost;
+          })
+        )
+      };
+    },
+    'out',
+    false,
+    function (c) {
+      return c.cost;
+    }
+  );
+  그룹줄(months, 쓴돈줄, 'out', true);
+  if (그룹열림('out')) {
+    항목줄('월세');
+    항목줄('인건비');
+  }
+  drawYearProfitRow(row);
+  drawYearRatioRow(opening, row);
+  /* ══ 36차 1-2 ══  뺄셈은 여기서 끝난다. 아래는 순이익에 안 들어가는 돈이다.
+     ★ 대표님이 문제를 처음 보신 화면이 이 표다 —
+       한 달 카드만 고치면 1년치에서 같은 오해가 그대로 난다 */
+  var anyIn = cols.some(function (c) {
+    return c.keepIn;
+  });
+  var anyOut = cols.some(function (c) {
+    return c.keepOut;
+  });
+  var anyKeep = anyIn || anyOut;
+  var anyUnset = cols.some(function (c) {
+    return c.unknown;
+  });
+  drawYearKeepRows(months, row, anyIn, anyOut, anyKeep);
+  drawYearUnsetRow(row, anyKeep, anyUnset);
+
+  drawYearCostRatioRow(opening, row);
+  /* ★ 61차 ①. 여기 있던 「원가율 (식자재·주류 ÷ 매출)」 줄은 위로 올렸다 —
+     접힌 자리에 있어서 1년치를 펴도 안 보였다. 같은 것을 두 자리에 두지 않는다 (49차) */
+
+  /* 이 앱의 최종 값. 열두 달 잔액 흐름이 한눈에 보인다.
+     ★ 66차 ③-3. 진행 중인 달의 칸은 「—」다. 아직 월말이 안 왔다.
+       예전에는 마지막 거래일 잔액을 넣어두고 이름만 「달 끝」이라 불렀는데,
+       그러면 이 줄에서 8월과 7월을 나란히 견주게 되어 거짓말이 된다.
+       지금 잔액은 맨 위 이번 달 구역에서 보신다 (같은 것 한 자리 — 49차).
+     ★ 65-2차. 평균 칸을 채운다. 완료된 달만 센다 —
+       진행 중인 달의 반쪽 잔액이 섞이면 평균이 내려앉는다 */
+  row(
+    '월말 계좌 잔액',
+    'balrow',
+    function (c) {
+      if (c.m === 진행달) return { txt: '—' };
+      return { txt: won(c.close) };
+    },
+    function (l) {
+      return {
+        txt: won(
+          meanOf(l, function (c) {
+            return c.close;
+          })
+        )
+      };
+    },
+    'bal'
+  );
+  tab.appendChild(tbody);
+  wrap.appendChild(tab);
+  host.appendChild(wrap);
+  /* ★ 66차 ③-3. 표를 열면 가장 오른쪽(최신 달)이 먼저 보이게 한다.
+     왼쪽이 가장 오래된 달이라, 그냥 두면 1년 전 숫자가 첫인상이 된다.
+     ★ 56차의 스크롤 자리 지키기가 그린 뒤에 scrollLeft 를 되돌려 놓으므로,
+       거기서 「아직 한 번도 안 민 표」만 오른쪽 끝으로 보낸다 (drawResult).
+       여기서는 처음 그릴 때의 자리만 정한다 */
+  wrap.scrollLeft = wrap.scrollWidth;
+  /* ★ 66차 ③-3. 진행 중인 달이 어디까지의 누적인지 표 밑에 밝힌다 */
+  /* ★ 71차 ⑤-5. 지났는데 자료가 없는 달 — 채우는 길을 알려드린다.
+     71차 ②로 파일을 보탤 수 있게 됐으니 이것은 빈말이 아니다.
+     ★ 아직 안 온 달은 여기 안 센다. 그건 기다리면 되는 것이라 할 말이 없다 */
+  var 빈달 = cols.filter(function (c) {
+    return c.없음 && !c.미래;
+  });
+  drawYearEmptyMonths(host, 해, 빈달);
+  /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
+     회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
+}
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearInRows(row, anyOtherIn) {
   if (그룹열림('in')) {
     row(
       '　매출',
@@ -1688,32 +1794,10 @@ function drawYear(host, allMonths) {
       );
     }
   }
-  var 쓴돈줄 = row(
-    '사업에 쓴 돈',
-    'yrout',
-    function (c) {
-      return { txt: won(c.cost) };
-    },
-    function (l) {
-      return {
-        txt: won(
-          meanOf(l, function (c) {
-            return c.cost;
-          })
-        )
-      };
-    },
-    'out',
-    false,
-    function (c) {
-      return c.cost;
-    }
-  );
-  그룹줄(months, 쓴돈줄, 'out', true);
-  if (그룹열림('out')) {
-    항목줄('월세');
-    항목줄('인건비');
-  }
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearProfitRow(row) {
   /* ★ 66차 ③-2. 핵심 세 줄(번 돈 · 쓴 돈 · 순이익)을 붙여 놓는다.
      세로로 그대로 뺄셈이 되어야 위 카드 줄과 같은 그림이 된다 */
   row(
@@ -1739,6 +1823,10 @@ function drawYear(host, allMonths) {
       return c.profit;
     }
   );
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearRatioRow(opening, row) {
   /* ★ 61차 ①. 원가율·월세·인건비 — 1년치로 봐야 뜻이 있는 셋이다.
      원가율은 「자세히 보기」 안에만 있어서 1년치를 펴도 안 보였다.
      ★ 익월 매칭은 안 한다. 한 달 화면과 같은 「같은 달 기준」이어야
@@ -1770,19 +1858,10 @@ function drawYear(host, allMonths) {
       });
     }
   );
-  /* ══ 36차 1-2 ══  뺄셈은 여기서 끝난다. 아래는 순이익에 안 들어가는 돈이다.
-     ★ 대표님이 문제를 처음 보신 화면이 이 표다 —
-       한 달 카드만 고치면 1년치에서 같은 오해가 그대로 난다 */
-  var anyIn = cols.some(function (c) {
-    return c.keepIn;
-  });
-  var anyOut = cols.some(function (c) {
-    return c.keepOut;
-  });
-  var anyKeep = anyIn || anyOut;
-  var anyUnset = cols.some(function (c) {
-    return c.unknown;
-  });
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearKeepRows(months, row, anyIn, anyOut, anyKeep) {
   if (anyKeep) {
     var 외줄 = row(
       '사업 외 용도',
@@ -1846,6 +1925,10 @@ function drawYear(host, allMonths) {
       );
     }
   }
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearUnsetRow(row, anyKeep, anyUnset) {
   /* 안 정한 돈은 매출에도 사업에 쓴 돈에도 안 들어간다.
      이 줄이 없으면 「순이익이 왜 이것뿐인가」를 표에서 설명할 길이 없다 */
   if (anyUnset) {
@@ -1870,7 +1953,10 @@ function drawYear(host, allMonths) {
       true
     );
   }
+}
 
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearCostRatioRow(opening, row) {
   /* 「원가율」은 식당에서 식자재 비율을 뜻하는 말이다.
      사업에 쓴 돈 전체를 매출로 나눈 값을 원가율이라고 부르면 안 된다.
      ★ 70차 ②. 이 줄은 「자세히 보기」 안에 숨어 있었다 — 이제 상시 노출이다.
@@ -1895,50 +1981,10 @@ function drawYear(host, allMonths) {
       );
     }
   );
-  /* ★ 61차 ①. 여기 있던 「원가율 (식자재·주류 ÷ 매출)」 줄은 위로 올렸다 —
-     접힌 자리에 있어서 1년치를 펴도 안 보였다. 같은 것을 두 자리에 두지 않는다 (49차) */
+}
 
-  /* 이 앱의 최종 값. 열두 달 잔액 흐름이 한눈에 보인다.
-     ★ 66차 ③-3. 진행 중인 달의 칸은 「—」다. 아직 월말이 안 왔다.
-       예전에는 마지막 거래일 잔액을 넣어두고 이름만 「달 끝」이라 불렀는데,
-       그러면 이 줄에서 8월과 7월을 나란히 견주게 되어 거짓말이 된다.
-       지금 잔액은 맨 위 이번 달 구역에서 보신다 (같은 것 한 자리 — 49차).
-     ★ 65-2차. 평균 칸을 채운다. 완료된 달만 센다 —
-       진행 중인 달의 반쪽 잔액이 섞이면 평균이 내려앉는다 */
-  row(
-    '월말 계좌 잔액',
-    'balrow',
-    function (c) {
-      if (c.m === 진행달) return { txt: '—' };
-      return { txt: won(c.close) };
-    },
-    function (l) {
-      return {
-        txt: won(
-          meanOf(l, function (c) {
-            return c.close;
-          })
-        )
-      };
-    },
-    'bal'
-  );
-  tab.appendChild(tbody);
-  wrap.appendChild(tab);
-  host.appendChild(wrap);
-  /* ★ 66차 ③-3. 표를 열면 가장 오른쪽(최신 달)이 먼저 보이게 한다.
-     왼쪽이 가장 오래된 달이라, 그냥 두면 1년 전 숫자가 첫인상이 된다.
-     ★ 56차의 스크롤 자리 지키기가 그린 뒤에 scrollLeft 를 되돌려 놓으므로,
-       거기서 「아직 한 번도 안 민 표」만 오른쪽 끝으로 보낸다 (drawResult).
-       여기서는 처음 그릴 때의 자리만 정한다 */
-  wrap.scrollLeft = wrap.scrollWidth;
-  /* ★ 66차 ③-3. 진행 중인 달이 어디까지의 누적인지 표 밑에 밝힌다 */
-  /* ★ 71차 ⑤-5. 지났는데 자료가 없는 달 — 채우는 길을 알려드린다.
-     71차 ②로 파일을 보탤 수 있게 됐으니 이것은 빈말이 아니다.
-     ★ 아직 안 온 달은 여기 안 센다. 그건 기다리면 되는 것이라 할 말이 없다 */
-  var 빈달 = cols.filter(function (c) {
-    return c.없음 && !c.미래;
-  });
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearEmptyMonths(host, 해, 빈달) {
   if (빈달.length) {
     var 토막 = [],
       앞 = null,
@@ -1969,9 +2015,8 @@ function drawYear(host, allMonths) {
       )
     );
   }
-  /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
-     회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
 }
+
 function foodOf(c) {
   return catOfMonth(c, '식자재') + catOfMonth(c, '주류·음료');
 }

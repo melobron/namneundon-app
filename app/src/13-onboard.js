@@ -1482,44 +1482,7 @@ function drawOnboard() {
     );
   }
 
-  /* 은행 표기만 다른 같은 거래처인지 묻는다. 여기서 묶으면 찍을 개수가 줄어든다 */
-  if (UP.ask) {
-    var ask = el('div', 'askcard');
-    ask.appendChild(el('div', 'ckq', '「' + showName(UP.ask.g.name) + '」도 같은 곳인가요?'));
-    ask.appendChild(
-      el(
-        'div',
-        'cka',
-        UP.ask.g.n +
-          '건 · ' +
-          (UP.ask.g.net > 0 ? '+' : '−') +
-          won(Math.abs(UP.ask.g.net)) +
-          '원 · 방금 「' +
-          showName(UP.ask.from) +
-          '」' +
-          eul(UP.ask.from) +
-          ' ' +
-          UP.ask.cat +
-          ro(UP.ask.cat) +
-          ' 정하셨습니다'
-      )
-    );
-    var ab = el('div', 'ckbtns');
-    var yes = el('button', 'b on', '같은 곳입니다 — ' + UP.ask.cat + ro(UP.ask.cat));
-    yes.type = 'button';
-    yes.addEventListener('click', function () {
-      takeAsk(true);
-    });
-    var no = el('button', 'b', '다른 곳입니다');
-    no.type = 'button';
-    no.addEventListener('click', function () {
-      takeAsk(false);
-    });
-    ab.appendChild(yes);
-    ab.appendChild(no);
-    ask.appendChild(ab);
-    host.appendChild(ask);
-  }
+  drawAskCard(host);
 
   /* 방금 찍은 것 — 미끄러졌을 때 바로 되돌릴 수 있게 */
   if (UP.hist.length) {
@@ -1732,6 +1695,117 @@ function drawOnboard() {
        「이자」 낱말이 나간 쪽 추천(대출 상환)을 끌고 온다 (63-2 ★) */
   var askIn = !g.outN;
 
+  drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn);
+  if (whyAll.length) card.appendChild(el('div', 'obwhy', '↑ ' + whyAll.join(' · ')));
+  drawRawPeek(card, g.rawList || [g.name], null, 이름칸);
+  /* 통장과 대조할 수 있게 원본 표기를 남긴다 */
+  if (g.rawList && g.rawList.length > 1) {
+    card.appendChild(
+      el(
+        'div',
+        'obwhy',
+        '거래내역에는 ' +
+          g.rawList.slice(0, 4).join(' · ') +
+          (g.rawList.length > 4 ? ' 외 ' + (g.rawList.length - 4) + '개' : '') +
+          ' 로 적혀 있어 한 곳으로 묶었습니다'
+      )
+    );
+  }
+
+  var later = el('div', 'oblater');
+  var prev = el('button', 'upbtn plain', '← 이전');
+  prev.type = 'button';
+  prev.disabled = !UP.hist.length && !(isCardOut(g) && g.cardBiz);
+  prev.addEventListener('click', function () {
+    if (isCardOut(g) && g.cardBiz) {
+      g.cardBiz = false;
+      drawOnboard();
+      return;
+    }
+    undoPick();
+  });
+  later.appendChild(prev);
+  var skip = el('button', 'oblink', '나중에');
+  skip.type = 'button';
+  skip.addEventListener('click', function () {
+    UP.hist.push({ i: UP.pos, g: g, cat: g.cat, auto: g.auto, name: g.name, kind: 'skip' });
+    UP.pos++;
+    utPick();
+    drawOnboard();
+  });
+  later.appendChild(skip);
+  card.appendChild(later);
+  /* ★ 119차. 보류 원인 경로 — 적용 범위를 한 번 적고, 중간에 돌아갈 길을 둔다.
+     분류는 거래처 단위 그대로다. 섞인 거래처는 출금 쪽에만 넣는다 (pickCat) */
+  if (UP.holdAsk) {
+    /* ★ 119차. 차례로 정하기 — 목록 경로는 기존 규칙대로 양쪽에 같이 넣으므로 「거래」 문장이다 */
+    card.appendChild(
+      el(
+        'div',
+        'obsub',
+        g.mixed && UP.holdAsk.종류 === '원인'
+          ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
+          : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'
+      )
+    );
+    var hb = el('button', 'b', '결과로 돌아가기');
+    hb.type = 'button';
+    hb.style.marginTop = '10px';
+    hb.addEventListener('click', function () {
+      holdAskEnd(true);
+    });
+    card.appendChild(hb);
+  }
+
+  host.appendChild(card);
+  /* ★ 76차. 목표 비율에 닿으면 남은 거래처가 있어도 결과를 볼 수 있다.
+     완료 화면의 단추와 같은 길을 쓰되, 아직 목표 전에는 보이지 않는다. */
+  appendReachedResult(reached, host);
+}
+/* drawOnboard 에서 뺀 부분 (B-4) */
+function drawAskCard(host) {
+  /* 은행 표기만 다른 같은 거래처인지 묻는다. 여기서 묶으면 찍을 개수가 줄어든다 */
+  if (UP.ask) {
+    var ask = el('div', 'askcard');
+    ask.appendChild(el('div', 'ckq', '「' + showName(UP.ask.g.name) + '」도 같은 곳인가요?'));
+    ask.appendChild(
+      el(
+        'div',
+        'cka',
+        UP.ask.g.n +
+          '건 · ' +
+          (UP.ask.g.net > 0 ? '+' : '−') +
+          won(Math.abs(UP.ask.g.net)) +
+          '원 · 방금 「' +
+          showName(UP.ask.from) +
+          '」' +
+          eul(UP.ask.from) +
+          ' ' +
+          UP.ask.cat +
+          ro(UP.ask.cat) +
+          ' 정하셨습니다'
+      )
+    );
+    var ab = el('div', 'ckbtns');
+    var yes = el('button', 'b on', '같은 곳입니다 — ' + UP.ask.cat + ro(UP.ask.cat));
+    yes.type = 'button';
+    yes.addEventListener('click', function () {
+      takeAsk(true);
+    });
+    var no = el('button', 'b', '다른 곳입니다');
+    no.type = 'button';
+    no.addEventListener('click', function () {
+      takeAsk(false);
+    });
+    ab.appendChild(yes);
+    ab.appendChild(no);
+    ask.appendChild(ab);
+    host.appendChild(ask);
+  }
+}
+
+/* drawOnboard 에서 뺀 부분 (B-4) */
+function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
   sides.forEach(function (isIn) {
     var side = single ? null : isIn;
     /* 양쪽 다 있는 곳은 나간 쪽 기준으로 본다 (건수가 많은 쪽이다) */
@@ -1938,72 +2012,8 @@ function drawOnboard() {
       if (whyAll.indexOf(w) === -1) whyAll.push(w);
     });
   });
-  if (whyAll.length) card.appendChild(el('div', 'obwhy', '↑ ' + whyAll.join(' · ')));
-  drawRawPeek(card, g.rawList || [g.name], null, 이름칸);
-  /* 통장과 대조할 수 있게 원본 표기를 남긴다 */
-  if (g.rawList && g.rawList.length > 1) {
-    card.appendChild(
-      el(
-        'div',
-        'obwhy',
-        '거래내역에는 ' +
-          g.rawList.slice(0, 4).join(' · ') +
-          (g.rawList.length > 4 ? ' 외 ' + (g.rawList.length - 4) + '개' : '') +
-          ' 로 적혀 있어 한 곳으로 묶었습니다'
-      )
-    );
-  }
-
-  var later = el('div', 'oblater');
-  var prev = el('button', 'upbtn plain', '← 이전');
-  prev.type = 'button';
-  prev.disabled = !UP.hist.length && !(isCardOut(g) && g.cardBiz);
-  prev.addEventListener('click', function () {
-    if (isCardOut(g) && g.cardBiz) {
-      g.cardBiz = false;
-      drawOnboard();
-      return;
-    }
-    undoPick();
-  });
-  later.appendChild(prev);
-  var skip = el('button', 'oblink', '나중에');
-  skip.type = 'button';
-  skip.addEventListener('click', function () {
-    UP.hist.push({ i: UP.pos, g: g, cat: g.cat, auto: g.auto, name: g.name, kind: 'skip' });
-    UP.pos++;
-    utPick();
-    drawOnboard();
-  });
-  later.appendChild(skip);
-  card.appendChild(later);
-  /* ★ 119차. 보류 원인 경로 — 적용 범위를 한 번 적고, 중간에 돌아갈 길을 둔다.
-     분류는 거래처 단위 그대로다. 섞인 거래처는 출금 쪽에만 넣는다 (pickCat) */
-  if (UP.holdAsk) {
-    /* ★ 119차. 차례로 정하기 — 목록 경로는 기존 규칙대로 양쪽에 같이 넣으므로 「거래」 문장이다 */
-    card.appendChild(
-      el(
-        'div',
-        'obsub',
-        g.mixed && UP.holdAsk.종류 === '원인'
-          ? '선택한 항목은 이 거래처의 다른 날짜 출금에도 적용됩니다.'
-          : '선택한 항목은 이 거래처의 다른 날짜 거래에도 적용됩니다.'
-      )
-    );
-    var hb = el('button', 'b', '결과로 돌아가기');
-    hb.type = 'button';
-    hb.style.marginTop = '10px';
-    hb.addEventListener('click', function () {
-      holdAskEnd(true);
-    });
-    card.appendChild(hb);
-  }
-
-  host.appendChild(card);
-  /* ★ 76차. 목표 비율에 닿으면 남은 거래처가 있어도 결과를 볼 수 있다.
-     완료 화면의 단추와 같은 길을 쓰되, 아직 목표 전에는 보이지 않는다. */
-  appendReachedResult(reached, host);
 }
+
 function appendReachedResult(reached, host) {
   if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
   if (!reached) return;
