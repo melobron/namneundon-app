@@ -53,6 +53,7 @@ app/
 | `core/classify.js`    | 거래처 묶기(년월 · (주) 떼기), 이름으로 항목 짐작, 거래처별 항목 다루기 (옛 `06-classify.js`)                                                                                             |
 | `core/compute.js`     | 월별 집계(`monthNumbersIn`), 계좌 간 이체, 잔액, 예측 기초, 매출 전망 — 매장 자료를 매개변수 `U` 로 받는다 (옛 `14-compute.js`)                                                           |
 | `core/due.js`         | 예상 잔액의 계산 부품 — 일별 예상 지출 · 입금 · 자료 범위 · 미정 출금 · 목표일 · 예정 지출 셈 · 잔액 표 · 예측 카드 · 곡선 · 그래프 점 (옛 `16-due.js`. 캐시·저장소는 창구 `E` 로 받는다) |
+| `core/onboard.js`     | 처음 분류(온보딩)의 계산 부품 — 이름 다듬기 · 사람 이름 가리기 · 개인 · 대출 짐작 · 비슷한 이름 · 묶음 · 묻는 차례 · 목표선 (옛 `13-onboard.js` 의 일부)                                  |
 
 - core 파일은 `index.html` 에서 **맨 앞**에 불러온다.
 - `npm run check` 가 core 규칙을 지킨다 (`tools/check-core.mjs`) — core 밖의 이름, 브라우저 기능, 지금 시각 · 난수, 최상위 값 바꾸기를 막는다.
@@ -74,7 +75,7 @@ app/
 | `10-demo-read-files.js`  | 예시 시작, 파일 읽기, 은행 알아보기                                                                                                                 |
 | `11-upload-flow.js`      | 파일 목록, 시작하기(`UP` 만들기), 잔액 끊김 확인 카드                                                                                               |
 | `12-storage.js`          | 저장 · 불러오기, 사용 기록, 직접 넣은 금액                                                                                                          |
-| `13-onboard.js`          | 매장 이름 · 대표자, 거래처 확인(차례로 정하기)                                                                                                      |
+| `13-onboard.js`          | 매장 이름 · 대표자, 거래처 확인(차례로 정하기) 화면 · 저장 (계산은 `core/onboard.js`)                                                               |
 | `14-compute.js`          | 연결 함수 (`monthNumbers` 등 → `core/compute.js` 의 `…In(UP, …)`)                                                                                   |
 | `15-result-panels.js`    | 결과 보여주기, 항목 관리, 분류 내보내기 · 불러오기, 매장 이름 바꾸기                                                                                |
 | `16-due.js`              | 예상 잔액의 캐시(`dueTable`) · 예정 지출 저장(`planBox`) · 창구 `DUE_ENV` · 카드 · 그래프 그리기                                                    |
