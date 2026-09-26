@@ -52,7 +52,8 @@ const BUILTIN = new Set([
   'Float64Array',
   'ArrayBuffer',
   'DataView',
-  'BigInt'
+  'BigInt',
+  'console' // 개발용 기록 — 브라우저·Node 모두 있다
 ]);
 const LIBS = new Set(['XLSX', 'pdfjsLib']); // Node 에도 같은 것을 넣어 줄 수 있다
 
