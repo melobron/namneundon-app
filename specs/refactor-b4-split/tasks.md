@@ -5,34 +5,39 @@
 
 ## 할 일
 
-| #   | 할 일                                                                                                                         | 먼저 끝나야 할 것 | 결과물                                                                                              | 확인 방법                                         | 상태 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
-| T1  | B-4a `drawResultInner` 안의 함수 꺼내기                                                                                       | —                 | `17-result.js` 1,852 → 1,155줄                                                                      | check · lint · test · 넓은 비교                   | 완료 |
-| T2  | 직접 적는 돈(현금매출 [＋ 추가] → [넣기]) 시험                                                                                | —                 | `tests/manual-entry.spec.mjs`                                                                       | 바꾸기 전 · 후 코드 모두 통과                     | 완료 |
-| T3  | B-4b 도구로 꺼낼 수 있는 것 — `drawYear` 9 · `openDuePlan` 2 · `drawDueGraph` 1 · `drawOnboard` 1                             | T1                | `drawYear` 700 → 612 · `openDuePlan` 891 → 878 · `drawDueGraph` 490 → 485 · `drawOnboard` 582 → 573 | check · lint · test · 넓은 비교                   | 완료 |
-| T3b | 예정 지출 창(목록 → 내역 → 뒤로 → 수정) 시험                                                                                  | —                 | `tests/due-plan.spec.mjs`                                                                           | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
-| T5  | B-4c `drawResultInner` 의 큰 블록 14개를 이름 있는 함수로 (`drawBalanceRow` · `drawTransferCards` · `drawSalesProjection` 등) | T3                | `drawResultInner` 1,155 → 600줄                                                                     | check · lint · test · 넓은 비교 · 계좌 두 개 시험 | 완료 |
-| T5b | 계좌 두 개일 때만 나오는 것(이체 카드 · 기간 안내 · B-9 안내) 시험                                                            | —                 | `tests/multi-bank.spec.mjs`                                                                         | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
-| T5c | 다른 큰 함수(`drawDueCard` · `drawProfitChart` · `drawYear` · `drawOnboard`)의 큰 블록 빼기                                   | T5                | —                                                                                                   | 같은 방법                                         | 대기 |
-| T6  | `openDuePlan` — 화면 전환 상태(`화면` · `닫힘`)를 한 객체로 묶어 화면 함수들을 꺼내기 (손작업)                                | T3                | —                                                                                                   | 같은 방법 + 예정 지출 창 시험                     | 대기 |
+| #   | 할 일                                                                                                                         | 먼저 끝나야 할 것 | 결과물                                                                                                                            | 확인 방법                                         | 상태 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
+| T1  | B-4a `drawResultInner` 안의 함수 꺼내기                                                                                       | —                 | `17-result.js` 1,852 → 1,155줄                                                                                                    | check · lint · test · 넓은 비교                   | 완료 |
+| T2  | 직접 적는 돈(현금매출 [＋ 추가] → [넣기]) 시험                                                                                | —                 | `tests/manual-entry.spec.mjs`                                                                                                     | 바꾸기 전 · 후 코드 모두 통과                     | 완료 |
+| T3  | B-4b 도구로 꺼낼 수 있는 것 — `drawYear` 9 · `openDuePlan` 2 · `drawDueGraph` 1 · `drawOnboard` 1                             | T1                | `drawYear` 700 → 612 · `openDuePlan` 891 → 878 · `drawDueGraph` 490 → 485 · `drawOnboard` 582 → 573                               | check · lint · test · 넓은 비교                   | 완료 |
+| T3b | 예정 지출 창(목록 → 내역 → 뒤로 → 수정) 시험                                                                                  | —                 | `tests/due-plan.spec.mjs`                                                                                                         | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
+| T5  | B-4c `drawResultInner` 의 큰 블록 14개를 이름 있는 함수로 (`drawBalanceRow` · `drawTransferCards` · `drawSalesProjection` 등) | T3                | `drawResultInner` 1,155 → 600줄                                                                                                   | check · lint · test · 넓은 비교 · 계좌 두 개 시험 | 완료 |
+| T5b | 계좌 두 개일 때만 나오는 것(이체 카드 · 기간 안내 · B-9 안내) 시험                                                            | —                 | `tests/multi-bank.spec.mjs`                                                                                                       | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
+| T5c | B-4d 다른 큰 함수의 큰 블록 빼기 — `drawYear` 7 · `drawProfitChart` 2 · `drawOnboard` 2 · `drawDueGraph` 1 · `drawDueCard` 1  | T5                | `drawYear` 612 → 386 · `drawProfitChart` 440 → 106 · `drawOnboard` 573 → 331 · `drawDueGraph` 485 → 428 · `drawDueCard` 433 → 403 | check · lint · test · 넓은 비교                   | 완료 |
+| T5d | 분류 중 「○○도 같은 곳인가요?」 카드 시험                                                                                     | —                 | `tests/onboard-ask.spec.mjs`                                                                                                      | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
+| T6  | `openDuePlan` — 화면 전환 상태(`화면` · `닫힘`)를 한 객체로 묶어 화면 함수들을 꺼내기 (손작업)                                | T3                | —                                                                                                                                 | 같은 방법 + 예정 지출 창 시험                     | 대기 |
 
 ## 검증 기록
 
-| 날짜       | 누가        | 무엇을 (명령 · 화면)                                                | 결과                                                            |
-| ---------- | ----------- | ------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 2026-09-27 | Claude Code | `npm run check`                                                     | 불러오는 순서 문제 없음 · core 규칙 지킴                        |
-| 2026-09-27 | Claude Code | `npm run lint`                                                      | 통과 (CSS 경고 59 · 앱 타입 오류 4 — 기준선 그대로)             |
-| 2026-09-27 | Claude Code | `npm test`                                                          | 87 통과 (새 `tests/manual-entry.spec.mjs` 포함, 스냅샷 그대로)  |
-| 2026-09-27 | Claude Code | `tests/manual-entry.spec.mjs` 를 바꾸기 전 `17-result.js` 로        | 통과 — 같은 동작                                                |
-| 2026-09-27 | Claude Code | 넓은 화면 비교 (origin/main `b991930` 대 이 가지, 106장)            | 진짜 차이 0 · 흔들림 의심 1 (시작 화면 3px, 같은 앱끼리도 나옴) |
-| 2026-09-27 | Claude Code | B-4a PR #34 CI · 머지 · 자동 배포 `46b6a39` · 배포 확인             | 통과 · 성공                                                     |
-| 2026-09-27 | Claude Code | B-4b `npm run lint` · `npm test`                                    | 통과 · 88 통과 (새 `tests/due-plan.spec.mjs` 포함)              |
-| 2026-09-27 | Claude Code | B-4b `tests/due-plan.spec.mjs` 를 바꾸기 전 `16` · `18` · `13` 으로 | 통과 — 같은 스냅샷                                              |
-| 2026-09-27 | Claude Code | B-4b 넓은 화면 비교 (origin/main `46b6a39` 대 이 가지, 106장)       | 진짜 차이 0 · 흔들림 의심 1                                     |
-| 2026-09-27 | Claude Code | B-4b PR #35 CI · 머지 · 자동 배포 `5357396` · 배포 확인             | 통과 · 성공                                                     |
-| 2026-09-27 | Claude Code | B-4c `npm run lint` · `npm test`                                    | 통과 · 89 통과 (새 `tests/multi-bank.spec.mjs` 포함)            |
-| 2026-09-27 | Claude Code | B-4c `tests/multi-bank.spec.mjs` 를 바꾸기 전 `17-result.js` 로     | 통과 — 같은 스냅샷 (5월 · 6월 결과 화면 전체 글)                |
-| 2026-09-27 | Claude Code | B-4c 넓은 화면 비교 (origin/main `5357396` 대 이 가지, 106장)       | 진짜 차이 0 · 흔들림 의심 3 (모두 시작 화면 3px)                |
+| 날짜       | 누가        | 무엇을 (명령 · 화면)                                                                                 | 결과                                                                                        |
+| ---------- | ----------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-27 | Claude Code | `npm run check`                                                                                      | 불러오는 순서 문제 없음 · core 규칙 지킴                                                    |
+| 2026-09-27 | Claude Code | `npm run lint`                                                                                       | 통과 (CSS 경고 59 · 앱 타입 오류 4 — 기준선 그대로)                                         |
+| 2026-09-27 | Claude Code | `npm test`                                                                                           | 87 통과 (새 `tests/manual-entry.spec.mjs` 포함, 스냅샷 그대로)                              |
+| 2026-09-27 | Claude Code | `tests/manual-entry.spec.mjs` 를 바꾸기 전 `17-result.js` 로                                         | 통과 — 같은 동작                                                                            |
+| 2026-09-27 | Claude Code | 넓은 화면 비교 (origin/main `b991930` 대 이 가지, 106장)                                             | 진짜 차이 0 · 흔들림 의심 1 (시작 화면 3px, 같은 앱끼리도 나옴)                             |
+| 2026-09-27 | Claude Code | B-4a PR #34 CI · 머지 · 자동 배포 `46b6a39` · 배포 확인                                              | 통과 · 성공                                                                                 |
+| 2026-09-27 | Claude Code | B-4b `npm run lint` · `npm test`                                                                     | 통과 · 88 통과 (새 `tests/due-plan.spec.mjs` 포함)                                          |
+| 2026-09-27 | Claude Code | B-4b `tests/due-plan.spec.mjs` 를 바꾸기 전 `16` · `18` · `13` 으로                                  | 통과 — 같은 스냅샷                                                                          |
+| 2026-09-27 | Claude Code | B-4b 넓은 화면 비교 (origin/main `46b6a39` 대 이 가지, 106장)                                        | 진짜 차이 0 · 흔들림 의심 1                                                                 |
+| 2026-09-27 | Claude Code | B-4b PR #35 CI · 머지 · 자동 배포 `5357396` · 배포 확인                                              | 통과 · 성공                                                                                 |
+| 2026-09-27 | Claude Code | B-4c `npm run lint` · `npm test`                                                                     | 통과 · 89 통과 (새 `tests/multi-bank.spec.mjs` 포함)                                        |
+| 2026-09-27 | Claude Code | B-4c `tests/multi-bank.spec.mjs` 를 바꾸기 전 `17-result.js` 로                                      | 통과 — 같은 스냅샷 (5월 · 6월 결과 화면 전체 글)                                            |
+| 2026-09-27 | Claude Code | B-4c 넓은 화면 비교 (origin/main `5357396` 대 이 가지, 106장)                                        | 진짜 차이 0 · 흔들림 의심 3 (모두 시작 화면 3px)                                            |
+| 2026-09-27 | Claude Code | B-4c PR #36 CI · 머지 · 자동 배포 `d55b2c7` · 배포 확인                                              | 통과 · 성공                                                                                 |
+| 2026-09-27 | Claude Code | B-4d `npm run lint` · `npm test`                                                                     | 통과 · 90 통과 (새 `tests/onboard-ask.spec.mjs` 포함)                                       |
+| 2026-09-27 | Claude Code | B-4d 새 · 관련 시험 4개(onboard-ask · due-plan · multi-bank · manual-entry)를 바꾸기 전 `app/src` 로 | 4 통과 — 같은 스냅샷                                                                        |
+| 2026-09-27 | Claude Code | B-4d 넓은 화면 비교 (origin/main `d55b2c7` 대 이 가지, 106장) 두 번                                  | 1회: 다름 1(390 5월 펼침, 3px 세로줄 56px — 자기 비교에서도 흔들린 화면) · 2회: 진짜 차이 0 |
 
 ## 구현 중 정한 작은 것
 
@@ -41,4 +46,5 @@
 
 ## 남은 문제
 
+- 블록 안에 바깥으로 나가는 `return` · 바깥 대입 · 블록 안 함수 선언이 있는 큰 블록은 도구로 못 뺐다 — `openDuePlan`(878줄, 화면 전환 상태를 바깥 변수로 들고 있다) · `drawDueGraph` 의 그래프 그리기(364줄) · `drawOnboard` 의 끝남 · 질문 카드 · `drawDueCard` 의 펼침 부분. 손으로 상태를 묶어야 한다 (T6).
 - `drawResultInner` 안에 남은 함수 7개: `calcRow`(같은 이름이 파일 안에 또 있다) · `회색펴기` · `manualBox`(바깥 변수 `회색모음` 에 대입) 등. 이름을 바꾸거나 대입을 풀어야 꺼낼 수 있다.
