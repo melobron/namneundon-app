@@ -393,6 +393,14 @@ header {
   width: 56px;
   flex: none;
 }
+.chev {
+  display: inline-block;
+  transition: transform 0.22s ease;
+}
+.adjtoggle .chev {
+  font-size: calc(11 * var(--fu));
+  transition: transform 0.22s ease;
+}
 .row .lab .chev {
   font-size: calc(13 * var(--fu));
   color: var(--gray);
@@ -401,10 +409,6 @@ header {
 .row:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
-}
-.chev {
-  display: inline-block;
-  transition: transform 0.22s ease;
 }
 .row.open .chev {
   transform: rotate(180deg);
@@ -466,6 +470,21 @@ header {
   overflow: hidden;
   visibility: hidden;
 }
+.adjwrap > div {
+  overflow: hidden;
+  visibility: hidden;
+}
+.det2 > div {
+  overflow: hidden;
+  visibility: hidden;
+}
+.whytip div + div {
+  margin-top: 3px;
+}
+.duenone div + div {
+  margin-top: 5px;
+  color: var(--gray);
+}
 .det.open > div {
   visibility: visible;
 }
@@ -493,8 +512,51 @@ table.o td.v {
   font-weight: 600;
   width: 150px;
 }
-table.o tr:last-child td {
-  border-bottom: none;
+/* ★ 66-16차 ④ · 원가율(업종별로 매입 비율·재료 비율) 줄.
+     맨글자라 표에서 안 보였다. 옅은 노란 바탕 + 진한 갈색 글자로 띄운다.
+     ★ 새 색은 안 만든다 — --estbg(옅은 크림)와 --est(진한 갈색)다.
+       「아직」 배지는 --est 를 통째로 채우고 흰 글자라 이 줄과 안 헷갈린다 */
+.ytab thead th {
+  font-size: calc(12.5 * var(--fu));
+  color: var(--gray);
+  font-weight: 600;
+}
+.ytab tr.yrratio td,
+.ytab tr.yrratio th {
+  background: var(--estbg);
+}
+/* ── 68차 ⑥ · 그룹 배경 밴드 ────────────────────────────────────
+     줄이 열 몇 개씩 늘어서면 어느 줄을 보고 있는지 눈이 놓친다.
+     행마다 아주 옅은 밴드를 깔고 행 이름도 그 행 숫자와 같은 색으로 맞춘다.
+     ★ 새 뜻의 색은 안 만든다 — 있는 색 계열의 옅은 판(--goodbg·--warnbg·--nowbg·
+       --panel·--estbg)만 쓴다.
+     ★ 이름 칸(.rh)은 왼쪽에 붙어 있는 sticky 칸이라 제 바탕을 따로 줘야 한다.
+     ★ 69차 ①. 평균 칸(.avgcol)은 이제 밴드를 이어받는다 — 아래 avgcol 밴드 규칙 참고.
+     ★ 진행 중인 달 칸(.livec)은 이 아래에 오는 규칙이라 그대로 이긴다 */
+.ytab tr.yrin td,
+.ytab tr.yrin th {
+  background: var(--goodbg);
+}
+.ytab tr.yrout td,
+.ytab tr.yrout th {
+  background: var(--warnbg);
+}
+.ytab tr.yrprof td,
+.ytab tr.yrprof th {
+  background: var(--nowbg);
+}
+.ytab tr.keeprow td,
+.ytab tr.keeprow th {
+  background: var(--panel);
+}
+.ytab tr.unsetrow2 td,
+.ytab tr.unsetrow2 th {
+  background: var(--estbg);
+}
+/* 마지막 줄은 굵은 선 위에. 이름도 숫자와 같은 파랑으로 (68차 ⑥) */
+.ytab tr.balrow td,
+.ytab tr.balrow th {
+  border-top: 2px solid var(--edge);
 }
 
 /* 직접 조정 — 앱이 모르는 큰 돈을 사장님이 직접 넣는 칸 */
@@ -522,10 +584,6 @@ table.o tr:last-child td {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
-.adjtoggle .chev {
-  font-size: calc(11 * var(--fu));
-  transition: transform 0.22s ease;
-}
 .adjtoggle.open .chev {
   transform: rotate(180deg);
 }
@@ -539,10 +597,6 @@ table.o tr:last-child td {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.22s ease;
-}
-.adjwrap > div {
-  overflow: hidden;
-  visibility: hidden;
 }
 .adjwrap.open > div {
   visibility: visible;
@@ -619,29 +673,6 @@ table.o tr:last-child td {
   padding: 0;
 }
 /* 부호 색은 화면 전체가 같다 — 더하기는 파랑, 빼기는 빨강 */
-.adj.on.plus .adjsign {
-  color: var(--now);
-  border-color: var(--now);
-}
-.adj.on.minus .adjsign {
-  color: var(--warn);
-  border-color: var(--warn);
-}
-.adj.on.plus .adjinput,
-.adj.on.plus .adjinput:focus {
-  color: var(--now);
-  border-color: var(--now);
-}
-.adj.on.minus .adjinput,
-.adj.on.minus .adjinput:focus {
-  color: var(--warn);
-  border-color: var(--warn);
-}
-.adjsign:focus-visible,
-.adjinput:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
 .adjinput {
   width: 116px;
   height: 34px;
@@ -658,9 +689,32 @@ table.o tr:last-child td {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.025em;
 }
+.adjsign:focus-visible,
+.adjinput:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.adj.on.plus .adjsign {
+  color: var(--now);
+  border-color: var(--now);
+}
+.adj.on.minus .adjsign {
+  color: var(--warn);
+  border-color: var(--warn);
+}
 .adjinput:focus {
   outline: none;
   border-color: var(--ink);
+}
+.adj.on.plus .adjinput,
+.adj.on.plus .adjinput:focus {
+  color: var(--now);
+  border-color: var(--now);
+}
+.adj.on.minus .adjinput,
+.adj.on.minus .adjinput:focus {
+  color: var(--warn);
+  border-color: var(--warn);
 }
 .adjwon {
   font-size: calc(13 * var(--fu));
@@ -701,11 +755,6 @@ table.o tr:last-child td {
     display: none;
   }
 }
-/* 조정이 들어간 줄은 굵게 (.biz .row .v 보다 뒤에 와야 이긴다) */
-.row.adjusted .v,
-.biz .row.adjusted .v {
-  font-weight: 800;
-}
 
 /* 판 안쪽 항목 줄 */
 .orow {
@@ -728,6 +777,11 @@ table.o tr:last-child td {
   text-align: right;
   font-weight: 600;
   flex: none;
+}
+/* 조정이 들어간 줄은 굵게 (.biz .row .v 보다 뒤에 와야 이긴다) */
+.row.adjusted .v,
+.biz .row.adjusted .v {
+  font-weight: 800;
 }
 .orow .p {
   width: 56px;
@@ -771,10 +825,6 @@ table.o tr:last-child td {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.22s ease;
-}
-.det2 > div {
-  overflow: hidden;
-  visibility: hidden;
 }
 .det2.open > div {
   visibility: visible;
@@ -878,10 +928,6 @@ table.o tr:last-child td {
   color: var(--warn);
   text-decoration: line-through;
 }
-.item.out .tag {
-  color: var(--warn);
-  border-color: var(--warnline);
-}
 .outx {
   color: var(--warn);
   font-weight: 700;
@@ -917,6 +963,10 @@ table.o tr:last-child td {
   vertical-align: 1px;
   white-space: nowrap;
 }
+.item.out .tag {
+  color: var(--warn);
+  border-color: var(--warnline);
+}
 /* 이름 안에 붙는 꼬리표 */
 .estmark {
   color: var(--est);
@@ -938,6 +988,10 @@ table.o tr:last-child td {
 .iamt.est,
 .orow .v.est {
   color: var(--est);
+}
+.sephead .lab {
+  flex: 1;
+  min-width: 0;
 }
 .item.est .iname,
 .item.est .isub,
@@ -969,10 +1023,6 @@ table.o tr:last-child td {
   font-size: calc(13 * var(--fu));
   font-weight: 700;
   border-bottom: 1px solid var(--line);
-}
-.sephead .lab {
-  flex: 1;
-  min-width: 0;
 }
 .sephead .v {
   width: 104px;
@@ -1089,12 +1139,12 @@ table.o tr:last-child td {
   background: var(--panel);
   border-color: var(--panel);
 }
-.card.answered .q {
-  color: var(--gray);
-}
 .q {
   font-size: calc(15 * var(--fu));
   line-height: 1.55;
+}
+.card.answered .q {
+  color: var(--gray);
 }
 .q b {
   font-weight: 700;
@@ -1664,19 +1714,6 @@ footer {
 .ysum .ysumw {
   color: var(--warn);
 }
-/* ★ 66-16차 ④ · 원가율(업종별로 매입 비율·재료 비율) 줄.
-     맨글자라 표에서 안 보였다. 옅은 노란 바탕 + 진한 갈색 글자로 띄운다.
-     ★ 새 색은 안 만든다 — --estbg(옅은 크림)와 --est(진한 갈색)다.
-       「아직」 배지는 --est 를 통째로 채우고 흰 글자라 이 줄과 안 헷갈린다 */
-.ytab tr.yrratio td,
-.ytab tr.yrratio th {
-  background: var(--estbg);
-}
-.ytab tr.yrratio .rh,
-.ytab tr.yrratio .num {
-  color: var(--est);
-  font-weight: 700;
-}
 /* ★ 66-6차 ① · 1년치 그림. 화면 폭에 맞춰 늘고 준다 —
      열두어 달이 옆으로 안 밀리고 한 화면에 다 들어와야 「한눈에 보기」다.
      옛 .chpane/.chax/.chax2/.chbody(눈금 고정 + 그림 스크롤)는 쓸 데가 없어져 걷어냈다 */
@@ -1693,12 +1730,6 @@ footer {
   margin: 24px auto 0;
   width: 100%;
   max-width: 640px;
-}
-/* ★ 65-2차. 범례는 오른쪽 위·굵게로 통일한다 —
-     그림마다 범례 자리가 다르면 같은 물건이 화면마다 옮겨 다닌다 (49차) */
-.chhead .chkey {
-  justify-content: flex-end;
-  margin-top: 3px;
 }
 /* ★ 66-4차 ③. 범례와 부제는 한 묶음으로 오른쪽에 선다 */
 .chright {
@@ -1748,9 +1779,18 @@ footer {
 .ytab tr.ygrp td.rh {
   cursor: pointer;
 }
-.ytab tr.ygrp td.rh:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: -2px;
+/* ★ 69차 ②. 밴드가 없는 흰 행의 이름 칸은 위 .ytab td.rh 가 이미
+     --paper 를 깔고 있다 — 그래도 「고정 칸은 불투명」이 이 표의 규칙이라
+     여기 한 번 더 적어 둔다. 다음에 누가 투명도를 넣지 않도록 */
+.ytab tr.yrsub td.rh,
+.ytab tr.balrow td.rh {
+  background: var(--paper);
+}
+.ytab tr.keeprow td.rh {
+  color: var(--ink);
+}
+.ytab tr.keeprow2 td.rh {
+  color: var(--ink);
 }
 .ychev {
   margin-left: 5px;
@@ -1767,6 +1807,12 @@ footer {
   color: var(--gray);
   white-space: nowrap;
   flex-wrap: wrap;
+}
+/* ★ 65-2차. 범례는 오른쪽 위·굵게로 통일한다 —
+     그림마다 범례 자리가 다르면 같은 물건이 화면마다 옮겨 다닌다 (49차) */
+.chhead .chkey {
+  justify-content: flex-end;
+  margin-top: 3px;
 }
 /* 새 색은 안 만든다. 그림에 쓰는 네 색 그대로다 */
 .chkey .kgood {
@@ -1983,10 +2029,6 @@ footer {
   text-align: left;
   margin: 16px 0 20px;
 }
-.startcard .tradehead,
-.startcard .tradesub {
-  text-align: center;
-}
 .startdemo {
   display: block;
   margin: 18px auto 0;
@@ -2091,6 +2133,10 @@ footer {
   color: var(--gray);
   line-height: 1.6;
 }
+.startcard .tradehead,
+.startcard .tradesub {
+  text-align: center;
+}
 /* ★ 63-13 · 「이어서 보기」. 타일보다 먼저 눈에 들어와야 한다 —
      돌아오신 분이 여기서 할 일은 자기 매장으로 가는 것이다.
      ★ 처음에는 --now 계열(옅은 파랑)로 두었는데, 바로 위 안심 고지가 같은 파랑이라
@@ -2159,12 +2205,13 @@ footer {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
+     재촉하는 색을 쓰지 않는다 — 회색 글씨와 이미 있는 알약 단추(oslink)뿐이다 */
+.gsrun {
+  margin: 6px 0 2px 2px;
+}
 .gsline .gsrun {
   flex: 1 0 100%;
-}
-.gsline .gostore {
-  flex: 1;
-  min-width: 0;
 }
 .gostore {
   display: block;
@@ -2177,6 +2224,10 @@ footer {
   font-family: inherit;
   color: var(--ink);
   cursor: pointer;
+}
+.gsline .gostore {
+  flex: 1;
+  min-width: 0;
 }
 .gostore:hover {
   border-color: var(--ink);
@@ -2194,11 +2245,6 @@ footer {
   margin-top: 2px;
   font-size: calc(12 * var(--fu));
   color: var(--gray);
-}
-/* ★ 105차 ④. 마지막으로 분석한 날과 그 뒤로 지난 날수.
-     재촉하는 색을 쓰지 않는다 — 회색 글씨와 이미 있는 알약 단추(oslink)뿐이다 */
-.gsrun {
-  margin: 6px 0 2px 2px;
 }
 .gsrun .gsrunday {
   font-size: calc(12.5 * var(--fu));
@@ -2505,6 +2551,11 @@ footer {
   font-weight: 800;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+.ytab tr.yrratio .rh,
+.ytab tr.yrratio .num {
+  color: var(--est);
+  font-weight: 700;
 }
 .upbadtrades {
   margin-top: 10px;
@@ -2860,6 +2911,12 @@ footer {
   flex-wrap: wrap;
   gap: 6px;
 }
+.addrow2 .b {
+  text-align: left;
+}
+.imgprevheadacts .b {
+  white-space: nowrap;
+}
 .obsub + .obbtns .b {
   width: auto;
   min-height: 0;
@@ -2928,9 +2985,6 @@ footer {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-}
-.addrow2 .b {
-  text-align: left;
 }
 .addrow2 .bsub {
   display: block;
@@ -3171,10 +3225,6 @@ footer {
   align-items: center;
   gap: 8px;
 }
-.osline .osb {
-  flex: 1;
-  min-width: 0;
-}
 /* 고르기가 주된 일이라 지우기는 옅게 */
 /* ★ 66-9차 ③. 알약 박스로 통일. 목록 안이라 한 치수 작게 */
 .oslink {
@@ -3204,6 +3254,10 @@ footer {
   text-align: left;
   max-width: 100%;
   word-break: break-all;
+}
+.osline .osb {
+  flex: 1;
+  min-width: 0;
 }
 .osb:hover {
   border-color: var(--ink);
@@ -3410,9 +3464,6 @@ footer {
   color: var(--warn);
   font-weight: 800;
 }
-.orow .p.small .pctbase {
-  display: block;
-}
 .howlink {
   display: block;
   font-size: calc(12.5 * var(--fu));
@@ -3449,6 +3500,9 @@ footer {
   color: var(--gray);
   white-space: nowrap;
   margin-top: 2px;
+}
+.orow .p.small .pctbase {
+  display: block;
 }
 .catn {
   white-space: nowrap;
@@ -3553,9 +3607,6 @@ footer {
   align-items: center;
   gap: 6px;
   margin-left: auto;
-}
-.imgprevheadacts .b {
-  white-space: nowrap;
 }
 .imgprevbody {
   flex: 1;
@@ -4095,9 +4146,6 @@ footer {
   border: 7px solid transparent;
   border-bottom-color: var(--ink);
 }
-.whytip div + div {
-  margin-top: 3px;
-}
 /* 문장 앞의 ? — 위 버튼과 같은 15×15px·10px. 어두운 바탕이라 --gray 는
      안 보여서 --line 으로 테두리와 글자를 준다. 새 색은 안 만든다 */
 .whytip .whyq {
@@ -4333,9 +4381,6 @@ footer {
 .res.restop.minus .v {
   color: var(--warn);
 }
-.res.restop.est.minus .v {
-  color: var(--est);
-}
 .res.restop.fixed .v {
   color: var(--good);
 }
@@ -4391,10 +4436,6 @@ footer {
   line-height: 1.65;
   color: var(--ink);
 }
-.duenone div + div {
-  margin-top: 5px;
-  color: var(--gray);
-}
 .duenone .duenonelist {
   margin-top: 7px;
   padding-top: 7px;
@@ -4405,13 +4446,6 @@ footer {
   padding-top: 10px;
   padding-bottom: 10px;
 }
-.duecard.shut .dueicon {
-  top: 9px;
-}
-/* ★ 101차. 접혀 있어도 기준일과 종료일은 보인다 */
-.duecard.shut .dueas {
-  display: block;
-}
 /* 세모 느낌표. 구간색은 그대로 따라간다 —
      53%(가운데 구간)에서 주황 세모가 나오는 것이 시안의 모습이다 */
 .dueicon {
@@ -4419,6 +4453,13 @@ footer {
   left: 13px;
   top: 12px;
   color: var(--dueicon);
+}
+.duecard.shut .dueicon {
+  top: 9px;
+}
+/* ★ 101차. 접혀 있어도 기준일과 종료일은 보인다 */
+.duecard.shut .dueas {
+  display: block;
 }
 .dueicon.good {
   color: var(--good);
@@ -4706,11 +4747,11 @@ footer {
        그래야 어느 줄이든 맨 오른쪽이 숫자라 끝이 한 열로 선다.
        DOM 차례는 그대로 두고 보이는 차례만 바꾼다 (계산·저장과 무관하다).
      ★ 이름 들여쓰기(앞의 전각 빈칸)는 그대로다 — 하위 항목인 것이 보여야 한다 */
-.pnl .orow:not(.mcalc) > .p:empty {
-  display: none;
-}
 .pnl .orow:not(.mcalc) > .p {
   order: 1;
+}
+.pnl .orow:not(.mcalc) > .p:empty {
+  display: none;
 }
 .pnl .orow:not(.mcalc) > .v {
   order: 2;
@@ -5571,11 +5612,11 @@ input.cashdayin {
   font-size: calc(13.5 * var(--fu));
   border-bottom: 1px dashed var(--line);
 }
-.dtl .drow:last-child {
-  border-bottom: none;
-}
 .dtl .drow {
   flex-wrap: wrap;
+}
+.dtl .drow:last-child {
+  border-bottom: none;
 }
 /* ★ 69차 ③. 여기서도 단추는 이름 오른쪽이다 (정하기 화면과 같은 원칙).
      ★ 390px 에서 이름·알약·금액이 한 줄에 다 들어가려면 자리를 다시 나눠야 했다.
@@ -5670,34 +5711,6 @@ input.cashdayin {
   font-weight: 700;
   box-shadow: 1px 0 0 var(--line);
 }
-/* ── 68차 ⑥ · 그룹 배경 밴드 ────────────────────────────────────
-     줄이 열 몇 개씩 늘어서면 어느 줄을 보고 있는지 눈이 놓친다.
-     행마다 아주 옅은 밴드를 깔고 행 이름도 그 행 숫자와 같은 색으로 맞춘다.
-     ★ 새 뜻의 색은 안 만든다 — 있는 색 계열의 옅은 판(--goodbg·--warnbg·--nowbg·
-       --panel·--estbg)만 쓴다.
-     ★ 이름 칸(.rh)은 왼쪽에 붙어 있는 sticky 칸이라 제 바탕을 따로 줘야 한다.
-     ★ 69차 ①. 평균 칸(.avgcol)은 이제 밴드를 이어받는다 — 아래 avgcol 밴드 규칙 참고.
-     ★ 진행 중인 달 칸(.livec)은 이 아래에 오는 규칙이라 그대로 이긴다 */
-.ytab tr.yrin td,
-.ytab tr.yrin th {
-  background: var(--goodbg);
-}
-.ytab tr.yrout td,
-.ytab tr.yrout th {
-  background: var(--warnbg);
-}
-.ytab tr.yrprof td,
-.ytab tr.yrprof th {
-  background: var(--nowbg);
-}
-.ytab tr.keeprow td,
-.ytab tr.keeprow th {
-  background: var(--panel);
-}
-.ytab tr.unsetrow2 td,
-.ytab tr.unsetrow2 th {
-  background: var(--estbg);
-}
 .ytab tr.yrin .num,
 .ytab tr.yrout .num,
 .ytab tr.yrprof .num {
@@ -5760,13 +5773,6 @@ input.cashdayin {
 .ytab tr.yrsub .num {
   color: color-mix(in srgb, var(--gray) 78%, var(--paper));
 }
-/* ★ 69차 ②. 밴드가 없는 흰 행의 이름 칸은 위 .ytab td.rh 가 이미
-     --paper 를 깔고 있다 — 그래도 「고정 칸은 불투명」이 이 표의 규칙이라
-     여기 한 번 더 적어 둔다. 다음에 누가 투명도를 넣지 않도록 */
-.ytab tr.yrsub td.rh,
-.ytab tr.balrow td.rh {
-  background: var(--paper);
-}
 /* ★ 68차 ⑥. 「아직 안 정한 돈」 값은 알약 박스로 — 눌러볼 수 있는 것의 모양새다.
      표는 border-collapse:collapse 라 칸 자체는 모서리가 안 둥글어진다.
      그래서 값을 span 하나로 감싸 그 span 을 알약으로 만든다 (글자는 그대로) */
@@ -5779,24 +5785,14 @@ input.cashdayin {
   color: var(--est);
   font-weight: 700;
 }
-.ytab tr.unsetrow2 td.dash .ypill {
-  background: none;
-  border-color: transparent;
-  color: var(--gray);
-}
 /* 알약 자체가 「누를 수 있다」를 말한다 — 밑줄을 겹치지 않는다 */
 .ytab td.gomonth .ypill {
   text-decoration: none;
 }
-/* 마지막 줄은 굵은 선 위에. 이름도 숫자와 같은 파랑으로 (68차 ⑥) */
-.ytab tr.balrow td,
-.ytab tr.balrow th {
-  border-top: 2px solid var(--edge);
-}
-.ytab thead th {
-  font-size: calc(12.5 * var(--fu));
+.ytab tr.unsetrow2 td.dash .ypill {
+  background: none;
+  border-color: transparent;
   color: var(--gray);
-  font-weight: 600;
 }
 .ytab thead th.live {
   color: var(--ink);
@@ -5849,15 +5845,9 @@ input.cashdayin {
   border-top: 3px double var(--ink);
   color: var(--gray);
 }
-.ytab tr.keeprow td.rh {
-  color: var(--ink);
-}
 /* 둘째 줄은 같은 묶음이라 겹선을 다시 긋지 않는다 */
 .ytab tr.keeprow2 td {
   color: var(--gray);
-}
-.ytab tr.keeprow2 td.rh {
-  color: var(--ink);
 }
 /* 36차 1-2 — 아직 안 정한 돈. 다 정하면 사라지는 줄이라 눈에 띄게 둔다 */
 /* ★ 54차 ④. 이름만 빨갛고 숫자는 회색이라 한 줄이 두 색이었다.
@@ -5867,6 +5857,19 @@ input.cashdayin {
 .ytab tr.unsetrow2 td {
   color: var(--est);
 }
+/* 최종 값이라 굵은 선을 하나 더 긋고 --now 를 쓴다 */
+.ytab tr.balrow td {
+  border-top: 3px double var(--ink);
+  color: var(--now);
+  font-weight: 800;
+}
+.ytab tr.prof td {
+  font-weight: 800;
+  border-top: 1px solid var(--ink);
+}
+table.o tr:last-child td {
+  border-bottom: none;
+}
 .ytab tr.unsetrow2 td.dash {
   color: var(--gray);
 }
@@ -5874,27 +5877,21 @@ input.cashdayin {
   color: var(--est);
   font-weight: 700;
 }
+/* ★ 68차 ⑥. 이름도 숫자와 같은 파랑으로 */
+.ytab tr.balrow td.rh {
+  color: var(--now);
+}
+.ytab tr.ygrp td.rh:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
 /* ★ 54차 ⑤. 누를 수 있는 칸은 달 이름처럼 밑줄이 붙는다 */
 .ytab td.gomonth {
   text-decoration: underline;
   cursor: pointer;
 }
-/* 최종 값이라 굵은 선을 하나 더 긋고 --now 를 쓴다 */
-.ytab tr.balrow td {
-  border-top: 3px double var(--ink);
-  color: var(--now);
-  font-weight: 800;
-}
-/* ★ 68차 ⑥. 이름도 숫자와 같은 파랑으로 */
-.ytab tr.balrow td.rh {
-  color: var(--now);
-}
 .ytab td.num {
   font-variant-numeric: tabular-nums;
-}
-.ytab tr.prof td {
-  font-weight: 800;
-  border-top: 1px solid var(--ink);
 }
 .ytab td.plus {
   color: var(--now);
@@ -6098,6 +6095,9 @@ input.cashdayin {
 .res.mcalc.mprofit .v {
   color: var(--paper);
   font-size: calc(14 * var(--fu));
+}
+.res.restop.est.minus .v {
+  color: var(--est);
 }
 /* ★ 85차 ①. 「조금만 더 정하면 나옵니다」에 갈 곳을 준다.
      문장일 뿐 갈 곳이 없었다. 바로 아래에 「아직 안 정한 곳 N곳」 단추가 있지만
