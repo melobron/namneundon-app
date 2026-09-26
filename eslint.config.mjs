@@ -47,6 +47,33 @@ export default [
     }
   },
   {
+    // 저장소(localStorage)는 00-storage.js 에서만 만진다 — 나중에 서버 동기화로 바꿀 자리가 한 곳이어야 한다
+    files: ['app/src/**/*.js'],
+    ignores: ['app/src/00-storage.js'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'localStorage',
+          message:
+            '저장소는 00-storage.js 의 함수(lsGet·lsSet·lsDel·lsKeys·lsReadJSON·lsRemove)로만 쓴다'
+        },
+        {
+          name: 'sessionStorage',
+          message: '이 앱은 sessionStorage 를 쓰지 않는다. 저장은 00-storage.js 로'
+        }
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'window',
+          property: 'localStorage',
+          message: '저장소는 00-storage.js 의 함수로만 쓴다'
+        }
+      ]
+    }
+  },
+  {
     files: ['app/sw.js'],
     languageOptions: { globals: { ...globals.serviceworker } }
   },

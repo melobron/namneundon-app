@@ -2,7 +2,7 @@
 /* ── 사장님이 정한 분류만 이 브라우저에 남긴다 ──
    거래내역·금액·잔액은 어떤 경로로도 저장하지 않는다.
    자동으로 잡은 것은 규칙이 코드에 있으니 저장할 필요가 없다 */
-var PICK_KEY = 'fc.picks.';
+/* 저장 이름 PICK_KEY 은 00-storage.js 에 모았다 */
 /* ── 36차 J · 직접 넣기 ─────────────────────────────────────
    ★ 저장통을 나눈다. fc.picks 의 hasNumber 검사는 그대로 둔다 —
      그것이 A안을 코드로 강제해둔 장치다.
@@ -10,17 +10,12 @@ var PICK_KEY = 'fc.picks.';
        fc.manual.<매장>   직접 적은 금액만   여기만 숫자를 허용한다
      fc.manual 은 pickPayload·내보내기에 들어가지 않는다.
    변호사 확인 — 사용자가 직접 입력한 숫자를 그 사람 브라우저에 남기는 것은 문제없다 */
-var MANUAL_KEY = 'fc.manual.';
+/* 저장 이름 MANUAL_KEY 은 00-storage.js 에 모았다 */
 
 var LS_OK = true; /* 시크릿 모드에서는 저장이 막힌다 — 앱은 그대로 돌아가야 한다 */
 var LS_MSG = '이 브라우저에서는 저장이 안 됩니다. 매번 다시 정하셔야 합니다';
 
-/* lsGet · lsSet · lsDel 은 00-early.js 에 있다 (첫 화면에서 바로 쓰여서 맨 앞에 둔다) */
-
-function storeKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return PICK_KEY + (s || '(기본)');
-}
+/* 저장소 읽기·쓰기 함수(lsGet · lsSet · lsDel …)와 저장 이름은 00-storage.js 에 모았다 */
 
 /* ── 91차 ① · 거래내역 데이터셋 (이 기기 전용) ──────────────────────
    ★ 이것은 네 번째 저장통이다. 앞의 셋과 섞지 않는다.
@@ -38,8 +33,8 @@ function storeKey(name) {
      그 길은 동기라 화면을 그리기 전에 값이 있다. IndexedDB 로 가면 부팅 순서를
      비동기로 바꿔야 하는데, 얻는 것보다 흔들 자리가 훨씬 많다.
      넘치면 조용히 접는다 — 저장이 안 돼도 앱은 메모리로 그대로 돌아간다 */
-var DATA_KEY = 'fc.data.';
-var LAST_KEY = 'fc.last'; /* 마지막으로 남긴 매장 — 열 때 어느 것부터 볼지 */
+/* 저장 이름 DATA_KEY 은 00-storage.js 에 모았다 */
+/* 저장 이름 LAST_KEY 은 00-storage.js 에 모았다 */
 /* ★ 105차 ④. 분석이 끝난 날짜 하나만 남긴다 (2026-09-19 요한 결정).
    ★ 파일을 고른 시각이 아니다 — 거래가 실제로 반영되고 결과 화면까지 간 날이다.
    ★ 「올리신 날」이 아니라 「분석한 날」이다. 같은 파일을 다시 분석할 수도 있다.
@@ -48,11 +43,7 @@ var LAST_KEY = 'fc.last'; /* 마지막으로 남긴 매장 — 열 때 어느 �
      들어가는 값은 'YYYY-MM-DD' 열 글자뿐이고 서버로 가는 것은 없다.
    ★ 사업자등록이 나오면 이 날짜를 그대로 올리면 된다. 보내는 기준은 30일 이상 하나뿐이고,
      그건 화면 줄(늘 보인다)과 다른 것이다. 섞지 않는다 */
-var LAST_RUN_KEY = 'nd_lastrun.';
-function lastRunKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return LAST_RUN_KEY + (s || '(기본)');
-}
+/* 저장 이름 LAST_RUN_KEY 은 00-storage.js 에 모았다 */
 function lastRunDay(name) {
   var v = lsGet(lastRunKey(name));
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
@@ -68,10 +59,6 @@ function markLastRun() {
 var DATA_CAP = 2000000; /* 이 글자 수를 넘으면 안 남긴다 (통이 터지지 않게) */
 var DATA_SIG = null; /* 마지막으로 남긴 것의 지문 — 안 바뀌었으면 다시 안 쓴다 */
 
-function dataKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return DATA_KEY + (s || '(기본)');
-}
 /* 그날부터 오늘까지 며칠 — 날짜만 센다. 시각은 안 본다 */
 function daysSince(day) {
   if (!day) return 0;
@@ -361,12 +348,13 @@ function pickPayload() {
 function nextPickSeq() {
   var max = 0;
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var k = 저장열쇠[i];
       if (!k || k.indexOf(PICK_KEY) !== 0) continue;
       var o = null;
       try {
-        o = JSON.parse(localStorage.getItem(k));
+        o = lsReadJSON(k);
       } catch (e) {
         continue;
       }
@@ -431,9 +419,9 @@ var PICK_SAVED = true;
 /* ★ 39차 5번. 「모자랄 것 같다」 카드를 걷어내면서 그 로그통도 비운다.
    쓰던 분 브라우저에 남아 있을 수 있어 한 번 지우고 간다 */
 try {
-  localStorage.removeItem('fc_log');
+  lsRemove('fc_log');
 } catch (e) {}
-var USE_KEY = 'fc_use';
+/* 저장 이름 USE_KEY 은 00-storage.js 에 모았다 */
 var USE_MAX = 30; /* 줄은 최근 30개까지 */
 var USE_CAP = 120; /* 한 곳에 2분을 넘기면 2분으로 자른다 */
 var USE_FAIL_MAX = 10; /* 못 읽은 파일은 최근 10개까지 */
@@ -936,10 +924,6 @@ function loadPicks(name) {
    ★ 「매달 같은 금액」 같은 선택지는 두지 않는다. 배달·현금은 달마다 다르다.
    ★ 계좌 잔액과 검산에는 절대 안 넣는다 —
      현금 매출은 계좌에 안 들어온 돈이라 검산에 넣으면 그 달이 통째로 안 나온다 */
-function manualKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return MANUAL_KEY + (s || '(기본)');
-}
 /* ── 83차 ① · 「현금매출」은 처음부터 있는 항목이다 ──────────────
    예전에는 대표님이 「＋ 항목 추가」를 눌러 이름을 손수 치셔야 했다.
    안내글에 「현금 매출」이라고 적혀 있었지만 그건 힌트일 뿐이라,
@@ -1084,11 +1068,7 @@ function manualShapeOk(m) {
      자동으로 잡은 이름을 덮어쓰면 40차에 고친 「틀린 것을 확신 있게 말하는」 자리로 되돌아간다.
    ★ 파일 목록 화면은 매장 이름을 묻기 전이라 그때는 되살릴 수 없다.
      매장이 정해진 뒤(온보딩 시작)에 붙인다 */
-var BANK_KEY = 'fc.banks.';
-function bankKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return BANK_KEY + (s || '(기본)');
-}
+/* 저장 이름 BANK_KEY 은 00-storage.js 에 모았다 */
 /* 계좌를 가리키는 열쇠. 숫자는 통째로 뺀다 —
    내려받을 때마다 바뀌는 시각(20260824170405)이 붙어 있고,
    숫자를 열쇠에 담지 않는 편이 이 통의 뜻에 맞다 */
@@ -1142,8 +1122,9 @@ function storeForBanks(banks) {
   if (!any) return null;
   var keys = [];
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var key = 저장열쇠[i];
       if (key && key.indexOf(PICK_KEY) === 0) keys.push(key);
     }
   } catch (e) {
@@ -1153,7 +1134,7 @@ function storeForBanks(banks) {
   keys.forEach(function (key) {
     var o;
     try {
-      o = JSON.parse(localStorage.getItem(key));
+      o = lsReadJSON(key);
     } catch (e) {
       return;
     }
@@ -1247,12 +1228,13 @@ function bankNameAnyStore(key) {
   var found = null,
     many = false;
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var k = 저장열쇠[i];
       if (!k || k.indexOf(BANK_KEY) !== 0) continue;
       var o = null;
       try {
-        o = JSON.parse(localStorage.getItem(k));
+        o = lsReadJSON(k);
       } catch (e) {
         continue;
       }
