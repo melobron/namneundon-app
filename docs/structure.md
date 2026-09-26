@@ -25,6 +25,7 @@ app/
 | `core/verify.js`      | 잔액 검산, 뒤바뀐 순서 바로잡기, 파일에 적힌 조회 기간 (옛 `05-verify.js`)                           |
 | `core/parse-excel.js` | 은행 엑셀·CSV·HTML 표 → 거래 행 (머리글·열 찾기, 숫자·날짜 해석, 은행 이름) (옛 `03-parse-excel.js`) |
 | `core/parse-pdf.js`   | PDF 글자 조각 → 표 → 거래 행, PDF 합계 확인 (옛 `04-parse-pdf.js`)                                   |
+| `core/classify.js`    | 거래처 묶기(년월·(주) 떼기), 이름으로 항목 짐작, 거래처별 항목 다루기 (옛 `06-classify.js`)          |
 
 - core 파일은 `index.html` 에서 **맨 앞**에 불러온다.
 - `npm run check` 가 core 규칙을 지킨다 (`tools/check-core.mjs`) — core 밖의 이름, 브라우저 기능, 지금 시각·난수, 최상위 값 바꾸기를 막는다.
