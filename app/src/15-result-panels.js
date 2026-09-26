@@ -360,21 +360,21 @@ function renameStore(oldName, neu) {
   if (a) {
     lsSet(storeKey(neu), a);
     try {
-      localStorage.removeItem(storeKey(oldName));
+      lsRemove(storeKey(oldName));
     } catch (e) {}
   }
   var b = lsGet(manualKey(oldName));
   if (b) {
     lsSet(manualKey(neu), b);
     try {
-      localStorage.removeItem(manualKey(oldName));
+      lsRemove(manualKey(oldName));
     } catch (e) {}
   }
   var c = lsGet(bankKey(oldName));
   if (c) {
     lsSet(bankKey(neu), c);
     try {
-      localStorage.removeItem(bankKey(oldName));
+      lsRemove(bankKey(oldName));
     } catch (e) {}
   }
   /* ★ 91차 ①. 거래내역(fc.data)도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
@@ -383,7 +383,7 @@ function renameStore(oldName, neu) {
   if (d) {
     lsSet(dataKey(neu), d);
     try {
-      localStorage.removeItem(dataKey(oldName));
+      lsRemove(dataKey(oldName));
     } catch (e) {}
   }
   /* ★ 116차 ⑪. 예정 지출도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
@@ -392,7 +392,7 @@ function renameStore(oldName, neu) {
   if (e5) {
     lsSet(planKey(neu), e5);
     try {
-      localStorage.removeItem(planKey(oldName));
+      lsRemove(planKey(oldName));
     } catch (e) {}
   }
   UP.__plan = null;
@@ -409,13 +409,14 @@ function storeRows() {
     seen[k.name] = { name: k.name, picks: k.n, months: 0 };
   });
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var key = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var key = 저장열쇠[i];
       if (!key || key.indexOf(MANUAL_KEY) !== 0) continue;
       var nm = key.slice(MANUAL_KEY.length);
       var o = null;
       try {
-        o = JSON.parse(localStorage.getItem(key));
+        o = lsReadJSON(key);
       } catch (e) {}
       var mn = o && o.amounts ? Object.keys(o.amounts).length : 0;
       if (!seen[nm]) seen[nm] = { name: nm, picks: 0, months: 0 };
@@ -555,18 +556,18 @@ function drawNames() {
         }
         DEL_ASK = null;
         try {
-          localStorage.removeItem(storeKey(r.name));
+          lsRemove(storeKey(r.name));
         } catch (e) {}
         try {
-          localStorage.removeItem(manualKey(r.name));
+          lsRemove(manualKey(r.name));
         } catch (e) {}
         try {
-          localStorage.removeItem(bankKey(r.name));
+          lsRemove(bankKey(r.name));
         } catch (e) {}
         /* ★ 116차 ⑪. 그 매장의 예정 지출도 같이 지운다.
            다른 매장의 계획은 그대로 둔다 (완료 기준 ⑫) */
         try {
-          localStorage.removeItem(planKey(r.name));
+          lsRemove(planKey(r.name));
         } catch (e) {}
         if (UP && UP.store === r.name) UP.__plan = null;
         drawNames();

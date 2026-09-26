@@ -148,8 +148,9 @@ function savedStores() {
     list.forEach(function (k) {
       have[k.name] = k;
     });
-    for (var i = 0; i < localStorage.length; i++) {
-      var dk = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var dk = 저장열쇠[i];
       if (!dk || dk.indexOf(DATA_KEY) !== 0) continue;
       var name = dk.slice(DATA_KEY.length);
       var o = loadData(name); /* 모양이 아니면 눌러도 못 여니 안 띄운다 */

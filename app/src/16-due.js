@@ -498,11 +498,7 @@ function 몫나누기(총액, 비중) {
      fc.picks 의 것이고 한 글자도 안 건드린다 — 통이 아예 다른 길이다.
    ★ 이 통을 읽어 네트워크로 내보내는 코드는 없다. 서버 약속은 그대로다.
    ★ 원본 거래 전체를 여기에 복사하지 않는다 — 연결은 계산으로 다시 찾는다 */
-var PLAN_KEY = 'fc.plan.';
-function planKey(name) {
-  var s = String(name != null ? name : (UP && UP.store) || '').trim();
-  return PLAN_KEY + (s || '(기본)');
-}
+/* 저장 이름 PLAN_KEY 은 00-storage.js 에 모았다 */
 function planEmpty() {
   return { v: 1, items: [] };
 }

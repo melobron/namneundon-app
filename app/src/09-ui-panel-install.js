@@ -7,7 +7,7 @@
      그쪽은 금액이 섞이면 안 되는 통이라 hasNumber 검사가 걸려 있는데,
      이건 금액이 아니라 설정값이다. 통을 나누면 그 검사도 옛 저장분도 안 건드린다
      (fc.a2hs.later · fc.breaks 와 같은 방식이다) */
-var FONT_KEY = 'fc.font';
+/* 저장 이름 FONT_KEY 은 00-storage.js 에 모았다 */
 var FONT_MIN = 1,
   FONT_MAX = 3;
 var 글씨단 = FONT_MIN;
@@ -194,7 +194,7 @@ document.getElementById('upclose').addEventListener('click', closeUpPanel);
    겉모습이 아니라 저장 때문이다. 사파리는 7일 쓰지 않으면 저장을 지우는데,
    홈 화면에 넣으면 그 규칙에서 빠진다.
    그리고 홈 화면 앱은 저장소가 따로라, 거래처를 찍기 전에 만들어야 한다 */
-var A2HS_KEY = 'fc.a2hs.later';
+/* 저장 이름 A2HS_KEY 은 00-storage.js 에 모았다 */
 var INSTALL_EVT = null;
 
 window.addEventListener('beforeinstallprompt', function (e) {
@@ -226,7 +226,7 @@ if ('serviceWorker' in navigator) {
 
 /* 앱 안 브라우저(WebView)는 홈 화면 추가가 안 되고 저장소도 따로 쓴다.
    표준 판별법이 없으니 흔한 문자열로 잡는다. 못 잡아도 앱은 그대로 돌아간다 */
-var INAPP_KEY = 'fc.inapp.later';
+/* 저장 이름 INAPP_KEY 은 00-storage.js 에 모았다 */
 function inAppKind() {
   var u = navigator.userAgent || '';
   if (/KAKAOTALK/i.test(u)) return 'kakao';
@@ -254,11 +254,12 @@ function isAndroid() {
 function savedSummary() {
   var out = { keys: [], total: 0 };
   try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
+    var 저장열쇠 = lsKeys();
+    for (var i = 0; i < 저장열쇠.length; i++) {
+      var k = 저장열쇠[i];
       if (!k || k.indexOf(PICK_KEY) !== 0) continue;
       try {
-        var o = JSON.parse(localStorage.getItem(k));
+        var o = lsReadJSON(k);
         if (o && o.picks) {
           /* ★ 46차 ⑥. 사장님이 세신 단위는 「곳」이다. 옛 저장분에는 없으니 그때만 키를 센다 */
           var n = typeof o.n곳 === 'number' && o.n곳 >= 0 ? o.n곳 : Object.keys(o.picks).length;
@@ -486,8 +487,8 @@ function drawA2HS() {
    「나중에」를 눌렀어도 결과 화면 아래에서 다시 부를 수 있게 한다 */
 function reopenInstall() {
   try {
-    localStorage.removeItem(A2HS_KEY);
-    localStorage.removeItem(INAPP_KEY);
+    lsRemove(A2HS_KEY);
+    lsRemove(INAPP_KEY);
   } catch (e) {}
   drawTopInApp();
   openUpPanel();
