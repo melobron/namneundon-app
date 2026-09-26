@@ -27,4 +27,4 @@
 
 ## 근거
 
-- `app/src/12-storage.js` · `app/src/07-state-categories.js` 주석, `.github/pull_request_template.md`
+- `app/src/00-storage.js`(저장 이름 표) · `app/src/12-storage.js` · `app/src/07-state-categories.js` 주석, `.github/pull_request_template.md`

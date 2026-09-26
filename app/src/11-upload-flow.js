@@ -935,7 +935,7 @@ function autoZeroBreaks() {
  ★ 통을 따로 둔다 (fc.picks 가 아니다). 확인 카드는 매장 이름을 묻기 전에 뜨므로
    그 시점에는 어느 매장 통에 넣어야 할지 알 수가 없다.
    담기는 것은 글자 하나(gap·stated·unknown)뿐이고 금액도 이름도 안 들어간다 */
-var BREAK_KEY = 'fc.breaks';
+/* 저장 이름 BREAK_KEY 은 00-storage.js 에 모았다 */
 function breakKey(r) {
   return r.at.slice(0, 10) + '|' + String(r.payee || '') + '|' + (r.excelRow || 0);
 }

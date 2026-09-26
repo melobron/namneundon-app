@@ -10,8 +10,9 @@ import * as acorn from 'acorn';
 
 const SRC = new URL('./app/src/', import.meta.url);
 const appGlobals = {};
-for (const f of readdirSync(SRC).filter((f) => f.endsWith('.js'))) {
-  const ast = acorn.parse(readFileSync(new URL(f, SRC), 'utf8'), { ecmaVersion: 'latest' });
+// core/ 같은 하위 폴더까지 읽는다
+for (const f of readdirSync(SRC, { recursive: true }).filter((f) => String(f).endsWith('.js'))) {
+  const ast = acorn.parse(readFileSync(new URL(String(f), SRC), 'utf8'), { ecmaVersion: 'latest' });
   for (const st of ast.body) {
     if (st.type === 'FunctionDeclaration') appGlobals[st.id.name] = 'writable';
     if (st.type === 'VariableDeclaration')
@@ -44,6 +45,33 @@ export default [
       // 공용 전역으로 알려준 이름을 그 파일에서 선언하는 것은 정상이다
       'no-redeclare': ['error', { builtinGlobals: false }],
       'no-empty': ['error', { allowEmptyCatch: true }]
+    }
+  },
+  {
+    // 저장소(localStorage)는 00-storage.js 에서만 만진다 — 나중에 서버 동기화로 바꿀 자리가 한 곳이어야 한다
+    files: ['app/src/**/*.js'],
+    ignores: ['app/src/00-storage.js'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'localStorage',
+          message:
+            '저장소는 00-storage.js 의 함수(lsGet·lsSet·lsDel·lsKeys·lsReadJSON·lsRemove)로만 쓴다'
+        },
+        {
+          name: 'sessionStorage',
+          message: '이 앱은 sessionStorage 를 쓰지 않는다. 저장은 00-storage.js 로'
+        }
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'window',
+          property: 'localStorage',
+          message: '저장소는 00-storage.js 의 함수로만 쓴다'
+        }
+      ]
     }
   },
   {

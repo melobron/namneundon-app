@@ -27,7 +27,7 @@ Claude Code · Codex 등 AI 가 이 저장소에서 일할 때 공통으로 따�
 
 ## 앱 코드(`app/src`)에서 꼭 알 것
 
-- 한 `<script>` 였던 것을 19개 파일로 나눴다. **모든 함수 · 변수가 전역**이고, 지금 올린 파일의 상태는 `UP` 객체에 모여 있다.
+- 한 `<script>` 였던 것을 21개 파일(`app/src/core/` 4 + `app/src/` 17)로 나눴다. **모든 함수 · 변수가 전역**이고, 지금 올린 파일의 상태는 `UP` 객체에 모여 있다.
 - **`index.html` 의 `<script>` 순서가 곧 실행 순서다.** 순서를 바꾸지 않는다. 앞 파일이 불러오는 순간 뒤 파일 이름을 쓰면 깨진다 → `npm run check` 가 잡는다.
 - 구조와 흐름: [docs/architecture/overview.md](docs/architecture/overview.md)
 
