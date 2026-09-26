@@ -133,6 +133,10 @@ function monthEndBalance(m) {
 function monthCloseBalance(m) {
   return monthCloseBalanceIn(UP, m);
 }
+/* 계산은 core/compute.js 의 lateAccountsIn — 지금 매장(UP)을 넘긴다 (B-9) */
+function lateAccounts(m) {
+  return lateAccountsIn(UP, m);
+}
 /* 계산은 core/compute.js 의 monthOpenBalanceIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function monthOpenBalance(m, rowsInMonth) {
   return monthOpenBalanceIn(UP, m, rowsInMonth);

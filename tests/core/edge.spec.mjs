@@ -5,6 +5,7 @@ import { loadCore } from './load-core.mjs';
 
 const core = loadCore({ xlsx: true });
 const X = core.XLSX;
+const plain = (x) => JSON.parse(JSON.stringify(x));
 const asWorkbook = (aoa) => {
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(aoa), '거래내역');
@@ -120,9 +121,10 @@ test.describe('여러 계좌', () => {
     expect(core.nowBalanceIn(U)).toBe(1560);
   });
 
-  // ★ 지금 동작을 적어둔 것이지 제품 규칙이 아니다 (backlog 참고).
+  // ★ 사용자 결정 (2026-09-27, backlog B-9): 계산은 이대로 둔다 — 앞 달을 추측해서 채우지 않는다.
   //   늦게 시작한 계좌는 첫 달 월초에 거꾸로 셈한 잔액으로 들어온다 —
-  //   그래서 앞 달 월말(그 계좌 없음)과 다음 달 월초(그 계좌 있음)가 다르다. 달마다 장부 검산은 맞는다
+  //   그래서 앞 달 월말(그 계좌 없음)과 다음 달 월초(그 계좌 있음)가 다르다. 달마다 장부 검산은 맞는다.
+  //   대신 화면이 lateAccountsIn 으로 까닭을 알린다 (아래 시험)
   test('늦게 시작한 계좌: 달마다 검산은 맞고, 앞 달 월말 ≠ 다음 달 월초', () => {
     const U = store(
       [
@@ -137,6 +139,41 @@ test.describe('여러 계좌', () => {
     expect(balanced(jun)).toBe(true);
     expect(may.close).toBe(1100);
     expect(jun.open).toBe(1600); // 1100(A) + 500(B 의 첫 거래 앞 잔액)
+  });
+
+  test('lateAccountsIn — 빠진 달은 before, 들어온 첫 달은 first, 그 뒤는 없음', () => {
+    const U = store(
+      [
+        row('2024-04-03 09:00:00', '카드사', 100, 1000, 0),
+        row('2024-05-01 09:00:00', '카드사', 100, 1100, 0),
+        row('2024-06-02 09:00:00', '식자재', -50, 450, 1),
+        row('2024-07-02 09:00:00', '식자재', -50, 400, 1)
+      ],
+      banks
+    );
+    expect(plain(core.lateAccountsIn(U, '2024-04'))).toEqual([
+      { acc: 1, from: '2024-06', state: 'before' }
+    ]);
+    expect(plain(core.lateAccountsIn(U, '2024-05'))).toEqual([
+      { acc: 1, from: '2024-06', state: 'before' }
+    ]);
+    expect(plain(core.lateAccountsIn(U, '2024-06'))).toEqual([
+      { acc: 1, from: '2024-06', state: 'first' }
+    ]);
+    expect(core.lateAccountsIn(U, '2024-07')).toEqual([]);
+  });
+
+  test('lateAccountsIn — 계좌가 하나거나 모두 같은 달에 시작하면 알릴 것이 없다', () => {
+    const one = store([row('2024-06-01 09:00:00', '카드사', 100, 1100, 0)]);
+    expect(core.lateAccountsIn(one, '2024-06')).toEqual([]);
+    const same = store(
+      [
+        row('2024-06-01 09:00:00', '카드사', 100, 1100, 0),
+        row('2024-06-20 09:00:00', '식자재', -50, 450, 1)
+      ],
+      banks
+    );
+    expect(core.lateAccountsIn(same, '2024-06')).toEqual([]);
   });
 });
 

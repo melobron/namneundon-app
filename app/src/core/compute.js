@@ -612,6 +612,31 @@ function monthEndBalanceIn(U, m) {
     return r.at.slice(0, 7) <= m;
   });
 }
+/* ★ B-9 (2026-09-27). 늦게 시작한 계좌 — 월말 잔액에 빠지거나, 들어온 첫 달이라 1일 잔액이 지난달 말과 다르다.
+   계산은 바꾸지 않는다 (추측해서 앞 달을 채우지 않는다). 화면이 이것을 보고 알리기만 한다 — 사용자 결정 2026-09-27.
+     before: 그 계좌 첫 거래가 이 달 뒤 → 이 달 잔액에 빠져 있다
+     first:  그 계좌 첫 거래가 이 달이고, 다른 계좌는 그 전 자료가 있다 → 1일 잔액에 새로 더해졌다 */
+function lateAccountsIn(U, m) {
+  var bs = U.banks || [];
+  if (bs.length < 2) return [];
+  var first = [],
+    earliest = null,
+    i;
+  for (i = 0; i < bs.length; i++) first[i] = null;
+  U.rows.forEach(function (r) {
+    var a = accOf(r),
+      mm = r.at.slice(0, 7);
+    if (first[a] === null || mm < first[a]) first[a] = mm;
+    if (earliest === null || mm < earliest) earliest = mm;
+  });
+  var out = [];
+  for (i = 0; i < bs.length; i++) {
+    if (first[i] === null) continue;
+    if (first[i] > m) out.push({ acc: i, from: first[i], state: 'before' });
+    else if (first[i] === m && earliest < m) out.push({ acc: i, from: first[i], state: 'first' });
+  }
+  return out;
+}
 /* 그 달 월말 — 계좌마다 그 달 마지막 잔액, 없으면 직전 달 것 */
 function monthCloseBalanceIn(U, m) {
   var v = monthEndBalanceIn(U, m);

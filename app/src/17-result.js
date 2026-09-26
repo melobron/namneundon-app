@@ -1279,6 +1279,23 @@ function drawResultInner(months) {
           if (v !== null) per.push(b.bank + ' ' + won(v) + '원');
         });
         if (per.length) host.appendChild(el('div', 'subnote', per.join(' · ')));
+        /* ★ B-9. 늦게 시작한 계좌가 있으면 달과 달 사이 잔액이 안 이어진다 — 숫자는 그대로 두고 까닭만 알린다 */
+        lateAccounts(UP.month).forEach(function (x) {
+          var 이름 = (UP.banks[x.acc] && UP.banks[x.acc].bank) || '계좌 ' + (x.acc + 1);
+          host.appendChild(
+            el(
+              'div',
+              'subnote',
+              x.state === 'before'
+                ? 이름 +
+                    은는(이름) +
+                    ' ' +
+                    +x.from.slice(5, 7) +
+                    '월부터 자료가 있어 이 달 잔액에 빠져 있습니다'
+                : 이름 + 은는(이름) + ' 이 달부터 자료가 있어 1일 잔액이 지난달 말과 다릅니다'
+            )
+          );
+        });
       }
       /* 이 뺄셈이 「들어온 돈 − 나간 돈」과 안 맞으면 그 달에 확인 안 된 거래가 있다 */
       var diff2 = d.close - d.open,
