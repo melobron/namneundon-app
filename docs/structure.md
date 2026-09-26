@@ -14,6 +14,21 @@ app/
 └─ robots.txt            검색 노출 차단
 ```
 
+## core — 순수한 계산 (리팩토링 B-1, 진행 중)
+
+`app/src/core/` 에는 **화면·저장소·바뀌는 전역(`UP`)에 닿지 않는 계산**만 둔다. 같은 입력이면 늘 같은 답이 나오고,
+화면 없이 **Node 에서도 돈다** — 단위 테스트(`tests/core/`)와 테스트베드 VDI 계산에 쓴다.
+
+| 파일             | 하는 일                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| `core/date.js`   | 날짜 → 날 번호 (`dayNum`, `dayMs`)                                         |
+| `core/verify.js` | 잔액 검산, 뒤바뀐 순서 바로잡기, 파일에 적힌 조회 기간 (옛 `05-verify.js`) |
+
+- core 파일은 `index.html` 에서 **맨 앞**에 불러온다.
+- `npm run check` 가 core 규칙을 지킨다 (`tools/check-core.mjs`) — core 밖의 이름, 브라우저 기능, 지금 시각·난수, 최상위 값 바꾸기를 막는다.
+- Node 에서 불러오기: `tests/core/load-core.mjs` 의 `loadCore()`.
+- 어떤 함수가 순수한지: `npm run purity` (`tools/analyze-purity.mjs`, `--why 함수이름` 으로 이유).
+
 ## src/ 파일
 
 | 파일                     |    줄 | 하는 일                                                                                                                                           |
@@ -24,7 +39,6 @@ app/
 | `02-text-loaders.js`     |    84 | 금액·조사 표기, 엑셀·PDF 도구 불러오기                                                                                                            |
 | `03-parse-excel.js`      |   622 | 엑셀 표 → 거래 행 (머리줄·열 찾기)                                                                                                                |
 | `04-parse-pdf.js`        |   516 | PDF → 표                                                                                                                                          |
-| `05-verify.js`           |   302 | 잔액 검산, 순서 바로잡기, 조회 기간                                                                                                               |
 | `06-classify.js`         |   358 | 거래처 이름 다듬기·묶기, 자동 분류                                                                                                                |
 | `07-state-categories.js` |   421 | 앱 상태(UP), 항목·업종 정의                                                                                                                       |
 | `08-ui-start-upload.js`  |   696 | 시작 화면, 업로드 창                                                                                                                              |

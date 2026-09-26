@@ -253,9 +253,6 @@ function rowId(r) {
 function xferKey(r) {
   return r.at.slice(0, 10) + '|' + bankName(r.acc || 0) + '|' + (r.excelRow || 0);
 }
-function dayNum(at) {
-  return Math.floor(dayMs(at) / 86400000);
-}
 
 /* 한 계좌는 출금, 다른 계좌는 입금, 금액이 같고, 날짜가 하루 안쪽 */
 function findTransfers() {
@@ -388,9 +385,6 @@ function nextMonthLabel(m) {
 var FC_MIN_MONTHS = 3; /* 이만큼 쌓여야 예상을 시도한다 */
 var FC_MAX_ERR = 0.08; /* 되돌려 재봤을 때 이보다 많이 틀리면 안 보여준다 */
 
-function dayMs(at) {
-  return Date.UTC(+at.slice(0, 4), +at.slice(5, 7) - 1, +at.slice(8, 10));
-}
 function dowOf(y, mon, day) {
   return new Date(Date.UTC(y, mon - 1, day)).getUTCDay();
 }
