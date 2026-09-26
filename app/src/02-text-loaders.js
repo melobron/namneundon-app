@@ -48,17 +48,19 @@ function loadPdfJS() {
     return Promise.resolve();
   }
   if (pdfjsLoading) return pdfjsLoading;
-  pdfjsLoading = new Promise(function (res, rej) {
-    var s = document.createElement('script');
-    s.src = PDFJS_SRC;
-    s.onload = function () {
-      pdfWorkerPath();
-      res();
-    };
-    s.onerror = function () {
-      rej(new Error('PDF 읽기 도구를 불러오지 못했습니다'));
-    };
-    document.head.appendChild(s);
-  });
+  pdfjsLoading = new Promise(
+    /** @param {(v?: any) => void} res */ function (res, rej) {
+      var s = document.createElement('script');
+      s.src = PDFJS_SRC;
+      s.onload = function () {
+        pdfWorkerPath();
+        res();
+      };
+      s.onerror = function () {
+        rej(new Error('PDF 읽기 도구를 불러오지 못했습니다'));
+      };
+      document.head.appendChild(s);
+    }
+  );
   return pdfjsLoading;
 }

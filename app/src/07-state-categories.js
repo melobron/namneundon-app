@@ -83,7 +83,7 @@ var BRAND_MARK =
 (function () {
   var s = document.getElementById('splash');
   if (!s) return;
-  var m = document.getElementById('splashmark');
+  var m = /** @type {HTMLImageElement} */ (document.getElementById('splashmark'));
   if (m) m.src = BRAND_MARK;
   var 지난 = window.performance && performance.now ? performance.now() : 0;
   var 남은 = Math.max(400, 1600 - 지난);

@@ -105,7 +105,7 @@ function fileBytes(file) {
   return new Promise(function (res, rej) {
     var fr = new FileReader(); /* 브라우저 안에서만 읽는다 */
     fr.onload = function () {
-      res(new Uint8Array(fr.result));
+      res(new Uint8Array(/** @type {ArrayBuffer} */ (fr.result)));
     };
     fr.onerror = function () {
       rej(new Error('파일을 읽지 못했습니다'));

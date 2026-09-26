@@ -70,7 +70,7 @@ function upReadState(on) {
   add.addEventListener('click', function () {
     useScreen('거래내역 추가하기');
     ADD_FROM_READ = true;
-    var inp = document.getElementById('upinput');
+    var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
     inp.value = ''; /* 같은 파일을 다시 고를 수 있게 비운다 */
     inp.click();
   });
@@ -822,7 +822,7 @@ document.getElementById('upopen').addEventListener('click', function () {
   b.className = 'uplogo';
   b.title = '첫 화면으로';
   b.setAttribute('aria-label', '첫 화면으로');
-  var img = src.cloneNode(true);
+  var img = /** @type {HTMLImageElement} */ (src.cloneNode(true));
   img.removeAttribute('id');
   img.alt = '';
   b.appendChild(img);

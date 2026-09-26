@@ -303,7 +303,7 @@ function drawFileList() {
   var add = el('button', 'b', '＋ 파일 더 올리기');
   add.type = 'button';
   add.addEventListener('click', function () {
-    var inp = document.getElementById('upinput');
+    var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
     inp.value = ''; /* 같은 파일을 다시 고를 수 있게 비운다 */
     inp.click();
   });
@@ -913,7 +913,7 @@ function showBreakError(over) {
     upStat('');
     PENDING = [];
     UP = null;
-    var inp = document.getElementById('upinput');
+    var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
     inp.value = '';
     inp.click();
   }
