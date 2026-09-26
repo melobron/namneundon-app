@@ -1864,11 +1864,9 @@ function drawResultInner(months) {
   dscLine(host);
 }
 
-/* ── 확인이 필요한 것 ──
-   숫자만 보여주고 판단을 사장님께 떠넘기지 않는다. 이상하면 우리가 먼저 말한다.
-   막지는 않는다 — 진짜 그런 매장도 있으니 알려주고 고르게 한다 */
+/* 계산은 core/result.js 의 warnOkIn — 지금 매장(UP)을 넘긴다 */
 function warnOk(m, id) {
-  return UP.okWarn && UP.okWarn[m + '|' + id];
+  return warnOkIn(UP, m, id);
 }
 function setWarnOk(m, id, on) {
   if (!UP.okWarn) UP.okWarn = {};
@@ -1899,11 +1897,9 @@ function collectChecks(d, months) {
   });
   return cards;
 }
+/* 계산은 core/result.js 의 checksLeftIn — 지금 매장(UP)을 넘긴다 */
 function checksLeft(cards) {
-  var m = UP.month;
-  return cards.filter(function (c) {
-    return !warnOk(m, checkId(c));
-  }).length;
+  return checksLeftIn(UP, cards);
 }
 
 /* 사장님이 손보는 중에 카드가 사라지면 하던 일을 잃는다.
@@ -2243,39 +2239,6 @@ function autoTag(g) {
   return gDone(g) && au ? el('span', 'autotag', '(앱이 넣음)') : null;
 }
 
-function checkId(c) {
-  if (c.kind === 'ratio') return c.w.id;
-  if (c.kind === 'unsure') return 'unsure:' + c.row.excelRow;
-  if (c.kind === 'resid') return 'resid:' + c.row.excelRow; /* ★ 112차 ②㉰ */
-  if (c.kind === 'new') return 'new:' + c.p.name;
-  return 'grow:' + c.p.name;
-}
-
-/* ── 「인건비부터 찾아보기」 ──
-   실측: 개인 이름 출금 중 매달 나가고 · 금액이 비슷하고 · 6개월 이상 이어진 곳은
-   40곳 중 26곳(65%)이 인건비였다. 지정하지는 않고 순서로만 쓴다 */
-function steadyScore(g) {
-  var s = 0;
-  if (looksPersonal(g.name) && g.net < 0) s += 2;
-  if (g.monthN >= 6) s += 2;
-  else if (g.monthN >= 3) s += 1;
-  if (g.amts && g.amts.length >= 3) {
-    var sum = 0;
-    g.amts.forEach(function (a) {
-      sum += a;
-    });
-    var mean = sum / g.amts.length,
-      v = 0;
-    g.amts.forEach(function (a) {
-      v += (a - mean) * (a - mean);
-    });
-    var cv = mean ? Math.sqrt(v / g.amts.length) / mean : 9;
-    if (cv < 0.3) s += 1;
-  }
-  if (g.n <= 3) s -= 2; /* 단발성은 힌트가 안 된다 — 뒤로 */
-  return s;
-}
-
 /* 항목 하나를 정해두고, 거기에 넣을 거래처를 골라 담는 화면.
    ── 사장님은 여러 곳을 연달아 찍는다. 한 번 찍을 때마다 닫히면 안 된다.
    그래서 여기서는 화면 전체를 다시 그리지 않고 이 목록만 고쳐 그린다.
@@ -2305,13 +2268,6 @@ function unsetCatQuiet(g) {
     g.auto = false;
   }
   savePicks();
-}
-
-/* 찾기 — 다듬은 이름끼리 견준다. 공백·대소문자는 무시한다 */
-function findKey(s) {
-  return canonName(String(s || ''))
-    .replace(/\s+/g, '')
-    .toLowerCase();
 }
 
 function drawFindFor(panel, d, cat) {

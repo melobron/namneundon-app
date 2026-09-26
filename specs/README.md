@@ -35,10 +35,11 @@ spec 이 확정되기 전에 plan 을, plan 이 확정되기 전에 tasks 를 �
 
 ## 목록
 
-| 작업                                                 | 상태           | 브랜치 · PR                  | 요약                                                     |
-| ---------------------------------------------------- | -------------- | ---------------------------- | -------------------------------------------------------- |
-| [ai-native-foundation](ai-native-foundation/spec.md) | `Implementing` | `chore/ai-native-foundation` | 지침 · 문서 · 명세 체계 · OMC 설정 (이 폴더를 만든 작업) |
-| [refactor-b1g-onboard](refactor-b1g-onboard/spec.md) | `Implementing` | `refactor/b1g-onboard`       | 온보딩 계산을 `core/onboard.js` 로 (리팩토링 B-1g)       |
+| 작업                                                 | 상태           | 브랜치 · PR                  | 요약                                                          |
+| ---------------------------------------------------- | -------------- | ---------------------------- | ------------------------------------------------------------- |
+| [ai-native-foundation](ai-native-foundation/spec.md) | `Implementing` | `chore/ai-native-foundation` | 지침 · 문서 · 명세 체계 · OMC 설정 (이 폴더를 만든 작업)      |
+| [refactor-b1g-onboard](refactor-b1g-onboard/spec.md) | `Completed`    | `refactor/b1g-onboard` · #27 | 온보딩 계산을 `core/onboard.js` 로 (리팩토링 B-1g)            |
+| [refactor-b1h-result](refactor-b1h-result/spec.md)   | `Implementing` | `refactor/b1h-result`        | 결과 화면 · 그래프 계산을 `core/result.js` 로 (리팩토링 B-1h) |
 
 아직 명세가 없는 개발 후보는 [docs/backlog.md](../docs/backlog.md) 에 있다.
 
