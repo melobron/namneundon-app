@@ -22,6 +22,7 @@
 | 2026-09-26 | Claude Code | `npm run lint`                                                       | 통과 (기준선 그대로)                                                                                     |
 | 2026-09-26 | Claude Code | `npm test`                                                           | 62 통과 (스냅샷 그대로, 새 `tests/core/result.spec.mjs` 6개 포함)                                        |
 | 2026-09-26 | Claude Code | 화면 픽셀 비교 (origin/main `bbf117f` 대 이 가지, 12개 화면)         | 12/12 동일                                                                                               |
+| 2026-09-26 | Claude Code | PR #28 CI(gitleaks · test) · 머지 · 자동 배포 `4d61438` · 배포 확인  | 통과 · 성공                                                                                              |
 
 ## 구현 중 정한 작은 것
 
