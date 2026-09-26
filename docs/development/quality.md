@@ -25,11 +25,11 @@
 | ESLint 경고         |      0 |               0 | `package.json` → `lint:js` 의 `--max-warnings 0`    |
 | html-validate 경고  |      0 |               0 | `package.json` → `lint:html` 의 `--max-warnings 0`  |
 | Stylelint 경고      |    110 |             110 | `package.json` → `lint:css` 의 `--max-warnings 110` |
-| 앱 타입 오류        |     51 |              51 | `tools/typecheck-app.mjs` 의 `BASELINE`             |
+| 앱 타입 오류        |      4 |       4 (09-26) | `tools/typecheck-app.mjs` 의 `BASELINE`             |
 | 개발 도구 타입 오류 |      0 |               0 | `tsconfig.json` (`tsc` 가 실패하면 바로 실패)       |
 
 - Stylelint 110 개는 `no-descending-specificity` 100 · `no-duplicate-selectors` 10 이다. CSS 선택자 순서를 바꾸면 화면이 달라질 수 있어 화면 비교와 함께 정리한다.
-- 앱 타입 오류는 대부분 「이 객체에 이런 속성이 있는지 모른다」(TS2339) 다.
+- 앱 타입 오류는 2026-09-26(B-6) 51 → 4. 바깥 라이브러리(SheetJS · PDF.js) 타입은 `types/app-libs.d.ts`(배포되지 않는다)에, 화면 요소 종류는 선언 자리에 JSDoc(`/** @type {HTMLInputElement} */ (…)`)으로 적었다. 남은 4개는 코드를 고쳐야 없어진다 — `createTreeWalker` 의 옛 넷째 인자 2 · `input.min` 에 숫자 1 · PDF 읽기 약속 모양 1.
 - 일부러 꺼 둔 옛 기능(`18-charts-year.js` 의 `return;` 뒤 각주 등)은 경고 정리 때(2026-09-25) 지웠다 — git 기록에 남아 있다.
 
 ## 정한 것과 이유

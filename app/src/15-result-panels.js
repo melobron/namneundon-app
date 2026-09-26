@@ -579,7 +579,8 @@ function drawCats() {
     ].forEach(function (p) {
       var b = el('button', 'mvb', p[0]);
       b.type = 'button';
-      b.disabled = (p[1] < 0 && idx === 0) || (p[1] > 0 && idx === UP.accounts.length - 1);
+      var 쪽 = /** @type {number} */ (p[1]);
+      b.disabled = (쪽 < 0 && idx === 0) || (쪽 > 0 && idx === UP.accounts.length - 1);
       b.addEventListener('click', function () {
         var j = idx + p[1];
         var t = UP.accounts[idx];
@@ -1124,7 +1125,7 @@ function importPicks(file) {
   fr.onload = function () {
     var o = null;
     try {
-      o = JSON.parse(fr.result);
+      o = JSON.parse(/** @type {string} */ (fr.result));
     } catch (e) {}
     if (!o || o.v !== 1 || !o.picks) {
       importRedraw(자리);
@@ -1370,7 +1371,7 @@ function importToStore(o, 이름, 새매장) {
   go.type = 'button';
   go.style.marginLeft = '8px';
   go.addEventListener('click', function () {
-    var inp = document.getElementById('upinput');
+    var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
     if (inp) {
       inp.value = '';
       inp.click();
@@ -1774,7 +1775,7 @@ function saveImage(btn, ready) {
     wrap.appendChild(sub);
   }
 
-  var body = src.cloneNode(true);
+  var body = /** @type {HTMLElement} */ (src.cloneNode(true));
   /* ★ 42차 4번. 화면이 아니라 이 사본에서만 가린다 */
   if (!UP || UP.hideNames !== false) maskPersons(body);
   /* 눌러야 뜻이 있는 것들은 이미지에서 뺀다 */
@@ -2194,7 +2195,7 @@ var WHY_TAIL = 7; /* 꼬리 높이 (border-width 와 같아야 한다) */
 function fixWhyTails() {
   var boxes = document.querySelectorAll('.whytip[data-why]');
   for (var i = 0; i < boxes.length; i++) {
-    var box = boxes[i];
+    var box = /** @type {HTMLElement} */ (boxes[i]);
     var q = document.querySelector('.why[data-why="' + box.getAttribute('data-why') + '"]');
     if (!q) continue;
     box.style.marginTop = ''; /* 다시 잴 때는 CSS 값에서 시작한다 */

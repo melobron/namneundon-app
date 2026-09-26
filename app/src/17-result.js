@@ -70,7 +70,7 @@ function drawResultInner(months) {
     more.addEventListener('click', function () {
       useScreen('거래내역 추가');
       if (!openAddFiles()) return;
-      var inp = document.getElementById('upinput');
+      var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
       if (inp) {
         inp.value = '';
         inp.click();
@@ -251,7 +251,7 @@ function drawResultInner(months) {
     again.addEventListener('click', function () {
       PENDING = [];
       UP = null;
-      var inp = document.getElementById('upinput');
+      var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
       if (inp) inp.value = '';
       openUpPanel();
       openPick();

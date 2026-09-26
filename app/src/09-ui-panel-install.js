@@ -22,8 +22,8 @@ function 글씨단그리기() {
   b.classList.remove('fs2');
   b.classList.remove('fs3');
   if (글씨단 > FONT_MIN) b.classList.add('fs' + 글씨단);
-  var 작게 = document.getElementById('fsdown');
-  var 크게 = document.getElementById('fsup');
+  var 작게 = /** @type {HTMLButtonElement} */ (document.getElementById('fsdown'));
+  var 크게 = /** @type {HTMLButtonElement} */ (document.getElementById('fsup'));
   if (작게) 작게.disabled = 글씨단 <= FONT_MIN;
   if (크게) 크게.disabled = 글씨단 >= FONT_MAX;
 }
@@ -37,8 +37,8 @@ function 글씨단옮기기(걸음) {
 (function () {
   글씨단 = 글씨단읽기();
   글씨단그리기();
-  var 작게 = document.getElementById('fsdown');
-  var 크게 = document.getElementById('fsup');
+  var 작게 = /** @type {HTMLButtonElement} */ (document.getElementById('fsdown'));
+  var 크게 = /** @type {HTMLButtonElement} */ (document.getElementById('fsup'));
   if (작게)
     작게.addEventListener('click', function () {
       글씨단옮기기(-1);
@@ -510,18 +510,21 @@ document.addEventListener('DOMContentLoaded', useOpened);
      여기는 문서가 다 읽힌 뒤라야 잡힌다.
    ★ 새 그림을 안 넣는다 — 파일에 이미 있는 BRAND_MARK 하나를 나눠 쓴다 */
 document.addEventListener('DOMContentLoaded', function () {
-  var am = document.getElementById('applinkmark');
+  var am = /** @type {HTMLImageElement} */ (document.getElementById('applinkmark'));
   if (am) am.src = BRAND_MARK;
 });
 
-document.getElementById('pickfile').addEventListener('change', function () {
-  if (this.files && this.files[0]) importPicks(this.files[0]);
-  this.value = '';
-});
+document.getElementById('pickfile').addEventListener(
+  'change',
+  /** @this {HTMLInputElement} */ function () {
+    if (this.files && this.files[0]) importPicks(this.files[0]);
+    this.value = '';
+  }
+);
 
 (function bindDrop() {
   var drop = document.getElementById('updrop');
-  var input = document.getElementById('upinput');
+  var input = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
   input.addEventListener('change', function () {
     if (input.files && input.files.length) handleFiles(input.files);
   });
