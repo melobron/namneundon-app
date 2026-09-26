@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run lint
-      - run: node tools/check-load-order.mjs
+      - run: npm run check
       - run: npx playwright test
       - uses: actions/upload-artifact@v7
         if: failure()

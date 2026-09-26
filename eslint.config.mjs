@@ -10,8 +10,9 @@ import * as acorn from 'acorn';
 
 const SRC = new URL('./app/src/', import.meta.url);
 const appGlobals = {};
-for (const f of readdirSync(SRC).filter((f) => f.endsWith('.js'))) {
-  const ast = acorn.parse(readFileSync(new URL(f, SRC), 'utf8'), { ecmaVersion: 'latest' });
+// core/ 같은 하위 폴더까지 읽는다
+for (const f of readdirSync(SRC, { recursive: true }).filter((f) => String(f).endsWith('.js'))) {
+  const ast = acorn.parse(readFileSync(new URL(String(f), SRC), 'utf8'), { ecmaVersion: 'latest' });
   for (const st of ast.body) {
     if (st.type === 'FunctionDeclaration') appGlobals[st.id.name] = 'writable';
     if (st.type === 'VariableDeclaration')
