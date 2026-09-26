@@ -65,7 +65,7 @@ app/
 | `00-early.js`            | 첫 화면부터 필요한 함수 (연 날 기록)                                                                                                                |
 | `01-biz-demo.js`         | 업종별 문구(`BIZ`), **예시 거래(`DEMO_TX`)** 와 예시 분류                                                                                           |
 | `02-text-loaders.js`     | 금액 · 조사 표기, 엑셀 · PDF 도구를 필요할 때 불러오기                                                                                              |
-| `06-classify.js`         | 거래처 이름 다듬기 · 묶기, 자동 분류                                                                                                                |
+| `06-classify.js`         | 연결 함수 `groupPayees` · `keyOf` (계산은 `core/classify.js`)                                                                                       |
 | `07-state-categories.js` | 앱 상태 `UP` 선언, 항목 · 업종 정의                                                                                                                 |
 | `08-ui-start-upload.js`  | 시작 화면, 업로드 창                                                                                                                                |
 | `09-ui-panel-install.js` | 글씨 크기, 창 열고 닫기, 홈 화면 설치 · 카톡 안내                                                                                                   |
@@ -100,7 +100,7 @@ flowchart LR
 | 파싱 | `core/parse-excel.js` · `core/parse-pdf.js`                                               | 계좌(`banks`)별 거래 행             |
 | 검산 | `core/verify.js`                                                                          | 순서 바로잡은 행, 끊긴 곳(`breaks`) |
 | 상태 | `11-upload-flow.js` 가 `UP = {…}` 를 새로 만든다. 예시는 `10` 의 `startDemo`              | `UP.rows` · `UP.banks` 등           |
-| 분류 | `06-classify.js` (묶기 · 자동 분류) → `13-onboard.js` (사용자에게 묻기) → `12` 저장       | `UP.payees` · `UP.byName`           |
+| 분류 | `core/classify.js` (묶기 · 자동 분류) → `13-onboard.js` (사용자에게 묻기) → `12` 저장     | `UP.payees` · `UP.byName`           |
 | 계산 | `14-compute.js` `monthNumbers(m, cutDay)`, `16-due.js` 예상 잔액                          | 달마다 숫자 객체                    |
 | 표시 | `15` · `17` (`drawResultInner`) · `18`                                                    | DOM                                 |
 
