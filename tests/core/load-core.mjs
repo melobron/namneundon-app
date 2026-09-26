@@ -15,8 +15,13 @@ export function coreFiles() {
   return [...html.matchAll(/<script src="(src\/core\/[^"]+)"><\/script>/g)].map((m) => m[1]);
 }
 
-export function loadCore() {
+// opts.xlsx: 엑셀 도구(app/xlsx.full.min.js — 브라우저가 쓰는 바로 그 파일)를 함께 올린다
+export function loadCore(opts = {}) {
   const ctx = vm.createContext({});
+  if (opts.xlsx)
+    vm.runInContext(readFileSync(new URL('xlsx.full.min.js', APP), 'utf8'), ctx, {
+      filename: 'xlsx.full.min.js'
+    });
   for (const f of coreFiles())
     vm.runInContext(readFileSync(new URL(f, APP), 'utf8'), ctx, { filename: f });
   return ctx;

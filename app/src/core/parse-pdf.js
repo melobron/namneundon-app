@@ -1,3 +1,7 @@
+/* ── core · PDF 글자 조각 → 표 → 거래 행 ────────────────────────
+   리팩토링 B-1b (2026-09-26): 04-parse-pdf.js 를 그대로 옮겼다 (window.XLSX → XLSX 한 줄만).
+   PDF 파일을 여는 일(pdf.js)은 화면 쪽(10-demo-read-files.js)에 남는다. 여기는 꺼낸 글자 조각만 다룬다 */
+/* ── (원래 04-parse-pdf.js) ── */
 /* ── 92차 ④ · PDF 를 「표 배열」로 ─────────────────────────────────────
    ★ 이번 회차에 새로 짜는 것은 이 조각 하나뿐이다.
      여기서 만든 행×열 배열을 엑셀 시트로 바꿔(pdfWorkbook) 위의 extractRows 에
@@ -8,8 +12,6 @@
    ★ 머리글을 못 찾으면 조각을 그대로 칸으로 놓고 넘긴다.
      판정은 여전히 findHeader 가 한다. 못 읽으면 ⑤ 안내로 간다 — 멈추지 않는다 */
 var PDF_LINE_TOL = 3; /* 이만큼(pt) 안이면 같은 줄로 본다 */
-var PDF_MIN_CHARS = 50; /* 글자가 이보다 적으면 사진을 찍어 넣은 PDF 다 */
-
 /* 조각들을 y 로 묶어 줄을 만든다. 줄 안은 x 순으로 놓는다 */
 /* ── 92-1차 ② · 낱자로 온 글자를 단어로 잇는다 ───────────────────────
    신한 실파일에서 pdf.js 가 「거 래 일 자」처럼 한 자씩 준다. PDF 가 글자를
@@ -621,6 +623,9 @@ function pdfPageFoot(글줄) {
 }
 /* 표 배열을 엑셀 시트 한 장으로 바꾼다 — 여기서부터는 엑셀과 같은 길이다 */
 function pdfWorkbook(grid) {
-  var ws = window.XLSX.utils.aoa_to_sheet(grid);
+  var ws = XLSX.utils.aoa_to_sheet(grid);
   return { SheetNames: ['PDF'], Sheets: { PDF: ws } };
 }
+
+/* ── (원래 04-parse-pdf.js) ── */
+var PDF_MIN_CHARS = 50; /* 글자가 이보다 적으면 사진을 찍어 넣은 PDF 다 */
