@@ -1,8 +1,3 @@
-/* ── 결과 ── */
-function monthOf(at) {
-  return at.slice(0, 7);
-}
-
 function monthList() {
   var seen = {},
     out = [];
