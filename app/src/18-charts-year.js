@@ -1518,23 +1518,6 @@ function drawYear(host, allMonths) {
   tab.appendChild(thead);
 
   var tbody = document.createElement('tbody');
-  /* pick 은 달 하나를, avg 는 평균 칸을 만든다.
-     ★ 53차 ①. whyId 가 있으면 이름 옆에 ? 가 붙고,
-       누르면 그 줄 바로 아래에 두 줄이 한 칸으로 깔린다.
-       한 달 화면과 같은 여섯 줄이라 설명도 같은 것을 쓴다 */
-  /* ★ 66차 ③-2. get 을 주면 칸 아래에 작은 「전월 대비」 한 줄이 붙는다.
-     마감한 달끼리만 견준다 — 바로 앞 칸이 진행 중이거나 문 열기 전 달이면 안 붙인다.
-     막힌 달(아직 안 정한 돈이 많은 달)도 견주지 않는다. 셀 수 없는 값이다 */
-  function 마감칸(c) {
-    return c.m !== 진행달 && !opening[c.m] && !c.blocked;
-  }
-  function deltaTxt(i, get) {
-    if (i < 1) return '';
-    var c = cols[i],
-      p = cols[i - 1];
-    if (!마감칸(c) || !마감칸(p)) return '';
-    return pctDelta(get(c), get(p));
-  }
   function row(label, cls, pick, avg, whyId, goUnsetRow, get) {
     var tr = document.createElement('tr');
     if (cls) tr.className = cls;
@@ -1573,7 +1556,7 @@ function drawYear(host, allMonths) {
       }
       /* ★ 90차 ②(A안). 줄을 언제나 붙인다 — 견줄 수 없는 칸이면 빈 줄로 자리만 잡는다.
          무엇을 견줄지 정하는 것은 그대로 deltaTxt 하나뿐이다 (66차 ③-2) */
-      if (get) td.appendChild(el('span', 'ydelta', deltaTxt(i, get)));
+      if (get) td.appendChild(el('span', 'ydelta', deltaTxt(cols, 진행달, opening, i, get)));
       /* ★ 54차 ⑤. 「아직 안 정한 돈」 줄만 눌린다 — 할 일이 남아 있는 줄이다.
          — 칸(갈 곳 없음)과 0원인 달(다 정함)은 안 눌린다 */
       if (goUnsetRow && v.go) {
@@ -1604,77 +1587,6 @@ function drawYear(host, allMonths) {
       tbody.appendChild(wtr);
     }
     return tr; /* ★ 70차 ②. 그룹 줄에 펼침 표시를 달려면 줄이 필요하다 */
-  }
-  /* ★ 70차 ② · 그룹 접기 ────────────────────────────────────────
-     표가 열두 달을 가로로 늘어놓는 자리라 줄이 늘면 바로 안 읽힌다.
-     그래서 세부가 있는 줄은 접어 두고, 궁금한 것만 펼쳐 보게 한다.
-     ★ 예전의 「자세히 보기 ▾」 하나로 전부 여닫던 방식은 없앴다 —
-       매출만 보고 싶어도 비율까지 다 딸려 나왔다 (개발자 확정).
-     ★ 접어도 그룹 합계 숫자는 그대로다. 접히는 것은 세부뿐이다.
-     ★ 접고 펴는 것은 보기일 뿐 — 계산에는 닿지 않는다 */
-  function 그룹열림(키) {
-    return !!(UP.open.__yg && UP.open.__yg[키]);
-  }
-  function 그룹줄(tr, 키, 세부있음) {
-    if (!tr || !세부있음) return; /* 세부가 없으면 누를 것이 없다 — 그냥 줄로 둔다 (요청서 6) */
-    var rh = tr.querySelector('.rh');
-    if (!rh) return;
-    var 열림 = 그룹열림(키);
-    tr.classList.add('ygrp');
-    rh.appendChild(el('span', 'ychev', 열림 ? '▲' : '▼'));
-    rh.setAttribute('role', 'button');
-    rh.tabIndex = 0;
-    rh.setAttribute('aria-expanded', 열림 ? 'true' : 'false');
-    var 뒤집기 = function () {
-      UP.open.__yg = UP.open.__yg || {};
-      UP.open.__yg[키] = !열림;
-      /* drawResult 가 표의 가로 스크롤 자리를 지킨다 (56차) — 여기서 튀지 않는다 */
-      drawResult(months);
-    };
-    rh.addEventListener('click', 뒤집기);
-    rh.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        뒤집기();
-      }
-    });
-  }
-  /* 끝난 달만 더해서 평균 */
-  function meanOf(list, get) {
-    var s = 0;
-    list.forEach(function (c) {
-      s += get(c);
-    });
-    return list.length ? Math.round(s / list.length) : 0;
-  }
-  /* 비율은 각 달 비율의 평균이 아니라 (분자 합 ÷ 분모 합) — 16차에서 정한 그대로 */
-  function poolPct(list, num, den) {
-    var n = 0,
-      d = 0;
-    list.forEach(function (c) {
-      if (c.blocked) return;
-      n += num(c);
-      d += den(c);
-    });
-    return d > 0 ? { txt: ratioTxt(n, d) } : { txt: '—' };
-  }
-  /* ★ 43차. 1년치 표에 세 자리 %가 그대로 남아 있었다 (153% · 152%).
-     42차에 한 달 화면만 고쳤고 검사도 표를 안 밟았다.
-   ★ 67차 ②. 여기도 배수를 뺀다 — 한 달 화면의 pctCell 과 같은 말을 쓴다 (49차) */
-  function ratioTxt(num, den) {
-    if (!den || den <= 0) return '—';
-    var p = Math.round((num / den) * 100);
-    if (p < 100) return p + '%';
-    return '매출 초과';
-  }
-  /* ★ 61차. 이름을 바꾼 매장에서도 그 자리의 항목을 집는다 —
-     RATIO_RULES 가 이미 하는 방식 그대로. 예전에는 원본 이름으로만 찾아서
-     「식자재」를 「재료비」로 바꾸신 매장에서는 0원으로 나왔다 */
-  function catOfMonth(c, name) {
-    return c.cats[baseName(name)] || 0;
-  }
-  function foodOf(c) {
-    return catOfMonth(c, '식자재') + catOfMonth(c, '주류·음료');
   }
 
   /* ★ 43차. 줄 차례를 한 달 화면과 같게 맞춘다.
@@ -1739,7 +1651,7 @@ function drawYear(host, allMonths) {
       return c.sales + c.otherIn;
     }
   );
-  그룹줄(번돈줄, 'in', true);
+  그룹줄(months, 번돈줄, 'in', true);
   if (그룹열림('in')) {
     row(
       '　매출',
@@ -1797,7 +1709,7 @@ function drawYear(host, allMonths) {
       return c.cost;
     }
   );
-  그룹줄(쓴돈줄, 'out', true);
+  그룹줄(months, 쓴돈줄, 'out', true);
   if (그룹열림('out')) {
     항목줄('월세');
     항목줄('인건비');
@@ -1890,7 +1802,7 @@ function drawYear(host, allMonths) {
       },
       'keep'
     );
-    그룹줄(외줄, 'keep', true);
+    그룹줄(months, 외줄, 'keep', true);
     /* ★ 부호를 안 쓰고 줄을 둘로 나눈다 — 넣은 쪽과 가져간 쪽.
        keep 은 「입금이면 −, 출금이면 +」라 한 줄로 두면 이 줄만 +가 나간 돈이 된다.
        바로 위 확인 카드에서는 −가 나간 돈이라 사장님이 반대로 읽으신다.
@@ -2059,6 +1971,102 @@ function drawYear(host, allMonths) {
   }
   /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
      회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
+}
+function foodOf(c) {
+  return catOfMonth(c, '식자재') + catOfMonth(c, '주류·음료');
+}
+
+/* ★ 61차. 이름을 바꾼 매장에서도 그 자리의 항목을 집는다 —
+     RATIO_RULES 가 이미 하는 방식 그대로. 예전에는 원본 이름으로만 찾아서
+     「식자재」를 「재료비」로 바꾸신 매장에서는 0원으로 나왔다 */
+function catOfMonth(c, name) {
+  return c.cats[baseName(name)] || 0;
+}
+
+/* 비율은 각 달 비율의 평균이 아니라 (분자 합 ÷ 분모 합) — 16차에서 정한 그대로 */
+function poolPct(list, num, den) {
+  var n = 0,
+    d = 0;
+  list.forEach(function (c) {
+    if (c.blocked) return;
+    n += num(c);
+    d += den(c);
+  });
+  return d > 0 ? { txt: ratioTxt(n, d) } : { txt: '—' };
+}
+
+/* ★ 43차. 1년치 표에 세 자리 %가 그대로 남아 있었다 (153% · 152%).
+     42차에 한 달 화면만 고쳤고 검사도 표를 안 밟았다.
+   ★ 67차 ②. 여기도 배수를 뺀다 — 한 달 화면의 pctCell 과 같은 말을 쓴다 (49차) */
+function ratioTxt(num, den) {
+  if (!den || den <= 0) return '—';
+  var p = Math.round((num / den) * 100);
+  if (p < 100) return p + '%';
+  return '매출 초과';
+}
+
+/* 끝난 달만 더해서 평균 */
+function meanOf(list, get) {
+  var s = 0;
+  list.forEach(function (c) {
+    s += get(c);
+  });
+  return list.length ? Math.round(s / list.length) : 0;
+}
+
+function 그룹줄(months, tr, 키, 세부있음) {
+  if (!tr || !세부있음) return; /* 세부가 없으면 누를 것이 없다 — 그냥 줄로 둔다 (요청서 6) */
+  var rh = tr.querySelector('.rh');
+  if (!rh) return;
+  var 열림 = 그룹열림(키);
+  tr.classList.add('ygrp');
+  rh.appendChild(el('span', 'ychev', 열림 ? '▲' : '▼'));
+  rh.setAttribute('role', 'button');
+  rh.tabIndex = 0;
+  rh.setAttribute('aria-expanded', 열림 ? 'true' : 'false');
+  var 뒤집기 = function () {
+    UP.open.__yg = UP.open.__yg || {};
+    UP.open.__yg[키] = !열림;
+    /* drawResult 가 표의 가로 스크롤 자리를 지킨다 (56차) — 여기서 튀지 않는다 */
+    drawResult(months);
+  };
+  rh.addEventListener('click', 뒤집기);
+  rh.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      뒤집기();
+    }
+  });
+}
+
+/* ★ 70차 ② · 그룹 접기 ────────────────────────────────────────
+     표가 열두 달을 가로로 늘어놓는 자리라 줄이 늘면 바로 안 읽힌다.
+     그래서 세부가 있는 줄은 접어 두고, 궁금한 것만 펼쳐 보게 한다.
+     ★ 예전의 「자세히 보기 ▾」 하나로 전부 여닫던 방식은 없앴다 —
+       매출만 보고 싶어도 비율까지 다 딸려 나왔다 (개발자 확정).
+     ★ 접어도 그룹 합계 숫자는 그대로다. 접히는 것은 세부뿐이다.
+     ★ 접고 펴는 것은 보기일 뿐 — 계산에는 닿지 않는다 */
+function 그룹열림(키) {
+  return !!(UP.open.__yg && UP.open.__yg[키]);
+}
+
+function deltaTxt(cols, 진행달, opening, i, get) {
+  if (i < 1) return '';
+  var c = cols[i],
+    p = cols[i - 1];
+  if (!마감칸(진행달, opening, c) || !마감칸(진행달, opening, p)) return '';
+  return pctDelta(get(c), get(p));
+}
+
+/* pick 은 달 하나를, avg 는 평균 칸을 만든다.
+     ★ 53차 ①. whyId 가 있으면 이름 옆에 ? 가 붙고,
+       누르면 그 줄 바로 아래에 두 줄이 한 칸으로 깔린다.
+       한 달 화면과 같은 여섯 줄이라 설명도 같은 것을 쓴다 */
+/* ★ 66차 ③-2. get 을 주면 칸 아래에 작은 「전월 대비」 한 줄이 붙는다.
+     마감한 달끼리만 견준다 — 바로 앞 칸이 진행 중이거나 문 열기 전 달이면 안 붙인다.
+     막힌 달(아직 안 정한 돈이 많은 달)도 견주지 않는다. 셀 수 없는 값이다 */
+function 마감칸(진행달, opening, c) {
+  return c.m !== 진행달 && !opening[c.m] && !c.blocked;
 }
 
 /* 화면을 열면 예시부터 세워둔다. 파일을 올리면 같은 자리에 그 숫자가 들어간다 */
