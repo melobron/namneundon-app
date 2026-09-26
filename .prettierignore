@@ -7,3 +7,5 @@ tests/snapshots/
 package-lock.json
 # 저장소 밖 자료
 google-drive/
+# OMC 가 관리하는 파일 — omc-setup 이 통째로 다시 쓴다. 모양을 고치면 다음 설정 때 되돌아간다
+.claude/CLAUDE.md

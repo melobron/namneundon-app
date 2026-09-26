@@ -20,6 +20,12 @@ playwright/.cache/
 # 개인 환경
 .DS_Store
 .claude/settings.local.json
+# OMC(oh-my-claudecode) 실행 상태 — 세션 기록·프롬프트·기계별 경로가 들어간다.
+# 프로젝트 스킬(.omc/skills/)만 공유할 수 있게 남긴다 (OMC 공식 규칙과 같다)
+.omc/*
+!.omc/skills/
+# OMC 설정 도구(omc-setup)가 복사해 두는 스킬 사본 — 플러그인이 같은 것을 준다
+.claude/skills/wiki/
 .vscode/
 .idea/
 *.log
