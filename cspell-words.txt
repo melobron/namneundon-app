@@ -610,3 +610,4 @@ claudecode
 toplevel
 worktrees
 fullview
+winget

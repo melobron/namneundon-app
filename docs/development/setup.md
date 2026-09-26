@@ -6,7 +6,7 @@
 | -------- | --------------------------------------------------------------------------------------------- |
 | Node.js  | **24** (`.nvmrc`, CI 도 이것을 쓴다). `package.json` 의 `engines` 는 `>=22`                   |
 | npm      | Node 에 딸린 것. 의존성은 `package-lock.json` 으로 고정 (`npm ci`)                            |
-| 크롬     | 테스트용 Chromium — `playwright install chromium` 이 받는다                                   |
+| 크롬     | 테스트용 Chromium — `npm run setup` 이 받는다 (이미 있으면 건너뜀)                            |
 | gitleaks | 선택. 있으면 커밋 전 비밀 값 검사를 한다 (`brew install gitleaks`). 없으면 CI 에서만 검사한다 |
 
 의존성은 모두 **개발 도구**(테스트 · 검사 · 배포)다. 앱 자체는 npm 패키지를 쓰지 않는다 — `app/` 안의 파일이 전부다.
@@ -15,10 +15,19 @@
 
 ```bash
 nvm use            # .nvmrc 의 24
-npm run setup      # npm ci → playwright install chromium → npm run check
+make setup         # 또는 npm run setup
 ```
 
-`npm ci` 가 `prepare` 스크립트로 husky 를 설치해 커밋 전 검사(`.husky/pre-commit`)가 켜진다.
+`make` 만 치면 명령 목록이 나온다. `Makefile` 은 npm 스크립트에 짧은 이름을 붙인 것뿐이라, `make` 가 없는 Windows 에서는 `npm run …` 을 쓰면 된다.
+
+`npm run setup`(`tools/setup.mjs`)이 하는 일 — 몇 번을 다시 돌려도 된다:
+
+1. **도구 점검** — Node 판(`engines` 보다 낮으면 멈추고 `nvm` 명령을 알려 준다, `.nvmrc` 와 다르면 경고) · git · gitleaks(선택)
+2. **`npm ci`** — `package-lock.json` 그대로 설치. `prepare` 스크립트가 husky 를 켜 커밋 전 검사(`.husky/pre-commit`)가 돈다
+3. **테스트용 Chromium** — Playwright 판에 맞는 것이 없을 때만 받는다. 받지 않으려면 `node tools/setup.mjs --skip-browser`
+4. **`npm run check`** — 불러오는 순서 검사
+
+무엇이 빠졌는지만 보려면 `make doctor`(= `npm run doctor`). 아무것도 설치하지 않는다.
 
 ## 실행
 
