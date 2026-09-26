@@ -606,3 +606,6 @@ ytabhead
 ywrap
 htmlvalidate
 assetsignore
+claudecode
+toplevel
+worktrees
