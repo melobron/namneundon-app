@@ -1578,23 +1578,9 @@ function etcName() {
   return (UP.baseCats && UP.baseCats[i]) || '기타';
 }
 
-/* 한 항목 안에 어느 거래처가 들어 있는지 */
+/* 계산은 core/compute.js 의 catPayeesIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function catPayees(d, cat) {
-  var m = {};
-  d.rows.forEach(function (r) {
-    if (catOf(r) !== cat) return;
-    var k = keyOf(r);
-    var e = m[k] || (m[k] = { name: k, n: 0, sum: 0, unknown: isUnknown(r) });
-    e.n++;
-    e.sum += cat === '매출' ? r.amount : -r.amount;
-  });
-  return Object.keys(m)
-    .map(function (k) {
-      return m[k];
-    })
-    .sort(function (a, b) {
-      return Math.abs(b.sum) - Math.abs(a.sum);
-    });
+  return catPayeesIn(UP, d, cat);
 }
 
 /* ── 36차 ── 사업과 무관한 항목의 거래처 목록.

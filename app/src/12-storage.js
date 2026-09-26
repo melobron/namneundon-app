@@ -918,20 +918,6 @@ function loadPicks(name) {
   return null;
 }
 
-/* ── 36차 J · 직접 넣기 칸 ────────────────────────────────
-   「현금 매출을 입력하게끔 그것도 해야 돼」 · 「그냥 텍스트로 적을 수 있게끔」
-   항목 이름은 매장 단위로, 금액은 달 단위로 저장한다.
-   ★ 「매달 같은 금액」 같은 선택지는 두지 않는다. 배달·현금은 달마다 다르다.
-   ★ 계좌 잔액과 검산에는 절대 안 넣는다 —
-     현금 매출은 계좌에 안 들어온 돈이라 검산에 넣으면 그 달이 통째로 안 나온다 */
-/* ── 83차 ① · 「현금매출」은 처음부터 있는 항목이다 ──────────────
-   예전에는 대표님이 「＋ 항목 추가」를 눌러 이름을 손수 치셔야 했다.
-   안내글에 「현금 매출」이라고 적혀 있었지만 그건 힌트일 뿐이라,
-   이런 칸이 있는 줄도 모르고 지나치셨다.
-   ★ items 에는 안 담는다. 화면에만 늘 있는 줄로 두고, 금액은 이 열쇠로 찾는다.
-     그래서 아무것도 안 적으면 fc.manual 이 아예 안 생기고
-     manualSum 이 예전과 똑같이 0을 돌려준다 (83차 ⑥) */
-var CASH_ID = 'cash';
 var CASH_NAME = '현금매출';
 /* { v:2, items: [{id, name, side}],
      amounts: { '2023-07': { id: 금액 } },      ← 달 단위. 옛 판 그대로다
@@ -1280,14 +1266,13 @@ function manualBag() {
   UP.manual.days = UP.manual.days || {};
   return UP.manual;
 }
+/* 계산은 core/compute.js 의 manualItemsIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function manualItems(side) {
-  return ((UP.manual && UP.manual.items) || []).filter(function (it) {
-    return it.side === side;
-  });
+  return manualItemsIn(UP, side);
 }
+/* 계산은 core/compute.js 의 manualAmtIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function manualAmt(m, id) {
-  var box = (UP.manual && UP.manual.amounts && UP.manual.amounts[m]) || {};
-  return +box[id] || 0;
+  return manualAmtIn(UP, m, id);
 }
 function manualSet(m, id, v) {
   manualBag();
@@ -1296,12 +1281,9 @@ function manualSet(m, id, v) {
   else delete UP.manual.amounts[m][id];
   manualSave();
 }
-/* ── 83차 ② · 날짜 있는 것 ────────────────────────────────── */
+/* 계산은 core/compute.js 의 manualDaysIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function manualDays(m, id) {
-  var arr = (UP.manual && UP.manual.days && UP.manual.days[m]) || [];
-  return arr.filter(function (it) {
-    return it.id === id;
-  });
+  return manualDaysIn(UP, m, id);
 }
 function manualDayAdd(m, id, day, amt) {
   manualBag();
@@ -1325,26 +1307,9 @@ function manualDayRemove(m, id, day, amt) {
   if (!arr.length) delete UP.manual.days[m];
   manualSave();
 }
-/* ── 그 달에 직접 넣으신 합계 ──────────────────────────────────
-   ★ 83차 ④. cutDay 가 있으면(진행 중인 달) 자를 둘로 쓴다.
-     - 날짜 있는 것은 cutDay 까지만 더한다 — 계좌 거래를 자르는 자와 같다
-     - 날짜 없이 달로만 적은 값은 안 더한다 —
-        그 달 전체를 뜻하는 값이라 반쪽 달에 통째로 넣으면 거짓이 된다
-   ★ 83차 ⑥. 아무것도 안 적으면 두 갈래 다 0이라 예전과 한 자리도 안 다르다 */
+/* 계산은 core/compute.js 의 manualSumIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function manualSum(m, side, cutDay) {
-  var s = 0,
-    ids = manualItems(side).map(function (it) {
-      return it.id;
-    });
-  if (side === 'in' && ids.indexOf(CASH_ID) === -1) ids.push(CASH_ID);
-  ids.forEach(function (id) {
-    if (!cutDay) s += manualAmt(m, id);
-    manualDays(m, id).forEach(function (it) {
-      if (cutDay && it.day > cutDay) return;
-      s += +it.amt || 0;
-    });
-  });
-  return s;
+  return manualSumIn(UP, m, side, cutDay);
 }
 function manualAdd(name, side) {
   manualBag();

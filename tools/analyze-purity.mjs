@@ -8,6 +8,7 @@
 // 사용: node tools/analyze-purity.mjs            파일별 요약
 //       node tools/analyze-purity.mjs --list     순수한 함수 목록까지
 //       node tools/analyze-purity.mjs --why 이름  그 함수가 왜 순수하지 않은지
+//       … --up   UP 를 읽기만 하는 것은 순수로 친다 (UP 를 매개변수로 넘기면 core 로 갈 수 있는 것)
 import { readFileSync } from 'node:fs';
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
@@ -136,13 +137,19 @@ function scan(fnNode) {
     // 대입의 왼쪽(X = …)은 Identifier 로 방문되지 않아 따로 본다.
     // X.a = … · X[k] = … 처럼 전역 객체의 속을 바꾸는 것도 그 전역을 상태로 만든다
     AssignmentExpression(n) {
+      if (rootName(n.left) === 'UP' && n.left.type === 'MemberExpression') refs.add('＄UP쓰기');
       const root = rootName(n.left);
       if (root && !locals.has(root)) {
         refs.add(root);
         if (vars.has(root)) assigned.add(root);
       }
     },
+    UnaryExpression(n) {
+      if (n.operator === 'delete' && rootName(n.argument) === 'UP') refs.add('＄UP쓰기');
+    },
     UpdateExpression(n) {
+      if (rootName(n.argument) === 'UP' && n.argument.type === 'MemberExpression')
+        refs.add('＄UP쓰기');
       const root = rootName(n.argument);
       if (root && !locals.has(root) && vars.has(root)) assigned.add(root);
     },
@@ -150,6 +157,7 @@ function scan(fnNode) {
       const c = n.callee;
       // X.push(…) 처럼 전역 배열·객체를 고치는 메서드
       if (c.type === 'MemberExpression' && !c.computed && MUTATE.has(c.property.name)) {
+        if (rootName(c.object) === 'UP') refs.add('＄UP쓰기');
         const root = rootName(c.object);
         if (root && !locals.has(root) && vars.has(root)) assigned.add(root);
       }
@@ -173,7 +181,13 @@ for (const [, v] of vars) {
 }
 
 // 순수하지 않은 뿌리: 브라우저 기능, 상태 var
-const STATE = new Set([...assigned, 'UP']);
+// --up: UP 를 「매개변수로 받을 수 있는 입력」으로 본다 — 읽기만 하면 순수, 고치면 순수하지 않다
+const upReadOnly = process.argv.includes('--up');
+// 이름이 _MEMO 로 끝나는 것은 계산 결과를 기억만 하는 곳이라 상태로 치지 않는다
+const STATE = new Set(
+  [...assigned, ...(upReadOnly ? [] : ['UP'])].filter((n) => !/_MEMO$/.test(n))
+);
+STATE.delete(upReadOnly ? 'UP' : '');
 const why = new Map(); // 이름 → 순수하지 않은 이유 (한 줄)
 function impure(name, seen = new Set()) {
   if (why.has(name)) return why.get(name);
@@ -185,6 +199,10 @@ function impure(name, seen = new Set()) {
   for (const r of it.refs) {
     if (r === '＄시각') {
       reason = '지금 시각 (new Date · Date.now)';
+      break;
+    }
+    if (r === '＄UP쓰기') {
+      reason = 'UP 를 고친다';
       break;
     }
     if (r === '＄난수') {
@@ -214,9 +232,9 @@ function impure(name, seen = new Set()) {
 }
 for (const n of fns.keys()) impure(n);
 
-const arg = process.argv[2];
+const arg = process.argv.filter((a) => a !== '--up')[2];
 if (arg === '--why') {
-  const n = process.argv[3];
+  const n = process.argv.filter((a) => a !== '--up')[3];
   console.log(n, '→', why.get(n) || '순수 ✓');
   process.exit(0);
 }

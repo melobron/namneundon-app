@@ -6,7 +6,7 @@
 //   - core 안에 있는 이름만 부른다 (화면 파일의 함수를 부르면 Node 에서 깨진다)
 //   - 브라우저 기능(document·window·저장소 …)을 쓰지 않는다
 //   - 지금 시각·난수를 쓰지 않는다 (같은 입력이면 늘 같은 답)
-//   - 최상위 var 는 상수다 — 함수 안에서 바꾸지 않는다
+//   - 최상위 var 는 상수다 — 함수 안에서 바꾸지 않는다 (이름이 _MEMO 로 끝나는 계산 기억장만 예외)
 // 사용: node tools/check-core.mjs
 import { readFileSync } from 'node:fs';
 import * as acorn from 'acorn';
@@ -99,7 +99,13 @@ for (const [f, ast] of parsed) {
     if (n.type === 'AssignmentExpression' || n.type === 'UpdateExpression') {
       let t = n.type === 'AssignmentExpression' ? n.left : n.argument;
       while (t.type === 'MemberExpression') t = t.object;
-      if (t.type === 'Identifier' && defs.has(t.name) && !declaredLocally(t, anc))
+      // 이름이 _MEMO 로 끝나는 것은 계산 결과를 기억만 하는 곳 — 같은 입력이면 같은 답이라 허용
+      if (
+        t.type === 'Identifier' &&
+        defs.has(t.name) &&
+        !/_MEMO$/.test(t.name) &&
+        !declaredLocally(t, anc)
+      )
         bad.push(`${where} ${t.name} 를 바꾼다 — core 의 최상위 값은 상수다`);
     }
   });

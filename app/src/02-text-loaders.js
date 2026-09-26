@@ -12,9 +12,6 @@ function escHtml(s) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-function won(n) {
-  return n.toLocaleString('ko-KR').replace('-', '−');
-}
 
 /* 조사: 받침 없거나 'ㄹ'이면 "로", 아니면 "으로" (공과금으로 / 인건비로) */
 function ro(word) {
