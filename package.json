@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:js": "eslint . --max-warnings 0",
-    "lint:css": "stylelint \"app/**/*.css\" --max-warnings 110",
+    "lint:css": "stylelint \"app/**/*.css\" --max-warnings 59",
     "lint:html": "html-validate app/index.html landing/index.html landing/404.html --max-warnings 0",
     "lint:spell": "cspell --no-progress \"**/*.{js,mjs,json,jsonc,md,yml,yaml,css,html}\"",
     "typecheck": "tsc -p tsconfig.json && node tools/typecheck-app.mjs",
