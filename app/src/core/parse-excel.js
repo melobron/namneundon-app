@@ -1,3 +1,8 @@
+/* ── core · 엑셀·CSV·HTML 표 → 거래 행 ────────────────────────────
+   리팩토링 B-1b (2026-09-26): 03-parse-excel.js 와, 그것이 부르는 은행 이름 도우미를 옮겼다.
+   바꾼 것은 window.XLSX → XLSX 세 줄뿐 (브라우저에서는 같은 것. Node 에 엑셀 도구를 넣어 주려고).
+   단위 테스트: tests/core/parse.spec.mjs */
+/* ── (원래 03-parse-excel.js) ── */
 /* ── 열 찾기 ── 행 번호를 고정하지 않고 "거래일시"가 있는 행을 헤더로 잡는다 */
 /* nz()가 공백·괄호를 지우고 소문자로 만들어주니 「거래후 잔액」과 「거래후잔액」은
    같은 것으로 잡힌다. 여기 적는 건 표기 자체가 다른 것들이다 */
@@ -140,7 +145,6 @@ function nzOuter(s) {
   t = t.replace(/[(（][^)）]*[)）]/g, ''); /* 괄호를 안째로 뗀다 */
   return nz(t);
 }
-
 /* ── 열은 이름으로 후보만 모으고, 판정은 그 열에 든 값이 한다 ──
    「일련번호」가 이름으로 걸려도 값이 날짜가 아니라 떨어진다.
    15차에서 가짜 「출금가능잔액」이 검산으로 떨어진 것과 같은 방식이다 */
@@ -171,10 +175,8 @@ function colLooks(grid, h, c, kind) {
   }
   return seen > 0 && ok * 2 >= seen; /* 절반 이상 */
 }
-
 /* 이름은 넓게, 판정은 값으로. 「일련번호」는 여기 안 걸린다 */
 var DATE_WIDE = /(일시|일자|날짜|년월일)$|^거래일$/;
-
 /* ── 51차 ① · 머리글은 멀쩡한데 그 아래가 통째로 빈 시트인가 ──────
    조회를 안 하고 「내려받기」만 누르면 은행이 이런 파일을 준다.
    ★ 이름만으로 가리므로 반드시 좁게 잡는다 —
@@ -223,7 +225,6 @@ function findHeader(grid) {
   }
   return -1;
 }
-
 function mapColumns(grid, h) {
   var header = grid[h] || [];
   var map = {};
@@ -284,7 +285,6 @@ function mapColumns(grid, h) {
   }
   return map;
 }
-
 /* 거래처 열이 아예 없는 은행이 있다. 신한·부산은 「적요」와 「내용」뿐인데
    「적요」에는 「인터넷뱅킹」처럼 거래 방법이 들어 있어
    이름 순서로 고르면 685건짜리 거래처가 하나 생긴다.
@@ -324,7 +324,6 @@ function pickPayeeCol(grid, h, map) {
   }
   return best;
 }
-
 /* ── 65차 ① · 이름 열 채움율로 거래처 열을 다시 본다 ──────────────────
    국민은행 파일은 「적요」가 거래처가 아니라 채널명이다 —
    전자금융 1,263 · 스마트출금 386 · 가맹입금 161 처럼 몇 마디 말이 파일을 덮는다.
@@ -412,7 +411,6 @@ function nameColByFill(grid, h, map, curCol) {
   }
   return best;
 }
-
 /* 시각이 따로 오는 은행을 위해. 「05:48:54」·「054854」·54854·0.2422·Date 를 다 받는다 */
 function toClock(v) {
   if (v == null || v === '') return '';
@@ -442,7 +440,6 @@ function toClock(v) {
   if (hh > 23 || mi > 59 || ss > 59) return '';
   return p(hh) + ':' + p(mi) + ':' + p(ss);
 }
-
 function toStamp(v) {
   if (v == null || v === '') return '';
   if (v instanceof Date) {
@@ -481,12 +478,10 @@ function toNum(v) {
   var n = Number(t);
   return isFinite(n) ? Math.round(n) : null;
 }
-
 var IN_WORDS = ['입금', '이체입금', '입금이체', '받음', '수입'];
 /* 「이체」「지급」「결제」는 방향을 말해주지 않는다 —
    카드사가 보내주는 정산 입금도 「지급」「결제」로 찍힌다 */
 var OUT_WORDS = ['출금', '이체출금', '출금이체', '송금', '보냄', '지출'];
-
 /* 거래구분 칸이 방향을 말해주는 경우 */
 function dirFromKind(v) {
   var t = nz(v);
@@ -495,7 +490,6 @@ function dirFromKind(v) {
   for (var j = 0; j < IN_WORDS.length; j++) if (t.indexOf(nz(IN_WORDS[j])) !== -1) return 1;
   return 0;
 }
-
 /* 부호가 없으면 잔액이 어느 쪽으로 움직였는지로 정한다.
    잔액은 은행이 찍은 사실이고 거래구분은 말이라, 사실을 먼저 본다.
    둘이 어긋나거나 둘 다 없으면 비워둔 채 확인 카드로 넘긴다 — 추측하지 않는다 */
@@ -517,7 +511,6 @@ function resolveSigns(rows) {
     prev = r.balance;
   });
 }
-
 /* 헤더 후보 — 못 읽는 파일일 때 사장님께 보여줄 열 이름 */
 function headerNames(grid, h) {
   var row = h >= 0 ? grid[h] : null;
@@ -543,7 +536,6 @@ function headerNames(grid, h) {
     })
     .slice(0, 12);
 }
-
 /* 잔액 열은 은행마다 이름이 다르다. 목록을 늘리는 방식은 계속 샌다 —
    은행이 몇 개인지 우리는 모른다. 그래서 「잔액/잔고로 끝나는 열」을 전부 후보로 잡고,
    검산이 맞는 열을 고른다. 「지급가능잔액」「출금가능잔액」처럼 뜻이 다른 열은
@@ -556,7 +548,6 @@ function balanceCandidates(header) {
   }
   return out;
 }
-
 /* 잔액 열 하나를 정해두고 그 시트를 읽는다 */
 function buildRows(grid, h, map, balCol) {
   var split = map.inAmt != null || map.outAmt != null;
@@ -648,7 +639,6 @@ function buildRows(grid, h, map, balCol) {
   if (needSign) resolveSigns(rows);
   return { rows: rows, oneCol: !split, dropped: 버린 }; /* ★ 113차 ②마 */
 }
-
 /* ★ 113차 ①. 조회 기간을 찾을 자리만 글자로 뽑는다 —
    머리글 위 전부와, 머리글 아래 몇 줄(우리 이메일 HTML 은 기간이 표 안에 있다).
    ★ 거래 줄 전체를 들고 있지 않는다. 기간은 거기 없다 */
@@ -675,7 +665,7 @@ function gridHead(grid, h) {
 function headLinesAll(wb) {
   var out = [];
   for (var i = 0; i < wb.SheetNames.length; i++) {
-    var g = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
+    var g = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
       header: 1,
       raw: false,
       defval: ''
@@ -700,7 +690,7 @@ function extractRows(wb) {
   /* 머리글 아래에 줄이 한 개도 없는가 — 조회를 안 하고 내려받으면 그렇게 나온다 */
   var 빈표 = false;
   for (var i = 0; i < wb.SheetNames.length; i++) {
-    var grid = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
+    var grid = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]], {
       header: 1,
       raw: true,
       defval: ''
@@ -819,4 +809,61 @@ function extractRows(wb) {
      이건 제대로 된 .xlsx 라, 「엑셀로 다시 받으세요」는 거짓말이 된다 */
   if (형식맞음 || 빈표) why = 'empty';
   return { fail: true, found: uniq.slice(0, 12), why: why };
+}
+/* ── (원래 10-demo-read-files.js) ── */
+/* 은행 이름만 쓴다. 파일 이름을 그대로 쓰면 사장님 이름·계좌번호가 화면에 나온다 */
+var BANK_NAMES = [
+  '신한',
+  '국민',
+  'KB',
+  '하나',
+  '우리',
+  '농협',
+  'NH',
+  '기업',
+  'IBK',
+  '부산',
+  '경남',
+  '대구',
+  '광주',
+  '전북',
+  '제주',
+  '카카오',
+  '토스',
+  '새마을',
+  '신협',
+  '우체국',
+  'SC',
+  '씨티',
+  '수협',
+  '산업',
+  '케이'
+];
+function bankHelpName(k) {
+  if (k === '그 밖의 은행') return k;
+  if (k === '새마을') return '새마을금고'; /* 은행도 뱅크도 안 붙는다 */
+  if (k === '카카오' || k === '토스' || k === '케이') return k + '뱅크';
+  return k + '은행';
+}
+/* ── 39차 4번 ── 파일 위쪽(헤더 행 위)에서 은행 이름만 뽑는다.
+   ★ 그 위쪽에는 계좌번호와 상품명도 같이 있다.
+     BANK_NAMES 에 걸리는 낱말만 뽑고, 원문은 어디에도 안 남긴다 —
+     계좌번호가 화면에 올라가는 길을 아예 안 만든다 */
+/* ★ 40차 1번. 「○○은행」·「○○뱅크」처럼 뒷말이 붙어 있을 때만 인정한다.
+   39차에는 낱말만 봐서 부산 파일 상품명 「기업자유예금」의 「기업」에 걸렸다.
+   「계좌 1」은 모른다고 말하는 것이고, 「기업은행」은 틀린 것을 확신 있게 말하는 것이다 —
+   게다가 찾았다고 여기면 이름을 고칠 입력칸도 안 나와서 바로잡을 길이 없었다.
+   ★ 모르는 것은 모른다고 둔다. 부산 파일 어디에도 「부산은행」이라고 안 적혀 있다 */
+function bankFromHead(grid, h) {
+  var lim = Math.min(h, 12); /* 헤더 위쪽 몇 줄만 본다 */
+  for (var r = 0; r < lim; r++) {
+    var line = (grid[r] || []).join(' ');
+    for (var i = 0; i < BANK_NAMES.length; i++) {
+      var nm = BANK_NAMES[i];
+      /* ★ 47차 ①. 이름은 한 곳에서만 만든다 */
+      if (line.indexOf(nm + '은행') !== -1 || line.indexOf(nm + '뱅크') !== -1)
+        return bankHelpName(nm);
+    }
+  }
+  return null;
 }

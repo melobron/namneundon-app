@@ -11,7 +11,7 @@
     "doctor": "node tools/setup.mjs --check",
     "prepare": "husky",
     "serve": "node tests/serve.mjs",
-    "check": "node tools/check-load-order.mjs",
+    "check": "node tools/check-load-order.mjs && node tools/check-core.mjs",
     "lint": "npm run format:check && npm run lint:js && npm run lint:css && npm run lint:html && npm run lint:spell && npm run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -25,7 +25,9 @@
     "test:prod": "BASE_URL=https://app.namneundon.com playwright test",
     "deploy:app": "wrangler deploy",
     "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main",
-    "verify:prod": "node tools/verify-deploy.mjs"
+    "verify:prod": "node tools/verify-deploy.mjs",
+    "test:core": "playwright test tests/core",
+    "purity": "node tools/analyze-purity.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

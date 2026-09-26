@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "strict": false
   },
-  "include": ["app/src/*.js"]
+  "include": ["app/src/**/*.js"]
 }
