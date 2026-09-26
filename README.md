@@ -42,17 +42,21 @@ flowchart LR
 
 ## 개발 시작
 
-Node.js 24 (`.nvmrc`) 가 필요합니다. 자세한 것은 [docs/development/setup.md](docs/development/setup.md).
+Node.js 24 (`.nvmrc`) 와 git 만 있으면 됩니다. 나머지는 명령 하나가 갖춥니다. 자세한 것은 [docs/development/setup.md](docs/development/setup.md).
 
 ```bash
-npm run setup   # 의존성 설치 · 테스트용 크롬 · 불러오는 순서 검사
-npm run serve   # http://localhost:4173 에서 앱 띄우기
+make setup      # 또는 npm run setup — 도구 점검 · 의존성 설치 · 테스트용 크롬 · 커밋 전 검사
+make serve      # 또는 npm run serve — http://localhost:4173 에서 앱 띄우기
 ```
+
+`make` 만 치면 명령 목록이 나옵니다. Windows 처럼 `make` 가 없으면 `npm run …` 을 씁니다.
 
 ## 주요 명령
 
 | 명령                  | 하는 일                                                     |
 | --------------------- | ----------------------------------------------------------- |
+| `npm run setup`       | 처음 한 번 — 개발 환경을 갖춘다 (다시 돌려도 된다)          |
+| `npm run doctor`      | 설치 없이 무엇이 빠졌는지만 본다                            |
 | `npm run serve`       | 앱을 내 컴퓨터에서 띄운다 (http://localhost:4173)           |
 | `npm test`            | 불러오는 순서 검사 + 안전망 테스트                          |
 | `npm run lint`        | 모양 · 린트 · CSS · HTML · 철자 · 타입 검사                 |
