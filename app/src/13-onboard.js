@@ -1447,15 +1447,6 @@ function drawOnboard() {
   var doneShare = coverage(0);
   var goal = goalLine();
   var reached = doneShare >= goal.share;
-  function appendReachedResult() {
-    if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
-    if (!reached) return;
-    var resultGo = el('button', 'b on big', '결과 보기');
-    resultGo.type = 'button';
-    resultGo.style.marginTop = '12px';
-    resultGo.addEventListener('click', showResult);
-    host.appendChild(resultGo);
-  }
   var covline = el('div', 'obcovline');
   covline.appendChild(el('span', 'obcov', won(UP.pos) + '곳 확인'));
   covline.appendChild(el('b', 'obcovnum' + (reached ? ' ok' : ''), pctTxt(doneShare) + ' 정리됨'));
@@ -1650,7 +1641,7 @@ function drawOnboard() {
   var bun = isCardOut(g) || UP.holdAsk ? null : bundleFor(g);
   if (bun) {
     drawBundle(host, bun);
-    appendReachedResult();
+    appendReachedResult(reached, host);
     return;
   }
   var card = el('div', 'obcard');
@@ -1718,7 +1709,7 @@ function drawOnboard() {
     card.appendChild(cardBtns);
     drawRawPeek(card, g.rawList || [g.name], null, 이름칸);
     host.appendChild(card);
-    appendReachedResult();
+    appendReachedResult(reached, host);
     return;
   }
 
@@ -2011,7 +2002,16 @@ function drawOnboard() {
   host.appendChild(card);
   /* ★ 76차. 목표 비율에 닿으면 남은 거래처가 있어도 결과를 볼 수 있다.
      완료 화면의 단추와 같은 길을 쓰되, 아직 목표 전에는 보이지 않는다. */
-  appendReachedResult();
+  appendReachedResult(reached, host);
+}
+function appendReachedResult(reached, host) {
+  if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
+  if (!reached) return;
+  var resultGo = el('button', 'b on big', '결과 보기');
+  resultGo.type = 'button';
+  resultGo.style.marginTop = '12px';
+  resultGo.addEventListener('click', showResult);
+  host.appendChild(resultGo);
 }
 
 /* side : 섞인 거래처에서 어느 쪽을 정하는 중인가 (35차 B). 한쪽만 있는 곳은 null */

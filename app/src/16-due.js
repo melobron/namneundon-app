@@ -467,24 +467,11 @@ function openDuePlan(c, months, 첫) {
     가기('목록', { 알림: ok ? null : '변경 내용은 현재 화면에 반영됐지만 저장하지 못했습니다.' });
   }
 
-  function 머리줄() {
-    body.appendChild(
-      el(
-        'div',
-        'duewhy',
-        '자료 기준일 ' + 날글(c.오늘) + ' · 계산 가능한 마지막 날 ' + 날짜글(base.끝)
-      )
-    );
-  }
-  function 알림줄() {
-    if (화면.알림) body.appendChild(el('div', 'planwarn', 화면.알림));
-  }
-
   /* ── 첫 화면 ─────────────────────────────────────────────── */
   function 목록화면() {
     제목.textContent = '예정 지출 확인·수정';
-    머리줄();
-    알림줄();
+    머리줄(body, c, base);
+    알림줄(화면, body);
     /* ★ 116차 통합 ④. 미정 출금 보류 카드에서 여신 때만 한 번 적는다.
        이 화면은 지출 금액만 다루고 예상 잔액·최저점·그래프는 내지 않는다.
        저장해도 보류가 풀리지 않는다 (보류 판단은 계획을 넣기 전 기본 예측에서 한다) */
@@ -1302,6 +1289,20 @@ function openDuePlan(c, months, 첫) {
     if (e.target === back) 닫기();
   });
 }
+function 알림줄(화면, body) {
+  if (화면.알림) body.appendChild(el('div', 'planwarn', 화면.알림));
+}
+
+function 머리줄(body, c, base) {
+  body.appendChild(
+    el(
+      'div',
+      'duewhy',
+      '자료 기준일 ' + 날글(c.오늘) + ' · 계산 가능한 마지막 날 ' + 날짜글(base.끝)
+    )
+  );
+}
+
 /* ── 114차 · 그래프 화면 ──────────────────────────────────────────
    ★ 카드 안에 펼침을 또 만들지 않는다. 이건 새 화면이지 카드 속 펼침이 아니다.
      그래서 카드를 다시 그리지 않고, 닫아도 카드의 날짜와 펼침 상태가 그대로다.
@@ -1412,11 +1413,6 @@ var FC_GH = 250; /* 그래프 높이 (날짜 줄 포함) */
 /* 점과 점을 곧은 선으로 잇는다. 부드러운 곡선 보간을 안 쓴다 —
    계산에 없는 고점·저점이 생긴다 (요청서 ④) */
 function drawDueGraph(host, c, cv, pts) {
-  /* 날을 고르면 이 함수가 제 자리를 다시 그린다. 고른 날은 host 에 붙어 있어
-     innerHTML 을 비워도 살아남는다 */
-  function 그리기다시() {
-    drawDueGraph(host, c, cv, pts);
-  }
   host.innerHTML = '';
   /* ★ 지나온 쪽을 앞날과 비슷한 길이로 자른다. 30일로 고정했더니
      19일짜리 앞날이 오른쪽 3분의 1에 눌려 톱니가 뭉개졌다 (실측).
@@ -1813,7 +1809,7 @@ function drawDueGraph(host, c, cv, pts) {
         });
         r.addEventListener('click', function () {
           host.__고른날 = host.__고른날 === day ? null : day;
-          그리기다시();
+          그리기다시(host, c, cv, pts);
         });
         hits.appendChild(r);
       })(hd);
@@ -1895,12 +1891,18 @@ function drawDueGraph(host, c, cv, pts) {
     끄기.type = 'button';
     끄기.addEventListener('click', function () {
       host.__고른날 = null;
-      그리기다시();
+      그리기다시(host, c, cv, pts);
     });
     det.appendChild(끄기);
   }
   host.appendChild(det);
 }
+/* 날을 고르면 이 함수가 제 자리를 다시 그린다. 고른 날은 host 에 붙어 있어
+     innerHTML 을 비워도 살아남는다 */
+function 그리기다시(host, c, cv, pts) {
+  drawDueGraph(host, c, cv, pts);
+}
+
 /* 계산은 core/due.js 의 dueGraphPastIn — 지금 매장(UP)과 캐시·저장소 창구(DUE_ENV)를 넘긴다 */
 function dueGraphPast(c, 며칠) {
   return dueGraphPastIn(UP, DUE_ENV, c, 며칠);
