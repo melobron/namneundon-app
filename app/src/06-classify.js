@@ -8,9 +8,9 @@
      「이유를 모른 채 기준값만 바꾸지 않는다」이고, 이번에는 바뀌는 이유를 알고 바꾼다. */
 var BOOKKEEPING_WORDS = ['기장료', '세무기장', '세무사', '세무법인', '회계법인', '세무'];
 
-/* 지금 매장(UP)의 규칙표로 — 앱의 나머지 코드는 이것을 그대로 부른다 */
+/* 계산은 core/compute.js 의 keyOfIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function keyOf(r) {
-  return mergedName(UP && UP.merge, r);
+  return keyOfIn(UP, r);
 }
 
 /* 지금 매장(UP)의 규칙표로 거래처를 묶는다 — 계산은 core 의 groupPayeesWith */
