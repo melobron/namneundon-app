@@ -84,35 +84,6 @@ function startDemo() {
   showResult();
 }
 
-/* ── 36차 4단계 I · 계좌 합치기 ────────────────────────────
-   ★ 「갈아탄 것」이 아니다. 신한이 0이 된 달이 없다.
-     이어붙이기(뒤 파일이 앞 파일을 대체)로 만들면 2026-04 이후 신한 쪽이 통째로 빠진다.
-   ★ 계좌가 다르면 잔액 사슬은 절대 안 이어진다.
-     파일마다 따로 읽고 따로 검산한 뒤에 합친다.
-   ★ UP.banks 다. UP.accounts 가 아니다 —
-     UP.accounts 는 이미 「항목 목록」이라 거기에 계좌를 담으면 항목 관리가 통째로 깨진다 */
-/* ★ 79차 · 경남은행 HTML.
-   은행 HTML은 UTF-8 또는 한글 구형 인코딩으로 저장될 수 있다.
-   파일 앞부분의 영문 meta charset만 보고 맞는 방식으로 풀고, 선언이 없으면 둘 다 시도한다.
-   엑셀은 기존 ArrayBuffer 경로를 그대로 사용한다. */
-function asciiHead(bytes) {
-  var s = '',
-    n = Math.min(bytes.length, 8192);
-  for (var i = 0; i < n; i++) s += bytes[i] < 128 ? String.fromCharCode(bytes[i]) : ' ';
-  return s;
-}
-function htmlEncoding(bytes) {
-  var h = asciiHead(bytes);
-  var m = h.match(/charset\s*=\s*["']?\s*([a-z0-9._-]+)/i);
-  if (!m) return null;
-  var e = m[1].toLowerCase();
-  if (/euc-kr|ks_c_5601|cp949|windows-949|x-windows-949/.test(e)) return 'euc-kr';
-  return 'utf-8';
-}
-function looksHtml(file, bytes) {
-  if (/\.html?$/i.test(String((file && file.name) || ''))) return true;
-  return /<(?:!doctype\s+html|html|table)\b/i.test(asciiHead(bytes));
-}
 function workbookTries(file, bytes) {
   if (!looksHtml(file, bytes)) {
     return [window.XLSX.read(bytes, { type: 'array', cellDates: true })];
@@ -176,15 +147,6 @@ function readOne(file) {
   });
 }
 
-/* ── 92차 ②③ · PDF 한 장 읽기 ─────────────────────────────────────
-   길은 엑셀과 같다. 다른 것은 「무엇으로 표를 만드느냐」뿐이다 —
-   엑셀은 시트에서, PDF 는 글자 좌표에서 표를 만든다 (pdfGrid).
-   그 뒤 extractRows·orderAndVerify 는 엑셀이 지나온 그 함수 그대로다 */
-function isPdfFile(f) {
-  return (
-    /\.pdf$/i.test(String((f && f.name) || '')) || String((f && f.type) || '') === 'application/pdf'
-  );
-}
 function readAnyOne(file) {
   return isPdfFile(file) ? readOnePdf(file) : readOne(file);
 }
@@ -290,81 +252,6 @@ function pdfOpen(bytes, name, 남은, 다듬음) {
       return pdfOpen(bytes, name, 남은 - 1);
     });
   });
-}
-/* ── 94차 ① · PDF 에서 은행 이름을 찾는다 ──────────────────────────────
-   첫 쪽 위 25% 안에서만 본다. 은행 이름은 명세서 머리글에 찍히기 때문이다.
-   아래까지 뒤지면 거래처명의 「국민은행 이체」 같은 글자가 잡혀
-   엉뚱한 은행 이름을 화면에 쓰게 된다 — 그건 아무 말도 안 하느니만 못하다.
-   ★ 확실하지 않으면 null 이다. 못 알아본 것은 못 알아봤다고 둔다 */
-var BANK_MARKS = [
-  ['국민', ['KB국민은행', 'KB국민', '국민은행']],
-  ['신한', ['신한은행', 'Shinhan']],
-  ['우리', ['우리은행']],
-  ['새마을금고', ['MG새마을금고', '새마을금고', 'MG더뱅킹']],
-  ['하나', ['하나은행', 'KEB하나']],
-  ['농협', ['NH농협', '농협은행', '농협중앙회']],
-  ['기업', ['IBK기업', '기업은행', 'IBK']],
-  ['JT친애', ['JT친애', '제이티친애']],
-  ['예가람', ['예가람']]
-];
-/* 사전 차례대로 본다 — 앞에 있는 것이 먼저 잡히면 그걸로 끝낸다.
-   ★ 띄어쓰기는 지우고 본다. PDF 는 「KB」 「국민은행」 처럼 한 낱말을
-     조각으로 흘려주는 일이 잦아서, 그대로 두면 아무것도 안 잡힌다 */
-function bankMarkOf(글) {
-  var t = String(글 || '').replace(/\s+/g, '');
-  for (var i = 0; i < BANK_MARKS.length; i++) {
-    for (var k = 0; k < BANK_MARKS[i][1].length; k++) {
-      if (t.indexOf(BANK_MARKS[i][1][k]) !== -1) return BANK_MARKS[i][0];
-    }
-  }
-  return null;
-}
-function pdfBankName(doc) {
-  /* ★ 여기서 무슨 일이 나도 파일 읽기를 막으면 안 된다. 은행 이름은 안내를
-     거들 뿐이고, 못 찾으면 null 로 두면 그만이다 — 그래서 통째로 감싼다 */
-  return Promise.resolve()
-    .then(function () {
-      return doc.getPage(1);
-    })
-    .then(function (page) {
-      var 쪽높이 = 0;
-      try {
-        쪽높이 = page.getViewport({ scale: 1 }).height || 0;
-      } catch (e) {
-        쪽높이 = 0;
-      }
-      return page.getTextContent().then(function (tc) {
-        var 조각 = [];
-        (tc.items || []).forEach(function (it) {
-          var s = String(it.str == null ? '' : it.str).trim();
-          if (!s) return;
-          조각.push({ s: s, y: +(it.transform || [])[5] || 0 });
-        });
-        if (!조각.length) return null;
-        /* 좌표는 쪽 아래가 0 이다. 위 25% 란 높이의 75% 보다 위쪽이다.
-         쪽 크기를 못 읽으면 글자가 놓인 범위로 대신 잰다 */
-        var 한계;
-        if (쪽높이) {
-          한계 = 쪽높이 * 0.75;
-        } else {
-          var 위 = 조각[0].y,
-            아래 = 조각[0].y;
-          조각.forEach(function (c) {
-            if (c.y > 위) 위 = c.y;
-            if (c.y < 아래) 아래 = c.y;
-          });
-          한계 = 위 - (위 - 아래) * 0.25;
-        }
-        var 윗글 = [];
-        조각.forEach(function (c) {
-          if (c.y >= 한계) 윗글.push(c.s);
-        });
-        return bankMarkOf(윗글.join(' '));
-      });
-    })
-    .catch(function () {
-      return null;
-    });
 }
 function readOnePdf(file) {
   var 은행 = null; /* 못 읽었을 때 은행에 맞는 안내를 하려고 먼저 봐둔다 */
@@ -753,73 +640,6 @@ function redrawBankHelp() {
   if (!host) return;
   host.innerHTML = '';
   drawBankHelp(host);
-}
-
-/* ── 47차 ① · 은행 이름을 만드는 곳을 하나로 ────────────────────
-   안내 화면은 「케이뱅크」라고 부르는데 파일 목록은 「케이은행」이라고 불렀다.
-   같은 앱이 같은 은행을 두 이름으로 부르고 있었다. 이름은 bankHelpName 하나가 만든다.
-   ★ 그리고 짧은 이름은 그것만으로 못 믿는다 —
-     「케이터링업체정산.xls」가 「케이」에 걸려 「케이은행」이 됐다.
-     40차에 고친 「틀린 이름을 확신 있게 붙이는」 문제와 같은 자리다.
-   ★ 인터넷은행 셋은 「뱅크」가 붙어 있을 때만 인정한다 —
-     「카카오페이정산」은 카카오뱅크가 아니다.
-   ★ 두 글자 약자도 「은행」·「뱅크」가 붙어 있을 때만 인정한다 —
-     「○○산업」·「제주도○○」가 다 걸린다.
-   ★ 모르는 것은 모른다고 둔다. 「계좌 N」이 틀린 이름보다 낫다 */
-var BANK_NET = ['카카오', '토스', '케이']; /* 「○○뱅크」로 부르는 곳 */
-/* ★ 실파일 거래처 1,071개를 훑어 실제로 걸리는 것을 찾았다 —
-   KB 7곳 · 케이 8곳 · NH 5곳 · 산업 1곳 · 제주 1곳 (전부 은행이 아니다).
-   거기에 더해 낱말로도 흔한 것들을 같이 좁힌다 —
-   「국민연금」·「하나로마트」·「우리가게」·「기업자유예금」이 다 파일 이름에 나올 수 있다.
-   ★ 좁히면 진짜 은행 파일이 「계좌 N」으로 나올 수는 있다. 그건 고칠 칸이 나오므로 괜찮다.
-     틀린 이름은 고칠 칸조차 안 나온다 — 40차에 그것 때문에 고쳤다 */
-var BANK_STRICT = [
-  'KB',
-  'NH',
-  'SC',
-  '산업',
-  '제주',
-  '수협',
-  '신협',
-  '국민',
-  '하나',
-  '우리',
-  '기업'
-];
-function bankHit(t, key) {
-  if (t.indexOf(key + '은행') !== -1) return true;
-  if (t.indexOf(key + '뱅크') !== -1) return true;
-  if (BANK_NET.indexOf(key) !== -1) return false; /* 뱅크가 붙어야만 */
-  if (BANK_STRICT.indexOf(key) !== -1) return false; /* 은행·뱅크가 붙어야만 */
-  return t.indexOf(key) !== -1;
-}
-function bankOf(fileName, sheet, hint) {
-  /* 파일 이름·시트 이름에 없으면 파일 위쪽에서 찾은 것을 쓴다.
-     부산 파일은 시트 이름이 sheet1 이라 「계좌 2」로 나왔다 */
-  var t = String(fileName || '') + ' ' + String(sheet || '');
-  for (var i = 0; i < BANK_NAMES.length; i++) {
-    if (bankHit(t, BANK_NAMES[i])) return bankHelpName(BANK_NAMES[i]);
-  }
-  return hint || null;
-}
-/* 같은 파일을 두 번 올렸나 — 이름이 같으면 안 받는다.
-   이름이 달라도 (날짜+금액+잔액)이 같은 거래가 절반을 넘으면 여쭙는다.
-   ★ 자동으로 지우지 않는다 */
-function sameRowKey(r) {
-  return r.at + '|' + r.amount + '|' + r.balance;
-}
-function overlapWith(banks, one) {
-  var seen = {};
-  banks.forEach(function (b) {
-    b.rows.forEach(function (r) {
-      seen[sameRowKey(r)] = 1;
-    });
-  });
-  var hit = 0;
-  one.rows.forEach(function (r) {
-    if (seen[sameRowKey(r)]) hit++;
-  });
-  return one.rows.length ? hit / one.rows.length : 0;
 }
 
 /* ── 37차 1·2번 ────────────────────────────────────────────
