@@ -82,3 +82,4 @@ declare var dataSig: any;
 declare var bankKeysNow: any;
 declare var breaksOver: any;
 declare var manualLeft: any;
+declare var goMonth: any;

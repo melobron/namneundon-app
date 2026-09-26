@@ -132,25 +132,7 @@ function drawResultInner(months) {
      월 화면은 보고 있는 달의 미분류 거래처 수, 1년 화면은 전체 미분류 수를 쓴다. */
   var restN = yearView ? unsetCount() : monthNumbers(UP.month).unkGroups || 0;
   var row1 = el('div', 'rselrow');
-  if (yearView) {
-    var ypick = document.createElement('select');
-    var 해목록 = yearsWithData(months);
-    해목록.forEach(function (y) {
-      var o = document.createElement('option');
-      o.value = y;
-      o.textContent = y + '년';
-      ypick.appendChild(o);
-    });
-    ypick.value = yearNow(months) || '';
-    ypick.addEventListener('change', function () {
-      UP.year = ypick.value;
-      UP.open = {};
-      UP.ckPin = {};
-      drawResult(months);
-    });
-    row1.appendChild(ypick);
-    sel.appendChild(row1);
-  }
+  drawYearPicker(months, sel, yearView, row1);
   var pick = document.createElement('select');
   all.forEach(function (m) {
     var o = document.createElement('option');
@@ -172,26 +154,7 @@ function drawResultInner(months) {
   }
 
   var mode = el('div', 'rmode');
-  [
-    ['month', '한 달'],
-    ['year', '1년']
-  ].forEach(function (p) {
-    var b = el('button', UP.view === p[0] ? 'on' : '', p[1]);
-    b.type = 'button';
-    b.addEventListener('click', function () {
-      var 바뀜 = p[0] !== UP.view;
-      if (바뀜) useScreen(p[0] === 'year' ? '1년치' : '한 달');
-      if (바뀜) UP.ckPin = {}; /* 화면을 옮기면 다시 센다 */
-      UP.view = p[0];
-      drawResult(months);
-      /* ★ 56차. 보기를 바꾸는 것은 「옮기려는 것」이라 위부터 본다.
-         예전에는 스크롤이 잘리는 덕에 우연히 위로 갔다 —
-         고쳐서 그런 것이 아니었다. 위를 고치면 그 우연이 사라지므로
-         여기서 일부러 부른다. 같은 보기를 다시 누르면 안 움직인다 */
-      if (바뀜) window.scrollTo(0, 0);
-    });
-    mode.appendChild(b);
-  });
+  drawViewToggle(months, mode);
   row1.appendChild(mode);
   host.appendChild(sel);
 
@@ -513,6 +476,207 @@ function drawResultInner(months) {
      그래서 아래 else 는 지금 규칙에서는 안 닿는다. 규칙이 바뀌어도
      맞는 말이 나오게 까닭으로 갈라 둔다 */
   var runNow = isRunning(UP.month, months);
+  drawBlockedReason(d, unsetAmt, res);
+  host.appendChild(res);
+  if (whyOpen('profit')) host.appendChild(whyBox('profit'));
+  /* ★ 118차 ⑤. blocked 조건은 그대로 두고, 안 정한 거래 때문에 막힌 경우의 주 문장과
+     범위를 이 자리 한 곳에 모은다. lo·hi 는 기존 계산값을 원 단위로 그대로 쓴다.
+     ★ 범위를 앞날 예측이나 계좌 잔액으로 부르지 않는다 — 이 달 계좌 순이익이
+       분류에 따라 어디서 어디까지 달라지는가다.
+     ★ 아래 「아직 안 정한 곳 N곳」 단추가 바로 뒤에 선다. 카드 아래에서 같은 범위를
+       한 번 더 풀어 쓰던 줄은 지웠다 (같은 말을 두 자리에 두지 않는다) */
+  var 분류탓 = d.blocked && (d.uOut > 0 || d.uIn > 0);
+  if (분류탓) {
+    host.appendChild(el('div', 'resbase', '거래 분류에 따라 계좌 순이익이 달라집니다.'));
+    host.appendChild(
+      el(
+        'div',
+        'resbase',
+        '분류에 따른 범위: ' + won(Math.round(d.lo)) + '원 ~ ' + won(Math.round(d.hi)) + '원'
+      )
+    );
+  }
+  if (d.blocked && !runNow && !분류탓) {
+    host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'));
+  }
+  drawBlockedRunning(months, host, d, lastD, runNow, 분류탓);
+  drawUnsetShiftLine(months, host, d, unsetAmt);
+  /* ★ 74차. 핵심 숫자와 아직 안 정한 돈을 본 다음에만 다음 행동을 보여준다. */
+  var 새로정할 = resultNewButton(restN);
+  if (새로정할) host.appendChild(새로정할);
+  /* ★ 66차 ④. 이 달이 어떻게 흘러왔는지. 위 숫자는 손대지 않고 그림만 더한다 */
+  drawDayChart(host, UP.month, d, months);
+  /* ── 덩어리 3 · 계산에 안 들어가는 것 ──
+     ★ 여기 셋은 순이익 뺄셈에 안 들어간다. 확인만 하는 자리다.
+       색을 죽여 위 덩어리와 갈라 보이게 한다 */
+  host.appendChild(el('div', 'pnlrule'));
+  drawBalanceRow(months, host, d, full, calcRow);
+  var keepTot = (d.keepIn || 0) + (d.keepOut || 0);
+  drawKeepRow(months, host, d, keepTot);
+  /* 앱이 질문을 생략한 작은 거래는 계산상 「아직 안 정한 돈」이 아니다.
+     임시로 사업 외 용도에 둔 값이지만, 다시 확인할 돈이라는 사용자 흐름은 같다.
+     따라서 아직 안 정한 돈을 펼치면 제일 먼저 보여주되 둘을 합산하지 않는다. */
+  var sk = skipTotals();
+  drawHoldRow(months, host);
+  drawUnsetRow(months, host, d, unsetAmt, calcRow, sk);
+
+  /* 아직 안 정한 돈이 없으면 안전 안내 자체가 사라지지 않도록 원래 자리에 남긴다. */
+  if (!unsetAmt) drawSkippedSmall(sk, months, host, false);
+
+  drawTransferCards(months, host);
+
+  drawRangeStepNote(host);
+
+  /* 이대로 가면 이번 달이 지난달보다 나을지 — 매출만, 세 조건이 다 맞을 때만.
+     들어온 돈과 나간 돈 사이에 두면 두 숫자를 나란히 못 본다 */
+  var proj = salesProjection(months, UP.month);
+  drawSalesProjection(host, proj);
+
+  /* ★ 86차 ⑦. 여기 있던 「확인할 게 N가지 있습니다」 상자를 없앤다.
+     「보기 ↓」를 눌러도 조금만 내려갔다 — 손가락으로 내려도 보이는 자리라
+     눌러야 할 까닭이 없었고 자리만 먹었다.
+     그 경고는 아래 「확인이 필요합니다 · N건」 제목으로 옮겼다 (drawChecks).
+     상자가 두 자리에서 같은 말을 하지 않는다 (49차) */
+
+  host = hostSave;
+  host.appendChild(card);
+
+  if (mLeft) {
+    host.appendChild(el('div', 'manleft', '직접 넣으실 달이 ' + won(mLeft) + '개 남았습니다'));
+  }
+
+  drawBlockedProfitNote(months, host, d, pd, pLab);
+
+  /* ★ 60차 ⑤. 「지난 N달 동안, 월말 계좌 순이익이 … 평균 ○○원 많았습니다」 줄을 걷어냈다.
+     말하려던 것은 참말이었다 — 예시 자료로 보면 7월 1~22일은 적자 −417,734원인데
+     7월 전체는 흑자 7,312,306원이다. 마지막 아흐레에 7,730,040원이 붙는다.
+     그런데도 빼는 까닭 셋 —
+       ① 바로 위 머리줄이 이미 「8월 1일 ~ 22일 · 아직 9일 남았습니다」라고 말한다
+       ② 「지난 7달 평균 1,225만원 많았다」가 「이번에도 늘겠구나」로 읽힌다.
+          주석으로 「예측이 아니라 지난 기록」이라고 방어하고 있었는데,
+          방어 문구가 필요하다는 것 자체가 그렇게 읽힌다는 뜻이다
+       ③ 「앞으로 어떻게 될까」는 이제 ⑦ 카드가 맡는다
+     ★ 「7월 같은 기간(1~22일) 대비」(cmprow) 는 그대로 둔다 —
+       지난달과 견주는 사실이라 예측으로 안 읽힌다 */
+
+  drawChecks(host, d, months, checkCards);
+
+  /* ★ 86차 ①. 여기 있던 「내려온 카드」 자리를 없앤다 — 카드는 늘 맨 위 하나뿐이다 */
+
+  var foot = el('div', 'upstat');
+  foot.style.marginTop = '14px';
+  /* 한 줄에 다 붙이면 어느 숫자가 무엇인지 안 읽힌다. 줄을 나눈다 */
+  var lines = [];
+  if (UP.patched) {
+    /* ★ 108차 ④. 「반영」을 눌렀다고 실제 거래 금액이 확인된 것은 아니다.
+       잔액 차이로 뽑은 값 그대로다 — 그 사실을 이름에 남긴다 */
+    lines.push('잔액 차이로 금액을 추정한 거래 ' + UP.patched + '건');
+  }
+  /* ★ 112차 ②㉲. 미응답은 「사용자 확인 완료」가 아니다. 다른 말로 적는다 */
+  if (UP.autoPatched) {
+    lines.push('그 가운데 ' + UP.autoPatched + '건은 선택하지 않아 임시로 반영한 것입니다');
+  }
+  /* ★ 107차 ②. 알림으로만 두지 않는다 — 눌러서 그 카드로 돌아갈 수 있어야 한다.
+     한 번 넘어가면 「아닙니다」를 고를 길이 아예 없었다.
+     ★ 예시 화면에서는 안 붙인다. 남의 가게 자료를 고치는 일이 된다 */
+  /* ★ 112차 ②. 어느 상태에서 와도 그 카드로 돌아갈 수 있어야 한다 —
+     예전에는 patched 한 갈래만 길이 있었다 */
+  var ck있 = (UP.rows || []).some(ckRow);
+  var 되돌 = ck있 && !UP.demo ? el('button', 'oslink', '다시 보기') : null;
+  if (되돌) {
+    되돌.type = 'button';
+    되돌.addEventListener('click', function () {
+      showPatchedCards();
+    });
+  }
+  /* ★ 112차 ②㉰. 「파일 금액 반영」은 거래 금액을 고르신 것이다.
+     「거래 금액도 모르는 것」과 한 덩어리로 세지 않는다 — 남은 것은 잔액 차이 하나다 */
+  if (UP.byStated) {
+    lines.push(
+      '파일에 적힌 금액으로 반영한 거래 ' +
+        UP.byStated +
+        '건 · 잔액 차이는 확인 필요로 따로 두었습니다'
+    );
+  }
+  /* ★ 112차 ②㉯. 거래 전체가 매출·지출에서 빠진 것들이다. 미응답과 다른 말로 적는다 */
+  if (UP.unsure) {
+    lines.push('확인 필요로 분류해 매출·지출 계산에서 뺀 거래 ' + UP.unsure + '건');
+  }
+  /* ★ 112차 ②. 이 줄은 맨 아래로 내린다 — 안 물은 줄이라 「다시 보기」에 안 뜬다.
+     위에 두면 그 단추가 이 줄에 붙어 「눌러도 그 거래가 없다」가 된다 */
+  if (UP.zeroed) {
+    lines.push(
+      '금액 칸이 비어 있지만 잔액도 안 움직인 거래 ' + won(UP.zeroed) + '건은 0원으로 두었습니다'
+    );
+  }
+  lines.forEach(function (t, i) {
+    var row = el('div', null, t);
+    if (i === 0 && 되돌) {
+      row.appendChild(document.createTextNode(' '));
+      row.appendChild(되돌);
+    }
+    foot.appendChild(row);
+  });
+  if (lines.length) host.appendChild(foot);
+  drawSaveFailNote(host);
+
+  if (installCase()) {
+    var ib = el('button', 'upbtn instlink', '폰 화면에 아이콘 만들기');
+    ib.type = 'button';
+    ib.addEventListener('click', reopenInstall);
+    host.appendChild(ib);
+  }
+  dscLine(host);
+}
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawYearPicker(months, sel, yearView, row1) {
+  if (yearView) {
+    var ypick = document.createElement('select');
+    var 해목록 = yearsWithData(months);
+    해목록.forEach(function (y) {
+      var o = document.createElement('option');
+      o.value = y;
+      o.textContent = y + '년';
+      ypick.appendChild(o);
+    });
+    ypick.value = yearNow(months) || '';
+    ypick.addEventListener('change', function () {
+      UP.year = ypick.value;
+      UP.open = {};
+      UP.ckPin = {};
+      drawResult(months);
+    });
+    row1.appendChild(ypick);
+    sel.appendChild(row1);
+  }
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawViewToggle(months, mode) {
+  [
+    ['month', '한 달'],
+    ['year', '1년']
+  ].forEach(function (p) {
+    var b = el('button', UP.view === p[0] ? 'on' : '', p[1]);
+    b.type = 'button';
+    b.addEventListener('click', function () {
+      var 바뀜 = p[0] !== UP.view;
+      if (바뀜) useScreen(p[0] === 'year' ? '1년치' : '한 달');
+      if (바뀜) UP.ckPin = {}; /* 화면을 옮기면 다시 센다 */
+      UP.view = p[0];
+      drawResult(months);
+      /* ★ 56차. 보기를 바꾸는 것은 「옮기려는 것」이라 위부터 본다.
+         예전에는 스크롤이 잘리는 덕에 우연히 위로 갔다 —
+         고쳐서 그런 것이 아니었다. 위를 고치면 그 우연이 사라지므로
+         여기서 일부러 부른다. 같은 보기를 다시 누르면 안 움직인다 */
+      if (바뀜) window.scrollTo(0, 0);
+    });
+    mode.appendChild(b);
+  });
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawBlockedReason(d, unsetAmt, res) {
   if (d.blocked) {
     res.classList.add('waiting');
     var 안정한탓 = d.uOut > 0 || d.uIn > 0;
@@ -542,28 +706,10 @@ function drawResultInner(months) {
     res.classList.add(unsetAmt ? 'est' : d.profit < 0 ? 'minus' : 'fixed');
     res.appendChild(el('div', 'v num', won(d.profit)));
   }
-  host.appendChild(res);
-  if (whyOpen('profit')) host.appendChild(whyBox('profit'));
-  /* ★ 118차 ⑤. blocked 조건은 그대로 두고, 안 정한 거래 때문에 막힌 경우의 주 문장과
-     범위를 이 자리 한 곳에 모은다. lo·hi 는 기존 계산값을 원 단위로 그대로 쓴다.
-     ★ 범위를 앞날 예측이나 계좌 잔액으로 부르지 않는다 — 이 달 계좌 순이익이
-       분류에 따라 어디서 어디까지 달라지는가다.
-     ★ 아래 「아직 안 정한 곳 N곳」 단추가 바로 뒤에 선다. 카드 아래에서 같은 범위를
-       한 번 더 풀어 쓰던 줄은 지웠다 (같은 말을 두 자리에 두지 않는다) */
-  var 분류탓 = d.blocked && (d.uOut > 0 || d.uIn > 0);
-  if (분류탓) {
-    host.appendChild(el('div', 'resbase', '거래 분류에 따라 계좌 순이익이 달라집니다.'));
-    host.appendChild(
-      el(
-        'div',
-        'resbase',
-        '분류에 따른 범위: ' + won(Math.round(d.lo)) + '원 ~ ' + won(Math.round(d.hi)) + '원'
-      )
-    );
-  }
-  if (d.blocked && !runNow && !분류탓) {
-    host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'));
-  }
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawBlockedRunning(months, host, d, lastD, runNow, 분류탓) {
   if (d.blocked && runNow) {
     /* ★ 64-3차. 윗줄이 「조금만 더 정하면」이라고 했는데 여기서 「아직 N일치라」라고 하면
        한 화면이 두 까닭을 말한다. 안 정한 돈이 까닭이면 그 말을 그대로 잇는다 */
@@ -592,6 +738,10 @@ function drawResultInner(months) {
       host.appendChild(gb);
     }
   }
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawUnsetShiftLine(months, host, d, unsetAmt) {
   /* ★ 43차 3단계 · 오차범위 한 줄.
      뒤집히지 않는다고 정확한 것은 아니다. lo·hi 는 이미 계산되어 있다.
      안 정한 돈은 나간 쪽이 들어온 쪽의 일곱 배라 순이익은 내려가기만 한다 —
@@ -633,15 +783,10 @@ function drawResultInner(months) {
     });
     host.appendChild(er);
   }
-  /* ★ 74차. 핵심 숫자와 아직 안 정한 돈을 본 다음에만 다음 행동을 보여준다. */
-  var 새로정할 = resultNewButton(restN);
-  if (새로정할) host.appendChild(새로정할);
-  /* ★ 66차 ④. 이 달이 어떻게 흘러왔는지. 위 숫자는 손대지 않고 그림만 더한다 */
-  drawDayChart(host, UP.month, d, months);
-  /* ── 덩어리 3 · 계산에 안 들어가는 것 ──
-     ★ 여기 셋은 순이익 뺄셈에 안 들어간다. 확인만 하는 자리다.
-       색을 죽여 위 덩어리와 갈라 보이게 한다 */
-  host.appendChild(el('div', 'pnlrule'));
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawBalanceRow(months, host, d, full, calcRow) {
   /* ★ 62-2차 ⑧. 자리만 바꾼다 —
      지금 계좌 잔액 → 사업 외 용도 → 아직 안 정한 돈.
      이름·금액·색·펼침은 그대로다 */
@@ -705,7 +850,10 @@ function drawResultInner(months) {
     'balrow2',
     full ? 'bal' : 'balnow'
   );
-  var keepTot = (d.keepIn || 0) + (d.keepOut || 0);
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawKeepRow(months, host, d, keepTot) {
   if (keepTot) {
     boxRow(
       months,
@@ -735,10 +883,10 @@ function drawResultInner(months) {
       'keep'
     );
   }
-  /* 앱이 질문을 생략한 작은 거래는 계산상 「아직 안 정한 돈」이 아니다.
-     임시로 사업 외 용도에 둔 값이지만, 다시 확인할 돈이라는 사용자 흐름은 같다.
-     따라서 아직 안 정한 돈을 펼치면 제일 먼저 보여주되 둘을 합산하지 않는다. */
-  var sk = skipTotals();
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawHoldRow(months, host) {
   /* ★ 116차 앞 ⑤. 예상 잔액 표시를 보류한 거래.
      「아직 안 정한 돈」 상자는 보고 계신 달만 담지만, 보류 원인은 과거 비교 구간에
      있어 그 달 밖일 수 있다. 그래서 달과 상관없이 따로 낸다.
@@ -769,6 +917,10 @@ function drawResultInner(months) {
       null
     );
   }
+}
+
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawUnsetRow(months, host, d, unsetAmt, calcRow, sk) {
   if (unsetAmt) {
     var 작은거래표시 = sk.n ? '작은 거래 ' + won(sk.n) + '곳 · ' + won(sk.sum) + '원 별도' : null;
     boxRow(
@@ -808,10 +960,10 @@ function drawResultInner(months) {
       el('div', 'unsetok', '다 채우지 않으셔도 됩니다. 확실하지 않은 것은 여기 두는 편이 낫습니다.')
     );
   }
+}
 
-  /* 아직 안 정한 돈이 없으면 안전 안내 자체가 사라지지 않도록 원래 자리에 남긴다. */
-  if (!unsetAmt) drawSkippedSmall(sk, months, host, false);
-
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawTransferCards(months, host) {
   /* ── 36차 4단계 · 계좌 간 이체 확인 카드 ─────────────────
      ★ 자동으로 안 뺀다. 후보가 0건이면 아무것도 안 띄운다.
      ★ 각 건을 따로 뺄 수 있다 — 금액이 같은 우연도 있다 */
@@ -911,7 +1063,10 @@ function drawResultInner(months) {
       host.appendChild(xb);
     }
   }
+}
 
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawRangeStepNote(host) {
   /* ── 36차 4단계 · 기간이 다른 구간 ────────────────────────
      계좌마다 연 날짜가 다르면 합친 잔액이 계단처럼 뛴다.
      밝혀두지 않으면 「3월에 갑자기 1천만원이 늘었다」로 보인다.
@@ -961,10 +1116,10 @@ function drawResultInner(months) {
       );
     }
   }
+}
 
-  /* 이대로 가면 이번 달이 지난달보다 나을지 — 매출만, 세 조건이 다 맞을 때만.
-     들어온 돈과 나간 돈 사이에 두면 두 숫자를 나란히 못 본다 */
-  var proj = salesProjection(months, UP.month);
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawSalesProjection(host, proj) {
   if (proj) {
     /* 예상 금액은 최대 30%까지 틀린다. 방향만 말하고 금액은 안 쓴다 */
     var pbox = el('div', 'projbox');
@@ -985,20 +1140,10 @@ function drawResultInner(months) {
     );
     host.appendChild(pbox);
   }
+}
 
-  /* ★ 86차 ⑦. 여기 있던 「확인할 게 N가지 있습니다」 상자를 없앤다.
-     「보기 ↓」를 눌러도 조금만 내려갔다 — 손가락으로 내려도 보이는 자리라
-     눌러야 할 까닭이 없었고 자리만 먹었다.
-     그 경고는 아래 「확인이 필요합니다 · N건」 제목으로 옮겼다 (drawChecks).
-     상자가 두 자리에서 같은 말을 하지 않는다 (49차) */
-
-  host = hostSave;
-  host.appendChild(card);
-
-  if (mLeft) {
-    host.appendChild(el('div', 'manleft', '직접 넣으실 달이 ' + won(mLeft) + '개 남았습니다'));
-  }
-
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawBlockedProfitNote(months, host, d, pd, pLab) {
   /* ── 카드 아래 ── 순이익을 어떻게 읽어야 하는지 */
   /* ★ 115차 ②-3. 여기 있던 「계좌에서 나간 돈을 모두 뺀 금액」을 지웠다.
      되풀이라서가 아니라 틀린 말이라서다 — 앱은 계좌 간 이체와 대표 입출금을
@@ -1073,78 +1218,10 @@ function drawResultInner(months) {
       host.appendChild(b2);
     }
   }
+}
 
-  /* ★ 60차 ⑤. 「지난 N달 동안, 월말 계좌 순이익이 … 평균 ○○원 많았습니다」 줄을 걷어냈다.
-     말하려던 것은 참말이었다 — 예시 자료로 보면 7월 1~22일은 적자 −417,734원인데
-     7월 전체는 흑자 7,312,306원이다. 마지막 아흐레에 7,730,040원이 붙는다.
-     그런데도 빼는 까닭 셋 —
-       ① 바로 위 머리줄이 이미 「8월 1일 ~ 22일 · 아직 9일 남았습니다」라고 말한다
-       ② 「지난 7달 평균 1,225만원 많았다」가 「이번에도 늘겠구나」로 읽힌다.
-          주석으로 「예측이 아니라 지난 기록」이라고 방어하고 있었는데,
-          방어 문구가 필요하다는 것 자체가 그렇게 읽힌다는 뜻이다
-       ③ 「앞으로 어떻게 될까」는 이제 ⑦ 카드가 맡는다
-     ★ 「7월 같은 기간(1~22일) 대비」(cmprow) 는 그대로 둔다 —
-       지난달과 견주는 사실이라 예측으로 안 읽힌다 */
-
-  drawChecks(host, d, months, checkCards);
-
-  /* ★ 86차 ①. 여기 있던 「내려온 카드」 자리를 없앤다 — 카드는 늘 맨 위 하나뿐이다 */
-
-  var foot = el('div', 'upstat');
-  foot.style.marginTop = '14px';
-  /* 한 줄에 다 붙이면 어느 숫자가 무엇인지 안 읽힌다. 줄을 나눈다 */
-  var lines = [];
-  if (UP.patched) {
-    /* ★ 108차 ④. 「반영」을 눌렀다고 실제 거래 금액이 확인된 것은 아니다.
-       잔액 차이로 뽑은 값 그대로다 — 그 사실을 이름에 남긴다 */
-    lines.push('잔액 차이로 금액을 추정한 거래 ' + UP.patched + '건');
-  }
-  /* ★ 112차 ②㉲. 미응답은 「사용자 확인 완료」가 아니다. 다른 말로 적는다 */
-  if (UP.autoPatched) {
-    lines.push('그 가운데 ' + UP.autoPatched + '건은 선택하지 않아 임시로 반영한 것입니다');
-  }
-  /* ★ 107차 ②. 알림으로만 두지 않는다 — 눌러서 그 카드로 돌아갈 수 있어야 한다.
-     한 번 넘어가면 「아닙니다」를 고를 길이 아예 없었다.
-     ★ 예시 화면에서는 안 붙인다. 남의 가게 자료를 고치는 일이 된다 */
-  /* ★ 112차 ②. 어느 상태에서 와도 그 카드로 돌아갈 수 있어야 한다 —
-     예전에는 patched 한 갈래만 길이 있었다 */
-  var ck있 = (UP.rows || []).some(ckRow);
-  var 되돌 = ck있 && !UP.demo ? el('button', 'oslink', '다시 보기') : null;
-  if (되돌) {
-    되돌.type = 'button';
-    되돌.addEventListener('click', function () {
-      showPatchedCards();
-    });
-  }
-  /* ★ 112차 ②㉰. 「파일 금액 반영」은 거래 금액을 고르신 것이다.
-     「거래 금액도 모르는 것」과 한 덩어리로 세지 않는다 — 남은 것은 잔액 차이 하나다 */
-  if (UP.byStated) {
-    lines.push(
-      '파일에 적힌 금액으로 반영한 거래 ' +
-        UP.byStated +
-        '건 · 잔액 차이는 확인 필요로 따로 두었습니다'
-    );
-  }
-  /* ★ 112차 ②㉯. 거래 전체가 매출·지출에서 빠진 것들이다. 미응답과 다른 말로 적는다 */
-  if (UP.unsure) {
-    lines.push('확인 필요로 분류해 매출·지출 계산에서 뺀 거래 ' + UP.unsure + '건');
-  }
-  /* ★ 112차 ②. 이 줄은 맨 아래로 내린다 — 안 물은 줄이라 「다시 보기」에 안 뜬다.
-     위에 두면 그 단추가 이 줄에 붙어 「눌러도 그 거래가 없다」가 된다 */
-  if (UP.zeroed) {
-    lines.push(
-      '금액 칸이 비어 있지만 잔액도 안 움직인 거래 ' + won(UP.zeroed) + '건은 0원으로 두었습니다'
-    );
-  }
-  lines.forEach(function (t, i) {
-    var row = el('div', null, t);
-    if (i === 0 && 되돌) {
-      row.appendChild(document.createTextNode(' '));
-      row.appendChild(되돌);
-    }
-    foot.appendChild(row);
-  });
-  if (lines.length) host.appendChild(foot);
+/* drawResultInner 에서 뺀 부분 (B-4) */
+function drawSaveFailNote(host) {
   /* ★ 112차 ③. 저장이 안 됐으면 그 자리에서 알린다 — 다음에 열었을 때
      「왜 아무것도 없지」가 되지 않게 한다.
      ★ 「현재 분석은 계속 볼 수 있다」는 참이다. 올려둔 것은 이 창이 살아 있는 동안
@@ -1174,15 +1251,8 @@ function drawResultInner(months) {
     }
     host.appendChild(sv);
   }
-
-  if (installCase()) {
-    var ib = el('button', 'upbtn instlink', '폰 화면에 아이콘 만들기');
-    ib.type = 'button';
-    ib.addEventListener('click', reopenInstall);
-    host.appendChild(ib);
-  }
-  dscLine(host);
 }
+
 /* ── 36차 F-3·4·5 ── 안 묻고 넘긴 것을 반드시 화면에 드러낸다.
      이 셋이 이 선택의 안전장치다. 숨기면 사업에 쓴 돈이 조용히 줄어든다.
      ★ 파일 전체 기간 합계다. 기간을 안 적으면 한 달치로 읽히신다 (원칙 3) */

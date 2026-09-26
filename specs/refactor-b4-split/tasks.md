@@ -5,14 +5,16 @@
 
 ## 할 일
 
-| #   | 할 일                                                                                                                           | 먼저 끝나야 할 것 | 결과물                                                                                              | 확인 방법                        | 상태 |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- | -------------------------------- | ---- |
-| T1  | B-4a `drawResultInner` 안의 함수 꺼내기                                                                                         | —                 | `17-result.js` 1,852 → 1,155줄                                                                      | check · lint · test · 넓은 비교  | 완료 |
-| T2  | 직접 적는 돈(현금매출 [＋ 추가] → [넣기]) 시험                                                                                  | —                 | `tests/manual-entry.spec.mjs`                                                                       | 바꾸기 전 · 후 코드 모두 통과    | 완료 |
-| T3  | B-4b 도구로 꺼낼 수 있는 것 — `drawYear` 9 · `openDuePlan` 2 · `drawDueGraph` 1 · `drawOnboard` 1                               | T1                | `drawYear` 700 → 612 · `openDuePlan` 891 → 878 · `drawDueGraph` 490 → 485 · `drawOnboard` 582 → 573 | check · lint · test · 넓은 비교  | 완료 |
-| T3b | 예정 지출 창(목록 → 내역 → 뒤로 → 수정) 시험                                                                                    | —                 | `tests/due-plan.spec.mjs`                                                                           | 바꾸기 전 코드에서도 같은 스냅샷 | 완료 |
-| T5  | 큰 블록을 이름 있는 함수로 빼기 (`drawResultInner` · `drawDueCard` · `drawProfitChart` 등 — 안쪽 함수가 적고 직선 코드가 긴 것) | T3                | —                                                                                                   | 같은 방법                        | 대기 |
-| T6  | `openDuePlan` — 화면 전환 상태(`화면` · `닫힘`)를 한 객체로 묶어 화면 함수들을 꺼내기 (손작업)                                  | T3                | —                                                                                                   | 같은 방법 + 예정 지출 창 시험    | 대기 |
+| #   | 할 일                                                                                                                         | 먼저 끝나야 할 것 | 결과물                                                                                              | 확인 방법                                         | 상태 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- |
+| T1  | B-4a `drawResultInner` 안의 함수 꺼내기                                                                                       | —                 | `17-result.js` 1,852 → 1,155줄                                                                      | check · lint · test · 넓은 비교                   | 완료 |
+| T2  | 직접 적는 돈(현금매출 [＋ 추가] → [넣기]) 시험                                                                                | —                 | `tests/manual-entry.spec.mjs`                                                                       | 바꾸기 전 · 후 코드 모두 통과                     | 완료 |
+| T3  | B-4b 도구로 꺼낼 수 있는 것 — `drawYear` 9 · `openDuePlan` 2 · `drawDueGraph` 1 · `drawOnboard` 1                             | T1                | `drawYear` 700 → 612 · `openDuePlan` 891 → 878 · `drawDueGraph` 490 → 485 · `drawOnboard` 582 → 573 | check · lint · test · 넓은 비교                   | 완료 |
+| T3b | 예정 지출 창(목록 → 내역 → 뒤로 → 수정) 시험                                                                                  | —                 | `tests/due-plan.spec.mjs`                                                                           | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
+| T5  | B-4c `drawResultInner` 의 큰 블록 14개를 이름 있는 함수로 (`drawBalanceRow` · `drawTransferCards` · `drawSalesProjection` 등) | T3                | `drawResultInner` 1,155 → 600줄                                                                     | check · lint · test · 넓은 비교 · 계좌 두 개 시험 | 완료 |
+| T5b | 계좌 두 개일 때만 나오는 것(이체 카드 · 기간 안내 · B-9 안내) 시험                                                            | —                 | `tests/multi-bank.spec.mjs`                                                                         | 바꾸기 전 코드에서도 같은 스냅샷                  | 완료 |
+| T5c | 다른 큰 함수(`drawDueCard` · `drawProfitChart` · `drawYear` · `drawOnboard`)의 큰 블록 빼기                                   | T5                | —                                                                                                   | 같은 방법                                         | 대기 |
+| T6  | `openDuePlan` — 화면 전환 상태(`화면` · `닫힘`)를 한 객체로 묶어 화면 함수들을 꺼내기 (손작업)                                | T3                | —                                                                                                   | 같은 방법 + 예정 지출 창 시험                     | 대기 |
 
 ## 검증 기록
 
@@ -27,6 +29,10 @@
 | 2026-09-27 | Claude Code | B-4b `npm run lint` · `npm test`                                    | 통과 · 88 통과 (새 `tests/due-plan.spec.mjs` 포함)              |
 | 2026-09-27 | Claude Code | B-4b `tests/due-plan.spec.mjs` 를 바꾸기 전 `16` · `18` · `13` 으로 | 통과 — 같은 스냅샷                                              |
 | 2026-09-27 | Claude Code | B-4b 넓은 화면 비교 (origin/main `46b6a39` 대 이 가지, 106장)       | 진짜 차이 0 · 흔들림 의심 1                                     |
+| 2026-09-27 | Claude Code | B-4b PR #35 CI · 머지 · 자동 배포 `5357396` · 배포 확인             | 통과 · 성공                                                     |
+| 2026-09-27 | Claude Code | B-4c `npm run lint` · `npm test`                                    | 통과 · 89 통과 (새 `tests/multi-bank.spec.mjs` 포함)            |
+| 2026-09-27 | Claude Code | B-4c `tests/multi-bank.spec.mjs` 를 바꾸기 전 `17-result.js` 로     | 통과 — 같은 스냅샷 (5월 · 6월 결과 화면 전체 글)                |
+| 2026-09-27 | Claude Code | B-4c 넓은 화면 비교 (origin/main `5357396` 대 이 가지, 106장)       | 진짜 차이 0 · 흔들림 의심 3 (모두 시작 화면 3px)                |
 
 ## 구현 중 정한 작은 것
 
