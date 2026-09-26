@@ -270,73 +270,6 @@ function drawResultInner(months) {
      어느 대표님이든 늘 맨 위에 · 늘 펼친 채로 둔다. 접는 것은 대표님이 정하신다 */
   drawDueCard(host, months);
 
-  /* ★ 36차. 음수를 아스키 하이픈으로 내면 화면에서 마이너스로 안 읽히고
-     색 규칙(나간 돈·적자는 빨강)에도 안 걸린다. 부호를 떼어 따로 돌려준다 */
-  function pctOf(n) {
-    if (d.blocked) return null; /* 못정한가 많으면 비율도 뜻이 없다 */
-    if (!(d.sales > 0)) return null;
-    var p = Math.round((n / d.sales) * 100);
-    return { txt: (p < 0 ? '−' : '') + Math.abs(p) + '%', minus: p < 0 };
-  }
-  /* ★ 54차 ⑥ · 매출 대비 비율.
-   ★ 42차·43차 규칙은 그대로다 — 세 자리 %는 뜻이 없다.
-   ★ 67차 ②. 매출보다 큰 항목을 예전에는 「N배」로 적었는데, 배수도 화면에서 뺀다.
-     그 자리에는 사실만 놓는다 — 「매출 초과」. 얼마나 넘었는지는 바로 옆 금액 칸이 말한다.
-     여러 항목의 합이 100%를 넘는 것은 막지 않는다. 그게 답이다 —
-     번 돈보다 더 썼다는 뜻이고 한눈에 보여야 한다 */
-  function pctCell(n) {
-    var p = pctOf(n);
-    if (!p) return '';
-    if (Math.abs(n) < d.sales) return p.txt;
-    return '매출 초과';
-  }
-  /* 들여쓴 작은 줄. 각자 눌려서 각자 열린다 */
-  function subRow(label, key, value, sub, draw, pct) {
-    var row = el('div', 'orow tapx');
-    var lb = el('div', 'lab', '　' + label);
-    lb.appendChild(el('span', 'chev', UP.open[key] ? '▴' : '▾'));
-    if (sub) lb.appendChild(el('span', 'gcount', sub));
-    row.appendChild(lb);
-    row.appendChild(el('div', 'v num', value));
-    row.appendChild(el('div', 'p num', pct || ''));
-    row.addEventListener('click', function () {
-      if (UP.open[key]) delete UP.open[key];
-      else UP.open[key] = true;
-      drawResult(months);
-    });
-    host.appendChild(row);
-    if (UP.open[key]) draw(host);
-  }
-  /* 매출·지출에 안 넣는 돈 — 항목 제 이름을 쓰고 꼬리표만 단다 */
-  /* ★ 36차. 다른 항목처럼 펼쳐진다. 안 그러면 잘못 찍은 것을 되돌릴 길이
-     「처음부터 다시 정하기」뿐이다 — [항목 바꾸기]가 펼친 줄에 붙기 때문이다.
-     partKey 는 monthNumbers 가 담은 이름이고, SKIP_PART 면 F가 넘긴 몫이다 */
-  function keepRow(name, amount, partKey, isIn) {
-    var skipOnly = partKey === SKIP_PART;
-    var cat = skipOnly ? baseName(ASK_SKIP_CAT) : partKey;
-    if (partKey === XFER_PART) cat = XFER_PART; /* 이체는 줄 단위로 거른다 */
-    var key = 'keep:' + partKey + ':' + (isIn ? 'in' : 'out');
-    var open = !!UP.open[key];
-    var row = el('div', 'orow tapx');
-    var lb = el('div', 'lab', '　' + name);
-    lb.appendChild(el('span', 'chev', open ? '▴' : '▾'));
-    lb.appendChild(el('span', 'keeptag', '사업 외'));
-    var cnt = keepCount(d, cat, isIn, skipOnly);
-    if (cnt) lb.appendChild(el('span', 'gcount', cnt));
-    row.appendChild(lb);
-    row.appendChild(el('div', 'v num', won(amount)));
-    row.appendChild(el('div', 'p num', ''));
-    row.addEventListener('click', function () {
-      if (UP.open[key]) delete UP.open[key];
-      else UP.open[key] = true;
-      drawResult(months);
-    });
-    host.appendChild(row);
-    if (open)
-      drawKeepDetail(host, d, cat, isIn, skipOnly, function () {
-        drawResult(months);
-      });
-  }
   /* 눌러서 그 안의 거래처를 펼쳐 보는 줄 */
 
   var mm = +UP.month.slice(5, 7);
@@ -366,16 +299,6 @@ function drawResultInner(months) {
     else pLab = pmN + '월 같은 기간(1~' + pCut + '일)';
   }
   if (!UP.cmpOpen) UP.cmpOpen = {};
-  function cmpRow(c, key) {
-    var open = UP.cmpOpen[key];
-    var s = el('div', 'cmprow tapx ' + c.cls, open ? c.full : c.short);
-    s.addEventListener('click', function () {
-      if (open) delete UP.cmpOpen[key];
-      else UP.cmpOpen[key] = true;
-      drawResult(months);
-    });
-    return s;
-  }
   /* 그 항목에 거래처 몇 곳, 거래 몇 건인지 */
 
   /* ── 손익 카드 ── 계산 순서 그대로 위에서 아래로 내려온다.
@@ -446,63 +369,12 @@ function drawResultInner(months) {
   var allKeys = keys.slice();
   if (d.cats[UNSET]) allKeys.push(UNSET);
 
-  /* 「나간 돈 75% 증가」의 차이가 전부 사장님 인출일 때가 있다.
-     비교 줄의 분모는 안 건드리고, 제외분을 뺀 %를 한 줄 덧붙인다.
-     ① 비교 줄이 없는 달에는 안 그린다 — 같은 숫자를 두 번 말하게 된다
-     ② 두 %가 3%p 미만이면 소음이다
-     ③ 방향이 뒤집히면 문턱과 상관없이 그린다 */
-
-  /* ══ 43차 · 위에서 아래로 한 번에 읽히게 ══════════════════
-     ★ 왜 다시 짰는가. 만든 사람이 1년치 표를 보고 자기 숫자를 못 읽었다 —
-       「매출 5500 − 지출 5100인데 왜 순이익 1000?」. 답은 「그 밖의 입금」이었고
-       그 줄은 화면에 있었다. 있는데 안 읽혔다.
-     ★ 그래서 순이익 바로 위 두 줄이 순이익을 만드는 두 값이 되게 놓는다.
-         들어온 돈(매출 + 그 밖의 입금) − 사업에 쓴 돈 = 순이익
-       세 줄이 그대로 뺄셈이라 더 설명할 것이 없다.
-     ★ 계좌로 들어오고 나간 전부(inTotal·outTotal)는 이 뺄셈의 값이 아니다.
-       그건 「계좌 잔액」을 펼치면 나온다 — 검산은 거기서 그대로 돈다.
-     ★ 접힌 화면에는 한 줄에 숫자 하나, 설명 없음. 설명은 펼쳤을 때만 */
-
-  /* 어느 쪽 줄인지로 이름을 정한다. 항목 이름만 믿으면 뜻이 반대가 된다 —
-     같은 거래처가 넣기도 하고 가져가기도 한다 */
-  function keepSideName(cat, side) {
-    /* 계좌 간 이체는 나간 쪽과 들어온 쪽이 같은 이름이라
-       두 줄이 똑같아 보인다. 방향을 붙여 갈라 부른다 (36차 4단계) */
-    if (cat === XFER_PART) {
-      return XFER_PART + (side === '입금' ? ' (들어옴)' : ' (나감)');
-    }
-    return sideOf(cat, side === '입금');
-  }
   /* 오른쪽 끝을 윗줄과 맞춘다 — % 칸을 두면 54px 만큼 어긋난다 */
   function calcRow(label, value) {
     var r = el('div', 'orow');
     r.appendChild(el('div', 'lab', label));
     r.appendChild(el('div', 'v num', value));
     return r;
-  }
-  /* 눌러서 안을 펼쳐 보는 칸 */
-  function boxRow(key, label, value, note, draw, cls, whyId) {
-    var open = !!UP.open[key];
-    var row = el('div', 'orow tapx' + (cls ? ' ' + cls : ''));
-    var lab = el('div', 'lab', label);
-    lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
-    if (note) lab.appendChild(el('span', 'gcount', note));
-    if (whyId)
-      lab.appendChild(
-        whyMark(whyId, function () {
-          drawResult(months);
-        })
-      );
-    row.appendChild(lab);
-    row.appendChild(el('div', 'v num', value));
-    row.addEventListener('click', function () {
-      UP.open[key] = !UP.open[key];
-      drawResult(months);
-    });
-    host.appendChild(row);
-    /* ? 상자가 먼저다 — 낱말 뜻을 보고 나서 안을 편다 */
-    if (whyId && whyOpen(whyId)) host.appendChild(whyBox(whyId));
-    if (open) draw();
   }
   /* ── 38차 1·6번 ── 펼치면 나오는 것 */
   /* ── 87차 ② · 회색 글씨는 「자세히」 안으로 다 넣는다 ─────────────────
@@ -514,10 +386,6 @@ function drawResultInner(months) {
        ② 나간 쪽 「아래 %는 매출 …원 기준입니다」는 바로 아래 줄들의 % 를
           읽는 자라, 그 줄들보다 먼저 보여야 뜻이 선다 */
   var 회색모음 = null;
-  function 회색줄(node) {
-    if (회색모음) 회색모음.push(node);
-    else host.appendChild(node);
-  }
   function 회색펴기(side) {
     var 줄들 = 회색모음 || [];
     회색모음 = null;
@@ -535,486 +403,6 @@ function drawResultInner(months) {
       줄들.forEach(function (n) {
         host.appendChild(n);
       });
-  }
-  function drawSideParts(side) {
-    if (d.blocked) return; /* 안 정한 게 많으면 숫자를 안 보여준다 */
-    if (side === 'in') {
-      /* 이 둘을 더하면 윗줄이다 */
-      /* ★ 51차 ①. 여기가 안 열렸다. subRow 는 바로 옆에 있는데
-         「들여쓴 작은 줄. 각자 눌려서 각자 열린다」라고 주석까지 달아두고
-         정작 calcRow(그냥 글줄)를 쓰고 있었다.
-       ★ 열쇠는 항목 이름 그대로 쓴다 — drawDetail 이 UP.open[cat] 으로
-         몇 개를 보일지도 정하기 때문에, 앞을 붙여 갈면 열려도 0개가 된다.
-         keepRow 는 이미 'keep:…' 로 갈라져 있고 tapLine 은 아무도 안 부른다 */
-      subRow('매출', '매출', won(d.sales), null, function () {
-        drawDetail(host, d, '매출');
-      });
-      if (d.otherIn) {
-        /* drawInDetail 은 만들어만 두고 아무도 안 부르고 있었다.
-           UP.open 을 안 보므로 subRow 가 열렸을 때만 부르면 그대로 된다.
-           항목이 아니라서 열쇠는 __otherin 으로 갈라 둔다 */
-        subRow('그 밖의 입금', '__otherin', won(d.otherIn), null, function () {
-          drawInDetail(host, d);
-        });
-        /* ★ 87차 ②. 회색 줄은 모아서 「자세히」 뒤로 넣는다 (회색펴기가 낸다) */
-        회색줄(
-          el(
-            'div',
-            'subnote',
-            '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'
-          )
-        );
-        /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다.
-           ★ 붉은 줄은 안 접는다. 짚어드리는 말이라 접으면 뜻이 없다 */
-        if (d.sales > 0 && d.otherIn / d.sales > 0.1) {
-          host.appendChild(
-            el('div', 'subnote warn', '매출로 정하지 않으신 입금이 큽니다. 확인해보세요')
-          );
-        }
-      }
-      if (d.salesOut) {
-        회색줄(
-          el('div', 'subnote', '매출 환불 ' + won(d.salesOut) + '원은 이미 매출에서 뺐습니다')
-        );
-      }
-      if (pd) {
-        var ci = cmpLine(d.sales + d.otherIn, pd.sales + pd.otherIn, pLab, true);
-        if (ci) 회색줄(el('div', 'subnote', ci.full));
-      }
-      /* ★ 51차 ①. 무조건 부르던 것을 지운다. 이제 subRow 가 열렸을 때만 부른다 */
-      return;
-    }
-    /* ★ 54차 ⑥. 원칙 4 — 비율에는 분모를 붙인다.
-       항목마다 분모를 쓰면 아홉 줄이 두 배가 된다. 머리줄 아래 한 번만 적는다.
-       ★ 비율을 못 내는 달에는 왜 없는지를 그 자리에 적는다 —
-         빈 칸만 남기면 「왜 안 나오지」가 된다 */
-    host.appendChild(
-      el(
-        'div',
-        'subnote',
-        d.sales > 0
-          ? '아래 %는 매출 ' + won(d.sales) + '원 기준입니다'
-          : '아직 다 정하지 않아 비율을 내지 않았습니다'
-      )
-    );
-    /* 나간 쪽 — 항목별.
-       ★ 43차. 금액 큰 순이 아니라 늘 같은 순서다.
-         매달 자리가 바뀌면 지난달과 견줄 수가 없다 */
-    keys.forEach(function (k) {
-      subRow(
-        k,
-        k,
-        won(d.cats[k]),
-        null,
-        function () {
-          drawDetail(host, d, k);
-        },
-        pctCell(d.cats[k])
-      );
-    });
-    /* 원가율 — 「제일 보고 싶은 건 원가」라고 하셨다.
-       원칙 4대로 분모 금액을 같이 적는다 */
-    var food = (d.cats[baseName('식자재')] || 0) + (d.cats[baseName('주류·음료')] || 0);
-    if (food > 0 && d.sales > 0) {
-      /* ★ 62차 ②. 업종마다 이름도 재료도 다르다. 1년치 표와 같은 이름을 쓴다 (49차) */
-      var 재료이름 =
-        baseName('식자재') + (isHidden(baseName('주류·음료')) ? '' : '·' + baseName('주류·음료'));
-      /* ★ 87차 ②. 나간 쪽 회색 줄도 「자세히」 안으로 — 두 자리의 모양을 맞춘다 */
-      회색줄(
-        el(
-          'div',
-          'subnote',
-          tradeInfo().비율이름 +
-            ' ' +
-            pctStr(food / d.sales) +
-            ' ' +
-            '(' +
-            재료이름 +
-            ' ' +
-            won(food) +
-            '원 ÷ 매출 ' +
-            won(d.sales) +
-            '원)'
-        )
-      );
-    }
-    if (pd) {
-      var co = cmpLine(d.cost, pd.cost, pLab, false);
-      if (co) 회색줄(el('div', 'subnote', co.full));
-    }
-  }
-  /* ── 86차 ④⑤⑨ · 직접 넣는 칸을 하나로 ────────────────────────────
-     들어온 쪽(현금매출)과 나간 쪽이 같은 칸·같은 규칙을 쓴다.
-     ★ 예전에는 「＋ 추가」를 누르면 그 자리에서 상자를 만들어 붙였다.
-       그래서 「넣기」로 다시 그리면 상자가 사라져, 하나 더 넣으려면
-       올라와서 또 눌러야 했다 — 여러 건 넣는 것이 이 기능의 뜻인데 그게 막혔다.
-       이제 열림·고침을 UP.open 에 두고 그리는 자가 상자를 낸다.
-       그래서 넣은 뒤에도 상자가 그대로 남고 칸만 비워진다.
-     ★ 화면은 안 움직인다 — drawResult 가 스크롤 자리를 지키고(56차),
-       칸으로 되돌아가는 focus 도 preventScroll 로 부른다.
-     ★ 저장은 fc.manual 의 items·amounts·days 그대로다. 새 칸을 안 만든다 */
-
-  /* 날짜 막는 규칙 — 들어온 쪽과 나간 쪽이 같은 자를 쓴다.
-     말은 83차에서 통과한 그대로다. 한 글자도 안 바꾼다 */
-  function 날짜재기(m, 진행, 끝날, dtxt) {
-    if (!dtxt) {
-      /* ★ 83차 ④-3. 진행 중인 달에는 날짜 없는 값을 안 받는다 */
-      if (진행) return { 말: '이 달은 아직 진행 중입니다. 며칠인지 적어주세요.' };
-      return { day: 0 }; /* 0 = 날짜 없이 이 달 전체 */
-    }
-    var dd = +dtxt;
-    if (dd < 1 || dd > 끝날) {
-      return {
-        말: 진행
-          ? '오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.'
-          : monNum(m) + '은 ' + 끝날 + '일까지입니다.'
-      };
-    }
-    return { day: dd };
-  }
-  /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 —
-     안 그러면 「월세」가 달마다 새로 생겨 줄이 쌓인다 (86차 ⑨) */
-  function manualFind(name, side) {
-    var t = String(name).trim();
-    var f = ((UP.manual && UP.manual.items) || []).filter(function (it) {
-      return it.side === side && String(it.name).trim() === t;
-    })[0];
-    return f ? f.id : null;
-  }
-  /* 금액·날짜(·항목 이름) 한 줄. opt.넣기(이름, 금액, 날) 이 참을 내면 넣은 것이다 */
-  function drawEntryBox(opt) {
-    var m = UP.month;
-    var box = el('div', 'catpanel cashadd');
-    var nameInp = null;
-    if (opt.이름칸) {
-      nameInp = document.createElement('input');
-      nameInp.type = 'text';
-      nameInp.className = 'maninput nameinput';
-      nameInp.placeholder = '항목 이름';
-      nameInp.value = opt.이름 || '';
-      box.appendChild(nameInp);
-    }
-    var amt = document.createElement('input');
-    amt.type = 'text';
-    amt.inputMode = 'numeric';
-    amt.className = 'maninput';
-    amt.placeholder = '금액';
-    if (opt.금액) amt.value = won(opt.금액);
-    moneyLive(amt); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
-    var 금액칸 = el('div', 'fixgrp');
-    금액칸.appendChild(amt);
-    /* ★ 85차 ②. 「원」은 칸 바깥에 글자로 둔다 — 안에 넣으면 지울 때 같이 지워진다 */
-    금액칸.appendChild(el('span', 'fixlab', '원'));
-    box.appendChild(금액칸);
-    var day = document.createElement('input');
-    day.type = 'number';
-    day.className = 'maninput cashdayin';
-    day.min = 1;
-    day.max = opt.끝날;
-    if (opt.날) day.value = opt.날;
-    /* ★ 85차 ③. 앞에 지금 보고 있는 달, 뒤에 「일」. 달을 옮기면 앞의 달도 같이 바뀐다 */
-    var 날짜칸 = el('div', 'fixgrp');
-    날짜칸.appendChild(el('span', 'fixlab', monNum(m)));
-    날짜칸.appendChild(day);
-    날짜칸.appendChild(el('span', 'fixlab', '일'));
-    box.appendChild(날짜칸);
-    box.appendChild(
-      el(
-        'div',
-        'cashhint',
-        opt.진행
-          ? '오늘까지만 넣을 수 있습니다 (1~' + opt.끝날 + '일)'
-          : '비워도 됩니다 — 비우면 이 달 전체로 칩니다'
-      )
-    );
-    var msg = el('div', 'subnote', '');
-    var ok = el('button', 'upbtn on', '넣기');
-    ok.type = 'button';
-    ok.addEventListener('click', function () {
-      var nm = nameInp ? String(nameInp.value).trim() : null;
-      if (nameInp && !nm) {
-        msg.textContent = '항목 이름을 적어주세요.';
-        return;
-      }
-      var v = moneyRead(amt.value); /* ★ 85차 ②. 예전 식 그대로다 — 콤마는 걷힌다 */
-      if (!v) {
-        msg.textContent = '금액을 적어주세요.';
-        return;
-      }
-      var 잰것 = 날짜재기(m, opt.진행, opt.끝날, String(day.value).replace(/[^0-9]/g, ''));
-      if (잰것.말) {
-        msg.textContent = 잰것.말;
-        return;
-      }
-      opt.넣기(nm, v, 잰것.day);
-      drawResult(months);
-    });
-    /* ★ 86차 ④. 「취소」가 아니라 「닫기」다 — 넣은 것을 무르는 것이 아니라 칸을 접는 것이다 */
-    var no = el('button', 'upbtn plain', '닫기');
-    no.type = 'button';
-    no.addEventListener('click', function () {
-      opt.닫기();
-      drawResult(months);
-    });
-    box.appendChild(ok);
-    box.appendChild(no);
-    box.appendChild(msg);
-    host.appendChild(box);
-    /* 이어서 바로 치실 수 있게 — 화면은 안 움직인다 */
-    try {
-      (nameInp || amt).focus({ preventScroll: true });
-    } catch (e) {}
-  }
-  /* 날짜별로 적으신 한 줄 — [수정] [지우기] (86차 ⑤) */
-  function 날줄(m, id, x, 열쇠, 고치기) {
-    var r = el('div', 'orow cashday');
-    r.appendChild(el('div', 'lab', '　　' + monNum(m) + ' ' + x.day + '일'));
-    r.appendChild(el('div', 'v num', won(x.amt)));
-    var ed = el('button', 'chbtn', '수정');
-    ed.type = 'button';
-    ed.addEventListener('click', function () {
-      고치기(열쇠);
-      drawResult(months);
-    });
-    r.appendChild(ed);
-    var del = el('button', 'chbtn', '지우기');
-    del.type = 'button';
-    del.addEventListener('click', function () {
-      manualDayRemove(m, id, x.day, x.amt);
-      drawResult(months);
-    });
-    r.appendChild(del);
-    host.appendChild(r);
-  }
-  /* 넣기·고치기가 실제로 저장하는 자리. 날 0 은 「날짜 없이 이 달 전체」다.
-     고칠 때는 지우고 다시 넣는다 — manualDayAdd 가 날짜순으로 꽂아 주므로
-     줄 차례가 안 튄다 (86차 ⑤) */
-  function 넣어두기(m, id, v, 날, 옛것) {
-    if (옛것) manualDayRemove(m, id, 옛것.day, 옛것.amt);
-    if (날) manualDayAdd(m, id, 날, v);
-    else manualSet(m, id, manualAmt(m, id) + v);
-  }
-  /* 날짜 없이 달로만 적으신 것 — 옛 저장분이라 있을 때만 보인다 (규칙 7) */
-  function 달전체줄(m, id, 달합, 진행) {
-    if (진행) {
-      if (달합) {
-        /* 끝난 뒤에 세겠다는 것을 밝힌다 — 조용히 빼면 숫자가 안 맞아 보인다 */
-        host.appendChild(
-          el('div', 'subnote', '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다')
-        );
-      }
-      return;
-    }
-    var r2 = el('div', 'orow cashday');
-    r2.appendChild(el('div', 'lab', '　　날짜 없이 이 달 전체'));
-    var inp = document.createElement('input');
-    inp.type = 'text';
-    inp.inputMode = 'numeric';
-    inp.className = 'maninput';
-    inp.value = 달합 ? won(달합) : '';
-    inp.placeholder = '0';
-    moneyLive(inp); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
-    inp.addEventListener('change', function () {
-      manualSet(m, id, moneyRead(inp.value));
-      drawResult(months);
-    });
-    r2.appendChild(inp);
-    r2.appendChild(el('span', 'fixlab', '원'));
-    host.appendChild(r2);
-  }
-
-  /* 직접 넣기 칸. 끝난 달에만 나온다 (규칙 2) */
-  /* ── 83차 ①②③ · 「현금매출」 한 줄과 그 아래 날짜별 목록 ──────────
-     ★ 병원·치과는 한 건에 3천만원씩 들어오는 경우가 있어 날짜가 필요하다.
-       식당·카페는 매출의 2~3%라 달에 한 번으로 충분하다 — 둘 다 되게 둔다.
-     ★ 날짜를 안 적으면 그 달 전체로 친다 (amounts). 적으면 days 로 간다.
-     ★ 진행 중인 달에는 오늘까지만, 그리고 날짜 있는 것만 받는다 (83차 ④) */
-  function drawCashRow(isFull) {
-    var m = UP.month;
-    var 진행 = !isFull;
-    var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
-    var 달합 = manualAmt(m, CASH_ID);
-    var 날들 = manualDays(m, CASH_ID);
-    var 합 =
-      (진행 ? 0 : 달합) +
-      날들.reduce(function (s, it) {
-        return s + (진행 && it.day > 끝날 ? 0 : +it.amt || 0);
-      }, 0);
-    var open = !!UP.open.__cash;
-    var row = el('div', 'orow manrow tapx');
-    var lab = el('div', 'lab', '　' + CASH_NAME);
-    lab.appendChild(el('span', 'manmark', ' ✎'));
-    lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
-    row.appendChild(lab);
-    row.appendChild(el('div', 'v num', 합 ? won(합) : ''));
-    row.addEventListener('click', function () {
-      UP.open.__cash = !UP.open.__cash;
-      drawResult(months);
-    });
-    host.appendChild(row);
-    if (!open) return;
-    /* 날짜별로 적으신 것 */
-    var 고침 = UP.open.__cashEdit || '';
-    날들.forEach(function (it) {
-      var 열쇠 = it.day + '|' + it.amt;
-      if (고침 === 열쇠) {
-        /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 금액과 날짜가 채워진 채로 */
-        drawEntryBox({
-          금액: it.amt,
-          날: it.day,
-          끝날: 끝날,
-          진행: 진행,
-          넣기: function (nm, v, 날) {
-            넣어두기(m, CASH_ID, v, 날, it);
-            UP.open.__cashEdit = '';
-          },
-          닫기: function () {
-            UP.open.__cashEdit = '';
-          }
-        });
-        return;
-      }
-      날줄(m, CASH_ID, it, 열쇠, function (k) {
-        UP.open.__cashEdit = k;
-        UP.open.__cashAdd = false;
-      });
-    });
-    /* 날짜 없이 달로만 적으신 것 — 끝난 달에서만 받는다 (83차 ④-3) */
-    달전체줄(m, CASH_ID, 달합, 진행);
-    /* ★ 86차 ④. 「＋ 추가」는 열림 상태만 켠다. 상자는 그리는 자가 낸다 —
-       그래야 「넣기」 뒤에도 상자가 그대로 남는다 */
-    if (UP.open.__cashAdd && !고침) {
-      drawEntryBox({
-        끝날: 끝날,
-        진행: 진행,
-        넣기: function (nm, v, 날) {
-          넣어두기(m, CASH_ID, v, 날, null);
-        },
-        닫기: function () {
-          UP.open.__cashAdd = false;
-        }
-      });
-    } else if (!고침) {
-      var add = el('button', 'oblink', '＋ 추가');
-      add.type = 'button';
-      add.addEventListener('click', function () {
-        UP.open.__cashAdd = true;
-        drawResult(months);
-      });
-      host.appendChild(add);
-    }
-  }
-
-  /* ── 86차 ⑨ · 「사업에 쓴 돈」에 직접 넣기 — 항목명·금액·날짜 ──────────
-     ⑧에서 들어온 쪽 단추를 없애면 나간 쪽까지 직접 넣을 길이 막힌다.
-     그래서 나간 쪽은 없애지 않고 제대로 다시 만든다 (개발자 지시).
-     ★ 들어온 쪽은 「현금매출」 하나로 충분하지만 나간 쪽은 무엇을 적을지
-       미리 알 수 없다 — 그래서 항목 이름도 대표님이 적으신다.
-     ★ 계산은 새로 만들 것이 없다. 여기 적은 금액은 manualSum('out') 으로
-       이미 manOut 에 배선돼 있어 「사업에 쓴 돈」에 더해진다.
-       계좌 잔액·검산(입금·출금 합계)·일별 흐름 막대에는 안 들어간다 —
-       계좌에서 나간 돈이 아니다. 들어온 쪽과 같은 규칙이다.
-     ★ 아무것도 안 적으면 숫자가 한 자리도 안 움직인다 (83차 ⑥과 같은 까닭) */
-  function drawOutManual(isFull) {
-    var m = UP.month;
-    var 진행 = !isFull;
-    var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
-    var 고침 = UP.open.__outEdit || '';
-    /* ★ 87차 ③. 방금 「넣기」를 누른 항목은 이 판에서만 펼친 채로 둔다 —
-       넣자마자 접혀 사라지면 「들어갔나?」 하게 된다.
-       다음에 화면을 다시 그릴 때는 접힌다 (여기서 한 번 쓰고 지운다) */
-    var 방금 = UP.open.__manJust || '';
-    UP.open.__manJust = '';
-    manualItems('out').forEach(function (it) {
-      var 날들 = manualDays(m, it.id);
-      var 달합 = manualAmt(m, it.id);
-      /* ★ 87차 ③. 오른쪽에 그 항목의 합계. 세는 자는 현금매출과 한 글자도 같다 */
-      var 합 =
-        (진행 ? 0 : 달합) +
-        날들.reduce(function (s, x) {
-          return s + (진행 && x.day > 끝날 ? 0 : +x.amt || 0);
-        }, 0);
-      /* ★ 87차 ③. 위 항목들(인건비·월세·…)과 같은 줄 모양이다 —
-         혼자만 늘 펼쳐져 있어서 눈에 걸렸다. 처음에는 접혀 있다 */
-      var 열쇠 = 'manopen:' + it.id;
-      var 폄 = !!UP.open[열쇠] || 방금 === it.id;
-      var head = el('div', 'orow manrow manitem tapx');
-      var l = el('div', 'lab', '　' + it.name);
-      l.appendChild(el('span', 'manmark', ' ✎'));
-      l.appendChild(el('span', 'chev', 폄 ? '▴' : '▾'));
-      head.appendChild(l);
-      head.appendChild(el('div', 'v num', 합 ? won(합) : ''));
-      head.addEventListener('click', function () {
-        UP.open[열쇠] = !폄;
-        drawResult(months);
-      });
-      host.appendChild(head);
-      if (!폄) return; /* 접으면 날짜 줄도 수정·지우기도 안 보인다 */
-      날들.forEach(function (x) {
-        var 열쇠 = it.id + '|' + x.day + '|' + x.amt;
-        if (고침 === 열쇠) {
-          /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 이미 채워진 채로 */
-          drawEntryBox({
-            금액: x.amt,
-            날: x.day,
-            끝날: 끝날,
-            진행: 진행,
-            넣기: function (nm, v, 날) {
-              넣어두기(m, it.id, v, 날, x);
-              UP.open.__outEdit = '';
-            },
-            닫기: function () {
-              UP.open.__outEdit = '';
-            }
-          });
-          return;
-        }
-        날줄(m, it.id, x, 열쇠, function (k) {
-          /* 고치는 동안 그 항목이 접혀 사라지면 고칠 칸도 같이 사라진다 */
-          UP.open['manopen:' + it.id] = true;
-          UP.open.__outEdit = k;
-          UP.open.__outAdd = false;
-        });
-      });
-      /* 옛 저장분 — 날짜 없이 달로만 적으신 것. 있을 때만 보인다 (규칙 7) */
-      if (달합) 달전체줄(m, it.id, 달합, 진행);
-      /* ★ 87차 ③. 항목을 통째로 지우는 단추는 펼친 안쪽에 둔다.
-         건 하나를 지우는 「지우기」와 헷갈리지 않게 이름을 갈라 둔다 */
-      var del = el('div', 'manitemdel');
-      var rm = el('button', 'chbtn', '항목 지우기');
-      rm.type = 'button';
-      rm.addEventListener('click', function () {
-        manualRemove(it.id);
-        drawResult(months);
-      });
-      del.appendChild(rm);
-      host.appendChild(del);
-    });
-    if (고침) return; /* 고치는 중에는 새로 넣는 칸을 안 연다 */
-    if (UP.open.__outAdd) {
-      drawEntryBox({
-        이름칸: true,
-        끝날: 끝날,
-        진행: 진행,
-        넣기: function (nm, v, 날) {
-          /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 */
-          var id = manualFind(nm, 'out') || manualAdd(nm, 'out');
-          넣어두기(m, id, v, 날, null);
-          UP.open.__manJust = id; /* ★ 87차 ③. 방금 넣은 것은 펼쳐서 보여드린다 */
-        },
-        닫기: function () {
-          UP.open.__outAdd = false;
-        }
-      });
-      return;
-    }
-    var add = el('button', 'oblink', '＋ 항목 추가');
-    add.type = 'button';
-    add.addEventListener('click', function () {
-      UP.open.__outAdd = true;
-      drawResult(months);
-    });
-    host.appendChild(add);
   }
 
   function manualBox(side, label, value, isFull) {
@@ -1043,20 +431,20 @@ function drawResultInner(months) {
     /* ★ 38차 1번. 펼치면 먼저 항목별이 나온다. 그다음이 직접 넣기 칸이다 */
     /* ★ 87차 ②. 여기서부터 나오는 회색 줄은 모았다가 「자세히」 뒤로 넣는다 */
     회색모음 = [];
-    drawSideParts(side);
+    drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side);
     /* 규칙 6 — 얼마가 직접 넣으신 것인지 늘 밝힌다 */
     if (mine) {
-      회색줄(el('div', 'subnote', '직접 넣으신 ' + won(mine) + '원 포함'));
+      회색줄(회색모음, host, el('div', 'subnote', '직접 넣으신 ' + won(mine) + '원 포함'));
     }
     회색펴기(side);
     /* ★ 83차 ①③. 매출 쪽에는 「현금매출」이 처음부터 한 줄로 있다.
        만들라고 시키지 않는다 — 이미 있는 상태로 보인다.
        이름은 고정이고 대표님이 바꾸거나 지울 수 없다 */
-    if (side === 'in') drawCashRow(isFull);
+    if (side === 'in') drawCashRow(months, host, isFull);
     /* ★ 86차 ⑨. 나간 쪽은 무엇을 적을지 미리 알 수 없어 항목 이름도 대표님이 적으신다.
        날짜 규칙은 들어온 쪽과 똑같다 — 그래서 진행 중인 달에도 이 자리가 열린다 */
     if (side === 'out') {
-      drawOutManual(isFull);
+      drawOutManual(months, host, isFull);
       return;
     }
     if (!isFull) return; /* 진행 중인 달에는 적는 칸을 안 연다 (규칙 2) */
@@ -1261,6 +649,8 @@ function drawResultInner(months) {
      통장에 찍힌 그대로라 안 바뀐다 — 순이익과 달리 확정값이다. 파랑(--now)으로 갈라 쓴다.
      펼치면 월초·들어온·나간·월말이 나온다. 계좌 검산은 거기서 그대로 돈다 */
   boxRow(
+    months,
+    host,
     '__bal',
     (full ? +UP.month.slice(5, 7) + '월 말' : '현재') + ' 계좌 잔액',
     won(d.close),
@@ -1318,6 +708,8 @@ function drawResultInner(months) {
   var keepTot = (d.keepIn || 0) + (d.keepOut || 0);
   if (keepTot) {
     boxRow(
+      months,
+      host,
       '__keep',
       '사업 외 용도',
       won(keepTot),
@@ -1336,7 +728,7 @@ function drawResultInner(months) {
             return b.v - a.v;
           })
           .forEach(function (r) {
-            keepRow(r.name, r.v, r.k, r.isIn);
+            keepRow(d, months, host, r.name, r.v, r.k, r.isIn);
           });
       },
       'sidebox',
@@ -1354,6 +746,8 @@ function drawResultInner(months) {
   if (DUE_HOLD_NOW) {
     var 보류것 = DUE_HOLD_NOW;
     boxRow(
+      months,
+      host,
       '__hold',
       '예상 잔액 표시를 보류한 거래 (출금 ' + won(보류것.건수) + '건)',
       won(보류것.합),
@@ -1378,12 +772,14 @@ function drawResultInner(months) {
   if (unsetAmt) {
     var 작은거래표시 = sk.n ? '작은 거래 ' + won(sk.n) + '곳 · ' + won(sk.sum) + '원 별도' : null;
     boxRow(
+      months,
+      host,
       '__unset',
       '아직 안 정한 돈 (거래 ' + won(d.unknownN) + '건)',
       won(unsetAmt),
       작은거래표시,
       function () {
-        drawSkippedSmall(true);
+        drawSkippedSmall(sk, months, host, true);
         if (d.uOut) host.appendChild(calcRow('　나간 돈', won(d.uOut)));
         if (d.uIn) host.appendChild(calcRow('　들어온 돈', won(d.uIn)));
         host.appendChild(el('div', 'subnote', '이 돈은 매출에도 지출에도 넣지 않았습니다'));
@@ -1413,101 +809,8 @@ function drawResultInner(months) {
     );
   }
 
-  /* ── 36차 F-3·4·5 ── 안 묻고 넘긴 것을 반드시 화면에 드러낸다.
-     이 셋이 이 선택의 안전장치다. 숨기면 사업에 쓴 돈이 조용히 줄어든다.
-     ★ 파일 전체 기간 합계다. 기간을 안 적으면 한 달치로 읽히신다 (원칙 3) */
-  function drawSkippedSmall(inUnset) {
-    if (!sk.n) return;
-    var skOpen = !!UP.open.__skip;
-    var sr = el('div', 'skipline');
-    var s1 = el('div', 'sk1 tapx');
-    if (inUnset) {
-      s1.appendChild(document.createTextNode('앱이 넘긴 작은 거래 · '));
-    }
-    s1.appendChild(document.createTextNode(monthSpan() + ' · ' + won(sk.n) + '곳 · '));
-    s1.appendChild(el('b', null, won(sk.sum) + '원'));
-    var outAll = 0;
-    (UP.payees || []).forEach(function (g) {
-      outAll += g.outSum;
-    });
-    if (outAll > 0) {
-      s1.appendChild(document.createTextNode('(나간 돈의 ' + pctStr(sk.sum / outAll) + ')'));
-    }
-    s1.appendChild(
-      document.createTextNode(
-        '은 묻지 않고 「' + sayCat(ASK_SKIP_CAT) + '」' + ro(sayCat(ASK_SKIP_CAT)) + ' 두었습니다'
-      )
-    );
-    s1.appendChild(foldChip(skOpen));
-    s1.addEventListener('click', function () {
-      UP.open.__skip = !UP.open.__skip;
-      drawResult(months);
-    });
-    sr.appendChild(s1);
-    /* F-5. 그 금액이 「사업에 쓴 돈」의 10%를 넘으면 한 줄 더.
-       ★ 41차 6번. 분모를 윗줄과 같은 기간으로 맞춘다 — 윗줄은 전 기간 합계인데
-         여기만 「그 달」이었다. 온보딩을 거의 안 한 상태에서는 1726%까지 갔다.
-       ★ 세 자리 %는 어떤 경우에도 뜻이 없다. 분모보다 크면 비율을 안 쓰고 금액만 말한다 */
-    var costSpan = costAllSpan();
-    if (costSpan > 0 && sk.sum / costSpan > 0.1) {
-      var big = sk.sum >= costSpan;
-      sr.appendChild(
-        el(
-          'div',
-          'sk2',
-          big
-            ? '같은 기간 사업에 쓴 돈 ' + won(costSpan) + '원보다 큰 금액입니다. 한 번 펼쳐보세요'
-            : '같은 기간 사업에 쓴 돈 ' +
-                won(costSpan) +
-                '원의 ' +
-                pctStr(sk.sum / costSpan) +
-                '입니다. 한 번 펼쳐보세요'
-        )
-      );
-    }
-    host.appendChild(sr);
-    /* F-4. 펼치면 금액 큰 순으로 보여준다. 정하기는 한 단추로 분류 화면에서 이어 한다. */
-    if (skOpen) {
-      var goSmallWrap = el('div', 'ckbtns');
-      var goSmall = el('button', 'b on', '작은 거래 정하러 가기');
-      goSmall.type = 'button';
-      goSmall.addEventListener('click', function () {
-        unskipAllAsk();
-        useScreen('거래처 더 찍기');
-        moreFromResult();
-      });
-      goSmallWrap.appendChild(goSmall);
-      host.appendChild(goSmallWrap);
-      var box = el('div', 'dtl');
-      UP.skipped
-        .slice()
-        .sort(function (a, b) {
-          return b.outSum - a.outSum;
-        })
-        .slice(0, 40)
-        .forEach(function (g) {
-          var row = el('div', 'drow');
-          var nm = el('div', 'dnm');
-          nm.appendChild(document.createTextNode(showName(g.name)));
-          nm.appendChild(el('div', 'dspan', sideSpan(g, false) + ' · ' + g.outN + '건'));
-          row.appendChild(nm);
-          row.appendChild(el('div', 'dv num', won(g.outSum)));
-          box.appendChild(row);
-        });
-      if (UP.skipped.length > 40) {
-        box.appendChild(
-          el(
-            'div',
-            'subnote',
-            '금액이 큰 40곳만 보여드립니다 (전부 ' + won(UP.skipped.length) + '곳)'
-          )
-        );
-      }
-      host.appendChild(box);
-    }
-  }
   /* 아직 안 정한 돈이 없으면 안전 안내 자체가 사라지지 않도록 원래 자리에 남긴다. */
-  if (!unsetAmt) drawSkippedSmall(false);
+  if (!unsetAmt) drawSkippedSmall(sk, months, host, false);
 
   /* ── 36차 4단계 · 계좌 간 이체 확인 카드 ─────────────────
      ★ 자동으로 안 뺀다. 후보가 0건이면 아무것도 안 띄운다.
@@ -1722,7 +1025,7 @@ function drawResultInner(months) {
          카드 밖에서는 상관없는 문장 밑에 붙어서 4px 겹쳤다.
          ★ cmpRow 함수 자체는 안 고친다 — 고치면 카드 안 쓰임이 같이 움직인다 */
       if (pc) {
-        var pr = cmpRow(pc, 'profit');
+        var pr = cmpRow(months, pc, 'profit');
         pr.classList.add('cmpfree');
         host.appendChild(pr);
       }
@@ -1879,6 +1182,734 @@ function drawResultInner(months) {
     host.appendChild(ib);
   }
   dscLine(host);
+}
+/* ── 36차 F-3·4·5 ── 안 묻고 넘긴 것을 반드시 화면에 드러낸다.
+     이 셋이 이 선택의 안전장치다. 숨기면 사업에 쓴 돈이 조용히 줄어든다.
+     ★ 파일 전체 기간 합계다. 기간을 안 적으면 한 달치로 읽히신다 (원칙 3) */
+function drawSkippedSmall(sk, months, host, inUnset) {
+  if (!sk.n) return;
+  var skOpen = !!UP.open.__skip;
+  var sr = el('div', 'skipline');
+  var s1 = el('div', 'sk1 tapx');
+  if (inUnset) {
+    s1.appendChild(document.createTextNode('앱이 넘긴 작은 거래 · '));
+  }
+  s1.appendChild(document.createTextNode(monthSpan() + ' · ' + won(sk.n) + '곳 · '));
+  s1.appendChild(el('b', null, won(sk.sum) + '원'));
+  var outAll = 0;
+  (UP.payees || []).forEach(function (g) {
+    outAll += g.outSum;
+  });
+  if (outAll > 0) {
+    s1.appendChild(document.createTextNode('(나간 돈의 ' + pctStr(sk.sum / outAll) + ')'));
+  }
+  s1.appendChild(
+    document.createTextNode(
+      '은 묻지 않고 「' + sayCat(ASK_SKIP_CAT) + '」' + ro(sayCat(ASK_SKIP_CAT)) + ' 두었습니다'
+    )
+  );
+  s1.appendChild(foldChip(skOpen));
+  s1.addEventListener('click', function () {
+    UP.open.__skip = !UP.open.__skip;
+    drawResult(months);
+  });
+  sr.appendChild(s1);
+  /* F-5. 그 금액이 「사업에 쓴 돈」의 10%를 넘으면 한 줄 더.
+       ★ 41차 6번. 분모를 윗줄과 같은 기간으로 맞춘다 — 윗줄은 전 기간 합계인데
+         여기만 「그 달」이었다. 온보딩을 거의 안 한 상태에서는 1726%까지 갔다.
+       ★ 세 자리 %는 어떤 경우에도 뜻이 없다. 분모보다 크면 비율을 안 쓰고 금액만 말한다 */
+  var costSpan = costAllSpan();
+  if (costSpan > 0 && sk.sum / costSpan > 0.1) {
+    var big = sk.sum >= costSpan;
+    sr.appendChild(
+      el(
+        'div',
+        'sk2',
+        big
+          ? '같은 기간 사업에 쓴 돈 ' + won(costSpan) + '원보다 큰 금액입니다. 한 번 펼쳐보세요'
+          : '같은 기간 사업에 쓴 돈 ' +
+              won(costSpan) +
+              '원의 ' +
+              pctStr(sk.sum / costSpan) +
+              '입니다. 한 번 펼쳐보세요'
+      )
+    );
+  }
+  host.appendChild(sr);
+  /* F-4. 펼치면 금액 큰 순으로 보여준다. 정하기는 한 단추로 분류 화면에서 이어 한다. */
+  if (skOpen) {
+    var goSmallWrap = el('div', 'ckbtns');
+    var goSmall = el('button', 'b on', '작은 거래 정하러 가기');
+    goSmall.type = 'button';
+    goSmall.addEventListener('click', function () {
+      unskipAllAsk();
+      useScreen('거래처 더 찍기');
+      moreFromResult();
+    });
+    goSmallWrap.appendChild(goSmall);
+    host.appendChild(goSmallWrap);
+    var box = el('div', 'dtl');
+    UP.skipped
+      .slice()
+      .sort(function (a, b) {
+        return b.outSum - a.outSum;
+      })
+      .slice(0, 40)
+      .forEach(function (g) {
+        var row = el('div', 'drow');
+        var nm = el('div', 'dnm');
+        nm.appendChild(document.createTextNode(showName(g.name)));
+        nm.appendChild(el('div', 'dspan', sideSpan(g, false) + ' · ' + g.outN + '건'));
+        row.appendChild(nm);
+        row.appendChild(el('div', 'dv num', won(g.outSum)));
+        box.appendChild(row);
+      });
+    if (UP.skipped.length > 40) {
+      box.appendChild(
+        el(
+          'div',
+          'subnote',
+          '금액이 큰 40곳만 보여드립니다 (전부 ' + won(UP.skipped.length) + '곳)'
+        )
+      );
+    }
+    host.appendChild(box);
+  }
+}
+
+/* ── 86차 ⑨ · 「사업에 쓴 돈」에 직접 넣기 — 항목명·금액·날짜 ──────────
+     ⑧에서 들어온 쪽 단추를 없애면 나간 쪽까지 직접 넣을 길이 막힌다.
+     그래서 나간 쪽은 없애지 않고 제대로 다시 만든다 (개발자 지시).
+     ★ 들어온 쪽은 「현금매출」 하나로 충분하지만 나간 쪽은 무엇을 적을지
+       미리 알 수 없다 — 그래서 항목 이름도 대표님이 적으신다.
+     ★ 계산은 새로 만들 것이 없다. 여기 적은 금액은 manualSum('out') 으로
+       이미 manOut 에 배선돼 있어 「사업에 쓴 돈」에 더해진다.
+       계좌 잔액·검산(입금·출금 합계)·일별 흐름 막대에는 안 들어간다 —
+       계좌에서 나간 돈이 아니다. 들어온 쪽과 같은 규칙이다.
+     ★ 아무것도 안 적으면 숫자가 한 자리도 안 움직인다 (83차 ⑥과 같은 까닭) */
+function drawOutManual(months, host, isFull) {
+  var m = UP.month;
+  var 진행 = !isFull;
+  var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
+  var 고침 = UP.open.__outEdit || '';
+  /* ★ 87차 ③. 방금 「넣기」를 누른 항목은 이 판에서만 펼친 채로 둔다 —
+       넣자마자 접혀 사라지면 「들어갔나?」 하게 된다.
+       다음에 화면을 다시 그릴 때는 접힌다 (여기서 한 번 쓰고 지운다) */
+  var 방금 = UP.open.__manJust || '';
+  UP.open.__manJust = '';
+  manualItems('out').forEach(function (it) {
+    var 날들 = manualDays(m, it.id);
+    var 달합 = manualAmt(m, it.id);
+    /* ★ 87차 ③. 오른쪽에 그 항목의 합계. 세는 자는 현금매출과 한 글자도 같다 */
+    var 합 =
+      (진행 ? 0 : 달합) +
+      날들.reduce(function (s, x) {
+        return s + (진행 && x.day > 끝날 ? 0 : +x.amt || 0);
+      }, 0);
+    /* ★ 87차 ③. 위 항목들(인건비·월세·…)과 같은 줄 모양이다 —
+         혼자만 늘 펼쳐져 있어서 눈에 걸렸다. 처음에는 접혀 있다 */
+    var 열쇠 = 'manopen:' + it.id;
+    var 폄 = !!UP.open[열쇠] || 방금 === it.id;
+    var head = el('div', 'orow manrow manitem tapx');
+    var l = el('div', 'lab', '　' + it.name);
+    l.appendChild(el('span', 'manmark', ' ✎'));
+    l.appendChild(el('span', 'chev', 폄 ? '▴' : '▾'));
+    head.appendChild(l);
+    head.appendChild(el('div', 'v num', 합 ? won(합) : ''));
+    head.addEventListener('click', function () {
+      UP.open[열쇠] = !폄;
+      drawResult(months);
+    });
+    host.appendChild(head);
+    if (!폄) return; /* 접으면 날짜 줄도 수정·지우기도 안 보인다 */
+    날들.forEach(function (x) {
+      var 열쇠 = it.id + '|' + x.day + '|' + x.amt;
+      if (고침 === 열쇠) {
+        /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 이미 채워진 채로 */
+        drawEntryBox(months, host, {
+          금액: x.amt,
+          날: x.day,
+          끝날: 끝날,
+          진행: 진행,
+          넣기: function (nm, v, 날) {
+            넣어두기(m, it.id, v, 날, x);
+            UP.open.__outEdit = '';
+          },
+          닫기: function () {
+            UP.open.__outEdit = '';
+          }
+        });
+        return;
+      }
+      날줄(months, host, m, it.id, x, 열쇠, function (k) {
+        /* 고치는 동안 그 항목이 접혀 사라지면 고칠 칸도 같이 사라진다 */
+        UP.open['manopen:' + it.id] = true;
+        UP.open.__outEdit = k;
+        UP.open.__outAdd = false;
+      });
+    });
+    /* 옛 저장분 — 날짜 없이 달로만 적으신 것. 있을 때만 보인다 (규칙 7) */
+    if (달합) 달전체줄(host, months, m, it.id, 달합, 진행);
+    /* ★ 87차 ③. 항목을 통째로 지우는 단추는 펼친 안쪽에 둔다.
+         건 하나를 지우는 「지우기」와 헷갈리지 않게 이름을 갈라 둔다 */
+    var del = el('div', 'manitemdel');
+    var rm = el('button', 'chbtn', '항목 지우기');
+    rm.type = 'button';
+    rm.addEventListener('click', function () {
+      manualRemove(it.id);
+      drawResult(months);
+    });
+    del.appendChild(rm);
+    host.appendChild(del);
+  });
+  if (고침) return; /* 고치는 중에는 새로 넣는 칸을 안 연다 */
+  if (UP.open.__outAdd) {
+    drawEntryBox(months, host, {
+      이름칸: true,
+      끝날: 끝날,
+      진행: 진행,
+      넣기: function (nm, v, 날) {
+        /* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 */
+        var id = manualFind(nm, 'out') || manualAdd(nm, 'out');
+        넣어두기(m, id, v, 날, null);
+        UP.open.__manJust = id; /* ★ 87차 ③. 방금 넣은 것은 펼쳐서 보여드린다 */
+      },
+      닫기: function () {
+        UP.open.__outAdd = false;
+      }
+    });
+    return;
+  }
+  var add = el('button', 'oblink', '＋ 항목 추가');
+  add.type = 'button';
+  add.addEventListener('click', function () {
+    UP.open.__outAdd = true;
+    drawResult(months);
+  });
+  host.appendChild(add);
+}
+
+/* 직접 넣기 칸. 끝난 달에만 나온다 (규칙 2) */
+/* ── 83차 ①②③ · 「현금매출」 한 줄과 그 아래 날짜별 목록 ──────────
+     ★ 병원·치과는 한 건에 3천만원씩 들어오는 경우가 있어 날짜가 필요하다.
+       식당·카페는 매출의 2~3%라 달에 한 번으로 충분하다 — 둘 다 되게 둔다.
+     ★ 날짜를 안 적으면 그 달 전체로 친다 (amounts). 적으면 days 로 간다.
+     ★ 진행 중인 달에는 오늘까지만, 그리고 날짜 있는 것만 받는다 (83차 ④) */
+function drawCashRow(months, host, isFull) {
+  var m = UP.month;
+  var 진행 = !isFull;
+  var 끝날 = 진행 ? lastDayIn(m) : monthDays(m);
+  var 달합 = manualAmt(m, CASH_ID);
+  var 날들 = manualDays(m, CASH_ID);
+  var 합 =
+    (진행 ? 0 : 달합) +
+    날들.reduce(function (s, it) {
+      return s + (진행 && it.day > 끝날 ? 0 : +it.amt || 0);
+    }, 0);
+  var open = !!UP.open.__cash;
+  var row = el('div', 'orow manrow tapx');
+  var lab = el('div', 'lab', '　' + CASH_NAME);
+  lab.appendChild(el('span', 'manmark', ' ✎'));
+  lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
+  row.appendChild(lab);
+  row.appendChild(el('div', 'v num', 합 ? won(합) : ''));
+  row.addEventListener('click', function () {
+    UP.open.__cash = !UP.open.__cash;
+    drawResult(months);
+  });
+  host.appendChild(row);
+  if (!open) return;
+  /* 날짜별로 적으신 것 */
+  var 고침 = UP.open.__cashEdit || '';
+  날들.forEach(function (it) {
+    var 열쇠 = it.day + '|' + it.amt;
+    if (고침 === 열쇠) {
+      /* ★ 86차 ⑤. 그 줄이 추가 칸과 같은 모양으로 바뀐다 — 금액과 날짜가 채워진 채로 */
+      drawEntryBox(months, host, {
+        금액: it.amt,
+        날: it.day,
+        끝날: 끝날,
+        진행: 진행,
+        넣기: function (nm, v, 날) {
+          넣어두기(m, CASH_ID, v, 날, it);
+          UP.open.__cashEdit = '';
+        },
+        닫기: function () {
+          UP.open.__cashEdit = '';
+        }
+      });
+      return;
+    }
+    날줄(months, host, m, CASH_ID, it, 열쇠, function (k) {
+      UP.open.__cashEdit = k;
+      UP.open.__cashAdd = false;
+    });
+  });
+  /* 날짜 없이 달로만 적으신 것 — 끝난 달에서만 받는다 (83차 ④-3) */
+  달전체줄(host, months, m, CASH_ID, 달합, 진행);
+  /* ★ 86차 ④. 「＋ 추가」는 열림 상태만 켠다. 상자는 그리는 자가 낸다 —
+       그래야 「넣기」 뒤에도 상자가 그대로 남는다 */
+  if (UP.open.__cashAdd && !고침) {
+    drawEntryBox(months, host, {
+      끝날: 끝날,
+      진행: 진행,
+      넣기: function (nm, v, 날) {
+        넣어두기(m, CASH_ID, v, 날, null);
+      },
+      닫기: function () {
+        UP.open.__cashAdd = false;
+      }
+    });
+  } else if (!고침) {
+    var add = el('button', 'oblink', '＋ 추가');
+    add.type = 'button';
+    add.addEventListener('click', function () {
+      UP.open.__cashAdd = true;
+      drawResult(months);
+    });
+    host.appendChild(add);
+  }
+}
+
+/* 날짜 없이 달로만 적으신 것 — 옛 저장분이라 있을 때만 보인다 (규칙 7) */
+function 달전체줄(host, months, m, id, 달합, 진행) {
+  if (진행) {
+    if (달합) {
+      /* 끝난 뒤에 세겠다는 것을 밝힌다 — 조용히 빼면 숫자가 안 맞아 보인다 */
+      host.appendChild(
+        el('div', 'subnote', '날짜 없이 적으신 ' + won(달합) + '원은 이 달이 끝나면 더합니다')
+      );
+    }
+    return;
+  }
+  var r2 = el('div', 'orow cashday');
+  r2.appendChild(el('div', 'lab', '　　날짜 없이 이 달 전체'));
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.inputMode = 'numeric';
+  inp.className = 'maninput';
+  inp.value = 달합 ? won(달합) : '';
+  inp.placeholder = '0';
+  moneyLive(inp); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+  inp.addEventListener('change', function () {
+    manualSet(m, id, moneyRead(inp.value));
+    drawResult(months);
+  });
+  r2.appendChild(inp);
+  r2.appendChild(el('span', 'fixlab', '원'));
+  host.appendChild(r2);
+}
+
+/* 넣기·고치기가 실제로 저장하는 자리. 날 0 은 「날짜 없이 이 달 전체」다.
+     고칠 때는 지우고 다시 넣는다 — manualDayAdd 가 날짜순으로 꽂아 주므로
+     줄 차례가 안 튄다 (86차 ⑤) */
+function 넣어두기(m, id, v, 날, 옛것) {
+  if (옛것) manualDayRemove(m, id, 옛것.day, 옛것.amt);
+  if (날) manualDayAdd(m, id, 날, v);
+  else manualSet(m, id, manualAmt(m, id) + v);
+}
+
+/* 날짜별로 적으신 한 줄 — [수정] [지우기] (86차 ⑤) */
+function 날줄(months, host, m, id, x, 열쇠, 고치기) {
+  var r = el('div', 'orow cashday');
+  r.appendChild(el('div', 'lab', '　　' + monNum(m) + ' ' + x.day + '일'));
+  r.appendChild(el('div', 'v num', won(x.amt)));
+  var ed = el('button', 'chbtn', '수정');
+  ed.type = 'button';
+  ed.addEventListener('click', function () {
+    고치기(열쇠);
+    drawResult(months);
+  });
+  r.appendChild(ed);
+  var del = el('button', 'chbtn', '지우기');
+  del.type = 'button';
+  del.addEventListener('click', function () {
+    manualDayRemove(m, id, x.day, x.amt);
+    drawResult(months);
+  });
+  r.appendChild(del);
+  host.appendChild(r);
+}
+
+/* 금액·날짜(·항목 이름) 한 줄. opt.넣기(이름, 금액, 날) 이 참을 내면 넣은 것이다 */
+function drawEntryBox(months, host, opt) {
+  var m = UP.month;
+  var box = el('div', 'catpanel cashadd');
+  var nameInp = null;
+  if (opt.이름칸) {
+    nameInp = document.createElement('input');
+    nameInp.type = 'text';
+    nameInp.className = 'maninput nameinput';
+    nameInp.placeholder = '항목 이름';
+    nameInp.value = opt.이름 || '';
+    box.appendChild(nameInp);
+  }
+  var amt = document.createElement('input');
+  amt.type = 'text';
+  amt.inputMode = 'numeric';
+  amt.className = 'maninput';
+  amt.placeholder = '금액';
+  if (opt.금액) amt.value = won(opt.금액);
+  moneyLive(amt); /* ★ 85차 ②. 치는 동안 콤마가 붙는다 */
+  var 금액칸 = el('div', 'fixgrp');
+  금액칸.appendChild(amt);
+  /* ★ 85차 ②. 「원」은 칸 바깥에 글자로 둔다 — 안에 넣으면 지울 때 같이 지워진다 */
+  금액칸.appendChild(el('span', 'fixlab', '원'));
+  box.appendChild(금액칸);
+  var day = document.createElement('input');
+  day.type = 'number';
+  day.className = 'maninput cashdayin';
+  day.min = 1;
+  day.max = opt.끝날;
+  if (opt.날) day.value = opt.날;
+  /* ★ 85차 ③. 앞에 지금 보고 있는 달, 뒤에 「일」. 달을 옮기면 앞의 달도 같이 바뀐다 */
+  var 날짜칸 = el('div', 'fixgrp');
+  날짜칸.appendChild(el('span', 'fixlab', monNum(m)));
+  날짜칸.appendChild(day);
+  날짜칸.appendChild(el('span', 'fixlab', '일'));
+  box.appendChild(날짜칸);
+  box.appendChild(
+    el(
+      'div',
+      'cashhint',
+      opt.진행
+        ? '오늘까지만 넣을 수 있습니다 (1~' + opt.끝날 + '일)'
+        : '비워도 됩니다 — 비우면 이 달 전체로 칩니다'
+    )
+  );
+  var msg = el('div', 'subnote', '');
+  var ok = el('button', 'upbtn on', '넣기');
+  ok.type = 'button';
+  ok.addEventListener('click', function () {
+    var nm = nameInp ? String(nameInp.value).trim() : null;
+    if (nameInp && !nm) {
+      msg.textContent = '항목 이름을 적어주세요.';
+      return;
+    }
+    var v = moneyRead(amt.value); /* ★ 85차 ②. 예전 식 그대로다 — 콤마는 걷힌다 */
+    if (!v) {
+      msg.textContent = '금액을 적어주세요.';
+      return;
+    }
+    var 잰것 = 날짜재기(m, opt.진행, opt.끝날, String(day.value).replace(/[^0-9]/g, ''));
+    if (잰것.말) {
+      msg.textContent = 잰것.말;
+      return;
+    }
+    opt.넣기(nm, v, 잰것.day);
+    drawResult(months);
+  });
+  /* ★ 86차 ④. 「취소」가 아니라 「닫기」다 — 넣은 것을 무르는 것이 아니라 칸을 접는 것이다 */
+  var no = el('button', 'upbtn plain', '닫기');
+  no.type = 'button';
+  no.addEventListener('click', function () {
+    opt.닫기();
+    drawResult(months);
+  });
+  box.appendChild(ok);
+  box.appendChild(no);
+  box.appendChild(msg);
+  host.appendChild(box);
+  /* 이어서 바로 치실 수 있게 — 화면은 안 움직인다 */
+  try {
+    (nameInp || amt).focus({ preventScroll: true });
+  } catch (e) {}
+}
+
+/* 같은 이름을 또 적으시면 새 항목을 안 만들고 그 항목에 붙인다 —
+     안 그러면 「월세」가 달마다 새로 생겨 줄이 쌓인다 (86차 ⑨) */
+function manualFind(name, side) {
+  var t = String(name).trim();
+  var f = ((UP.manual && UP.manual.items) || []).filter(function (it) {
+    return it.side === side && String(it.name).trim() === t;
+  })[0];
+  return f ? f.id : null;
+}
+
+/* ── 86차 ④⑤⑨ · 직접 넣는 칸을 하나로 ────────────────────────────
+     들어온 쪽(현금매출)과 나간 쪽이 같은 칸·같은 규칙을 쓴다.
+     ★ 예전에는 「＋ 추가」를 누르면 그 자리에서 상자를 만들어 붙였다.
+       그래서 「넣기」로 다시 그리면 상자가 사라져, 하나 더 넣으려면
+       올라와서 또 눌러야 했다 — 여러 건 넣는 것이 이 기능의 뜻인데 그게 막혔다.
+       이제 열림·고침을 UP.open 에 두고 그리는 자가 상자를 낸다.
+       그래서 넣은 뒤에도 상자가 그대로 남고 칸만 비워진다.
+     ★ 화면은 안 움직인다 — drawResult 가 스크롤 자리를 지키고(56차),
+       칸으로 되돌아가는 focus 도 preventScroll 로 부른다.
+     ★ 저장은 fc.manual 의 items·amounts·days 그대로다. 새 칸을 안 만든다 */
+
+/* 날짜 막는 규칙 — 들어온 쪽과 나간 쪽이 같은 자를 쓴다.
+     말은 83차에서 통과한 그대로다. 한 글자도 안 바꾼다 */
+function 날짜재기(m, 진행, 끝날, dtxt) {
+  if (!dtxt) {
+    /* ★ 83차 ④-3. 진행 중인 달에는 날짜 없는 값을 안 받는다 */
+    if (진행) return { 말: '이 달은 아직 진행 중입니다. 며칠인지 적어주세요.' };
+    return { day: 0 }; /* 0 = 날짜 없이 이 달 전체 */
+  }
+  var dd = +dtxt;
+  if (dd < 1 || dd > 끝날) {
+    return {
+      말: 진행
+        ? '오늘까지만 넣을 수 있습니다 — 1일에서 ' + 끝날 + '일 사이로 적어주세요.'
+        : monNum(m) + '은 ' + 끝날 + '일까지입니다.'
+    };
+  }
+  return { day: dd };
+}
+
+function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
+  if (d.blocked) return; /* 안 정한 게 많으면 숫자를 안 보여준다 */
+  if (side === 'in') {
+    /* 이 둘을 더하면 윗줄이다 */
+    /* ★ 51차 ①. 여기가 안 열렸다. subRow 는 바로 옆에 있는데
+         「들여쓴 작은 줄. 각자 눌려서 각자 열린다」라고 주석까지 달아두고
+         정작 calcRow(그냥 글줄)를 쓰고 있었다.
+       ★ 열쇠는 항목 이름 그대로 쓴다 — drawDetail 이 UP.open[cat] 으로
+         몇 개를 보일지도 정하기 때문에, 앞을 붙여 갈면 열려도 0개가 된다.
+         keepRow 는 이미 'keep:…' 로 갈라져 있고 tapLine 은 아무도 안 부른다 */
+    subRow(months, host, '매출', '매출', won(d.sales), null, function () {
+      drawDetail(host, d, '매출');
+    });
+    if (d.otherIn) {
+      /* drawInDetail 은 만들어만 두고 아무도 안 부르고 있었다.
+           UP.open 을 안 보므로 subRow 가 열렸을 때만 부르면 그대로 된다.
+           항목이 아니라서 열쇠는 __otherin 으로 갈라 둔다 */
+      subRow(months, host, '그 밖의 입금', '__otherin', won(d.otherIn), null, function () {
+        drawInDetail(host, d);
+      });
+      /* ★ 87차 ②. 회색 줄은 모아서 「자세히」 뒤로 넣는다 (회색펴기가 낸다) */
+      회색줄(
+        회색모음,
+        host,
+        el(
+          'div',
+          'subnote',
+          '매출로 정하지 않으신 입금입니다. 환급·되돌려받은 돈이 여기 들어갑니다'
+        )
+      );
+      /* 매출의 10%를 넘으면 한 번 짚어드린다 — 매출로 정하셔야 할 것이 섞여 있을 수 있다.
+           ★ 붉은 줄은 안 접는다. 짚어드리는 말이라 접으면 뜻이 없다 */
+      if (d.sales > 0 && d.otherIn / d.sales > 0.1) {
+        host.appendChild(
+          el('div', 'subnote warn', '매출로 정하지 않으신 입금이 큽니다. 확인해보세요')
+        );
+      }
+    }
+    if (d.salesOut) {
+      회색줄(
+        회색모음,
+        host,
+        el('div', 'subnote', '매출 환불 ' + won(d.salesOut) + '원은 이미 매출에서 뺐습니다')
+      );
+    }
+    if (pd) {
+      var ci = cmpLine(d.sales + d.otherIn, pd.sales + pd.otherIn, pLab, true);
+      if (ci) 회색줄(회색모음, host, el('div', 'subnote', ci.full));
+    }
+    /* ★ 51차 ①. 무조건 부르던 것을 지운다. 이제 subRow 가 열렸을 때만 부른다 */
+    return;
+  }
+  /* ★ 54차 ⑥. 원칙 4 — 비율에는 분모를 붙인다.
+       항목마다 분모를 쓰면 아홉 줄이 두 배가 된다. 머리줄 아래 한 번만 적는다.
+       ★ 비율을 못 내는 달에는 왜 없는지를 그 자리에 적는다 —
+         빈 칸만 남기면 「왜 안 나오지」가 된다 */
+  host.appendChild(
+    el(
+      'div',
+      'subnote',
+      d.sales > 0
+        ? '아래 %는 매출 ' + won(d.sales) + '원 기준입니다'
+        : '아직 다 정하지 않아 비율을 내지 않았습니다'
+    )
+  );
+  /* 나간 쪽 — 항목별.
+       ★ 43차. 금액 큰 순이 아니라 늘 같은 순서다.
+         매달 자리가 바뀌면 지난달과 견줄 수가 없다 */
+  keys.forEach(function (k) {
+    subRow(
+      months,
+      host,
+      k,
+      k,
+      won(d.cats[k]),
+      null,
+      function () {
+        drawDetail(host, d, k);
+      },
+      pctCell(d, d.cats[k])
+    );
+  });
+  /* 원가율 — 「제일 보고 싶은 건 원가」라고 하셨다.
+       원칙 4대로 분모 금액을 같이 적는다 */
+  var food = (d.cats[baseName('식자재')] || 0) + (d.cats[baseName('주류·음료')] || 0);
+  if (food > 0 && d.sales > 0) {
+    /* ★ 62차 ②. 업종마다 이름도 재료도 다르다. 1년치 표와 같은 이름을 쓴다 (49차) */
+    var 재료이름 =
+      baseName('식자재') + (isHidden(baseName('주류·음료')) ? '' : '·' + baseName('주류·음료'));
+    /* ★ 87차 ②. 나간 쪽 회색 줄도 「자세히」 안으로 — 두 자리의 모양을 맞춘다 */
+    회색줄(
+      회색모음,
+      host,
+      el(
+        'div',
+        'subnote',
+        tradeInfo().비율이름 +
+          ' ' +
+          pctStr(food / d.sales) +
+          ' ' +
+          '(' +
+          재료이름 +
+          ' ' +
+          won(food) +
+          '원 ÷ 매출 ' +
+          won(d.sales) +
+          '원)'
+      )
+    );
+  }
+  if (pd) {
+    var co = cmpLine(d.cost, pd.cost, pLab, false);
+    if (co) 회색줄(회색모음, host, el('div', 'subnote', co.full));
+  }
+}
+
+function 회색줄(회색모음, host, node) {
+  if (회색모음) 회색모음.push(node);
+  else host.appendChild(node);
+}
+
+/* 눌러서 안을 펼쳐 보는 칸 */
+function boxRow(months, host, key, label, value, note, draw, cls, whyId) {
+  var open = !!UP.open[key];
+  var row = el('div', 'orow tapx' + (cls ? ' ' + cls : ''));
+  var lab = el('div', 'lab', label);
+  lab.appendChild(el('span', 'chev', open ? '▴' : '▾'));
+  if (note) lab.appendChild(el('span', 'gcount', note));
+  if (whyId)
+    lab.appendChild(
+      whyMark(whyId, function () {
+        drawResult(months);
+      })
+    );
+  row.appendChild(lab);
+  row.appendChild(el('div', 'v num', value));
+  row.addEventListener('click', function () {
+    UP.open[key] = !UP.open[key];
+    drawResult(months);
+  });
+  host.appendChild(row);
+  /* ? 상자가 먼저다 — 낱말 뜻을 보고 나서 안을 편다 */
+  if (whyId && whyOpen(whyId)) host.appendChild(whyBox(whyId));
+  if (open) draw();
+}
+
+/* 「나간 돈 75% 증가」의 차이가 전부 사장님 인출일 때가 있다.
+     비교 줄의 분모는 안 건드리고, 제외분을 뺀 %를 한 줄 덧붙인다.
+     ① 비교 줄이 없는 달에는 안 그린다 — 같은 숫자를 두 번 말하게 된다
+     ② 두 %가 3%p 미만이면 소음이다
+     ③ 방향이 뒤집히면 문턱과 상관없이 그린다 */
+
+/* ══ 43차 · 위에서 아래로 한 번에 읽히게 ══════════════════
+     ★ 왜 다시 짰는가. 만든 사람이 1년치 표를 보고 자기 숫자를 못 읽었다 —
+       「매출 5500 − 지출 5100인데 왜 순이익 1000?」. 답은 「그 밖의 입금」이었고
+       그 줄은 화면에 있었다. 있는데 안 읽혔다.
+     ★ 그래서 순이익 바로 위 두 줄이 순이익을 만드는 두 값이 되게 놓는다.
+         들어온 돈(매출 + 그 밖의 입금) − 사업에 쓴 돈 = 순이익
+       세 줄이 그대로 뺄셈이라 더 설명할 것이 없다.
+     ★ 계좌로 들어오고 나간 전부(inTotal·outTotal)는 이 뺄셈의 값이 아니다.
+       그건 「계좌 잔액」을 펼치면 나온다 — 검산은 거기서 그대로 돈다.
+     ★ 접힌 화면에는 한 줄에 숫자 하나, 설명 없음. 설명은 펼쳤을 때만 */
+
+/* 어느 쪽 줄인지로 이름을 정한다. 항목 이름만 믿으면 뜻이 반대가 된다 —
+     같은 거래처가 넣기도 하고 가져가기도 한다 */
+function keepSideName(cat, side) {
+  /* 계좌 간 이체는 나간 쪽과 들어온 쪽이 같은 이름이라
+       두 줄이 똑같아 보인다. 방향을 붙여 갈라 부른다 (36차 4단계) */
+  if (cat === XFER_PART) {
+    return XFER_PART + (side === '입금' ? ' (들어옴)' : ' (나감)');
+  }
+  return sideOf(cat, side === '입금');
+}
+
+function cmpRow(months, c, key) {
+  var open = UP.cmpOpen[key];
+  var s = el('div', 'cmprow tapx ' + c.cls, open ? c.full : c.short);
+  s.addEventListener('click', function () {
+    if (open) delete UP.cmpOpen[key];
+    else UP.cmpOpen[key] = true;
+    drawResult(months);
+  });
+  return s;
+}
+
+/* 매출·지출에 안 넣는 돈 — 항목 제 이름을 쓰고 꼬리표만 단다 */
+/* ★ 36차. 다른 항목처럼 펼쳐진다. 안 그러면 잘못 찍은 것을 되돌릴 길이
+     「처음부터 다시 정하기」뿐이다 — [항목 바꾸기]가 펼친 줄에 붙기 때문이다.
+     partKey 는 monthNumbers 가 담은 이름이고, SKIP_PART 면 F가 넘긴 몫이다 */
+function keepRow(d, months, host, name, amount, partKey, isIn) {
+  var skipOnly = partKey === SKIP_PART;
+  var cat = skipOnly ? baseName(ASK_SKIP_CAT) : partKey;
+  if (partKey === XFER_PART) cat = XFER_PART; /* 이체는 줄 단위로 거른다 */
+  var key = 'keep:' + partKey + ':' + (isIn ? 'in' : 'out');
+  var open = !!UP.open[key];
+  var row = el('div', 'orow tapx');
+  var lb = el('div', 'lab', '　' + name);
+  lb.appendChild(el('span', 'chev', open ? '▴' : '▾'));
+  lb.appendChild(el('span', 'keeptag', '사업 외'));
+  var cnt = keepCount(d, cat, isIn, skipOnly);
+  if (cnt) lb.appendChild(el('span', 'gcount', cnt));
+  row.appendChild(lb);
+  row.appendChild(el('div', 'v num', won(amount)));
+  row.appendChild(el('div', 'p num', ''));
+  row.addEventListener('click', function () {
+    if (UP.open[key]) delete UP.open[key];
+    else UP.open[key] = true;
+    drawResult(months);
+  });
+  host.appendChild(row);
+  if (open)
+    drawKeepDetail(host, d, cat, isIn, skipOnly, function () {
+      drawResult(months);
+    });
+}
+
+/* 들여쓴 작은 줄. 각자 눌려서 각자 열린다 */
+function subRow(months, host, label, key, value, sub, draw, pct) {
+  var row = el('div', 'orow tapx');
+  var lb = el('div', 'lab', '　' + label);
+  lb.appendChild(el('span', 'chev', UP.open[key] ? '▴' : '▾'));
+  if (sub) lb.appendChild(el('span', 'gcount', sub));
+  row.appendChild(lb);
+  row.appendChild(el('div', 'v num', value));
+  row.appendChild(el('div', 'p num', pct || ''));
+  row.addEventListener('click', function () {
+    if (UP.open[key]) delete UP.open[key];
+    else UP.open[key] = true;
+    drawResult(months);
+  });
+  host.appendChild(row);
+  if (UP.open[key]) draw(host);
+}
+
+/* ★ 54차 ⑥ · 매출 대비 비율.
+   ★ 42차·43차 규칙은 그대로다 — 세 자리 %는 뜻이 없다.
+   ★ 67차 ②. 매출보다 큰 항목을 예전에는 「N배」로 적었는데, 배수도 화면에서 뺀다.
+     그 자리에는 사실만 놓는다 — 「매출 초과」. 얼마나 넘었는지는 바로 옆 금액 칸이 말한다.
+     여러 항목의 합이 100%를 넘는 것은 막지 않는다. 그게 답이다 —
+     번 돈보다 더 썼다는 뜻이고 한눈에 보여야 한다 */
+function pctCell(d, n) {
+  var p = pctOf(d, n);
+  if (!p) return '';
+  if (Math.abs(n) < d.sales) return p.txt;
+  return '매출 초과';
+}
+
+/* ★ 36차. 음수를 아스키 하이픈으로 내면 화면에서 마이너스로 안 읽히고
+     색 규칙(나간 돈·적자는 빨강)에도 안 걸린다. 부호를 떼어 따로 돌려준다 */
+function pctOf(d, n) {
+  if (d.blocked) return null; /* 못정한가 많으면 비율도 뜻이 없다 */
+  if (!(d.sales > 0)) return null;
+  var p = Math.round((n / d.sales) * 100);
+  return { txt: (p < 0 ? '−' : '') + Math.abs(p) + '%', minus: p < 0 };
 }
 
 /* 계산은 core/result.js 의 warnOkIn — 지금 매장(UP)을 넘긴다 */
