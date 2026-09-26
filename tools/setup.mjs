@@ -110,7 +110,7 @@ if (SKIP_BROWSER) {
 
 if (!CHECK_ONLY) {
   console.log('\n빠른 검사');
-  if (!run('npm', ['run', 'check'])) fail('불러오는 순서 검사 실패');
+  if (!run('npm', ['run', 'check'])) fail('불러오는 순서 · core 규칙 검사 실패');
 }
 
 // ── 결과 ─────────────────────────────────────────

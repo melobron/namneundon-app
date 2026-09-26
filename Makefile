@@ -17,7 +17,7 @@ doctor: ## 설치 없이 개발 환경 점검만 (npm run doctor)
 serve: ## 앱 띄우기 → http://localhost:4173 (npm run serve)
 	npm run serve
 
-test: ## 불러오는 순서 + 안전망 테스트 (npm test)
+test: ## 불러오는 순서 · core 규칙 + 안전망 테스트 (npm test)
 	npm test
 
 lint: ## 모양 · 린트 · CSS · HTML · 철자 · 타입 검사 (npm run lint)

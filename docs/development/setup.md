@@ -25,7 +25,7 @@ make setup         # 또는 npm run setup
 1. **도구 점검** — Node 판(`engines` 보다 낮으면 멈추고 `nvm` 명령을 알려 준다, `.nvmrc` 와 다르면 경고) · git · gitleaks(선택)
 2. **`npm ci`** — `package-lock.json` 그대로 설치. `prepare` 스크립트가 husky 를 켜 커밋 전 검사(`.husky/pre-commit`)가 돈다
 3. **테스트용 Chromium** — Playwright 판에 맞는 것이 없을 때만 받는다. 받지 않으려면 `node tools/setup.mjs --skip-browser`
-4. **`npm run check`** — 불러오는 순서 검사
+4. **`npm run check`** — 불러오는 순서 · core 규칙 검사
 
 무엇이 빠졌는지만 보려면 `make doctor`(= `npm run doctor`). 아무것도 설치하지 않는다.
 
