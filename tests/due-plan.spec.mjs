@@ -25,4 +25,18 @@ test('예정 지출 창의 화면들이 그대로다', async ({ page }) => {
 
   await page.locator(pane).getByRole('button', { name: '수정', exact: true }).first().click();
   expect(await screenText(page, pane)).toMatchSnapshot('3-edit.txt');
+
+  // 새 총액을 넣고 반영 → 목록으로 돌아와 반영된 것이 보인다
+  const total = page.locator(pane).locator('input:visible').last();
+  await total.fill('1000000');
+  await page.locator(pane).getByRole('button', { name: '변경 반영' }).first().click();
+  expect(await screenText(page, pane)).toMatchSnapshot('4-list-after-edit.txt');
+
+  // 새 지출 추가 화면
+  await page.locator(pane).getByRole('button', { name: '새 지출 추가' }).first().click();
+  expect(await screenText(page, pane)).toMatchSnapshot('5-add.txt');
+
+  // Esc 로 닫힌다
+  await page.keyboard.press('Escape');
+  await expect(page.locator(pane)).toHaveCount(0);
 });

@@ -415,7 +415,7 @@ function openDuePlan(c, months, 첫) {
   if (document.querySelector('.fcback')) return;
   var t = dueTable();
   if (!t || !t.n) return;
-  var base = null;
+  var base; /* 아래 try · catch 가 둘 다 정한다 */
   try {
     base = duePlanBase(t, c.i);
   } catch (e) {
@@ -452,531 +452,698 @@ function openDuePlan(c, months, 첫) {
   back.appendChild(pane);
   document.body.appendChild(back);
 
-  var 화면 = { 이름: 첫 || '목록' };
+  /* ★ B-4 (2026-09-27). 창이 열려 있는 동안 바뀌는 값 둘을 한 객체에 둔다 —
+     안쪽 함수들이 이 변수에 새 값을 넣지 않고 속성만 바꾸게 해서, 파일 최상위로 꺼낼 수 있게 했다.
+     닫힘은 원래 아래(첫 그리기 뒤)에서 false 로 정했는데, 쓰는 곳이 닫기(단추 · Esc)뿐이라 여기서 정해도 같다 */
+  var 창 = { 화면: { 이름: 첫 || '목록' }, 닫힘: false };
   /* ★ 116차 통합. 미정 출금 보류 카드에서 열었는가. 계획을 고쳐도 이 값은 안 바뀐다 */
   var 보류중 = !!c.보류;
-  function 가기(이름, 옵션) {
-    화면 = 옵션 || {};
-    화면.이름 = 이름;
-    그리기();
-  }
-  function 반영끝(ok) {
-    /* 저장 실패 시 기존 저장본은 보존된다 (planSave 가 새로 쓰지 못한 것뿐이다).
-       현재 화면에는 적용됐으므로 그 사실을 그대로 말한다 (⑪) */
-    drawResult(months);
-    가기('목록', { 알림: ok ? null : '변경 내용은 현재 화면에 반영됐지만 저장하지 못했습니다.' });
-  }
 
-  /* ── 첫 화면 ─────────────────────────────────────────────── */
-  function 목록화면() {
-    제목.textContent = '예정 지출 확인·수정';
-    머리줄(body, c, base);
-    알림줄(화면, body);
-    /* ★ 116차 통합 ④. 미정 출금 보류 카드에서 여신 때만 한 번 적는다.
+  /* ★ B-4 (2026-09-27). 화면 함수들이 쓰는 값을 창에 담는다 — 아래 값들은 여기 뒤로 바뀌지 않는다 (도구가 확인).
+     부르지 않고 넘기는 함수(키 · 닫기 등)는 한 번만 묶는다 — removeEventListener 가 같은 함수를 봐야 한다 */
+  창.c = c;
+  창.months = months;
+  창.t = t;
+  창.base = base;
+  창.뒤스크롤 = 뒤스크롤;
+  창.back = back;
+  창.제목 = 제목;
+  창.body = body;
+  창.보류중 = 보류중;
+  창.닫기 = 예정닫기.bind(null, 창);
+  창.키 = 예정키.bind(null, 창);
+  예정그리기(창);
+
+  document.addEventListener('keydown', 창.키);
+  x.addEventListener('click', 창.닫기);
+  x2.addEventListener('click', 창.닫기);
+  back.addEventListener('click', function (e) {
+    if (e.target === back) 예정닫기(창);
+  });
+}
+function 예정가기(창, 이름, 옵션) {
+  창.화면 = 옵션 || {};
+  창.화면.이름 = 이름;
+  예정그리기(창);
+}
+
+function 예정반영끝(창, ok) {
+  /* 저장 실패 시 기존 저장본은 보존된다 (planSave 가 새로 쓰지 못한 것뿐이다).
+       현재 화면에는 적용됐으므로 그 사실을 그대로 말한다 (⑪) */
+  drawResult(창.months);
+  예정가기(창, '목록', {
+    알림: ok ? null : '변경 내용은 현재 화면에 반영됐지만 저장하지 못했습니다.'
+  });
+}
+
+/* ── 첫 화면 ─────────────────────────────────────────────── */
+function 예정목록화면(창) {
+  창.제목.textContent = '예정 지출 확인·수정';
+  머리줄(창.body, 창.c, 창.base);
+  알림줄(창.화면, 창.body);
+  /* ★ 116차 통합 ④. 미정 출금 보류 카드에서 여신 때만 한 번 적는다.
        이 화면은 지출 금액만 다루고 예상 잔액·최저점·그래프는 내지 않는다.
        저장해도 보류가 풀리지 않는다 (보류 판단은 계획을 넣기 전 기본 예측에서 한다) */
-    if (보류중) {
-      body.appendChild(
+  if (창.보류중) {
+    창.body.appendChild(
+      el(
+        'div',
+        'planwarn',
+        '예정 지출은 수정할 수 있습니다. 예상 잔액은 아직 안 정한 거래를 확인한 뒤 표시 여부를 다시 판단합니다.'
+      )
+    );
+  }
+  var box = planBox(),
+    use = dueDailyUse(창.t, 창.c.i);
+  if (use.적용보류) {
+    var w = el(
+      'div',
+      'planwarn',
+      '예정 지출 ' + won(use.적용보류) + '건의 반영이 보류되어 있습니다.'
+    );
+    var wb = el('button', 'b', '확인하기');
+    wb.type = 'button';
+    wb.addEventListener('click', function () {
+      예정가기(창, '적용보류');
+    });
+    w.appendChild(wb);
+    창.body.appendChild(w);
+  }
+
+  창.body.appendChild(el('div', 'planhead', '기존 예상 지출'));
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      날짜글(창.base.시작) + ' ~ ' + 날짜글(창.base.끝) + ' 에 나갈 것으로 잡혀 있는 금액입니다.'
+    )
+  );
+  if (!창.base.list.length) {
+    창.body.appendChild(el('div', 'fcnote', '이 기간에 잡힌 예상 지출이 없습니다.'));
+  }
+  창.base.list.forEach(function (it) {
+    var r = el('div', 'planrow');
+    var L = el('div', 'planlab');
+    L.appendChild(el('div', 'planname', it.거래처));
+    L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
+    r.appendChild(L);
+    r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
+    var a = el('div', 'planacts');
+    var b1 = el('button', 'b', '수정');
+    b1.type = 'button';
+    b1.addEventListener('click', function () {
+      예정가기(창, '수정', { p: it.거래처 });
+    });
+    var b2 = el('button', 'b', '반영된 내역 보기');
+    b2.type = 'button';
+    b2.addEventListener('click', function () {
+      예정가기(창, '내역', { p: it.거래처, lo: 창.base.시작, hi: 창.base.끝 });
+    });
+    a.appendChild(b1);
+    a.appendChild(b2);
+    r.appendChild(a);
+    창.body.appendChild(r);
+  });
+
+  창.body.appendChild(el('div', 'planhead', '등록한 예정 지출'));
+  if (!box.items.length) {
+    창.body.appendChild(el('div', 'fcnote', '아직 등록한 예정 지출이 없습니다.'));
+  }
+  box.items.forEach(function (pl) {
+    var 적용보류 = use.적용보류목록.indexOf(pl) >= 0;
+    var r = el('div', 'planrow');
+    var L = el('div', 'planlab');
+    L.appendChild(el('div', 'planname', pl.유형 === '대체' ? pl.거래처 : pl.이름 || '새 지출'));
+    L.appendChild(
+      el(
+        'div',
+        'plansub',
+        pl.유형 === '대체'
+          ? '기존 예상 대체 · ' + 날글(pl.시작) + ' ~ ' + 날글(pl.종료)
+          : '별도 추가 · ' + (pl.지급 && pl.지급[0] ? 날글(pl.지급[0].날) : '')
+      )
+    );
+    if (적용보류) L.appendChild(el('div', 'plansub warnsub', '반영 보류 중'));
+    r.appendChild(L);
+    r.appendChild(el('div', 'planamt', won(duePlanTotal(pl)) + '원'));
+    var a = el('div', 'planacts');
+    var b1 = el('button', 'b', '수정');
+    b1.type = 'button';
+    b1.addEventListener('click', function () {
+      if (pl.유형 === '대체') 예정가기(창, '수정', { p: pl.거래처, id: pl.id });
+      else 예정가기(창, '추가', { id: pl.id });
+    });
+    var b2 = el('button', 'b', pl.유형 === '대체' ? '변경 취소' : '삭제');
+    b2.type = 'button';
+    b2.addEventListener('click', function () {
+      /* ★ ⑩ 대체 계획을 취소하면 기본 예상분이 그대로 살아난다 —
+           수정 결과에서 또 빼는 것이 아니라 계획 하나를 목록에서 뺄 뿐이다 */
+      var nb = {
+        v: 1,
+        items: box.items.filter(function (y) {
+          return y.id !== pl.id;
+        })
+      };
+      예정반영끝(창, planSave(nb));
+    });
+    a.appendChild(b1);
+    a.appendChild(b2);
+    r.appendChild(a);
+    창.body.appendChild(r);
+  });
+
+  var add = el('button', 'fcopen', '새 지출 추가');
+  add.type = 'button';
+  add.addEventListener('click', function () {
+    예정가기(창, '추가');
+  });
+  창.body.appendChild(add);
+  /* ★ 116차 통합 ④. 보류 중에는 「예상 잔액과 그래프에 반영됩니다」가 사실과 다르다.
+       그때는 위의 한 문장으로 대신하고 여기서 되풀이하지 않는다 */
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      창.보류중
+        ? '원본 거래내역과 월별 결과는 바뀌지 않습니다.'
+        : '여기서 고치신 내용은 예상 잔액과 그래프에 함께 반영됩니다. ' +
+            '원본 거래내역과 월별 결과는 바뀌지 않습니다.'
+    )
+  );
+}
+
+/* ── 반영된 내역 보기 ────────────────────────────────────── */
+function 예정내역화면(창) {
+  창.제목.textContent = '반영된 내역';
+  var rows = duePlanRows(창.base.dd, 창.base.t0, 창.화면.p, 창.화면.lo, 창.화면.hi);
+  창.body.appendChild(el('div', 'planhead', 창.화면.p));
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      날짜글(창.화면.lo) +
+        ' ~ ' +
+        날짜글(창.화면.hi) +
+        ' 의 예상 지출에 쓰인 과거 거래입니다. ' +
+        '같은 거래가 여러 날짜에 쓰이면 각각 따로 적습니다.'
+    )
+  );
+  var 합 = 0;
+  rows.forEach(function (x) {
+    합 += x.액;
+  });
+  창.body.appendChild(el('div', 'planmine', '합계 ' + won(Math.round(합)) + '원'));
+  rows.forEach(function (x) {
+    var r = el('div', 'planrow small');
+    var L = el('div', 'planlab');
+    L.appendChild(
+      el('div', 'plansub', 날글(날짜값(x.과거), true) + ' 거래 → ' + 날짜글(x.미래) + ' 예상')
+    );
+    r.appendChild(L);
+    r.appendChild(el('div', 'planamt', won(Math.round(x.액)) + '원'));
+    창.body.appendChild(r);
+  });
+  if (!rows.length) 창.body.appendChild(el('div', 'fcnote', '해당 기간에 반영된 내역이 없습니다.'));
+  예정뒤로단추(창);
+}
+
+function 예정뒤로단추(창, 텍스트) {
+  var b = el('button', 'fcopen', 텍스트 || '목록으로');
+  b.type = 'button';
+  b.addEventListener('click', function () {
+    예정가기(창, '목록');
+  });
+  창.body.appendChild(b);
+}
+
+/* ── 기존 예상 수정 ──────────────────────────────────────── */
+function 예정수정화면(창) {
+  창.제목.textContent = '기존 예상 수정';
+  var box = planBox();
+  var 기존 = null;
+  if (창.화면.id)
+    box.items.forEach(function (y) {
+      if (y.id === 창.화면.id) 기존 = y;
+    });
+  var lo = 기존 ? dayNum(기존.시작) : 창.base.시작;
+  var hi = 기존 ? dayNum(기존.종료) : 창.base.끝;
+
+  창.body.appendChild(el('div', 'planhead', 창.화면.p));
+  /* ★ ⑥ 한 번만 표시한다. 같은 말을 화면 두 자리에 두지 않는다 */
+  창.body.appendChild(el('div', 'planwarn', '선택한 기간의 이 거래처 예상 지출 전체를 바꿉니다.'));
+
+  var g1 = el('div', 'planfield');
+  g1.appendChild(el('label', 'planlabel', '적용 시작일'));
+  var d1 = 날칸(lo, 창.base.시작, 창.base.끝);
+  g1.appendChild(d1);
+  창.body.appendChild(g1);
+  var g2 = el('div', 'planfield');
+  g2.appendChild(el('label', 'planlabel', '적용 종료일'));
+  var d2 = 날칸(hi, 창.base.시작, 창.base.끝);
+  g2.appendChild(d2);
+  창.body.appendChild(g2);
+
+  var 현재줄 = el('div', 'planmine', '');
+  창.body.appendChild(현재줄);
+
+  var g3 = el('div', 'planfield');
+  g3.appendChild(el('label', 'planlabel', '새 총액'));
+  var amt = 돈칸(기존 ? duePlanTotal(기존) : null);
+  var 금액칸 = el('div', 'fixgrp');
+  금액칸.appendChild(amt);
+  금액칸.appendChild(el('span', 'fixlab', '원'));
+  g3.appendChild(금액칸);
+  창.body.appendChild(g3);
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      '0원을 적으시면 이 기간의 해당 예상 지출을 없앱니다. ' + '비워두면 반영하지 않습니다.'
+    )
+  );
+
+  /* 지급 일정 */
+  창.body.appendChild(el('div', 'planhead2', '지급 일정'));
+  var 방식 = (기존 && 기존.일정) || '유지';
+  var 줄들 =
+    기존 && 기존.일정 === '지정' && 기존.지급 && 기존.지급.length
+      ? 기존.지급.map(function (g) {
+          return { 날: dayNum(g.날), 액: g.액 };
+        })
+      : [{ 날: null, 액: null }];
+  var 방식칸 = el('div', 'planpick');
+  var r1 = el('button', 'planopt', '기존 예상 일정 유지');
+  r1.type = 'button';
+  var r2 = el('button', 'planopt', '지급일 직접 지정');
+  r2.type = 'button';
+  방식칸.appendChild(r1);
+  방식칸.appendChild(r2);
+  창.body.appendChild(방식칸);
+  var 방식말 = el('div', 'fcnote', '');
+  창.body.appendChild(방식말);
+  var 지정칸 = el('div', 'planrows');
+  창.body.appendChild(지정칸);
+
+  var msg = el('div', 'planwarn hide', '');
+  var 뒤값 = el('div', 'planmine', '');
+
+  function 기간읽기() {
+    var a = d1.value ? dayNum(d1.value) : null;
+    var b = d2.value ? dayNum(d2.value) : null;
+    return { lo: a, hi: b };
+  }
+  function 현재액() {
+    var k = 기간읽기();
+    if (k.lo === null || k.hi === null || k.hi < k.lo) return null;
+    return duePlanSpan(창.base, 창.화면.p, k.lo, k.hi);
+  }
+  function 지정그리기() {
+    지정칸.innerHTML = '';
+    if (방식 !== '지정') return;
+    줄들.forEach(function (g, idx) {
+      var r = el('div', 'planrow small');
+      var dv = 날칸(g.날, 창.base.시작, 창.base.끝);
+      dv.addEventListener('change', function () {
+        g.날 = dv.value ? dayNum(dv.value) : null;
+        새로고침();
+      });
+      var mv = 돈칸(g.액);
+      mv.addEventListener('input', function () {
+        g.액 = 돈읽기(mv.value);
+        새로고침();
+      });
+      var 칸 = el('div', 'fixgrp');
+      칸.appendChild(mv);
+      칸.appendChild(el('span', 'fixlab', '원'));
+      r.appendChild(dv);
+      r.appendChild(칸);
+      if (줄들.length > 1) {
+        var dl = el('button', 'b', '지우기');
+        dl.type = 'button';
+        dl.addEventListener('click', function () {
+          줄들.splice(idx, 1);
+          지정그리기();
+          새로고침();
+        });
+        r.appendChild(dl);
+      }
+      지정칸.appendChild(r);
+    });
+    var ad = el('button', 'b', '날짜 추가');
+    ad.type = 'button';
+    ad.addEventListener('click', function () {
+      줄들.push({ 날: null, 액: null });
+      지정그리기();
+    });
+    지정칸.appendChild(ad);
+  }
+  function 새로고침() {
+    var sp = 현재액();
+    현재줄.textContent = sp
+      ? '현재 예상에 포함된 금액 ' + won(Math.round(sp.합)) + '원'
+      : '적용 기간을 고르시면 현재 예상 금액을 보여드립니다.';
+    r1.className = 'planopt' + (방식 === '유지' ? ' on' : '');
+    r2.className = 'planopt' + (방식 === '지정' ? ' on' : '');
+    방식말.textContent =
+      방식 === '유지'
+        ? '기존 예상 지출 비중에 따라 날짜별로 나눠 반영합니다.'
+        : '한 날짜 또는 여러 날짜에 금액을 적으시면 됩니다. 날짜별 금액 합계가 새 총액과 같아야 반영합니다.';
+    var v = 돈읽기(amt.value);
+    뒤값.textContent = v === null ? '' : '변경 후 금액 ' + won(v) + '원';
+    if (방식 === '유지' && sp && sp.합 <= 0) {
+      msg.textContent =
+        '이 기간에는 기존 예상 지출이 없어 기존 일정을 쓸 수 없습니다. 지급일을 직접 지정해주세요.';
+      msg.className = 'planwarn';
+    } else if (msg.className === 'planwarn' && msg.textContent.indexOf('기존 일정') >= 0) {
+      msg.textContent = '';
+      msg.className = 'planwarn hide';
+    }
+  }
+  d1.addEventListener('change', 새로고침);
+  d2.addEventListener('change', 새로고침);
+  amt.addEventListener('input', 새로고침);
+  r1.addEventListener('click', function () {
+    방식 = '유지';
+    지정그리기();
+    새로고침();
+  });
+  r2.addEventListener('click', function () {
+    방식 = '지정';
+    지정그리기();
+    새로고침();
+  });
+
+  창.body.appendChild(뒤값);
+  창.body.appendChild(msg);
+
+  var ok = el('button', 'fcopen', '변경 반영');
+  ok.type = 'button';
+  ok.addEventListener('click', function () {
+    function 틀림(s) {
+      msg.textContent = s;
+      msg.className = 'planwarn';
+    }
+    var k = 기간읽기();
+    if (k.lo === null || k.hi === null) return 틀림('적용 시작일과 종료일을 골라주세요.');
+    if (k.hi < k.lo) return 틀림('적용 종료일이 시작일보다 앞섭니다.');
+    if (k.lo < 창.base.시작 || k.hi > 창.base.끝) {
+      return 틀림(
+        '적용 기간은 ' +
+          날짜글(창.base.시작) +
+          ' ~ ' +
+          날짜글(창.base.끝) +
+          ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
+      );
+    }
+    var v = 돈읽기(amt.value);
+    if (v === null) return 틀림('새 총액을 적어주세요. 0원도 적으실 수 있습니다.');
+    var 부딪 = duePlanClash(box, 창.화면.p, k.lo, k.hi, 창.화면.id);
+    if (부딪) {
+      return 틀림(
+        '이 거래처의 ' +
+          날글(부딪.시작) +
+          ' ~ ' +
+          날글(부딪.종료) +
+          ' 계획과 기간이 겹칩니다. 그 계획을 수정해주세요.'
+      );
+    }
+    var sp = duePlanSpan(창.base, 창.화면.p, k.lo, k.hi);
+    var 지급 = [];
+    if (방식 === '유지') {
+      if (sp.합 <= 0) return 틀림('이 기간에는 기존 예상 지출이 없어 기존 일정을 쓸 수 없습니다.');
+      var 나눔 = 몫나누기(v, sp.값);
+      if (!나눔) return 틀림('기존 예상 비중을 구할 수 없습니다. 지급일을 직접 지정해주세요.');
+      for (var q = 0; q < 나눔.length; q++) {
+        if (나눔[q] > 0) 지급.push({ 날: 날짜값(sp.날[q]), 액: 나눔[q] });
+      }
+    } else {
+      var 합 = 0,
+        빈 = false;
+      줄들.forEach(function (g) {
+        if (g.날 === null || g.액 === null) {
+          빈 = true;
+          return;
+        }
+        합 += g.액;
+      });
+      if (v > 0 && 빈)
+        return 틀림('지급일과 금액을 모두 적어주세요. 빈 칸은 0원으로 치지 않습니다.');
+      if (v > 0) {
+        for (var w = 0; w < 줄들.length; w++) {
+          var 날 = 줄들[w].날;
+          if (날 < 창.base.시작 || 날 > 창.base.끝) {
+            return 틀림(
+              '지급일은 ' +
+                날짜글(창.base.시작) +
+                ' ~ ' +
+                날짜글(창.base.끝) +
+                ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
+            );
+          }
+        }
+        if (합 !== v) {
+          return 틀림(
+            '날짜별 금액 합계(' + won(합) + '원)가 새 총액(' + won(v) + '원)과 다릅니다.'
+          );
+        }
+        줄들.forEach(function (g) {
+          if (g.액 > 0) 지급.push({ 날: 날짜값(g.날), 액: g.액 });
+        });
+      }
+    }
+    var pl = {
+      id: 창.화면.id || planNewId(),
+      유형: '대체',
+      거래처: 창.화면.p,
+      시작: 날짜값(k.lo),
+      종료: 날짜값(k.hi),
+      총액: v,
+      일정: 방식,
+      지급: 지급,
+      확인: true,
+      자료: 창.base.지문,
+      모델: DUE_MODEL
+    };
+    /* ★ ⑩ 같은 계획을 다시 수정하면 기존 계획을 교체한다 — 쌓지 않는다 */
+    var items = box.items.filter(function (y) {
+      return y.id !== pl.id;
+    });
+    items.push(pl);
+    예정반영끝(창, planSave({ v: 1, items: items }));
+  });
+  창.body.appendChild(ok);
+  var view = el('button', 'fcopen', '반영된 내역 보기');
+  view.type = 'button';
+  view.addEventListener('click', function () {
+    var k = 기간읽기();
+    예정가기(창, '내역', {
+      p: 창.화면.p,
+      lo: k.lo === null ? 창.base.시작 : k.lo,
+      hi: k.hi === null ? 창.base.끝 : k.hi
+    });
+  });
+  창.body.appendChild(view);
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      '이 기간 밖의 같은 거래처 예상 지출은 그대로 둡니다. ' +
+        '일부 지급만 고르는 상세 수정은 아직 없습니다.'
+    )
+  );
+  예정뒤로단추(창);
+  지정그리기();
+  새로고침();
+}
+
+/* ── 새 지출 추가 ────────────────────────────────────────── */
+function 예정추가화면(창) {
+  창.제목.textContent = '새 지출 추가';
+  var box = planBox();
+  var 기존 = null;
+  if (창.화면.id)
+    box.items.forEach(function (y) {
+      if (y.id === 창.화면.id) 기존 = y;
+    });
+
+  var g1 = el('div', 'planfield');
+  g1.appendChild(el('label', 'planlabel', '이름'));
+  var nm = document.createElement('input');
+  nm.type = 'text';
+  nm.className = 'maninput planname-in';
+  nm.placeholder = '지출 이름';
+  if (기존) nm.value = 기존.이름 || '';
+  g1.appendChild(nm);
+  창.body.appendChild(g1);
+
+  var g2 = el('div', 'planfield');
+  g2.appendChild(el('label', 'planlabel', '지급일'));
+  var dv = 날칸(
+    기존 && 기존.지급 && 기존.지급[0] ? dayNum(기존.지급[0].날) : null,
+    창.base.시작,
+    창.base.끝
+  );
+  g2.appendChild(dv);
+  창.body.appendChild(g2);
+
+  var g3 = el('div', 'planfield');
+  g3.appendChild(el('label', 'planlabel', '금액'));
+  var amt = 돈칸(기존 ? duePlanTotal(기존) : null);
+  var 금액칸 = el('div', 'fixgrp');
+  금액칸.appendChild(amt);
+  금액칸.appendChild(el('span', 'fixlab', '원'));
+  g3.appendChild(금액칸);
+  창.body.appendChild(g3);
+
+  var 안내 = el('div', 'planfound');
+  창.body.appendChild(안내);
+  var msg = el('div', 'planwarn hide', '');
+  창.body.appendChild(msg);
+
+  function 살피기() {
+    안내.innerHTML = '';
+    var 닮 = 닮은거래처(창.base, nm.value);
+    if (닮.length) {
+      안내.appendChild(el('div', 'planwarn2', '이 거래처의 지출이 예상에 포함되어 있습니다.'));
+      닮.forEach(function (it) {
+        var r = el('div', 'planrow small');
+        var L = el('div', 'planlab');
+        L.appendChild(el('div', 'planname', it.거래처));
+        L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
+        r.appendChild(L);
+        r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
+        var b = el('button', 'b', '기존 예상 수정');
+        b.type = 'button';
+        b.addEventListener('click', function () {
+          예정가기(창, '수정', { p: it.거래처 });
+        });
+        r.appendChild(b);
+        안내.appendChild(r);
+      });
+      안내.appendChild(
+        el('div', 'fcnote', '같은 곳이 아니라면 아래에서 별도 지출로 추가하시면 됩니다.')
+      );
+    } else if (String(nm.value).trim()) {
+      안내.appendChild(el('div', 'planwarn2', '기존 예상에서 연결할 지출을 찾지 못했습니다.'));
+      /* ★ ⑨ 「기존 예상에 없는 지출」이라고 단정하지 않는다 */
+      안내.appendChild(
         el(
           'div',
-          'planwarn',
-          '예정 지출은 수정할 수 있습니다. 예상 잔액은 아직 안 정한 거래를 확인한 뒤 표시 여부를 다시 판단합니다.'
+          'fcnote',
+          '기존 예상에 없는 지출인지는 확인하지 못했습니다. ' + '별도 추가가 맞는지 확인해주세요.'
         )
       );
     }
-    var box = planBox(),
-      use = dueDailyUse(t, c.i);
-    if (use.적용보류) {
-      var w = el(
-        'div',
-        'planwarn',
-        '예정 지출 ' + won(use.적용보류) + '건의 반영이 보류되어 있습니다.'
+  }
+  nm.addEventListener('input', 살피기);
+  살피기();
+
+  var ok = el('button', 'fcopen', 기존 ? '변경 반영' : '별도 지출로 추가');
+  ok.type = 'button';
+  ok.addEventListener('click', function () {
+    function 틀림(s) {
+      msg.textContent = s;
+      msg.className = 'planwarn';
+    }
+    var 이름 = String(nm.value).trim();
+    if (!이름) return 틀림('지출 이름을 적어주세요.');
+    if (!dv.value) return 틀림('지급일을 골라주세요.');
+    var 날 = dayNum(dv.value);
+    if (날 < 창.base.시작 || 날 > 창.base.끝) {
+      return 틀림(
+        '지급일은 ' +
+          날짜글(창.base.시작) +
+          ' ~ ' +
+          날짜글(창.base.끝) +
+          ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
       );
-      var wb = el('button', 'b', '확인하기');
-      wb.type = 'button';
-      wb.addEventListener('click', function () {
-        가기('적용보류');
-      });
-      w.appendChild(wb);
-      body.appendChild(w);
     }
-
-    body.appendChild(el('div', 'planhead', '기존 예상 지출'));
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        날짜글(base.시작) + ' ~ ' + 날짜글(base.끝) + ' 에 나갈 것으로 잡혀 있는 금액입니다.'
-      )
-    );
-    if (!base.list.length) {
-      body.appendChild(el('div', 'fcnote', '이 기간에 잡힌 예상 지출이 없습니다.'));
-    }
-    base.list.forEach(function (it) {
-      var r = el('div', 'planrow');
-      var L = el('div', 'planlab');
-      L.appendChild(el('div', 'planname', it.거래처));
-      L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
-      r.appendChild(L);
-      r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
-      var a = el('div', 'planacts');
-      var b1 = el('button', 'b', '수정');
-      b1.type = 'button';
-      b1.addEventListener('click', function () {
-        가기('수정', { p: it.거래처 });
-      });
-      var b2 = el('button', 'b', '반영된 내역 보기');
-      b2.type = 'button';
-      b2.addEventListener('click', function () {
-        가기('내역', { p: it.거래처, lo: base.시작, hi: base.끝 });
-      });
-      a.appendChild(b1);
-      a.appendChild(b2);
-      r.appendChild(a);
-      body.appendChild(r);
+    var v = 돈읽기(amt.value);
+    if (v === null) return 틀림('금액을 적어주세요.');
+    var pl = {
+      id: 창.화면.id || planNewId(),
+      유형: '추가',
+      이름: 이름,
+      총액: v,
+      일정: '지정',
+      지급: v > 0 ? [{ 날: 날짜값(날), 액: v }] : [],
+      확인: true,
+      자료: 창.base.지문,
+      모델: DUE_MODEL
+    };
+    var items = box.items.filter(function (y) {
+      return y.id !== pl.id;
     });
+    items.push(pl);
+    예정반영끝(창, planSave({ v: 1, items: items }));
+  });
+  창.body.appendChild(ok);
+  창.body.appendChild(el('div', 'fcnote', '새 지출은 기존 예상에 연결하지 않고 한 번 더합니다.'));
+  예정뒤로단추(창);
+}
 
-    body.appendChild(el('div', 'planhead', '등록한 예정 지출'));
-    if (!box.items.length) {
-      body.appendChild(el('div', 'fcnote', '아직 등록한 예정 지출이 없습니다.'));
-    }
-    box.items.forEach(function (pl) {
-      var 적용보류 = use.적용보류목록.indexOf(pl) >= 0;
-      var r = el('div', 'planrow');
-      var L = el('div', 'planlab');
-      L.appendChild(el('div', 'planname', pl.유형 === '대체' ? pl.거래처 : pl.이름 || '새 지출'));
-      L.appendChild(
+/* ── 보류 확인 (⑫) ──────────────────────────────────────── */
+function 예정적용보류화면(창) {
+  창.제목.textContent = '예정 지출 확인';
+  var use = dueDailyUse(창.t, 창.c.i),
+    box = planBox();
+  /* ★ 118차 ③. 보류 까닭이 둘이다 — 예측 모델이 바뀐 것과 자료가 바뀐 것.
+       실제로 해당하는 까닭만 적는다 */
+  var 옛모델 = use.적용보류목록.filter(function (pl) {
+    return (pl.모델 || 1) !== DUE_MODEL;
+  });
+  var 까닭 = [];
+  if (옛모델.length) 까닭.push('예상 지출에 사업 외 출금도 들어가도록 계산 범위가 바뀌었습니다.');
+  if (옛모델.length < use.적용보류목록.length) {
+    /* ★ 116차 통합 ⑥. 재업로드만이 아니라 분류를 바꿔도 여기로 온다. 까닭을 하나로 단정하지 않는다 */
+    까닭.push('거래내역이나 분류가 바뀌어 예측에 쓰는 자료가 달라졌습니다.');
+  }
+  창.body.appendChild(
+    el(
+      'div',
+      'fcnote',
+      까닭.join(' ') +
+        (까닭.length ? ' ' : '') +
+        '이전 차감액을 그대로 쓰지 않고 보류했습니다. 확인 후 다시 반영하실 수 있습니다.'
+    )
+  );
+  if (!use.적용보류목록.length) {
+    창.body.appendChild(el('div', 'fcnote', '보류된 예정 지출이 없습니다.'));
+    예정뒤로단추(창);
+    return;
+  }
+  use.적용보류목록.forEach(function (pl) {
+    var wrap = el('div', 'plancheck');
+    wrap.appendChild(el('div', 'planname', pl.유형 === '대체' ? pl.거래처 : pl.이름 || '새 지출'));
+    wrap.appendChild(el('div', 'plansub', '저장된 총액 ' + won(duePlanTotal(pl)) + '원'));
+    if (pl.유형 === '대체') {
+      var sp = duePlanSpan(창.base, pl.거래처, dayNum(pl.시작), dayNum(pl.종료));
+      wrap.appendChild(
         el(
           'div',
           'plansub',
-          pl.유형 === '대체'
-            ? '기존 예상 대체 · ' + 날글(pl.시작) + ' ~ ' + 날글(pl.종료)
-            : '별도 추가 · ' + (pl.지급 && pl.지급[0] ? 날글(pl.지급[0].날) : '')
+          '새 기본 예상분 ' +
+            won(Math.round(sp.합)) +
+            '원 (' +
+            날글(pl.시작) +
+            ' ~ ' +
+            날글(pl.종료) +
+            ')'
         )
       );
-      if (적용보류) L.appendChild(el('div', 'plansub warnsub', '반영 보류 중'));
-      r.appendChild(L);
-      r.appendChild(el('div', 'planamt', won(duePlanTotal(pl)) + '원'));
-      var a = el('div', 'planacts');
-      var b1 = el('button', 'b', '수정');
-      b1.type = 'button';
-      b1.addEventListener('click', function () {
-        if (pl.유형 === '대체') 가기('수정', { p: pl.거래처, id: pl.id });
-        else 가기('추가', { id: pl.id });
-      });
-      var b2 = el('button', 'b', pl.유형 === '대체' ? '변경 취소' : '삭제');
-      b2.type = 'button';
-      b2.addEventListener('click', function () {
-        /* ★ ⑩ 대체 계획을 취소하면 기본 예상분이 그대로 살아난다 —
-           수정 결과에서 또 빼는 것이 아니라 계획 하나를 목록에서 뺄 뿐이다 */
-        var nb = {
-          v: 1,
-          items: box.items.filter(function (y) {
-            return y.id !== pl.id;
-          })
-        };
-        반영끝(planSave(nb));
-      });
-      a.appendChild(b1);
-      a.appendChild(b2);
-      r.appendChild(a);
-      body.appendChild(r);
-    });
-
-    var add = el('button', 'fcopen', '새 지출 추가');
-    add.type = 'button';
-    add.addEventListener('click', function () {
-      가기('추가');
-    });
-    body.appendChild(add);
-    /* ★ 116차 통합 ④. 보류 중에는 「예상 잔액과 그래프에 반영됩니다」가 사실과 다르다.
-       그때는 위의 한 문장으로 대신하고 여기서 되풀이하지 않는다 */
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        보류중
-          ? '원본 거래내역과 월별 결과는 바뀌지 않습니다.'
-          : '여기서 고치신 내용은 예상 잔액과 그래프에 함께 반영됩니다. ' +
-              '원본 거래내역과 월별 결과는 바뀌지 않습니다.'
-      )
-    );
-  }
-
-  /* ── 반영된 내역 보기 ────────────────────────────────────── */
-  function 내역화면() {
-    제목.textContent = '반영된 내역';
-    var rows = duePlanRows(base.dd, base.t0, 화면.p, 화면.lo, 화면.hi);
-    body.appendChild(el('div', 'planhead', 화면.p));
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        날짜글(화면.lo) +
-          ' ~ ' +
-          날짜글(화면.hi) +
-          ' 의 예상 지출에 쓰인 과거 거래입니다. ' +
-          '같은 거래가 여러 날짜에 쓰이면 각각 따로 적습니다.'
-      )
-    );
-    var 합 = 0;
-    rows.forEach(function (x) {
-      합 += x.액;
-    });
-    body.appendChild(el('div', 'planmine', '합계 ' + won(Math.round(합)) + '원'));
-    rows.forEach(function (x) {
-      var r = el('div', 'planrow small');
-      var L = el('div', 'planlab');
-      L.appendChild(
-        el('div', 'plansub', 날글(날짜값(x.과거), true) + ' 거래 → ' + 날짜글(x.미래) + ' 예상')
-      );
-      r.appendChild(L);
-      r.appendChild(el('div', 'planamt', won(Math.round(x.액)) + '원'));
-      body.appendChild(r);
-    });
-    if (!rows.length) body.appendChild(el('div', 'fcnote', '해당 기간에 반영된 내역이 없습니다.'));
-    뒤로단추();
-  }
-
-  function 뒤로단추(텍스트) {
-    var b = el('button', 'fcopen', 텍스트 || '목록으로');
-    b.type = 'button';
-    b.addEventListener('click', function () {
-      가기('목록');
-    });
-    body.appendChild(b);
-  }
-
-  /* ── 기존 예상 수정 ──────────────────────────────────────── */
-  function 수정화면() {
-    제목.textContent = '기존 예상 수정';
-    var box = planBox();
-    var 기존 = null;
-    if (화면.id)
-      box.items.forEach(function (y) {
-        if (y.id === 화면.id) 기존 = y;
-      });
-    var lo = 기존 ? dayNum(기존.시작) : base.시작;
-    var hi = 기존 ? dayNum(기존.종료) : base.끝;
-
-    body.appendChild(el('div', 'planhead', 화면.p));
-    /* ★ ⑥ 한 번만 표시한다. 같은 말을 화면 두 자리에 두지 않는다 */
-    body.appendChild(el('div', 'planwarn', '선택한 기간의 이 거래처 예상 지출 전체를 바꿉니다.'));
-
-    var g1 = el('div', 'planfield');
-    g1.appendChild(el('label', 'planlabel', '적용 시작일'));
-    var d1 = 날칸(lo, base.시작, base.끝);
-    g1.appendChild(d1);
-    body.appendChild(g1);
-    var g2 = el('div', 'planfield');
-    g2.appendChild(el('label', 'planlabel', '적용 종료일'));
-    var d2 = 날칸(hi, base.시작, base.끝);
-    g2.appendChild(d2);
-    body.appendChild(g2);
-
-    var 현재줄 = el('div', 'planmine', '');
-    body.appendChild(현재줄);
-
-    var g3 = el('div', 'planfield');
-    g3.appendChild(el('label', 'planlabel', '새 총액'));
-    var amt = 돈칸(기존 ? duePlanTotal(기존) : null);
-    var 금액칸 = el('div', 'fixgrp');
-    금액칸.appendChild(amt);
-    금액칸.appendChild(el('span', 'fixlab', '원'));
-    g3.appendChild(금액칸);
-    body.appendChild(g3);
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        '0원을 적으시면 이 기간의 해당 예상 지출을 없앱니다. ' + '비워두면 반영하지 않습니다.'
-      )
-    );
-
-    /* 지급 일정 */
-    body.appendChild(el('div', 'planhead2', '지급 일정'));
-    var 방식 = (기존 && 기존.일정) || '유지';
-    var 줄들 =
-      기존 && 기존.일정 === '지정' && 기존.지급 && 기존.지급.length
-        ? 기존.지급.map(function (g) {
-            return { 날: dayNum(g.날), 액: g.액 };
-          })
-        : [{ 날: null, 액: null }];
-    var 방식칸 = el('div', 'planpick');
-    var r1 = el('button', 'planopt', '기존 예상 일정 유지');
-    r1.type = 'button';
-    var r2 = el('button', 'planopt', '지급일 직접 지정');
-    r2.type = 'button';
-    방식칸.appendChild(r1);
-    방식칸.appendChild(r2);
-    body.appendChild(방식칸);
-    var 방식말 = el('div', 'fcnote', '');
-    body.appendChild(방식말);
-    var 지정칸 = el('div', 'planrows');
-    body.appendChild(지정칸);
-
-    var msg = el('div', 'planwarn hide', '');
-    var 뒤값 = el('div', 'planmine', '');
-
-    function 기간읽기() {
-      var a = d1.value ? dayNum(d1.value) : null;
-      var b = d2.value ? dayNum(d2.value) : null;
-      return { lo: a, hi: b };
     }
-    function 현재액() {
-      var k = 기간읽기();
-      if (k.lo === null || k.hi === null || k.hi < k.lo) return null;
-      return duePlanSpan(base, 화면.p, k.lo, k.hi);
-    }
-    function 지정그리기() {
-      지정칸.innerHTML = '';
-      if (방식 !== '지정') return;
-      줄들.forEach(function (g, idx) {
-        var r = el('div', 'planrow small');
-        var dv = 날칸(g.날, base.시작, base.끝);
-        dv.addEventListener('change', function () {
-          g.날 = dv.value ? dayNum(dv.value) : null;
-          새로고침();
-        });
-        var mv = 돈칸(g.액);
-        mv.addEventListener('input', function () {
-          g.액 = 돈읽기(mv.value);
-          새로고침();
-        });
-        var 칸 = el('div', 'fixgrp');
-        칸.appendChild(mv);
-        칸.appendChild(el('span', 'fixlab', '원'));
-        r.appendChild(dv);
-        r.appendChild(칸);
-        if (줄들.length > 1) {
-          var dl = el('button', 'b', '지우기');
-          dl.type = 'button';
-          dl.addEventListener('click', function () {
-            줄들.splice(idx, 1);
-            지정그리기();
-            새로고침();
-          });
-          r.appendChild(dl);
-        }
-        지정칸.appendChild(r);
-      });
-      var ad = el('button', 'b', '날짜 추가');
-      ad.type = 'button';
-      ad.addEventListener('click', function () {
-        줄들.push({ 날: null, 액: null });
-        지정그리기();
-      });
-      지정칸.appendChild(ad);
-    }
-    function 새로고침() {
-      var sp = 현재액();
-      현재줄.textContent = sp
-        ? '현재 예상에 포함된 금액 ' + won(Math.round(sp.합)) + '원'
-        : '적용 기간을 고르시면 현재 예상 금액을 보여드립니다.';
-      r1.className = 'planopt' + (방식 === '유지' ? ' on' : '');
-      r2.className = 'planopt' + (방식 === '지정' ? ' on' : '');
-      방식말.textContent =
-        방식 === '유지'
-          ? '기존 예상 지출 비중에 따라 날짜별로 나눠 반영합니다.'
-          : '한 날짜 또는 여러 날짜에 금액을 적으시면 됩니다. 날짜별 금액 합계가 새 총액과 같아야 반영합니다.';
-      var v = 돈읽기(amt.value);
-      뒤값.textContent = v === null ? '' : '변경 후 금액 ' + won(v) + '원';
-      if (방식 === '유지' && sp && sp.합 <= 0) {
-        msg.textContent =
-          '이 기간에는 기존 예상 지출이 없어 기존 일정을 쓸 수 없습니다. 지급일을 직접 지정해주세요.';
-        msg.className = 'planwarn';
-      } else if (msg.className === 'planwarn' && msg.textContent.indexOf('기존 일정') >= 0) {
-        msg.textContent = '';
-        msg.className = 'planwarn hide';
-      }
-    }
-    d1.addEventListener('change', 새로고침);
-    d2.addEventListener('change', 새로고침);
-    amt.addEventListener('input', 새로고침);
-    r1.addEventListener('click', function () {
-      방식 = '유지';
-      지정그리기();
-      새로고침();
-    });
-    r2.addEventListener('click', function () {
-      방식 = '지정';
-      지정그리기();
-      새로고침();
-    });
-
-    body.appendChild(뒤값);
-    body.appendChild(msg);
-
-    var ok = el('button', 'fcopen', '변경 반영');
-    ok.type = 'button';
-    ok.addEventListener('click', function () {
-      function 틀림(s) {
-        msg.textContent = s;
-        msg.className = 'planwarn';
-      }
-      var k = 기간읽기();
-      if (k.lo === null || k.hi === null) return 틀림('적용 시작일과 종료일을 골라주세요.');
-      if (k.hi < k.lo) return 틀림('적용 종료일이 시작일보다 앞섭니다.');
-      if (k.lo < base.시작 || k.hi > base.끝) {
-        return 틀림(
-          '적용 기간은 ' +
-            날짜글(base.시작) +
-            ' ~ ' +
-            날짜글(base.끝) +
-            ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
-        );
-      }
-      var v = 돈읽기(amt.value);
-      if (v === null) return 틀림('새 총액을 적어주세요. 0원도 적으실 수 있습니다.');
-      var 부딪 = duePlanClash(box, 화면.p, k.lo, k.hi, 화면.id);
-      if (부딪) {
-        return 틀림(
-          '이 거래처의 ' +
-            날글(부딪.시작) +
-            ' ~ ' +
-            날글(부딪.종료) +
-            ' 계획과 기간이 겹칩니다. 그 계획을 수정해주세요.'
-        );
-      }
-      var sp = duePlanSpan(base, 화면.p, k.lo, k.hi);
-      var 지급 = [];
-      if (방식 === '유지') {
-        if (sp.합 <= 0)
-          return 틀림('이 기간에는 기존 예상 지출이 없어 기존 일정을 쓸 수 없습니다.');
-        var 나눔 = 몫나누기(v, sp.값);
-        if (!나눔) return 틀림('기존 예상 비중을 구할 수 없습니다. 지급일을 직접 지정해주세요.');
-        for (var q = 0; q < 나눔.length; q++) {
-          if (나눔[q] > 0) 지급.push({ 날: 날짜값(sp.날[q]), 액: 나눔[q] });
-        }
-      } else {
-        var 합 = 0,
-          빈 = false;
-        줄들.forEach(function (g) {
-          if (g.날 === null || g.액 === null) {
-            빈 = true;
-            return;
-          }
-          합 += g.액;
-        });
-        if (v > 0 && 빈)
-          return 틀림('지급일과 금액을 모두 적어주세요. 빈 칸은 0원으로 치지 않습니다.');
-        if (v > 0) {
-          for (var w = 0; w < 줄들.length; w++) {
-            var 날 = 줄들[w].날;
-            if (날 < base.시작 || 날 > base.끝) {
-              return 틀림(
-                '지급일은 ' +
-                  날짜글(base.시작) +
-                  ' ~ ' +
-                  날짜글(base.끝) +
-                  ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
-              );
-            }
-          }
-          if (합 !== v) {
-            return 틀림(
-              '날짜별 금액 합계(' + won(합) + '원)가 새 총액(' + won(v) + '원)과 다릅니다.'
-            );
-          }
-          줄들.forEach(function (g) {
-            if (g.액 > 0) 지급.push({ 날: 날짜값(g.날), 액: g.액 });
-          });
-        }
-      }
-      var pl = {
-        id: 화면.id || planNewId(),
-        유형: '대체',
-        거래처: 화면.p,
-        시작: 날짜값(k.lo),
-        종료: 날짜값(k.hi),
-        총액: v,
-        일정: 방식,
-        지급: 지급,
-        확인: true,
-        자료: base.지문,
-        모델: DUE_MODEL
-      };
-      /* ★ ⑩ 같은 계획을 다시 수정하면 기존 계획을 교체한다 — 쌓지 않는다 */
-      var items = box.items.filter(function (y) {
-        return y.id !== pl.id;
-      });
-      items.push(pl);
-      반영끝(planSave({ v: 1, items: items }));
-    });
-    body.appendChild(ok);
-    var view = el('button', 'fcopen', '반영된 내역 보기');
-    view.type = 'button';
-    view.addEventListener('click', function () {
-      var k = 기간읽기();
-      가기('내역', {
-        p: 화면.p,
-        lo: k.lo === null ? base.시작 : k.lo,
-        hi: k.hi === null ? base.끝 : k.hi
-      });
-    });
-    body.appendChild(view);
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        '이 기간 밖의 같은 거래처 예상 지출은 그대로 둡니다. ' +
-          '일부 지급만 고르는 상세 수정은 아직 없습니다.'
-      )
-    );
-    뒤로단추();
-    지정그리기();
-    새로고침();
-  }
-
-  /* ── 새 지출 추가 ────────────────────────────────────────── */
-  function 추가화면() {
-    제목.textContent = '새 지출 추가';
-    var box = planBox();
-    var 기존 = null;
-    if (화면.id)
-      box.items.forEach(function (y) {
-        if (y.id === 화면.id) 기존 = y;
-      });
-
-    var g1 = el('div', 'planfield');
-    g1.appendChild(el('label', 'planlabel', '이름'));
-    var nm = document.createElement('input');
-    nm.type = 'text';
-    nm.className = 'maninput planname-in';
-    nm.placeholder = '지출 이름';
-    if (기존) nm.value = 기존.이름 || '';
-    g1.appendChild(nm);
-    body.appendChild(g1);
-
-    var g2 = el('div', 'planfield');
-    g2.appendChild(el('label', 'planlabel', '지급일'));
-    var dv = 날칸(
-      기존 && 기존.지급 && 기존.지급[0] ? dayNum(기존.지급[0].날) : null,
-      base.시작,
-      base.끝
-    );
-    g2.appendChild(dv);
-    body.appendChild(g2);
-
-    var g3 = el('div', 'planfield');
-    g3.appendChild(el('label', 'planlabel', '금액'));
-    var amt = 돈칸(기존 ? duePlanTotal(기존) : null);
-    var 금액칸 = el('div', 'fixgrp');
-    금액칸.appendChild(amt);
-    금액칸.appendChild(el('span', 'fixlab', '원'));
-    g3.appendChild(금액칸);
-    body.appendChild(g3);
-
-    var 안내 = el('div', 'planfound');
-    body.appendChild(안내);
-    var msg = el('div', 'planwarn hide', '');
-    body.appendChild(msg);
-
-    function 살피기() {
-      안내.innerHTML = '';
-      var 닮 = 닮은거래처(base, nm.value);
+    /* ★ 118차 ③. 예전 모델에서 「추가」로 넣은 계획은 새 기본 예상과 겹칠 수 있다.
+         이름이 비슷한 기존 예상을 보여드리고 고르시게 한다. 같은 지출이라고 단정하지 않는다 */
+    if (pl.유형 !== '대체' && (pl.모델 || 1) !== DUE_MODEL) {
+      var 닮 = 닮은거래처(창.base, pl.이름);
       if (닮.length) {
-        안내.appendChild(el('div', 'planwarn2', '이 거래처의 지출이 예상에 포함되어 있습니다.'));
+        wrap.appendChild(
+          el(
+            'div',
+            'planwarn2',
+            '기본 예상에 이름이 비슷한 지출이 있습니다. 같은 지출이면 다시 반영하지 마시고 계획을 취소하거나 기존 예상을 수정해주세요.'
+          )
+        );
         닮.forEach(function (it) {
           var r = el('div', 'planrow small');
           var L = el('div', 'planlab');
@@ -984,311 +1151,167 @@ function openDuePlan(c, months, 첫) {
           L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
           r.appendChild(L);
           r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
-          var b = el('button', 'b', '기존 예상 수정');
-          b.type = 'button';
-          b.addEventListener('click', function () {
-            가기('수정', { p: it.거래처 });
+          var eb = el('button', 'b', '기존 예상 수정');
+          eb.type = 'button';
+          eb.addEventListener('click', function () {
+            예정가기(창, '수정', { p: it.거래처 });
           });
-          r.appendChild(b);
-          안내.appendChild(r);
+          r.appendChild(eb);
+          wrap.appendChild(r);
         });
-        안내.appendChild(
-          el('div', 'fcnote', '같은 곳이 아니라면 아래에서 별도 지출로 추가하시면 됩니다.')
-        );
-      } else if (String(nm.value).trim()) {
-        안내.appendChild(el('div', 'planwarn2', '기존 예상에서 연결할 지출을 찾지 못했습니다.'));
-        /* ★ ⑨ 「기존 예상에 없는 지출」이라고 단정하지 않는다 */
-        안내.appendChild(
+      } else {
+        wrap.appendChild(
           el(
             'div',
-            'fcnote',
-            '기존 예상에 없는 지출인지는 확인하지 못했습니다. ' + '별도 추가가 맞는지 확인해주세요.'
+            'plansub',
+            '기본 예상에서 이름이 비슷한 지출을 찾지 못했습니다. 같은 지출이 없는지는 확인하지 못했습니다.'
           )
         );
       }
     }
-    nm.addEventListener('input', 살피기);
-    살피기();
-
-    var ok = el('button', 'fcopen', 기존 ? '변경 반영' : '별도 지출로 추가');
-    ok.type = 'button';
-    ok.addEventListener('click', function () {
-      function 틀림(s) {
-        msg.textContent = s;
-        msg.className = 'planwarn';
-      }
-      var 이름 = String(nm.value).trim();
-      if (!이름) return 틀림('지출 이름을 적어주세요.');
-      if (!dv.value) return 틀림('지급일을 골라주세요.');
-      var 날 = dayNum(dv.value);
-      if (날 < base.시작 || 날 > base.끝) {
-        return 틀림(
-          '지급일은 ' +
-            날짜글(base.시작) +
+    /* 지난 지급분과 남은 지급분을 가른다. 지난 것을 지급 완료로 단정하지 않는다 */
+    var 지난 = [],
+      남은 = [],
+      새날 = {};
+    (pl.지급 || []).forEach(function (g, idx) {
+      if (dayNum(g.날) <= 창.base.t0) 지난.push({ i: idx, g: g });
+      else 남은.push({ i: idx, g: g });
+    });
+    if (지난.length) {
+      wrap.appendChild(
+        el(
+          'div',
+          'planwarn2',
+          '지급일이 새 자료 기준일보다 앞섭니다. 지급 완료 여부는 확인하지 않았습니다.'
+        )
+      );
+      지난.forEach(function (o) {
+        var r = el('div', 'planrow small');
+        var L = el('div', 'planlab');
+        L.appendChild(el('div', 'plansub', 날글(o.g.날) + ' · ' + won(o.g.액) + '원'));
+        r.appendChild(L);
+        var nd = 날칸(null, 창.base.시작, 창.base.끝);
+        nd.addEventListener('change', function () {
+          새날[o.i] = nd.value ? dayNum(nd.value) : null;
+        });
+        r.appendChild(nd);
+        wrap.appendChild(r);
+      });
+      wrap.appendChild(
+        el(
+          'div',
+          'fcnote',
+          '아직 나가지 않았다면 새 지급일을 정해주세요. ' +
+            '정하지 않은 지난 지급분은 반영하지 않습니다. 남은 기간에 자동으로 다시 넣지 않습니다.'
+        )
+      );
+    }
+    if (남은.length) {
+      wrap.appendChild(
+        el(
+          'div',
+          'plansub',
+          '남은 지급분 ' +
+            남은
+              .map(function (o) {
+                return 날글(o.g.날) + ' ' + won(o.g.액) + '원';
+              })
+              .join(' · ')
+        )
+      );
+    }
+    var 말 = el('div', 'planwarn hide', '');
+    wrap.appendChild(말);
+    var acts = el('div', 'planacts');
+    var a1 = el('button', 'b on', '다시 반영');
+    a1.type = 'button';
+    a1.addEventListener('click', function () {
+      var 지급 = [];
+      남은.forEach(function (o) {
+        지급.push({ 날: o.g.날, 액: o.g.액 });
+      });
+      var 막힘 = null;
+      지난.forEach(function (o) {
+        var d = 새날[o.i];
+        if (d == null) return; /* 안 정하신 것은 반영하지 않는다 */
+        if (d < 창.base.시작 || d > 창.base.끝) {
+          막힘 =
+            '새 지급일은 ' +
+            날짜글(창.base.시작) +
             ' ~ ' +
-            날짜글(base.끝) +
-            ' 안에서 골라주세요. 그 밖은 아직 계산할 수 없습니다.'
-        );
+            날짜글(창.base.끝) +
+            ' 안에서 골라주세요.';
+          return;
+        }
+        지급.push({ 날: 날짜값(d), 액: o.g.액 });
+      });
+      if (막힘) {
+        말.textContent = 막힘;
+        말.className = 'planwarn';
+        return;
       }
-      var v = 돈읽기(amt.value);
-      if (v === null) return 틀림('금액을 적어주세요.');
-      var pl = {
-        id: 화면.id || planNewId(),
-        유형: '추가',
-        이름: 이름,
-        총액: v,
-        일정: '지정',
-        지급: v > 0 ? [{ 날: 날짜값(날), 액: v }] : [],
+      지급.sort(function (a, b) {
+        return a.날 < b.날 ? -1 : a.날 > b.날 ? 1 : 0;
+      });
+      var neo = {
+        id: pl.id,
+        유형: pl.유형,
+        거래처: pl.거래처,
+        이름: pl.이름,
+        시작: pl.시작,
+        종료: pl.종료,
+        총액: 지급.reduce(function (s, g) {
+          return s + g.액;
+        }, 0),
+        일정: pl.일정,
+        지급: 지급,
         확인: true,
-        자료: base.지문,
+        자료: 창.base.지문,
         모델: DUE_MODEL
       };
+      var items = box.items.map(function (y) {
+        return y.id === pl.id ? neo : y;
+      });
+      예정반영끝(창, planSave({ v: 1, items: items }));
+    });
+    var a2 = el('button', 'b', '계획 취소');
+    a2.type = 'button';
+    a2.addEventListener('click', function () {
       var items = box.items.filter(function (y) {
         return y.id !== pl.id;
       });
-      items.push(pl);
-      반영끝(planSave({ v: 1, items: items }));
+      예정반영끝(창, planSave({ v: 1, items: items }));
     });
-    body.appendChild(ok);
-    body.appendChild(el('div', 'fcnote', '새 지출은 기존 예상에 연결하지 않고 한 번 더합니다.'));
-    뒤로단추();
-  }
-
-  /* ── 보류 확인 (⑫) ──────────────────────────────────────── */
-  function 적용보류화면() {
-    제목.textContent = '예정 지출 확인';
-    var use = dueDailyUse(t, c.i),
-      box = planBox();
-    /* ★ 118차 ③. 보류 까닭이 둘이다 — 예측 모델이 바뀐 것과 자료가 바뀐 것.
-       실제로 해당하는 까닭만 적는다 */
-    var 옛모델 = use.적용보류목록.filter(function (pl) {
-      return (pl.모델 || 1) !== DUE_MODEL;
-    });
-    var 까닭 = [];
-    if (옛모델.length) 까닭.push('예상 지출에 사업 외 출금도 들어가도록 계산 범위가 바뀌었습니다.');
-    if (옛모델.length < use.적용보류목록.length) {
-      /* ★ 116차 통합 ⑥. 재업로드만이 아니라 분류를 바꿔도 여기로 온다. 까닭을 하나로 단정하지 않는다 */
-      까닭.push('거래내역이나 분류가 바뀌어 예측에 쓰는 자료가 달라졌습니다.');
-    }
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        까닭.join(' ') +
-          (까닭.length ? ' ' : '') +
-          '이전 차감액을 그대로 쓰지 않고 보류했습니다. 확인 후 다시 반영하실 수 있습니다.'
-      )
-    );
-    if (!use.적용보류목록.length) {
-      body.appendChild(el('div', 'fcnote', '보류된 예정 지출이 없습니다.'));
-      뒤로단추();
-      return;
-    }
-    use.적용보류목록.forEach(function (pl) {
-      var wrap = el('div', 'plancheck');
-      wrap.appendChild(
-        el('div', 'planname', pl.유형 === '대체' ? pl.거래처 : pl.이름 || '새 지출')
-      );
-      wrap.appendChild(el('div', 'plansub', '저장된 총액 ' + won(duePlanTotal(pl)) + '원'));
-      if (pl.유형 === '대체') {
-        var sp = duePlanSpan(base, pl.거래처, dayNum(pl.시작), dayNum(pl.종료));
-        wrap.appendChild(
-          el(
-            'div',
-            'plansub',
-            '새 기본 예상분 ' +
-              won(Math.round(sp.합)) +
-              '원 (' +
-              날글(pl.시작) +
-              ' ~ ' +
-              날글(pl.종료) +
-              ')'
-          )
-        );
-      }
-      /* ★ 118차 ③. 예전 모델에서 「추가」로 넣은 계획은 새 기본 예상과 겹칠 수 있다.
-         이름이 비슷한 기존 예상을 보여드리고 고르시게 한다. 같은 지출이라고 단정하지 않는다 */
-      if (pl.유형 !== '대체' && (pl.모델 || 1) !== DUE_MODEL) {
-        var 닮 = 닮은거래처(base, pl.이름);
-        if (닮.length) {
-          wrap.appendChild(
-            el(
-              'div',
-              'planwarn2',
-              '기본 예상에 이름이 비슷한 지출이 있습니다. 같은 지출이면 다시 반영하지 마시고 계획을 취소하거나 기존 예상을 수정해주세요.'
-            )
-          );
-          닮.forEach(function (it) {
-            var r = el('div', 'planrow small');
-            var L = el('div', 'planlab');
-            L.appendChild(el('div', 'planname', it.거래처));
-            L.appendChild(el('div', 'plansub', 날짜글(it.첫) + ' ~ ' + 날짜글(it.끝)));
-            r.appendChild(L);
-            r.appendChild(el('div', 'planamt', won(Math.round(it.총액)) + '원'));
-            var eb = el('button', 'b', '기존 예상 수정');
-            eb.type = 'button';
-            eb.addEventListener('click', function () {
-              가기('수정', { p: it.거래처 });
-            });
-            r.appendChild(eb);
-            wrap.appendChild(r);
-          });
-        } else {
-          wrap.appendChild(
-            el(
-              'div',
-              'plansub',
-              '기본 예상에서 이름이 비슷한 지출을 찾지 못했습니다. 같은 지출이 없는지는 확인하지 못했습니다.'
-            )
-          );
-        }
-      }
-      /* 지난 지급분과 남은 지급분을 가른다. 지난 것을 지급 완료로 단정하지 않는다 */
-      var 지난 = [],
-        남은 = [],
-        새날 = {};
-      (pl.지급 || []).forEach(function (g, idx) {
-        if (dayNum(g.날) <= base.t0) 지난.push({ i: idx, g: g });
-        else 남은.push({ i: idx, g: g });
-      });
-      if (지난.length) {
-        wrap.appendChild(
-          el(
-            'div',
-            'planwarn2',
-            '지급일이 새 자료 기준일보다 앞섭니다. 지급 완료 여부는 확인하지 않았습니다.'
-          )
-        );
-        지난.forEach(function (o) {
-          var r = el('div', 'planrow small');
-          var L = el('div', 'planlab');
-          L.appendChild(el('div', 'plansub', 날글(o.g.날) + ' · ' + won(o.g.액) + '원'));
-          r.appendChild(L);
-          var nd = 날칸(null, base.시작, base.끝);
-          nd.addEventListener('change', function () {
-            새날[o.i] = nd.value ? dayNum(nd.value) : null;
-          });
-          r.appendChild(nd);
-          wrap.appendChild(r);
-        });
-        wrap.appendChild(
-          el(
-            'div',
-            'fcnote',
-            '아직 나가지 않았다면 새 지급일을 정해주세요. ' +
-              '정하지 않은 지난 지급분은 반영하지 않습니다. 남은 기간에 자동으로 다시 넣지 않습니다.'
-          )
-        );
-      }
-      if (남은.length) {
-        wrap.appendChild(
-          el(
-            'div',
-            'plansub',
-            '남은 지급분 ' +
-              남은
-                .map(function (o) {
-                  return 날글(o.g.날) + ' ' + won(o.g.액) + '원';
-                })
-                .join(' · ')
-          )
-        );
-      }
-      var 말 = el('div', 'planwarn hide', '');
-      wrap.appendChild(말);
-      var acts = el('div', 'planacts');
-      var a1 = el('button', 'b on', '다시 반영');
-      a1.type = 'button';
-      a1.addEventListener('click', function () {
-        var 지급 = [];
-        남은.forEach(function (o) {
-          지급.push({ 날: o.g.날, 액: o.g.액 });
-        });
-        var 막힘 = null;
-        지난.forEach(function (o) {
-          var d = 새날[o.i];
-          if (d == null) return; /* 안 정하신 것은 반영하지 않는다 */
-          if (d < base.시작 || d > base.끝) {
-            막힘 =
-              '새 지급일은 ' + 날짜글(base.시작) + ' ~ ' + 날짜글(base.끝) + ' 안에서 골라주세요.';
-            return;
-          }
-          지급.push({ 날: 날짜값(d), 액: o.g.액 });
-        });
-        if (막힘) {
-          말.textContent = 막힘;
-          말.className = 'planwarn';
-          return;
-        }
-        지급.sort(function (a, b) {
-          return a.날 < b.날 ? -1 : a.날 > b.날 ? 1 : 0;
-        });
-        var neo = {
-          id: pl.id,
-          유형: pl.유형,
-          거래처: pl.거래처,
-          이름: pl.이름,
-          시작: pl.시작,
-          종료: pl.종료,
-          총액: 지급.reduce(function (s, g) {
-            return s + g.액;
-          }, 0),
-          일정: pl.일정,
-          지급: 지급,
-          확인: true,
-          자료: base.지문,
-          모델: DUE_MODEL
-        };
-        var items = box.items.map(function (y) {
-          return y.id === pl.id ? neo : y;
-        });
-        반영끝(planSave({ v: 1, items: items }));
-      });
-      var a2 = el('button', 'b', '계획 취소');
-      a2.type = 'button';
-      a2.addEventListener('click', function () {
-        var items = box.items.filter(function (y) {
-          return y.id !== pl.id;
-        });
-        반영끝(planSave({ v: 1, items: items }));
-      });
-      acts.appendChild(a1);
-      acts.appendChild(a2);
-      wrap.appendChild(acts);
-      body.appendChild(wrap);
-    });
-    뒤로단추();
-  }
-
-  function 그리기() {
-    body.innerHTML = '';
-    body.scrollTop = 0;
-    if (화면.이름 === '내역') 내역화면();
-    else if (화면.이름 === '수정') 수정화면();
-    else if (화면.이름 === '추가') 추가화면();
-    else if (화면.이름 === '적용보류') 적용보류화면();
-    else 목록화면();
-  }
-  그리기();
-
-  var 닫힘 = false;
-  function 닫기() {
-    if (닫힘) return;
-    닫힘 = true;
-    if (back.parentNode) back.parentNode.removeChild(back);
-    document.body.style.overflow = 뒤스크롤;
-    document.removeEventListener('keydown', 키);
-  }
-  function 키(e) {
-    if (e.key === 'Escape') 닫기();
-  }
-  document.addEventListener('keydown', 키);
-  x.addEventListener('click', 닫기);
-  x2.addEventListener('click', 닫기);
-  back.addEventListener('click', function (e) {
-    if (e.target === back) 닫기();
+    acts.appendChild(a1);
+    acts.appendChild(a2);
+    wrap.appendChild(acts);
+    창.body.appendChild(wrap);
   });
+  예정뒤로단추(창);
 }
+
+function 예정그리기(창) {
+  창.body.innerHTML = '';
+  창.body.scrollTop = 0;
+  if (창.화면.이름 === '내역') 예정내역화면(창);
+  else if (창.화면.이름 === '수정') 예정수정화면(창);
+  else if (창.화면.이름 === '추가') 예정추가화면(창);
+  else if (창.화면.이름 === '적용보류') 예정적용보류화면(창);
+  else 예정목록화면(창);
+}
+
+function 예정닫기(창) {
+  if (창.닫힘) return;
+  창.닫힘 = true;
+  if (창.back.parentNode) 창.back.parentNode.removeChild(창.back);
+  document.body.style.overflow = 창.뒤스크롤;
+  document.removeEventListener('keydown', 창.키);
+}
+
+function 예정키(창, e) {
+  if (e.key === 'Escape') 예정닫기(창);
+}
+
 function 알림줄(화면, body) {
   if (화면.알림) body.appendChild(el('div', 'planwarn', 화면.알림));
 }
