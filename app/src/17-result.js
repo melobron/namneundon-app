@@ -1629,7 +1629,7 @@ function drawEntryBox(months, host, opt) {
   var day = document.createElement('input');
   day.type = 'number';
   day.className = 'maninput cashdayin';
-  day.min = 1;
+  day.min = '1';
   day.max = opt.끝날;
   if (opt.날) day.value = opt.날;
   /* ★ 85차 ③. 앞에 지금 보고 있는 달, 뒤에 「일」. 달을 옮기면 앞의 달도 같이 바뀐다 */

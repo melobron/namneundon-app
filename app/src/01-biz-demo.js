@@ -25,7 +25,7 @@ var BIZ = { 주인: '대표님', 곳: '사업장' };
      다시 못 채우므로, 채우기 전에 원본을 그 마디에 붙여 들고 있는다 */
 var BIZ_SLOTS = [];
 function fillBiz(root) {
-  var w = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT, null, false);
+  var w = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT, null);
   var hits = [],
     t;
   while ((t = w.nextNode())) {
