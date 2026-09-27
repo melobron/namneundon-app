@@ -90,7 +90,8 @@ export default [
   },
   {
     // page.evaluate 안의 코드는 브라우저(앱)에서 돈다
-    files: ['tests/**/*.mjs'],
+    // 브라우저 안에서 도는 코드(page.evaluate)가 앱 전역을 쓴다 — 화면 비교 도구도 같다
+    files: ['tests/**/*.mjs', 'tools/compare-screens.mjs'],
     languageOptions: {
       globals: { ...globals.browser, ...appGlobals, XLSX: 'readonly' }
     }

@@ -27,7 +27,8 @@
     "deploy:landing": "wrangler pages deploy landing --project-name namneundon --branch main",
     "verify:prod": "node tools/verify-deploy.mjs",
     "test:core": "playwright test tests/core",
-    "purity": "node tools/analyze-purity.mjs"
+    "purity": "node tools/analyze-purity.mjs",
+    "screens": "node tools/compare-screens.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
