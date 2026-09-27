@@ -202,7 +202,7 @@ function maskPersons(root) {
   });
   if (!keys.length) return 0;
   var n = 0;
-  var walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  var walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   var nodes = [];
   while (walk.nextNode()) nodes.push(walk.currentNode);
   nodes.forEach(function (t) {

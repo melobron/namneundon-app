@@ -25,12 +25,12 @@
 | ESLint 경고         |      0 |               0 | `package.json` → `lint:js` 의 `--max-warnings 0`   |
 | html-validate 경고  |      0 |               0 | `package.json` → `lint:html` 의 `--max-warnings 0` |
 | Stylelint 경고      |     59 |      59 (09-27) | `package.json` → `lint:css` 의 `--max-warnings 59` |
-| 앱 타입 오류        |      4 |       4 (09-26) | `tools/typecheck-app.mjs` 의 `BASELINE`            |
+| 앱 타입 오류        |      0 |       0 (09-27) | `tools/typecheck-app.mjs` 의 `BASELINE`            |
 | 개발 도구 타입 오류 |      0 |               0 | `tsconfig.json` (`tsc` 가 실패하면 바로 실패)      |
 
 - Stylelint 는 110 → 59 (2026-09-27, B-6). 「결과가 안 바뀌는 이동」만 했다 — 규칙을 옮길 때 건너뛰는 규칙들 중 **구체성이 같고 겹치는 속성을 쓰는 것이 하나도 없을 때만** 옮겼다 (구체성이 다르면 순서와 상관없이 구체성이 이긴다). 넓은 화면 비교(4개 너비 · 다크 · 12달 × 펼침 · 올리기 흐름, 106장)로 확인했다.
 - 남은 59 개는 옮기면 사이의 같은 구체성 규칙과 겹치는 속성이 있어 결과가 바뀔 수 있는 것, 또는 옮기면 다른 경고가 생기는 것이다. 두 선택자가 실제로 한 요소에 같이 걸리는지 하나씩 확인해야 풀린다.
-- 앱 타입 오류는 2026-09-26(B-6) 51 → 4. 바깥 라이브러리(SheetJS · PDF.js) 타입은 `types/app-libs.d.ts`(배포되지 않는다)에, 화면 요소 종류는 선언 자리에 JSDoc(`/** @type {HTMLInputElement} */ (…)`)으로 적었다. 남은 4개는 코드를 고쳐야 없어진다 — `createTreeWalker` 의 옛 넷째 인자 2 · `input.min` 에 숫자 1 · PDF 읽기 약속 모양 1.
+- 앱 타입 오류는 2026-09-26(B-6) 51 → 4. 바깥 라이브러리(SheetJS · PDF.js) 타입은 `types/app-libs.d.ts`(배포되지 않는다)에, 화면 요소 종류는 선언 자리에 JSDoc(`/** @type {HTMLInputElement} */ (…)`)으로 적었다. 2026-09-27 남은 4개도 고쳐 **0**: `createTreeWalker` 의 옛 넷째 인자(브라우저가 무시) 삭제 2 · `input.min` 에 숫자 대신 글자 1 · PDF 읽기 약속에 JSDoc 1.
 - 일부러 꺼 둔 옛 기능(`18-charts-year.js` 의 `return;` 뒤 각주 등)은 경고 정리 때(2026-09-25) 지웠다 — git 기록에 남아 있다.
 
 ## 정한 것과 이유

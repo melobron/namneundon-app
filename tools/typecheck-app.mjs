@@ -4,11 +4,12 @@
 // 라서 지금 고치지 않고, 새로 늘지만 않게 묶는다. 고쳐서 줄면 BASELINE 을 그 수로 낮춘다.
 // 2026-09-26 (B-6): 51 → 4. 바깥 라이브러리 타입(types/app-libs.d.ts)과 화면 요소 JSDoc 표시로 줄였다.
 //   남은 4개는 코드를 고쳐야 없어진다 — createTreeWalker 의 옛 넷째 인자 2 · input.min 에 숫자 1 · PDF 읽기 약속 모양 1.
+// 2026-09-27 (B-6): 4 → 0. 위 넷을 고쳤다 (옛 인자는 브라우저가 무시하고, min 은 글자로 저장되므로 동작은 같다).
 //
 // 사용: node tools/typecheck-app.mjs
 import { execFileSync } from 'node:child_process';
 
-const BASELINE = 4;
+const BASELINE = 0;
 
 let out = '';
 let failed = null; // tsc 가 0 이 아닌 값으로 끝났나 (오류가 있을 때도 그렇다)
