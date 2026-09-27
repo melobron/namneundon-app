@@ -32,7 +32,7 @@
 
 ### 알려진 한계 (코드로 확인)
 
-- **배포 workflow 는 `npm run lint` 를 돌리지 않는다.** `deploy.yml` 의 `test` 작업은 `npm test`(불러오는 순서 + Playwright)만 돈다. 린트 · 타입 검사는 `test.yml` 에서 **따로 · 동시에** 돌고, 배포는 그 결과를 기다리지 않는다. PR 단계에서 CI 가 통과한 뒤 합친다는 약속([결정 0005](../decisions/0005-main-protection-by-rule.md))이 지금의 안전장치다. PR #14 뒤에도 이 점은 그대로다. 개선 항목: [backlog](../backlog.md) Q-2.
+- **배포 workflow 도 `npm run lint` 를 돌린다** (2026-09-27, [backlog](../backlog.md) Q-2). `deploy.yml` 의 `test` 작업이 린트 · 타입 검사 → `npm test` 순서로 돌고, 둘 다 통과해야 앱 · 랜딩을 올린다. 예전에는 `npm test` 만 보고 올렸다.
 - 랜딩 배포는 안전망 테스트(`test`)를 기다리지만, 랜딩 자체를 검사하는 테스트는 없다. 운영 랜딩의 `APP_URL` 확인만 배포 뒤에 한다.
 
 ## 처음 한 번 — Cloudflare 토큰 (이미 되어 있음)

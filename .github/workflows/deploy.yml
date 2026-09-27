@@ -1,5 +1,5 @@
 # main 에 합쳐지면 자동 배포한다.
-#   ① 안전망 테스트 → ② 앱·랜딩을 Cloudflare 에 올린다 → ③ 운영 주소에서 다시 테스트
+#   ① 린트 · 안전망 테스트 → ② 앱·랜딩을 Cloudflare 에 올린다 → ③ 운영 주소에서 다시 테스트
 # 테스트가 실패하면 올리지 않는다.
 #
 # ★ 2026-09-25. 예전에는 「직전 커밋 대비 바뀐 곳만」 올렸다. PR 셋을 연달아 합치자
@@ -34,6 +34,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # ★ Q-2 (2026-09-27). 린트 · 타입 검사도 통과해야 올린다 — 예전에는 npm test 만 보고 배포했다
+      - run: npm run lint
       - run: npx playwright install --with-deps chromium
       - run: npm test
 

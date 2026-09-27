@@ -11,12 +11,21 @@ import { execFileSync } from 'node:child_process';
 const BASELINE = 4;
 
 let out = '';
+let failed = null; // tsc 가 0 이 아닌 값으로 끝났나 (오류가 있을 때도 그렇다)
 try {
   execFileSync('npx', ['tsc', '-p', 'tsconfig.app.json'], { encoding: 'utf8', stdio: 'pipe' });
 } catch (e) {
   out = (e.stdout || '') + (e.stderr || '');
+  failed = e;
 }
 const errors = out.split('\n').filter((l) => l.includes('error TS'));
+// ★ Q-1 (2026-09-27). tsc 를 아예 못 돌렸으면(npx · node 를 못 찾음, 설정 오류 등) 「error TS」 줄이 없어
+//   0 개로 세고 「기준선보다 줄었다」로 통과했다. 실패했는데 타입 오류 줄이 하나도 없으면 검사 실패로 본다
+if (failed && errors.length === 0) {
+  console.log(out || String(failed.message || failed));
+  console.log('\n✗ 타입 검사(tsc)를 실행하지 못했다 — 위 출력을 본다. 오류 0 개로 치지 않는다');
+  process.exit(1);
+}
 console.log(`앱 타입 오류 ${errors.length}개 (기준선 ${BASELINE})`);
 if (errors.length > BASELINE) {
   console.log(out);
