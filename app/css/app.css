@@ -1102,6 +1102,7 @@ table.o td.v {
   font-size: calc(14 * var(--fu));
   font-weight: 700;
   flex: none;
+  position: relative;
 }
 .res .fsub {
   font-weight: 400;
@@ -2678,12 +2679,14 @@ footer {
   color: var(--gray);
   border-color: var(--line);
 }
+/* 36차 K — 목표선을 넘으면 초록. 새 색을 만들지 않고 --good 을 쓴다 */
 .obbar {
   height: 6px;
   background: var(--line);
   border-radius: var(--rad-pill);
   margin: 5px 0 5px;
   overflow: hidden;
+  position: relative;
 }
 .obbar i {
   display: block;
@@ -2691,10 +2694,6 @@ footer {
   background: var(--ink);
   border-radius: var(--rad-pill);
   transition: width 0.2s ease;
-}
-/* 36차 K — 목표선을 넘으면 초록. 새 색을 만들지 않고 --good 을 쓴다 */
-.obbar {
-  position: relative;
 }
 .obbar.ok i {
   background: var(--good);
@@ -3281,9 +3280,14 @@ footer {
        보이는 모습은 똑같지만, padding 은 줄의 상자를 화면 끝에 그대로 두고
        글자만 밀어낸다 — 그러면 재는 자리(left)가 0 으로 남아 로고와 안 맞는다.
        margin 이면 상자와 글자가 같이 18px 로 온다 */
+/* 38차 1-1 — 이름 옆 [수정] */
 .rstore {
   padding: 14px 0 0;
   margin: 0 30px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .rstorebtn {
   border: none;
@@ -3298,13 +3302,6 @@ footer {
 }
 .rstorebtn:hover {
   border-bottom-color: var(--gray);
-}
-/* 38차 1-1 — 이름 옆 [수정] */
-.rstore {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 .rstoreedit {
   border: 1px solid var(--edge);
@@ -3490,9 +3487,6 @@ footer {
 .orow[hidden] {
   display: none;
 }
-.res .pct {
-  position: relative;
-}
 .pctbase {
   display: block;
   font-size: calc(10.5 * var(--fu));
@@ -3554,6 +3548,7 @@ footer {
 }
 .ckhead.done2 .chev {
   margin-left: 6px;
+  font-size: calc(12 * var(--fu));
 }
 .chbtn.rollback {
   border-color: var(--ink);
@@ -4056,10 +4051,6 @@ footer {
   margin-top: 16px;
   cursor: pointer;
   color: var(--gray);
-}
-.ckhead.done2 .chev {
-  margin-left: 6px;
-  font-size: calc(12 * var(--fu));
 }
 .simstore {
   margin-top: 14px;
@@ -4757,6 +4748,11 @@ footer {
   order: 2;
 }
 /* 그 밖의 것(「수정」·「지우기」·직접 넣는 칸)은 지금처럼 숫자 뒤에 남는다 */
+
+/* 검산이 안 맞으면 숫자를 하나도 보여주지 않는다 (인수인계 §10-3) */
+body.failed > *:not(.err) {
+  display: none;
+}
 .pnl .orow:not(.mcalc) > *:not(.lab):not(.p):not(.v) {
   order: 3;
 }
@@ -5611,8 +5607,6 @@ input.cashdayin {
   padding: 7px 0;
   font-size: calc(13.5 * var(--fu));
   border-bottom: 1px dashed var(--line);
-}
-.dtl .drow {
   flex-wrap: wrap;
 }
 .dtl .drow:last-child {
@@ -6039,9 +6033,6 @@ table.o tr:last-child td {
   padding: 0 0 0 8px;
   background: var(--paper);
 }
-.orow.mcalc + .orow.mcalc {
-  border-top: 1px solid var(--line);
-}
 .mcalc .msign {
   font-size: calc(14 * var(--fu));
   font-weight: 800;
@@ -6090,6 +6081,14 @@ table.o tr:last-child td {
   background: var(--brand);
   color: var(--paper);
 }
+/* ★ 88차 ④. 「−」는 한 줄 안에서 왼쪽에 붙는 부호다. 줄을 쌓으면 혼자 가운데 떠서
+     무슨 뜻인지 알 수 없게 된다. 큰 단에서는 안 보이게 한다 —
+     「사업에 쓴 돈」이 빨간 글씨라 뺀다는 것이 이미 보인다.
+     「=」도 같은 자리·같은 까닭이라 같이 감춘다. 1단에서는 지금처럼 보인다 */
+.fs2 .mcalc .msign,
+.fs3 .mcalc .msign {
+  display: none;
+}
 .res.mcalc.mprofit .msign,
 .res.mcalc.mprofit .lab,
 .res.mcalc.mprofit .v {
@@ -6123,11 +6122,6 @@ table.o tr:last-child td {
 }
 .res.mcalc.mprofit .v.waitgo:active {
   background: var(--panel);
-}
-
-/* 검산이 안 맞으면 숫자를 하나도 보여주지 않는다 (인수인계 §10-3) */
-body.failed > *:not(.err) {
-  display: none;
 }
 .err {
   padding: 44px 30px;
@@ -6296,13 +6290,8 @@ body.failed > *:not(.err) {
   padding-top: 11px;
   padding-bottom: 11px;
 }
-/* ★ 88차 ④. 「−」는 한 줄 안에서 왼쪽에 붙는 부호다. 줄을 쌓으면 혼자 가운데 떠서
-     무슨 뜻인지 알 수 없게 된다. 큰 단에서는 안 보이게 한다 —
-     「사업에 쓴 돈」이 빨간 글씨라 뺀다는 것이 이미 보인다.
-     「=」도 같은 자리·같은 까닭이라 같이 감춘다. 1단에서는 지금처럼 보인다 */
-.fs2 .mcalc .msign,
-.fs3 .mcalc .msign {
-  display: none;
+.orow.mcalc + .orow.mcalc {
+  border-top: 1px solid var(--line);
 }
 .fs2 .orow.mcalc .v,
 .fs2 .res.mcalc .v,

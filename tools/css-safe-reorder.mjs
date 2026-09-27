@@ -185,6 +185,27 @@ for (let iter = 0; iter < 400; iter++) {
       });
     }
   }
+  // 합친 블록에 같은 속성이 두 번이면: 값도 같으면 앞의 것을 지운다(뒤의 것이 어차피 이긴다).
+  // 값이 다르면 합치지 않는다 — 옛 브라우저용 대체 값(display: -webkit-box; display: flex)일 수 있다
+  if (dup) {
+    const merged = plan === 'up' ? B : A;
+    const seen = new Map();
+    let clash = null;
+    merged.each((d) => {
+      if (d.type !== 'decl') return;
+      const k = d.prop.toLowerCase();
+      if (seen.has(k)) {
+        const prev = seen.get(k);
+        if (prev.value === d.value && prev.important === d.important) prev.remove();
+        else clash = k;
+      }
+      seen.set(k, d);
+    });
+    if (clash) {
+      skipped.push(['값이 다른 같은 속성', w.line, clash]);
+      continue;
+    }
+  }
   const next = root.toString();
   const nw = await lint(next);
   if (nw.length >= warns.length) {
