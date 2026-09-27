@@ -259,18 +259,19 @@ function readOnePdf(file) {
     .then(function (bytes) {
       return pdfOpen(bytes, file.name, 3);
     })
-    .then(function (doc) {
-      if (!doc) return { fail: 'pdf_locked', found: [], name: file.name };
-      return pdfBankName(doc)
-        .then(function (b) {
-          은행 = b;
-          return pdfGrid(doc);
-        })
-        .then(function (g) {
-          /* 글자가 거의 없으면 표가 아니라 사진이다. 좌표로 할 수 있는 일이 없다 */
-          if (g.chars < PDF_MIN_CHARS)
-            return { fail: 'pdf_image', found: [], name: file.name, pdfBank: 은행 };
-          /* ★ 92-1차 ①. 칸을 가른 방법이 여럿이다. 다 읽어보고 가장 나은 것을 고른다 —
+    .then(
+      /** @param {any} doc @returns {any} */ function (doc) {
+        if (!doc) return { fail: 'pdf_locked', found: [], name: file.name };
+        return pdfBankName(doc)
+          .then(function (b) {
+            은행 = b;
+            return pdfGrid(doc);
+          })
+          .then(function (g) {
+            /* 글자가 거의 없으면 표가 아니라 사진이다. 좌표로 할 수 있는 일이 없다 */
+            if (g.chars < PDF_MIN_CHARS)
+              return { fail: 'pdf_image', found: [], name: file.name, pdfBank: 은행 };
+            /* ★ 92-1차 ①. 칸을 가른 방법이 여럿이다. 다 읽어보고 가장 나은 것을 고른다 —
          extractRows 가 잔액 열 후보를 고르는 방법 그대로다.
          차례대로 먼저 되는 것을 쓰면 안 된다: 읽히기는 하는데 금액이 옆 칸으로
          간 표도 「읽힌 것」이라, 잔액 사슬이 끊긴 채로 통과해 버린다.
@@ -278,78 +279,79 @@ function readOnePdf(file) {
            좋아져서, 스스로 거래를 흘리는 쪽을 고른다 (실측: 905건짜리에서
            740건만 뽑은 후보가 이겼다). 그래서 「덜 뽑은 것」에 벌점을 준다.
          ★ 92-2차 ③. 은행이 적어준 총액과 맞는 후보가 있으면 그것이 곧 답이다 */
-          var 후보 = [],
-            last = null,
-            t;
-          for (t = 0; t < g.grids.length; t++) {
-            var one = extractRows(pdfWorkbook(g.grids[t]));
-            if (one.fail) {
-              last = one;
-              continue;
+            var 후보 = [],
+              last = null,
+              t;
+            for (t = 0; t < g.grids.length; t++) {
+              var one = extractRows(pdfWorkbook(g.grids[t]));
+              if (one.fail) {
+                last = one;
+                continue;
+              }
+              var chk = orderAndVerify(one.rows);
+              후보.push({
+                got: one,
+                res: chk,
+                건: one.rows.length,
+                맞음: pdfTotalsOk(g.totals, pdfSums(chk.rows))
+              });
             }
-            var chk = orderAndVerify(one.rows);
-            후보.push({
-              got: one,
-              res: chk,
-              건: one.rows.length,
-              맞음: pdfTotalsOk(g.totals, pdfSums(chk.rows))
+            if (!후보.length) {
+              return {
+                fail: last && last.why === 'empty' ? 'empty' : 'pdf_no_header',
+                found: (last && last.found) || [],
+                name: file.name,
+                why: last && last.why,
+                pdfBank: 은행
+              };
+            }
+            var 최다 = 0;
+            후보.forEach(function (c) {
+              if (c.건 > 최다) 최다 = c.건;
             });
-          }
-          if (!후보.length) {
-            return {
-              fail: last && last.why === 'empty' ? 'empty' : 'pdf_no_header',
-              found: (last && last.found) || [],
-              name: file.name,
-              why: last && last.why,
-              pdfBank: 은행
-            };
-          }
-          var 최다 = 0;
-          후보.forEach(function (c) {
-            if (c.건 > 최다) 최다 = c.건;
-          });
-          후보.forEach(function (c) {
-            var 어긋 = c.건 ? c.res.breaks.length / c.건 : 1;
-            var 유실 = 최다 ? (최다 - c.건) / 최다 : 0;
-            c.점수 = (c.맞음 === true ? 0 : 10) + 어긋 + 유실;
-          });
-          후보.sort(function (a, b) {
-            return a.점수 - b.점수 || b.건 - a.건;
-          });
-          var best = 후보[0];
-          /* ★ 92-2차 ③. 은행이 적은 총액과 안 맞으면 통과시키지 않는다.
+            후보.forEach(function (c) {
+              var 어긋 = c.건 ? c.res.breaks.length / c.건 : 1;
+              var 유실 = 최다 ? (최다 - c.건) / 최다 : 0;
+              c.점수 = (c.맞음 === true ? 0 : 10) + 어긋 + 유실;
+            });
+            후보.sort(function (a, b) {
+              return a.점수 - b.점수 || b.건 - a.건;
+            });
+            var best = 후보[0];
+            /* ★ 92-2차 ③. 은행이 적은 총액과 안 맞으면 통과시키지 않는다.
          사장님께 틀린 숫자를 맞다고 보여주느니 「아직 못 읽는다」가 낫다.
          총액이 아예 없는 파일은 여기 안 걸린다 (맞음 === null) */
-          if (best.맞음 === false) {
-            return { fail: 'pdf_total', found: [], name: file.name, pdfBank: 은행 };
-          }
-          var got = best.got;
-          var res = best.res;
-          /* ★ 113차 ①②. PDF 는 쪽 꼬리(다)와 은행이 적은 합계(라)를 근거로 쓸 수 있다.
+            if (best.맞음 === false) {
+              return { fail: 'pdf_total', found: [], name: file.name, pdfBank: 은행 };
+            }
+            var got = best.got;
+            var res = best.res;
+            /* ★ 113차 ①②. PDF 는 쪽 꼬리(다)와 은행이 적은 합계(라)를 근거로 쓸 수 있다.
          ★ 라 는 pdfTotalsOk 가 그대로 돌려준다 — 표기가 없으면 null(모름)이다.
            실물 아홉에는 총입금·총출금 표기가 하나도 없어 대개 null 이 된다.
          ★ 마 는 표를 세울 때 흘린 줄 수다 (extractRows 가 세어 온다) */
-          return {
-            name: file.name,
-            sheet: got.sheet,
-            header: got.header,
-            balName: got.balName,
-            balTried: got.balTried,
-            bankHint: got.bankHint,
-            range: makeRange(g.headLines, res.rows, {
-              lost: 최다 - best.건,
-              pages: g.pages,
-              pageFoot: g.pageFoot,
-              totals: best.맞음
-            }),
-            rows: res.rows,
-            opening: res.opening,
-            closing: res.closing,
-            breaks: res.breaks,
-            moved: res.moved
-          };
-        });
-    })
+            return {
+              name: file.name,
+              sheet: got.sheet,
+              header: got.header,
+              balName: got.balName,
+              balTried: got.balTried,
+              bankHint: got.bankHint,
+              range: makeRange(g.headLines, res.rows, {
+                lost: 최다 - best.건,
+                pages: g.pages,
+                pageFoot: g.pageFoot,
+                totals: best.맞음
+              }),
+              rows: res.rows,
+              opening: res.opening,
+              closing: res.closing,
+              breaks: res.breaks,
+              moved: res.moved
+            };
+          });
+      }
+    )
     .catch(function () {
       /* 여기서 멈추면 사장님 눈에는 아무 일도 안 일어난다. 목록에 한 줄로 남긴다 (⑤) */
       return { fail: 'pdf_open', found: [], name: file.name, pdfBank: 은행 };
