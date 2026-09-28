@@ -1,7 +1,7 @@
 // 처음 한 번 준비 — 저장소를 처음 받은 사람이 명령 하나로 개발 환경을 갖춘다.
 // 사용: npm run setup (또는 make setup)   · 점검만: npm run doctor (또는 make doctor)
 //   --check         설치하지 않고 무엇이 빠졌는지만 본다
-//   --skip-browser  테스트용 크롬을 받지 않는다 (이미 다른 경로에 있는 기기 · 오프라인)
+//   --skip-browser  브라우저 다운로드만 건너뛴다. npm ci 는 그대로 실행한다
 //
 // Windows 에는 make 가 없어서 절차를 Makefile 이 아니라 여기(node)에 둔다.
 // Makefile · npm 스크립트는 이 파일을 부르기만 한다.
@@ -26,7 +26,12 @@ const fail = (msg, fix) => {
 /** 명령을 화면에 보이며 돌린다. 실패하면 false */
 function run(cmd, args) {
   console.log(`\n$ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', shell: SHELL });
+  const r = spawnSync(cmd, args, {
+    cwd: ROOT,
+    stdio: 'inherit',
+    // Node 실행 경로에 공백이 있어도 인수가 셸에서 다시 해석되지 않게 한다.
+    shell: SHELL && cmd === 'npm'
+  });
   return r.status === 0;
 }
 
@@ -71,7 +76,8 @@ else if (CHECK_ONLY) fail('node_modules 없음', 'npm run setup');
 // worktree 에서는 .git 이 파일이다. 설정(core.hooksPath)은 원래 폴더와 같이 쓴다
 if (existsSync(new URL('../.git', import.meta.url))) {
   const hooks = spawnSync('git', ['config', 'core.hooksPath'], { cwd: ROOT, encoding: 'utf8' });
-  if (hooks.stdout.trim().startsWith('.husky')) ok('커밋 전 검사(husky) 켜짐');
+  if (hooks.status === 0 && hooks.stdout?.trim().startsWith('.husky'))
+    ok('커밋 전 검사(husky) 켜짐');
   else if (CHECK_ONLY) fail('커밋 전 검사(husky) 꺼짐', 'npm run setup');
 }
 
@@ -94,13 +100,19 @@ console.log('\n테스트용 크롬');
 if (SKIP_BROWSER) {
   warn('건너뜀 (--skip-browser)');
 } else if (!existsSync(new URL('../node_modules/@playwright/test/', import.meta.url))) {
-  warn('Playwright 가 아직 없어 확인 못 함');
+  fail('Playwright 가 없다', 'npm run setup 으로 개발 의존성 설치');
 } else {
   // Playwright 판마다 크롬 판이 정해져 있다. 이미 받았으면 다시 받지 않는다
   const { chromium } = await import('@playwright/test');
   if (existsSync(chromium.executablePath())) ok('Chromium 있음');
   else if (CHECK_ONLY) fail('Chromium 없음', 'npx playwright install chromium');
-  else if (!run('npx', ['playwright', 'install', 'chromium'])) {
+  else if (
+    !run(process.execPath, [
+      fileURLToPath(new URL('../node_modules/playwright/cli.js', import.meta.url)),
+      'install',
+      'chromium'
+    ])
+  ) {
     fail(
       'Chromium 받기 실패',
       'Linux 라면 npx playwright install --with-deps chromium (시스템 라이브러리까지)'

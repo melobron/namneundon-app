@@ -1,0 +1,2 @@
+# 편집기와 형식 검사 기준에 맞춰 Windows 에서도 LF 로 받는다.
+* text=auto eol=lf
