@@ -10,7 +10,7 @@
     "setup": "node tools/setup.mjs",
     "doctor": "node tools/setup.mjs --check",
     "prepare": "husky",
-    "serve": "node tests/serve.mjs",
+    "serve": "node tests/serve.mjs --all",
     "check": "node tools/check-load-order.mjs && node tools/check-core.mjs",
     "lint": "npm run format:check && npm run lint:js && npm run lint:css && npm run lint:html && npm run lint:spell && npm run typecheck",
     "format": "prettier --write .",
