@@ -16,7 +16,9 @@ const { selectorSpecificity } = await import(
   fromStylelint.resolve('@csstools/selector-specificity')
 );
 import { readFileSync, writeFileSync } from 'node:fs';
-const [file = 'app/css/app.css'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const [file = 'app/css/app.css'] = process.argv
+  .slice(2)
+  .filter((a, i, all) => !a.startsWith('--') && !['--allow', '--pairs'].includes(all[i - 1]));
 const apply = process.argv.includes('--apply');
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 
@@ -58,7 +60,6 @@ const propsOf = (rule) => {
   rule.walkDecls((d) => s.push(d.prop.toLowerCase()));
   return s;
 };
-const selectorSpecsOf = (rule) => rule.selectors.map((s) => specOf(s));
 function rulesIn(node) {
   const out = [];
   if (node.type === 'rule') out.push(node);
@@ -69,19 +70,36 @@ function rulesIn(node) {
   return out;
 }
 // X 가 between 노드들을 건너뛰어도 되나
+// --allow 파일: 「한 요소에 같이 걸리지 않는다」고 확인한 선택자 짝 [[a, b], …] — 이 짝은 막는 이유로 치지 않는다
+// --pairs 파일: 막은 선택자 짝을 모두 적어 낸다 (확인할 거리)
+const argAfter = (k) => {
+  const i = process.argv.indexOf(k);
+  return i >= 0 ? process.argv[i + 1] : null;
+};
+const pairKey = (a, b) => (a < b ? a + '\u0000' + b : b + '\u0000' + a);
+const ALLOW = new Set(
+  (argAfter('--allow') ? JSON.parse(readFileSync(argAfter('--allow'), 'utf8')) : []).map(([a, b]) =>
+    pairKey(a, b)
+  )
+);
+const PAIRS = new Map();
 function safeSkip(X, between) {
-  const xs = selectorSpecsOf(X),
-    xp = propsOf(X);
+  const xp = propsOf(X);
+  let why = null;
   for (const n of between)
     for (const S of rulesIn(n)) {
       if (S === X) continue;
-      const ss = selectorSpecsOf(S),
-        sp = propsOf(S);
-      if (!xs.some((a) => ss.some((b) => sameSpec(a, b)))) continue;
-      if (xp.some((p) => sp.some((q) => overlap(p, q))))
-        return { ok: false, why: S.selector.slice(0, 60) + ' @' + S.source.start.line };
+      const sp = propsOf(S);
+      if (!xp.some((p) => sp.some((q) => overlap(p, q)))) continue;
+      for (const a of X.selectors)
+        for (const b of S.selectors) {
+          if (!sameSpec(specOf(a), specOf(b))) continue;
+          if (ALLOW.has(pairKey(a, b))) continue;
+          PAIRS.set(pairKey(a, b), [a, b]);
+          why = why || b.slice(0, 60) + ' @' + S.source.start.line;
+        }
     }
-  return { ok: true };
+  return why ? { ok: false, why } : { ok: true };
 }
 // 규칙 앞에 붙은 주석(설명)은 함께 옮긴다
 function withComments(node) {
@@ -219,3 +237,5 @@ for (let iter = 0; iter < 400; iter++) {
 console.log(`경고 ${start} → ${warns.length} (옮김 ${moved})`);
 skipped.forEach((s) => console.log('  건너뜀', s.join(' · ')));
 if (apply) writeFileSync(file, code);
+if (argAfter('--pairs'))
+  writeFileSync(argAfter('--pairs'), JSON.stringify([...PAIRS.values()], null, 1));
