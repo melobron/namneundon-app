@@ -16,10 +16,11 @@ if "%~1"=="test" goto test
 if "%~1"=="lint" goto lint
 if "%~1"=="analysis" goto analysis
 if "%~1"=="python" goto python
+if "%~1"=="notebook" goto notebook
 if "%~1"=="shell" goto shell
 if "%~1"=="restore" goto restore
 if "%~1"=="" goto start
-echo Commands: prepare start verify test lint analysis python shell restore
+echo Commands: prepare start verify test lint analysis python notebook shell restore
 exit /b 1
 :prepare
 powershell.exe -NoProfile -File "%~dp0tools\vdi\prepare.ps1"
@@ -42,12 +43,15 @@ exit /b %errorlevel%
 :analysis
 if not exist ".offline\python\python.exe" exit /b 1
 pushd .offline\analysis\dtestbed_v3
-"%~dp0.offline\python\python.exe" -c "import sys,runpy; sys.path.insert(0,'.'); sys.argv=['run.py','selftest']; runpy.run_path('run.py',run_name='__main__')"
+"%~dp0.offline\python\python.exe" -X utf8 -c "import sys,runpy; sys.path.insert(0,'.'); sys.argv=['run.py']+(sys.argv[2:] or ['selftest']); runpy.run_path('run.py',run_name='__main__')" %*
 set "RESULT=%errorlevel%"
 popd
 exit /b %RESULT%
 :python
-"%~dp0.offline\python\python.exe"
+"%~dp0.offline\python\python.exe" -X utf8
+exit /b %errorlevel%
+:notebook
+"%~dp0.offline\python\python.exe" -X utf8 -m jupyterlab --no-browser --ip=127.0.0.1
 exit /b %errorlevel%
 :shell
 set "PATH=%~dp0.offline\python;%PATH%"

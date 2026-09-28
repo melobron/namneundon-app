@@ -33,7 +33,7 @@ jobs:
           python -m pip install --only-binary=:all: --target "$bundle/.offline/python/Lib/site-packages" numpy pandas pyarrow openpyxl matplotlib scipy statsmodels jupyterlab
           if ($LASTEXITCODE -ne 0) { throw 'Python packages failed' }
           python -m pip freeze --path "$bundle/.offline/python/Lib/site-packages" > "$bundle/.offline/python-requirements.txt"
-          & "$bundle/.offline/python/python.exe" -c "import numpy,pandas,pyarrow,openpyxl,matplotlib,scipy,statsmodels,jupyterlab; print('Python imports OK')"
+          & "$bundle/.offline/python/python.exe" -X utf8 -c "import numpy,pandas,pyarrow,openpyxl,matplotlib,scipy,statsmodels,jupyterlab; print('Python imports OK')"
           if ($LASTEXITCODE -ne 0) { throw 'Python imports failed' }
       - name: 다른 경로에서도 실행되는지 확인
         shell: pwsh
@@ -44,7 +44,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Relocated browser failed' }
           & .\vdi.cmd analysis
           if ($LASTEXITCODE -ne 0) { throw 'Relocated analysis failed' }
-          & .\.offline\python\python.exe -m jupyterlab --version
+          & .\.offline\python\python.exe -X utf8 -m jupyterlab --version
           if ($LASTEXITCODE -ne 0) { throw 'Relocated Jupyter failed' }
           "${{ github.sha }}" | Set-Content .offline\SOURCE_COMMIT.txt
       - name: 파일 묶기

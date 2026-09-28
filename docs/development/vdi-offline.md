@@ -27,18 +27,20 @@ Windows x64 용이다. 인터넷이 끊겨도 앱 · 소개 사이트 · 코드 
 
 ## 다른 명령
 
-| 명령                | 용도                                                               |
-| ------------------- | ------------------------------------------------------------------ |
-| `.\vdi.cmd test`    | 앱 자동 테스트 (메모리 부담을 줄여 작업자 2개)                     |
-| `.\vdi.cmd lint`    | 코드 · 형식 · 타입 검사                                            |
-| `.\vdi.cmd restore` | 확보한 npm 캐시로 오프라인 재설치. 기존 node_modules 를 재생성한다 |
-| `.\vdi.cmd python`  | 포함한 Python 실행                                                 |
-| `.\vdi.cmd shell`   | Node · Python 경로가 설정된 명령 창                                |
+| 명령                      | 용도                                                               |
+| ------------------------- | ------------------------------------------------------------------ |
+| `.\vdi.cmd test`          | 앱 자동 테스트 (메모리 부담을 줄여 작업자 2개)                     |
+| `.\vdi.cmd lint`          | 코드 · 형식 · 타입 검사                                            |
+| `.\vdi.cmd restore`       | 확보한 npm 캐시로 오프라인 재설치. 기존 node_modules 를 재생성한다 |
+| `.\vdi.cmd analysis demo` | 가짜 데이터로 분석 흐름 연습                                       |
+| `.\vdi.cmd notebook`      | 로컬 JupyterLab 실행                                               |
+| `.\vdi.cmd python`        | 포함한 Python 실행                                                 |
+| `.\vdi.cmd shell`         | Node · Python 경로가 설정된 명령 창                                |
 
 노트북은 새 PowerShell 창에서 아래 명령으로 연다. 출력된 로컬 접속 주소를 같은 VDI 의 브라우저에 입력한다. 인증 토큰은 외부에 공유하지 않는다.
 
 ```powershell
-.\.offline\python\python.exe -m jupyterlab --no-browser --ip=127.0.0.1
+.\vdi.cmd notebook
 ```
 
 분석도구는 `.offline\analysis\dtestbed_v3\README.md` 를 먼저 읽는다. 실제 자료에 대한 `init`, 분할, 동결은 준비 스크립트에서 자동 실행하지 않는다. `analysis` 명령은 자체 검사만 한다. 패키지 버전 기록은 `.offline\python-requirements.txt`, 소스 커밋은 `.offline\SOURCE_COMMIT.txt` 에 있다.
