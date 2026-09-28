@@ -32,6 +32,10 @@ jobs:
           $bundle = "$env:RUNNER_TEMP/vdi-bundle"
           python -m pip install --only-binary=:all: --target "$bundle/.offline/python/Lib/site-packages" numpy pandas pyarrow openpyxl matplotlib scipy statsmodels jupyterlab
           if ($LASTEXITCODE -ne 0) { throw 'Python packages failed' }
+          foreach ($name in @('share', 'etc')) {
+            $data = "$bundle/.offline/python/Lib/site-packages/$name"
+            if (Test-Path $data) { Move-Item $data "$bundle/.offline/python/$name" }
+          }
           python -m pip freeze --path "$bundle/.offline/python/Lib/site-packages" > "$bundle/.offline/python-requirements.txt"
           & "$bundle/.offline/python/python.exe" -X utf8 -c "import numpy,pandas,pyarrow,openpyxl,matplotlib,scipy,statsmodels,jupyterlab; print('Python imports OK')"
           if ($LASTEXITCODE -ne 0) { throw 'Python imports failed' }
@@ -46,6 +50,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Relocated analysis failed' }
           & .\.offline\python\python.exe -X utf8 -m jupyterlab --version
           if ($LASTEXITCODE -ne 0) { throw 'Relocated Jupyter failed' }
+          & .\.offline\python\python.exe -X utf8 tools/vdi/verify-notebook.py
+          if ($LASTEXITCODE -ne 0) { throw 'Notebook runtime failed' }
           "${{ github.sha }}" | Set-Content .offline\SOURCE_COMMIT.txt
       - name: 파일 묶기
         shell: pwsh

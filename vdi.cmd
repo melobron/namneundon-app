@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set "PATH=%~dp0.offline\node;%PATH%"
+set "PATH=%~dp0.offline\node;%~dp0.offline\python;%PATH%"
 set "PLAYWRIGHT_BROWSERS_PATH=%~dp0.offline\browsers"
 set "HUSKY=0"
 set "BASE_URL="
