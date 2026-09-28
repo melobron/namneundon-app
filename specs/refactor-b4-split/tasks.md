@@ -47,6 +47,7 @@
 | 2026-09-27 | Claude Code | B-4e PR #43 CI · 머지 · 자동 배포 `1fb5029` · 배포 확인                                                                                                | 통과 · 성공                                                                                                                                                                     |
 | 2026-09-28 | Claude Code | B-4f `npm run lint` · `npm test`                                                                                                                       | 통과 · 96 통과 (새 `tests/due-card.spec.mjs` 포함)                                                                                                                              |
 | 2026-09-28 | Claude Code | B-4f `npm run screens` (origin/main 대 이 가지, 106장)                                                                                                 | 진짜 차이 0 · 흔들림 의심 3 (시작 화면 · 분류 중간 — 알려진 자리)                                                                                                               |
+| 2026-09-28 | Claude Code | B-4f PR #45 CI · 머지 · 자동 배포 `d3549bd` · 배포 확인                                                                                                | 통과 · 성공 — 명세 완료 조건(대상 함수들이 줄어듦 · 단계마다 검사 · 넓은 비교) 확인                                                                                             |
 
 ## 구현 중 정한 작은 것
 
