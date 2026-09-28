@@ -1438,34 +1438,7 @@ function drawYear(host, allMonths) {
     host.appendChild(el('div', 'yperiod', +첫달.slice(5, 7) + '~' + monNum(끝달) + ' 합계'));
   }
 
-  if (셀수있는.length) {
-    var 합번 = 0,
-      합쓴 = 0,
-      합순 = 0;
-    셀수있는.forEach(function (c) {
-      합번 += c.sales + c.otherIn;
-      합쓴 += c.cost;
-      합순 += c.profit;
-    });
-    var 카드줄 = el('div', 'ycards');
-    function 카드(기호, 이름, 값, cls) {
-      var b = el('div', 'ycard ' + cls);
-      b.appendChild(el('div', 'ysign', 기호));
-      b.appendChild(el('div', 'ycname', 이름));
-      /* ★ 74차. 합계 카드는 줄인 만원 단위보다 실제 원 단위가 더 분명하다. */
-      b.appendChild(el('div', 'ycval num', won(값) + '원'));
-      return b;
-    }
-    카드줄.appendChild(카드('', '사업으로 번 돈', 합번, 'yin'));
-    카드줄.appendChild(카드('−', '사업에 쓴 돈', 합쓴, 'yout'));
-    카드줄.appendChild(카드('=', '계좌 순이익', 합순, 'yprof'));
-    host.appendChild(카드줄);
-
-    /* ★ 66-8차 ③ · 66-16차 ③. 순이익 합계는 위 카드가 이미 말한다 —
-       여기서는 흑자·적자 달 수와 사업 외 용도만 남긴다 */
-    var 요약 = yearSumLine(months, cols);
-    if (요약) host.appendChild(요약);
-  }
+  drawYearSummaryCards(host, months, cols, 셀수있는);
 
   /* ★ 49차 ④. 한 달 화면에는 있는데 1년치에는 없었다 —
      그래프에 빈 달이 여럿 보이는데 얼마나 남았는지 알 길이 없었다.
@@ -1502,23 +1475,7 @@ function drawYear(host, allMonths) {
   var thead = document.createElement('thead');
   var hr = document.createElement('tr');
   hr.appendChild(el('th', 'rh', ''));
-  cols.forEach(function (c) {
-    /* ★ 48차 ②. 표의 달 이름을 눌러도 그 달로 간다
-       ★ 66차 ③-3. 진행 중인 달에만 표를 붙인다.
-         마감 달마다 (마감)을 붙이면 열두 칸이 다 시끄러워진다
-       ★ 70차 ①. 「8월(진행 중)」 괄호 글씨는 작아서 눈에 안 띄었다.
-         달 이름 밑에 호박 알약 한 줄로 내린다 — 괄호 글씨는 없앤다 (알약이 대신한다).
-         ★ 새 색은 안 만든다. 표의 「아직 안 정한 돈」 알약과 같은 호박 계열이다.
-         ★ 열 바탕은 칠하지 않는다 (개발자 1안 확정) */
-    var th = el('th', 'ymtap');
-    if (c.m === 진행달) th.appendChild(el('span', 'runpill', '진행 중'));
-    else th.appendChild(el('span', 'runspace', ''));
-    th.appendChild(el('span', 'ymnum', monNum(c.m)));
-    th.addEventListener('click', function () {
-      goMonth(c.m);
-    });
-    hr.appendChild(th);
-  });
+  drawYearMonthHeads(진행달, cols, hr);
   if (done.length) {
     var ah = el('th', 'avgcol', '평균');
     ah.appendChild(el('span', 'avgn', won(done.length) + '달'));
@@ -1528,76 +1485,6 @@ function drawYear(host, allMonths) {
   tab.appendChild(thead);
 
   var tbody = document.createElement('tbody');
-  function row(label, cls, pick, avg, whyId, goUnsetRow, get) {
-    var tr = document.createElement('tr');
-    if (cls) tr.className = cls;
-    var rh = el('td', 'rh', label);
-    if (whyId)
-      rh.appendChild(
-        whyMark(whyId, function () {
-          drawResult(months);
-        })
-      );
-    tr.appendChild(rh);
-    cols.forEach(function (c, i) {
-      /* ★ 71차 ⑤-5. 자료가 없는 달은 pick 을 아예 안 부른다.
-         monthNumbers 는 그 달에 0을 내는데 그 0은 「0원」이 아니라 「모른다」다 (38차).
-         ★ 두 가지를 갈라 보인다 —
-           아직 안 온 달: 조용한 회색 「—」. 아무 말도 안 붙인다. 기다리면 된다.
-           지났는데 자료 없는 달: 빈 칸. 표 아래 한 줄이 채우는 길을 알려준다.
-         ★ 새 색은 안 칠한다. 크림·호박은 이미 「아직 안 정한 돈」·「진행 중」의 뜻이다 */
-      if (c.없음) {
-        var ntd = el('td', 'num noyet', c.미래 ? '—' : '');
-        /* ★ 90차 ②(A안). 이 칸도 같은 줄 수로 둔다 — 안 그러면 「—」만 반 줄 내려앉는다 */
-        if (get) ntd.appendChild(el('span', 'ydelta', ''));
-        tr.appendChild(ntd);
-        return;
-      }
-      var v = pick(c);
-      /* ★ 68차 ⑥. pill 이 붙은 칸은 값을 span 하나로 감싼다 —
-         표가 border-collapse:collapse 라 칸 자체는 모서리가 안 둥글어진다.
-         글자는 그대로다. 감싸기만 한다 */
-      var td;
-      if (v.pill && v.txt) {
-        td = el('td', 'num' + (v.cls ? ' ' + v.cls : ''));
-        td.appendChild(el('span', 'ypill', v.txt));
-      } else {
-        td = el('td', 'num' + (v.cls ? ' ' + v.cls : ''), v.txt);
-      }
-      /* ★ 90차 ②(A안). 줄을 언제나 붙인다 — 견줄 수 없는 칸이면 빈 줄로 자리만 잡는다.
-         무엇을 견줄지 정하는 것은 그대로 deltaTxt 하나뿐이다 (66차 ③-2) */
-      if (get) td.appendChild(el('span', 'ydelta', deltaTxt(cols, 진행달, opening, i, get)));
-      /* ★ 54차 ⑤. 「아직 안 정한 돈」 줄만 눌린다 — 할 일이 남아 있는 줄이다.
-         — 칸(갈 곳 없음)과 0원인 달(다 정함)은 안 눌린다 */
-      if (goUnsetRow && v.go) {
-        td.classList.add('gomonth');
-        td.addEventListener('click', function () {
-          goUnset(c.m);
-        });
-      }
-      tr.appendChild(td);
-    });
-    if (done.length) {
-      var a = avg ? avg(done) : { txt: '' };
-      var atd = el('td', 'num avgcol' + (a.cls ? ' ' + a.cls : ''));
-      if (a.pill && a.txt) atd.appendChild(el('span', 'ypill', a.txt));
-      else atd.textContent = a.txt;
-      /* ★ 90차 ②(A안). 평균 칸에는 전월 대비가 없다. 그래도 줄 수는 같아야
-         한 줄의 숫자가 전부 같은 높이에 앉는다 (textContent 뒤에 붙인다 — 앞에 붙이면 지워진다) */
-      if (get) atd.appendChild(el('span', 'ydelta', ''));
-      tr.appendChild(atd);
-    }
-    tbody.appendChild(tr);
-    if (whyId && whyOpen(whyId)) {
-      var wtr = document.createElement('tr');
-      var wtd = el('td', 'whytd');
-      wtd.colSpan = 1 + cols.length + (done.length ? 1 : 0);
-      wtd.appendChild(whyBox(whyId));
-      wtr.appendChild(wtd);
-      tbody.appendChild(wtr);
-    }
-    return tr; /* ★ 70차 ②. 그룹 줄에 펼침 표시를 달려면 줄이 필요하다 */
-  }
 
   /* ★ 43차. 줄 차례를 한 달 화면과 같게 맞춘다.
      들어온 돈 − 사업에 쓴 돈 = 순이익. 세로로 그대로 뺄셈이 되어야 한다.
@@ -1607,40 +1494,14 @@ function drawYear(host, allMonths) {
   var anyOtherIn = cols.some(function (c) {
     return c.otherIn;
   });
-  /* ★ 61차 ①. 업종마다 이름이 다르다 — 식당은 「월세」, 나머지는 「임차료」.
-     ★ 70차 ②. 이 둘은 뜻으로 「사업에 쓴 돈」의 세부다. 그 줄 바로 아래로 옮긴다
-       (개발자 확정 — 예전에는 원가율 아래에 있어서 무엇의 세부인지 안 보였다).
-     ★ 64-12. 평균 칸이 0원으로 나오던 것을 원가율과 같은 규칙으로 맞춘다 —
-       아직 아무 곳도 그 항목으로 안 정하셨으면 「0원 썼다」가 아니라 「모른다」다.
-       「없는 것」과 「아직 안 정한 것」을 구분 못 하니 억지로 0을 안 보여준다 (38차).
-     ★ 달 칸의 0원은 그대로 둔다 — 그 달에 안 나간 것은 사실이고,
-       월세는 실제로 매달 꼬박꼬박 나가지 않는다 (87개월 중 72개월) */
-  function 항목줄(원이름) {
-    row(
-      baseName(원이름),
-      'yrsub',
-      function (c) {
-        if (c.blocked) return { txt: '—', cls: 'none' };
-        return { txt: won(catOfMonth(c, 원이름)) };
-      },
-      function (l) {
-        var 합 = 0;
-        l.forEach(function (c) {
-          if (!c.blocked) 합 += catOfMonth(c, 원이름);
-        });
-        if (!합) return { txt: '—' };
-        return {
-          txt: won(
-            meanOf(l, function (c) {
-              return catOfMonth(c, 원이름);
-            })
-          )
-        };
-      }
-    );
-  }
 
-  var 번돈줄 = row(
+  var 번돈줄 = 연표줄(
+    months,
+    cols,
+    진행달,
+    opening,
+    done,
+    tbody,
     '사업으로 번 돈',
     'yrin',
     function (c) {
@@ -1662,8 +1523,19 @@ function drawYear(host, allMonths) {
     }
   );
   그룹줄(months, 번돈줄, 'in', true);
-  drawYearInRows(row, anyOtherIn);
-  var 쓴돈줄 = row(
+  drawYearInRows(function () {
+    return 연표줄.apply(
+      null,
+      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+    );
+  }, anyOtherIn);
+  var 쓴돈줄 = 연표줄(
+    months,
+    cols,
+    진행달,
+    opening,
+    done,
+    tbody,
     '사업에 쓴 돈',
     'yrout',
     function (c) {
@@ -1686,11 +1558,21 @@ function drawYear(host, allMonths) {
   );
   그룹줄(months, 쓴돈줄, 'out', true);
   if (그룹열림('out')) {
-    항목줄('월세');
-    항목줄('인건비');
+    항목줄(months, cols, 진행달, opening, done, tbody, '월세');
+    항목줄(months, cols, 진행달, opening, done, tbody, '인건비');
   }
-  drawYearProfitRow(row);
-  drawYearRatioRow(opening, row);
+  drawYearProfitRow(function () {
+    return 연표줄.apply(
+      null,
+      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+    );
+  });
+  drawYearRatioRow(opening, function () {
+    return 연표줄.apply(
+      null,
+      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+    );
+  });
   /* ══ 36차 1-2 ══  뺄셈은 여기서 끝난다. 아래는 순이익에 안 들어가는 돈이다.
      ★ 대표님이 문제를 처음 보신 화면이 이 표다 —
        한 달 카드만 고치면 1년치에서 같은 오해가 그대로 난다 */
@@ -1704,10 +1586,241 @@ function drawYear(host, allMonths) {
   var anyUnset = cols.some(function (c) {
     return c.unknown;
   });
-  drawYearKeepRows(months, row, anyIn, anyOut, anyKeep);
-  drawYearUnsetRow(row, anyKeep, anyUnset);
+  drawYearKeepRows(
+    months,
+    function () {
+      return 연표줄.apply(
+        null,
+        [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+      );
+    },
+    anyIn,
+    anyOut,
+    anyKeep
+  );
+  drawYearUnsetRow(
+    function () {
+      return 연표줄.apply(
+        null,
+        [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+      );
+    },
+    anyKeep,
+    anyUnset
+  );
 
-  drawYearCostRatioRow(opening, row);
+  drawYearCostRatioRow(opening, function () {
+    return 연표줄.apply(
+      null,
+      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+    );
+  });
+  drawYearBalanceRow(진행달, function () {
+    return 연표줄.apply(
+      null,
+      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+    );
+  });
+  tab.appendChild(tbody);
+  wrap.appendChild(tab);
+  host.appendChild(wrap);
+  /* ★ 66차 ③-3. 표를 열면 가장 오른쪽(최신 달)이 먼저 보이게 한다.
+     왼쪽이 가장 오래된 달이라, 그냥 두면 1년 전 숫자가 첫인상이 된다.
+     ★ 56차의 스크롤 자리 지키기가 그린 뒤에 scrollLeft 를 되돌려 놓으므로,
+       거기서 「아직 한 번도 안 민 표」만 오른쪽 끝으로 보낸다 (drawResult).
+       여기서는 처음 그릴 때의 자리만 정한다 */
+  wrap.scrollLeft = wrap.scrollWidth;
+  /* ★ 66차 ③-3. 진행 중인 달이 어디까지의 누적인지 표 밑에 밝힌다 */
+  /* ★ 71차 ⑤-5. 지났는데 자료가 없는 달 — 채우는 길을 알려드린다.
+     71차 ②로 파일을 보탤 수 있게 됐으니 이것은 빈말이 아니다.
+     ★ 아직 안 온 달은 여기 안 센다. 그건 기다리면 되는 것이라 할 말이 없다 */
+  var 빈달 = cols.filter(function (c) {
+    return c.없음 && !c.미래;
+  });
+  drawYearEmptyMonths(host, 해, 빈달);
+  /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
+     회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
+}
+/* ★ 61차 ①. 업종마다 이름이 다르다 — 식당은 「월세」, 나머지는 「임차료」.
+     ★ 70차 ②. 이 둘은 뜻으로 「사업에 쓴 돈」의 세부다. 그 줄 바로 아래로 옮긴다
+       (개발자 확정 — 예전에는 원가율 아래에 있어서 무엇의 세부인지 안 보였다).
+     ★ 64-12. 평균 칸이 0원으로 나오던 것을 원가율과 같은 규칙으로 맞춘다 —
+       아직 아무 곳도 그 항목으로 안 정하셨으면 「0원 썼다」가 아니라 「모른다」다.
+       「없는 것」과 「아직 안 정한 것」을 구분 못 하니 억지로 0을 안 보여준다 (38차).
+     ★ 달 칸의 0원은 그대로 둔다 — 그 달에 안 나간 것은 사실이고,
+       월세는 실제로 매달 꼬박꼬박 나가지 않는다 (87개월 중 72개월) */
+function 항목줄(months, cols, 진행달, opening, done, tbody, 원이름) {
+  연표줄(
+    months,
+    cols,
+    진행달,
+    opening,
+    done,
+    tbody,
+    baseName(원이름),
+    'yrsub',
+    function (c) {
+      if (c.blocked) return { txt: '—', cls: 'none' };
+      return { txt: won(catOfMonth(c, 원이름)) };
+    },
+    function (l) {
+      var 합 = 0;
+      l.forEach(function (c) {
+        if (!c.blocked) 합 += catOfMonth(c, 원이름);
+      });
+      if (!합) return { txt: '—' };
+      return {
+        txt: won(
+          meanOf(l, function (c) {
+            return catOfMonth(c, 원이름);
+          })
+        )
+      };
+    }
+  );
+}
+
+function 연표줄(
+  months,
+  cols,
+  진행달,
+  opening,
+  done,
+  tbody,
+  label,
+  cls,
+  pick,
+  avg,
+  whyId,
+  goUnsetRow,
+  get
+) {
+  var tr = document.createElement('tr');
+  if (cls) tr.className = cls;
+  var rh = el('td', 'rh', label);
+  if (whyId)
+    rh.appendChild(
+      whyMark(whyId, function () {
+        drawResult(months);
+      })
+    );
+  tr.appendChild(rh);
+  cols.forEach(function (c, i) {
+    /* ★ 71차 ⑤-5. 자료가 없는 달은 pick 을 아예 안 부른다.
+         monthNumbers 는 그 달에 0을 내는데 그 0은 「0원」이 아니라 「모른다」다 (38차).
+         ★ 두 가지를 갈라 보인다 —
+           아직 안 온 달: 조용한 회색 「—」. 아무 말도 안 붙인다. 기다리면 된다.
+           지났는데 자료 없는 달: 빈 칸. 표 아래 한 줄이 채우는 길을 알려준다.
+         ★ 새 색은 안 칠한다. 크림·호박은 이미 「아직 안 정한 돈」·「진행 중」의 뜻이다 */
+    if (c.없음) {
+      var ntd = el('td', 'num noyet', c.미래 ? '—' : '');
+      /* ★ 90차 ②(A안). 이 칸도 같은 줄 수로 둔다 — 안 그러면 「—」만 반 줄 내려앉는다 */
+      if (get) ntd.appendChild(el('span', 'ydelta', ''));
+      tr.appendChild(ntd);
+      return;
+    }
+    var v = pick(c);
+    /* ★ 68차 ⑥. pill 이 붙은 칸은 값을 span 하나로 감싼다 —
+         표가 border-collapse:collapse 라 칸 자체는 모서리가 안 둥글어진다.
+         글자는 그대로다. 감싸기만 한다 */
+    var td;
+    if (v.pill && v.txt) {
+      td = el('td', 'num' + (v.cls ? ' ' + v.cls : ''));
+      td.appendChild(el('span', 'ypill', v.txt));
+    } else {
+      td = el('td', 'num' + (v.cls ? ' ' + v.cls : ''), v.txt);
+    }
+    /* ★ 90차 ②(A안). 줄을 언제나 붙인다 — 견줄 수 없는 칸이면 빈 줄로 자리만 잡는다.
+         무엇을 견줄지 정하는 것은 그대로 deltaTxt 하나뿐이다 (66차 ③-2) */
+    if (get) td.appendChild(el('span', 'ydelta', deltaTxt(cols, 진행달, opening, i, get)));
+    /* ★ 54차 ⑤. 「아직 안 정한 돈」 줄만 눌린다 — 할 일이 남아 있는 줄이다.
+         — 칸(갈 곳 없음)과 0원인 달(다 정함)은 안 눌린다 */
+    if (goUnsetRow && v.go) {
+      td.classList.add('gomonth');
+      td.addEventListener('click', function () {
+        goUnset(c.m);
+      });
+    }
+    tr.appendChild(td);
+  });
+  if (done.length) {
+    var a = avg ? avg(done) : { txt: '' };
+    var atd = el('td', 'num avgcol' + (a.cls ? ' ' + a.cls : ''));
+    if (a.pill && a.txt) atd.appendChild(el('span', 'ypill', a.txt));
+    else atd.textContent = a.txt;
+    /* ★ 90차 ②(A안). 평균 칸에는 전월 대비가 없다. 그래도 줄 수는 같아야
+         한 줄의 숫자가 전부 같은 높이에 앉는다 (textContent 뒤에 붙인다 — 앞에 붙이면 지워진다) */
+    if (get) atd.appendChild(el('span', 'ydelta', ''));
+    tr.appendChild(atd);
+  }
+  tbody.appendChild(tr);
+  if (whyId && whyOpen(whyId)) {
+    var wtr = document.createElement('tr');
+    var wtd = el('td', 'whytd');
+    wtd.colSpan = 1 + cols.length + (done.length ? 1 : 0);
+    wtd.appendChild(whyBox(whyId));
+    wtr.appendChild(wtd);
+    tbody.appendChild(wtr);
+  }
+  return tr; /* ★ 70차 ②. 그룹 줄에 펼침 표시를 달려면 줄이 필요하다 */
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearSummaryCards(host, months, cols, 셀수있는) {
+  if (셀수있는.length) {
+    var 합번 = 0,
+      합쓴 = 0,
+      합순 = 0;
+    셀수있는.forEach(function (c) {
+      합번 += c.sales + c.otherIn;
+      합쓴 += c.cost;
+      합순 += c.profit;
+    });
+    var 카드줄 = el('div', 'ycards');
+    /* ★ B-4 (2026-09-28). 블록 안 함수 선언을 변수로 바꿨다 — 선언 뒤에서만 부르므로 같다. 블록을 함수로 뺄 수 있게 */
+    var 카드 = function (기호, 이름, 값, cls) {
+      var b = el('div', 'ycard ' + cls);
+      b.appendChild(el('div', 'ysign', 기호));
+      b.appendChild(el('div', 'ycname', 이름));
+      /* ★ 74차. 합계 카드는 줄인 만원 단위보다 실제 원 단위가 더 분명하다. */
+      b.appendChild(el('div', 'ycval num', won(값) + '원'));
+      return b;
+    };
+    카드줄.appendChild(카드('', '사업으로 번 돈', 합번, 'yin'));
+    카드줄.appendChild(카드('−', '사업에 쓴 돈', 합쓴, 'yout'));
+    카드줄.appendChild(카드('=', '계좌 순이익', 합순, 'yprof'));
+    host.appendChild(카드줄);
+
+    /* ★ 66-8차 ③ · 66-16차 ③. 순이익 합계는 위 카드가 이미 말한다 —
+       여기서는 흑자·적자 달 수와 사업 외 용도만 남긴다 */
+    var 요약 = yearSumLine(months, cols);
+    if (요약) host.appendChild(요약);
+  }
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearMonthHeads(진행달, cols, hr) {
+  cols.forEach(function (c) {
+    /* ★ 48차 ②. 표의 달 이름을 눌러도 그 달로 간다
+       ★ 66차 ③-3. 진행 중인 달에만 표를 붙인다.
+         마감 달마다 (마감)을 붙이면 열두 칸이 다 시끄러워진다
+       ★ 70차 ①. 「8월(진행 중)」 괄호 글씨는 작아서 눈에 안 띄었다.
+         달 이름 밑에 호박 알약 한 줄로 내린다 — 괄호 글씨는 없앤다 (알약이 대신한다).
+         ★ 새 색은 안 만든다. 표의 「아직 안 정한 돈」 알약과 같은 호박 계열이다.
+         ★ 열 바탕은 칠하지 않는다 (개발자 1안 확정) */
+    var th = el('th', 'ymtap');
+    if (c.m === 진행달) th.appendChild(el('span', 'runpill', '진행 중'));
+    else th.appendChild(el('span', 'runspace', ''));
+    th.appendChild(el('span', 'ymnum', monNum(c.m)));
+    th.addEventListener('click', function () {
+      goMonth(c.m);
+    });
+    hr.appendChild(th);
+  });
+}
+
+/* drawYear 에서 뺀 부분 (B-4) */
+function drawYearBalanceRow(진행달, row) {
   /* ★ 61차 ①. 여기 있던 「원가율 (식자재·주류 ÷ 매출)」 줄은 위로 올렸다 —
      접힌 자리에 있어서 1년치를 펴도 안 보였다. 같은 것을 두 자리에 두지 않는다 (49차) */
 
@@ -1736,26 +1849,8 @@ function drawYear(host, allMonths) {
     },
     'bal'
   );
-  tab.appendChild(tbody);
-  wrap.appendChild(tab);
-  host.appendChild(wrap);
-  /* ★ 66차 ③-3. 표를 열면 가장 오른쪽(최신 달)이 먼저 보이게 한다.
-     왼쪽이 가장 오래된 달이라, 그냥 두면 1년 전 숫자가 첫인상이 된다.
-     ★ 56차의 스크롤 자리 지키기가 그린 뒤에 scrollLeft 를 되돌려 놓으므로,
-       거기서 「아직 한 번도 안 민 표」만 오른쪽 끝으로 보낸다 (drawResult).
-       여기서는 처음 그릴 때의 자리만 정한다 */
-  wrap.scrollLeft = wrap.scrollWidth;
-  /* ★ 66차 ③-3. 진행 중인 달이 어디까지의 누적인지 표 밑에 밝힌다 */
-  /* ★ 71차 ⑤-5. 지났는데 자료가 없는 달 — 채우는 길을 알려드린다.
-     71차 ②로 파일을 보탤 수 있게 됐으니 이것은 빈말이 아니다.
-     ★ 아직 안 온 달은 여기 안 센다. 그건 기다리면 되는 것이라 할 말이 없다 */
-  var 빈달 = cols.filter(function (c) {
-    return c.없음 && !c.미래;
-  });
-  drawYearEmptyMonths(host, 해, 빈달);
-  /* ★ 76차. 표 아래 긴 설명은 모두 걷는다.
-     회계상 순이익과 다를 수 있다는 한 줄은 drawResultInner의 dscLine에서만 보여준다. */
 }
+
 /* drawYear 에서 뺀 부분 (B-4) */
 function drawYearInRows(row, anyOtherIn) {
   if (그룹열림('in')) {

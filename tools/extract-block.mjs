@@ -2,6 +2,7 @@
 // 사용: node tools/extract-block.mjs <파일> <바깥 함수> --list [최소줄]
 //       node extract-block.mjs <파일> <바깥 함수> --plan '<시작줄>:<새이름>,…' [--apply]
 // 큰 함수의 바로 아래 문장 하나를 새 최상위 함수로 뺀다. 읽는 바깥 변수는 매개변수로 넘긴다 (그 자리에서 부르므로 같은 값).
+// ★ `if (…) { …; return; }` 처럼 끝에만 값 없는 return 이 있으면 그 앞부분만 뺀다 — 자리에는 `새함수(…); return;` 이 남는다.
 // 못 빼는 것: 바깥 변수에 대입 · 블록 안 var 를 블록 밖에서 씀 · 바깥으로 나가는 return/break/continue · 바깥 함수의 this/arguments · 블록 안 함수 선언
 // 구문 분석 · 변수 범위 분석은 eslint 가 쓰는 것을 그대로 빌린다 (package.json 에 새 의존성을 더하지 않는다)
 import { fileURLToPath } from 'node:url';
@@ -35,46 +36,60 @@ function declaredNames() {
   }
   return names;
 }
-function check(src, ast, sm, outer, stmt) {
+// 뺄 문장들: 보통은 그 문장 하나. 끝이 값 없는 return 인 if 블록(else 없음)이면 그 return 앞까지
+function partsOf(stmt) {
+  const b =
+    stmt.type === 'IfStatement' && !stmt.alternate && stmt.consequent.type === 'BlockStatement'
+      ? stmt.consequent.body
+      : null;
+  const last = b && b[b.length - 1];
+  if (last && last.type === 'ReturnStatement' && !last.argument && b.length > 1)
+    return { parts: b.slice(0, -1), tail: true };
+  return { parts: [stmt], tail: false };
+}
+function check(src, ast, sm, outer, whole) {
   const outerScope = sm.acquire(outer);
+  const { parts } = partsOf(whole);
+  const stmt = { range: [parts[0].range[0], parts[parts.length - 1].range[1]] };
   // 바깥으로 나가는 제어
   let bad = null;
   const stack = [];
-  estraverse.traverse(stmt, {
-    enter(n) {
-      if (/Function/.test(n.type)) {
-        stack.push('fn');
-        if (n.type === 'FunctionDeclaration' && stack.length === 1)
-          bad = bad || '블록 안 함수 선언 ' + n.id.name;
-        return;
-      }
-      if (/^(For|ForIn|ForOf|While|DoWhile)Statement$/.test(n.type)) stack.push('loop');
-      if (n.type === 'SwitchStatement') stack.push('switch');
-      const inFn = stack.includes('fn');
-      if (!inFn && n.type === 'ReturnStatement') bad = bad || 'return';
-      if (!inFn && (n.type === 'BreakStatement' || n.type === 'ContinueStatement')) {
+  for (const part of parts)
+    estraverse.traverse(part, {
+      enter(n) {
+        if (/Function/.test(n.type)) {
+          stack.push('fn');
+          if (n.type === 'FunctionDeclaration' && stack.length === 1)
+            bad = bad || '블록 안 함수 선언 ' + n.id.name;
+          return;
+        }
+        if (/^(For|ForIn|ForOf|While|DoWhile)Statement$/.test(n.type)) stack.push('loop');
+        if (n.type === 'SwitchStatement') stack.push('switch');
+        const inFn = stack.includes('fn');
+        if (!inFn && n.type === 'ReturnStatement') bad = bad || 'return';
+        if (!inFn && (n.type === 'BreakStatement' || n.type === 'ContinueStatement')) {
+          if (
+            n.label ||
+            !stack.some((x) => x === 'loop' || (x === 'switch' && n.type === 'BreakStatement'))
+          )
+            bad = bad || n.type;
+        }
         if (
-          n.label ||
-          !stack.some((x) => x === 'loop' || (x === 'switch' && n.type === 'BreakStatement'))
+          !inFn &&
+          (n.type === 'ThisExpression' || (n.type === 'Identifier' && n.name === 'arguments'))
         )
-          bad = bad || n.type;
-      }
-      if (
-        !inFn &&
-        (n.type === 'ThisExpression' || (n.type === 'Identifier' && n.name === 'arguments'))
-      )
-        bad = bad || 'this/arguments';
-    },
-    leave(n) {
-      if (
-        /Function/.test(n.type) ||
-        /^(For|ForIn|ForOf|While|DoWhile)Statement$/.test(n.type) ||
-        n.type === 'SwitchStatement'
-      )
-        stack.pop();
-    },
-    fallback: 'iteration'
-  });
+          bad = bad || 'this/arguments';
+      },
+      leave(n) {
+        if (
+          /Function/.test(n.type) ||
+          /^(For|ForIn|ForOf|While|DoWhile)Statement$/.test(n.type) ||
+          n.type === 'SwitchStatement'
+        )
+          stack.pop();
+      },
+      fallback: 'iteration'
+    });
   if (bad) return { bad };
   const caps = new Map();
   for (const v of outerScope.variables) {
@@ -145,8 +160,10 @@ for (const [line, nm] of plan) {
     console.log('✗', line, r.bad);
     process.exit(1);
   }
+  const { parts, tail } = partsOf(s);
+  const region = { range: [parts[0].range[0], parts[parts.length - 1].range[1]] };
   // 문장 앞 설명 주석도 함께
-  let from = s.range[0];
+  let from = region.range[0];
   for (;;) {
     let j = from;
     while (j > 0 && /[ \t\n]/.test(src[j - 1])) j--;
@@ -158,7 +175,7 @@ for (const [line, nm] of plan) {
   }
   const lineStart = src.lastIndexOf('\n', from - 1) + 1;
   const indent = src.slice(lineStart, from);
-  const body = src.slice(from, s.range[1]);
+  const body = src.slice(from, region.range[1]);
   const call = indent + nm + '(' + r.caps.join(', ') + ');';
   const fnText =
     '\n/* ' +
@@ -172,9 +189,14 @@ for (const [line, nm] of plan) {
     body +
     '\n}\n';
   added.push(fnText);
-  src = src.slice(0, lineStart) + call + src.slice(s.range[1]);
+  src = src.slice(0, lineStart) + call + src.slice(region.range[1]);
   names.add(nm);
-  console.log('✓', line, nm, '(' + r.caps.join(', ') + ')');
+  console.log(
+    '✓',
+    line,
+    nm,
+    '(' + r.caps.join(', ') + ')' + (tail ? ' — 끝의 return 은 자리에 남김' : '')
+  );
 }
 // 새 함수들은 바깥 함수 바로 뒤에, 원래 순서대로
 const ast = parse(src);
