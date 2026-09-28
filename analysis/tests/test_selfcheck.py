@@ -208,18 +208,33 @@ class Guard(unittest.TestCase):
         self.assertEqual(events.count("evaluate"), 2)
 
     def test_params_change_after_freeze(self):
-        import run
+        import subprocess
+        # 사용 중인 설정을 수정·복원하지 않고 임시 사본에서 변경 감지를 검증한다.
+        # 텍스트 복원은 Windows 에서 원본의 LF 를 CRLF 로 바꾸기도 한다.
+        tool = os.path.join(TMP, "tool_guard")
+        os.makedirs(tool)
+        for folder in ("config", "tb"):
+            shutil.copytree(os.path.join(ROOT, folder), os.path.join(tool, folder),
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copyfile(os.path.join(ROOT, "run.py"), os.path.join(tool, "run.py"))
         work = os.path.join(TMP, "work_guard2")
-        run.main(["split", "--data", DATA, "--work", work, "--demo"])
-        run.main(["freeze", "--data", DATA, "--work", work, "--demo"])
-        guide = os.path.join(ROOT, "config", "guideline.md")
-        orig = open(guide, encoding="utf-8").read()
-        try:
-            open(guide, "a", encoding="utf-8").write("\n")
-            with self.assertRaises(SystemExit):
-                run.main(["sample", "--data", DATA, "--work", work, "--demo"])
-        finally:
-            open(guide, "w", encoding="utf-8").write(orig)
+
+        def go(command):
+            return subprocess.run(
+                [sys.executable, "-X", "utf8", os.path.join(tool, "run.py"), command,
+                 "--data", DATA, "--work", work, "--demo"],
+                capture_output=True, encoding="utf-8", check=False,
+            )
+
+        for command in ("split", "freeze"):
+            result = go(command)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        with open(os.path.join(tool, "config", "guideline.md"), "ab") as guide:
+            guide.write(b"\n")
+        result = go("sample")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("동결", result.stdout + result.stderr)
+
 
 
 if __name__ == "__main__":

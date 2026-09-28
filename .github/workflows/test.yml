@@ -43,5 +43,6 @@ jobs:
       - run: npm.cmd run setup
       - run: npm.cmd run doctor
       - run: npm.cmd run analysis:check
+      - run: git diff --exit-code
       - run: npm.cmd run lint
       - run: npm.cmd test -- --workers=2
