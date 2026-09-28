@@ -20,7 +20,7 @@ jobs:
       - name: 추적 파일만 별도 폴더에 준비
         shell: pwsh
         run: |
-          git archive --format=zip --output="$env:RUNNER_TEMP/source.zip" HEAD
+          git -c core.autocrlf=false archive --format=zip --output="$env:RUNNER_TEMP/source.zip" HEAD
           Expand-Archive "$env:RUNNER_TEMP/source.zip" "$env:RUNNER_TEMP/vdi-bundle"
       - name: Windows 실행 환경 설치 · 오프라인 복원 · 전체 검사
         shell: pwsh
