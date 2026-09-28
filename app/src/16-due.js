@@ -1444,8 +1444,7 @@ function drawDueGraph(host, c, cv, pts) {
   var 앞 = pts.점;
   /* 세로 범위 — 지난 것과 앞날을 다 담는다. 0원은 늘 넣는다 (마이너스가 보이게) */
   var lo = 0,
-    hi = 0,
-    i;
+    hi = 0;
   지난.forEach(function (p) {
     if (p.값 === null) return;
     if (p.값 < lo) lo = p.값;
@@ -1475,7 +1474,36 @@ function drawDueGraph(host, c, cv, pts) {
   var 끝날 = pts.끝;
   var box = el('div', 'dchart');
   host.appendChild(box);
+  drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 끝날, box);
+  /* 그림 아래 값 — 상세 금액은 원 단위다 (요청서 ③-5) */
+  var key = el('div', 'fckey');
+  var k1 = el('div');
+  k1.appendChild(document.createTextNode(날글(c.목표) + ' 예상 잔액 '));
+  k1.appendChild(el('b', null, won(c.예상) + '원'));
+  key.appendChild(k1);
+  var k2 = el('div');
+  /* ★ 114차 보정 ①. 기준일 잔액이 최저면 그 이름으로 부른다 */
+  var 기준최저 = cv.최저날수 === pts.시작;
+  k2.appendChild(
+    document.createTextNode(기준최저 ? '자료 기준일 잔액 ' : '기간 중 최저 ' + cv.최저날 + ' ')
+  );
+  k2.appendChild(el('b', null, won(cv.최저) + '원'));
+  key.appendChild(k2);
+  host.appendChild(key);
+
+  /* ── 114차 보정 ④ · 고른 날의 상세 ────────────────────────────────
+     같은 날의 두 시점을 각각 적는다. 잔액이 같아 마커가 하나로 보여도
+     여기서는 둘이 따로 선다 — 겹쳐 보이는 것과 자료가 하나인 것은 다르다 */
+  var 고른날 = host.__고른날;
+  var det = el('div', 'fcdet');
+  drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det);
+  host.appendChild(det);
+}
+/* drawDueGraph 에서 뺀 부분 (B-4) */
+function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 끝날, box) {
   fitChart(box, FC_GH, function (svg, W) {
+    /* ★ B-4 (2026-09-28). i 는 아래 두 반복에서만 쓴다 — 바깥 함수에서 옮겨 왔다 (바깥은 읽지 않는다) */
+    var i;
     var LEFT = axisLeft(ticks),
       RIGHT = 12,
       PAD = 16,
@@ -1839,30 +1867,8 @@ function drawDueGraph(host, c, cv, pts) {
     }
     svg.appendChild(hits);
   });
-  /* 그림 아래 값 — 상세 금액은 원 단위다 (요청서 ③-5) */
-  var key = el('div', 'fckey');
-  var k1 = el('div');
-  k1.appendChild(document.createTextNode(날글(c.목표) + ' 예상 잔액 '));
-  k1.appendChild(el('b', null, won(c.예상) + '원'));
-  key.appendChild(k1);
-  var k2 = el('div');
-  /* ★ 114차 보정 ①. 기준일 잔액이 최저면 그 이름으로 부른다 */
-  var 기준최저 = cv.최저날수 === pts.시작;
-  k2.appendChild(
-    document.createTextNode(기준최저 ? '자료 기준일 잔액 ' : '기간 중 최저 ' + cv.최저날 + ' ')
-  );
-  k2.appendChild(el('b', null, won(cv.최저) + '원'));
-  key.appendChild(k2);
-  host.appendChild(key);
-
-  /* ── 114차 보정 ④ · 고른 날의 상세 ────────────────────────────────
-     같은 날의 두 시점을 각각 적는다. 잔액이 같아 마커가 하나로 보여도
-     여기서는 둘이 따로 선다 — 겹쳐 보이는 것과 자료가 하나인 것은 다르다 */
-  var 고른날 = host.__고른날;
-  var det = el('div', 'fcdet');
-  drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det);
-  host.appendChild(det);
 }
+
 /* drawDueGraph 에서 뺀 부분 (B-4) */
 function drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det) {
   if (고른날 == null) {
@@ -1973,50 +1979,7 @@ function drawDueCard(host, months) {
     c = null;
   }
   if (!c) {
-    /* ★ 102차 추가 ③. 카드가 안 나오는 까닭이 「그날 잔액을 복원 못 하는 계좌가 있음」
-       이면 빈 자리로 두지 않고 그 사실을 적는다.
-       ★ 확인이 필요한 계좌는 이름과 자료 기간을 있는 그대로 적는다 —
-         은행을 고르셨으면 「카카오뱅크」로, 안 고르셨으면 「계좌 2」로 뜬다.
-         그때는 옆의 자료 기간으로 알아보신다 */
-    var 못 = null;
-    try {
-      못 = dueUnknownAccs();
-    } catch (e) {}
-    if (못) {
-      var 안 = el('div', 'duenone');
-      안.appendChild(
-        el(
-          'div',
-          null,
-          '계좌 ' +
-            won(못.총) +
-            '개 중 ' +
-            won(못.빠짐) +
-            '개는 ' +
-            +못.날.slice(5, 7) +
-            '월 ' +
-            +못.날.slice(8, 10) +
-            '일 기준 잔액을 확인할 수 없어 예상 잔액을 표시하지 않았습니다.'
-        )
-      );
-      안.appendChild(el('div', null, '계좌별 자료 기간과 잔액 정보를 확인해주세요.'));
-      /* ★ 「자료 기간을 맞춰 올려주시면 계산해드리겠습니다」라고 하지 않는다 —
-         나중에 연 계좌라면 앞 자료를 넣을 수가 없다. 보장할 수 없는 말이다.
-         「최신 내역을 올리면 맞춰집니다」도 쓰지 않는다 */
-      안.appendChild(
-        el(
-          'div',
-          'duenonelist',
-          '확인이 필요한 계좌: ' +
-            못.목록
-              .map(function (x) {
-                return x.이름 + (x.기간 ? ' (' + x.기간 + ')' : '');
-              })
-              .join(' · ')
-        )
-      );
-      host.appendChild(안);
-    }
+    drawDueNoCard(host);
     return;
   }
   /* ★ 116차 앞 ④. 보류면 예상 숫자 대신 안내를 낸다.
@@ -2157,22 +2120,7 @@ function drawDueCard(host, months) {
     });
     box.appendChild(gbtn);
   }
-  /* ★ 116차 ⑫. 적용 보류가 있을 때만 한 줄 표시한다. 없으면 아무 말도 안 한다 */
-  if (c.적용보류수) {
-    var pw = el(
-      'div',
-      'duewhy dueas duehold',
-      '예정 지출 ' + won(c.적용보류수) + '건의 반영이 보류되어 있습니다.'
-    );
-    var pb = el('button', 'b', '확인하기');
-    pb.type = 'button';
-    pb.addEventListener('click', function (e) {
-      e.stopPropagation(); /* 카드 머리의 접기·펴기를 건드리지 않는다 */
-      openDuePlan(c, months, '적용보류');
-    });
-    pw.appendChild(pb);
-    box.appendChild(pw);
-  }
+  drawDueHeldPlans(months, c, box);
   /* ★ 101차. 자료 기준일과 분석 종료일을 늘 보이게 둔다. 접혀 있을 때도 안 감춘다.
      ★ 「오늘」이라고 쓰지 않는다 — 자료의 기준일이지 오늘이 아니다.
      ★ 최저일과 종료일은 다를 수 있어 한 낱말로 섞지 않는다 */
@@ -2232,6 +2180,79 @@ function drawDueCard(host, months) {
     UP.open.__dueOpen = !UP.open.__dueOpen;
     drawResult(months);
   });
+  drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가);
+  host.appendChild(box);
+}
+/* drawDueCard 에서 뺀 부분 (B-4) */
+function drawDueNoCard(host) {
+  /* ★ 102차 추가 ③. 카드가 안 나오는 까닭이 「그날 잔액을 복원 못 하는 계좌가 있음」
+       이면 빈 자리로 두지 않고 그 사실을 적는다.
+       ★ 확인이 필요한 계좌는 이름과 자료 기간을 있는 그대로 적는다 —
+         은행을 고르셨으면 「카카오뱅크」로, 안 고르셨으면 「계좌 2」로 뜬다.
+         그때는 옆의 자료 기간으로 알아보신다 */
+  var 못 = null;
+  try {
+    못 = dueUnknownAccs();
+  } catch (e) {}
+  if (못) {
+    var 안 = el('div', 'duenone');
+    안.appendChild(
+      el(
+        'div',
+        null,
+        '계좌 ' +
+          won(못.총) +
+          '개 중 ' +
+          won(못.빠짐) +
+          '개는 ' +
+          +못.날.slice(5, 7) +
+          '월 ' +
+          +못.날.slice(8, 10) +
+          '일 기준 잔액을 확인할 수 없어 예상 잔액을 표시하지 않았습니다.'
+      )
+    );
+    안.appendChild(el('div', null, '계좌별 자료 기간과 잔액 정보를 확인해주세요.'));
+    /* ★ 「자료 기간을 맞춰 올려주시면 계산해드리겠습니다」라고 하지 않는다 —
+         나중에 연 계좌라면 앞 자료를 넣을 수가 없다. 보장할 수 없는 말이다.
+         「최신 내역을 올리면 맞춰집니다」도 쓰지 않는다 */
+    안.appendChild(
+      el(
+        'div',
+        'duenonelist',
+        '확인이 필요한 계좌: ' +
+          못.목록
+            .map(function (x) {
+              return x.이름 + (x.기간 ? ' (' + x.기간 + ')' : '');
+            })
+            .join(' · ')
+      )
+    );
+    host.appendChild(안);
+  }
+}
+
+/* drawDueCard 에서 뺀 부분 (B-4) */
+function drawDueHeldPlans(months, c, box) {
+  /* ★ 116차 ⑫. 적용 보류가 있을 때만 한 줄 표시한다. 없으면 아무 말도 안 한다 */
+  if (c.적용보류수) {
+    var pw = el(
+      'div',
+      'duewhy dueas duehold',
+      '예정 지출 ' + won(c.적용보류수) + '건의 반영이 보류되어 있습니다.'
+    );
+    var pb = el('button', 'b', '확인하기');
+    pb.type = 'button';
+    pb.addEventListener('click', function (e) {
+      e.stopPropagation(); /* 카드 머리의 접기·펴기를 건드리지 않는다 */
+      openDuePlan(c, months, '적용보류');
+    });
+    pw.appendChild(pb);
+    box.appendChild(pw);
+  }
+}
+
+/* drawDueCard 에서 뺀 부분 (B-4) */
+function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가) {
   if (open) {
     /* ★ 110차 ④. 31칸 격자를 드롭다운으로 바꾼다. 격자가 234px 로 카드에서 제일 큰
        덩어리였다. 달을 고르는 자리에 이미 쓰는 방식이라 새 장치가 아니다.
@@ -2244,14 +2265,15 @@ function drawDueCard(host, months) {
        보류 카드와 같은 것을 쓰게 하려는 것이다. 글자와 동작은 110차 ④ 그대로다 */
     box.appendChild(duePickBox(months));
     var t = el('div', 'duepick');
-    function 줄(name, v, sub, sign) {
+    /* ★ B-4 (2026-09-28). 블록 안 함수 선언을 변수로 바꿨다 — 선언 뒤에서만 부르므로 같다. 블록을 함수로 뺄 수 있게 */
+    var 줄 = function (name, v, sub, sign) {
       var r = el('div', 'orow');
       var l = el('div', 'lab', '　' + name);
       if (sub) l.appendChild(el('span', 'gcount', sub));
       r.appendChild(l);
       r.appendChild(el('div', 'v num', (sign || '') + won(Math.abs(v))));
       t.appendChild(r);
-    }
+    };
     /* ★ 113차 ①④⑤ (수정). 자료 범위의 출처와 제한은 「자세히」 안에만 둔다.
        ★ 처음에는 if (open) 밖에 붙였다. .shut 에는 자식을 감추는 규칙이 없어서
          접힌 카드에 그대로 보였고, 폰 390×844 에서 카드가 124px → 208·230px 이 됐다.
@@ -2365,8 +2387,8 @@ function drawDueCard(host, months) {
     });
     box.appendChild(pbtn);
   }
-  host.appendChild(box);
 }
+
 /* drawDueCard 에서 뺀 부분 (B-4) */
 function drawDueLowestLine(c, cv, 색, box, 기준날인가, 겹침) {
   /* ★ 111차 ①. 자료 기준일 잔액은 예상이 아니라 자료에 적힌 실제 값이다.
