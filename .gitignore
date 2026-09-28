@@ -38,3 +38,6 @@ npm-debug.log*
 
 # Obsidian 으로 docs 를 볼 때 생기는 설정 폴더
 .obsidian/
+
+# VDI 에서 받은 실행 환경 · 캐시 · 분석 결과 (공유하지 않는다)
+.offline/

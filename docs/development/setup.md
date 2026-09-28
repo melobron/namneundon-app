@@ -40,6 +40,10 @@ npm run serve      # app/ 을 그대로 내준다 → http://localhost:4173
 
 자주 쓰는 명령은 [README](../../README.md#주요-명령), 검사는 [quality](quality.md), 테스트는 [testing](testing.md), 배포는 [deployment](deployment.md).
 
+## 인터넷이 없는 Windows VDI
+
+[VDI 오프라인 준비](vdi-offline.md)에서 실행 환경이 포함된 다운로드 묶음과 명령을 확인한다.
+
 ## worktree
 
 **코드를 고치는 작업은 자기 전용 worktree 에서 하고, 원래 폴더에서 가지를 바꾸지 않는다** ([AGENTS.md](../../AGENTS.md#작업-전에-확인)).

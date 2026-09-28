@@ -1,0 +1,63 @@
+name: VDI 오프라인 Windows 묶음
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/vdi-offline]
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12.10'
+      - name: 추적 파일만 별도 폴더에 준비
+        shell: pwsh
+        run: |
+          git archive --format=zip --output="$env:RUNNER_TEMP/source.zip" HEAD
+          Expand-Archive "$env:RUNNER_TEMP/source.zip" "$env:RUNNER_TEMP/vdi-bundle"
+      - name: Windows 실행 환경 설치 · 오프라인 복원 · 전체 검사
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP/vdi-bundle/tools/vdi/prepare.ps1"
+      - name: 분석 라이브러리와 노트북 준비
+        shell: pwsh
+        run: |
+          $bundle = "$env:RUNNER_TEMP/vdi-bundle"
+          python -m pip install --only-binary=:all: --target "$bundle/.offline/python/Lib/site-packages" numpy pandas pyarrow openpyxl matplotlib scipy statsmodels jupyterlab
+          if ($LASTEXITCODE -ne 0) { throw 'Python packages failed' }
+          python -m pip freeze --path "$bundle/.offline/python/Lib/site-packages" > "$bundle/.offline/python-requirements.txt"
+          & "$bundle/.offline/python/python.exe" -c "import numpy,pandas,pyarrow,openpyxl,matplotlib,scipy,statsmodels,jupyterlab; print('Python imports OK')"
+          if ($LASTEXITCODE -ne 0) { throw 'Python imports failed' }
+      - name: 다른 경로에서도 실행되는지 확인
+        shell: pwsh
+        run: |
+          Move-Item "$env:RUNNER_TEMP/vdi-bundle" "$env:RUNNER_TEMP/vdi relocated"
+          Set-Location "$env:RUNNER_TEMP/vdi relocated"
+          & .\vdi.cmd verify
+          if ($LASTEXITCODE -ne 0) { throw 'Relocated browser failed' }
+          & .\vdi.cmd analysis
+          if ($LASTEXITCODE -ne 0) { throw 'Relocated analysis failed' }
+          & .\.offline\python\python.exe -m jupyterlab --version
+          if ($LASTEXITCODE -ne 0) { throw 'Relocated Jupyter failed' }
+          "${{ github.sha }}" | Set-Content .offline\SOURCE_COMMIT.txt
+      - name: 파일 묶기
+        shell: pwsh
+        run: |
+          tar.exe -a -c -f "$env:RUNNER_TEMP/namneundon-vdi-windows-x64.zip" -C "$env:RUNNER_TEMP/vdi relocated" .
+          if ($LASTEXITCODE -ne 0) { throw 'Archive failed' }
+          (Get-FileHash "$env:RUNNER_TEMP/namneundon-vdi-windows-x64.zip" -Algorithm SHA256).Hash | Set-Content "$env:RUNNER_TEMP/SHA256.txt"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: namneundon-vdi-windows-x64
+          path: |
+            ${{ runner.temp }}/namneundon-vdi-windows-x64.zip
+            ${{ runner.temp }}/SHA256.txt
+          retention-days: 30
+          compression-level: 0

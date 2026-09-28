@@ -611,3 +611,5 @@ toplevel
 worktrees
 fullview
 winget
+
+nosniff
