@@ -107,12 +107,26 @@ def check_notebook(folder):
             with urllib.request.urlopen(url.replace("/lab?", "/api/kernelspecs?")) as response:
                 assert "python3" in json.load(response)["kernelspecs"]
         finally:
-            process.terminate()
+            # Windows 가상 환경의 python.exe 는 실제 Python 을 자식으로 실행한다.
+            # 부모만 종료하면 서버가 남아 로그 파일을 계속 잡으므로 서버에 종료를 요청한다.
             try:
+                request = urllib.request.Request(
+                    "http://127.0.0.1:%d/api/shutdown?token=%s" % (port, token),
+                    data=b"", method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=5):
+                    pass
+                process.wait(timeout=15)
+            except (OSError, subprocess.TimeoutExpired):
+                if os.name == "nt":
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+                    )
+                else:
+                    process.kill()
                 process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
+
 
 
 with tempfile.TemporaryDirectory(prefix="analysis-check-") as temp:

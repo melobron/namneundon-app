@@ -6,5 +6,6 @@
 - [x] 분석·노트북 실행 명령 및 기능 점검 추가
 - [x] Mac Python 3.12 실제 설치, 분석 자체 점검 17개, 파일·통계·그래프·Jupyter 점검, doctor 통과
 - [x] lint 통과 (기존 CSS 경고 48개), 웹 전체 103개 및 추가 환경 보존 테스트 1개 통과
-- [ ] Windows 자동 Python 설치·전체 설정·분석 점검
+- [x] Windows 공식 Python 자동 설치, setup, doctor 통과
+- [ ] Windows 분석 점검 재검증: 기능 점검 후 자식 프로세스가 남는 종료 문제를 수정
 - [ ] PR 머지
