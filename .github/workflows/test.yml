@@ -28,3 +28,17 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm.cmd run setup
+      - run: npm.cmd run doctor
+      - run: npm.cmd run lint
+      - run: npm.cmd test -- --workers=2
