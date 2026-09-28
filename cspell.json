@@ -12,7 +12,12 @@
     "**/*.png",
     ".git/**",
     "cspell-words.txt",
-    ".claude/CLAUDE.md"
+    ".claude/CLAUDE.md",
+    ".venv/**",
+    "data/**",
+    "analysis/data/**",
+    "analysis/work/**",
+    "analysis/work_demo/**"
   ],
   "ignoreRegExpList": ["data:[^\\s'\"]+", "#[0-9a-fA-F]{3,8}\\b"],
   "dictionaryDefinitions": [

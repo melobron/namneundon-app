@@ -1,0 +1,20 @@
+{
+  "_설명": "반복 출금 탐지 규칙의 숫자. 개발용 계좌에서만 고친다. 동결(freeze) 뒤에는 고치면 평가가 멈춘다. 계좌 번호를 여기에 넣지 않는다. 비율이 실제로 몇 달을 뜻하는지는 python run.py thresholds 로 본다.",
+  "input_tables": ["HF_TRNS_TRAN"],
+  "min_occurrences": 3,
+  "min_distinct_months": 3,
+  "weekly_median_per_month": 3,
+  "max_bundles": 2,
+  "max_attempts": 3,
+  "month_end_mode": true,
+  "monthly_interval_lo": 25,
+  "monthly_interval_hi": 35,
+  "day_tolerance": 3,
+  "min_on_schedule_ratio": 0.7,
+  "min_regular_gap_ratio": 0.6,
+  "max_missing_month_ratio": 0.34,
+  "amount_adjacent_buckets": 1,
+  "min_amount_stable_ratio": 0.8,
+  "allow_variable_amount": false,
+  "baseline_min_distinct_months": 3
+}

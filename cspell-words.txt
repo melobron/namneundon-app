@@ -611,3 +611,26 @@ toplevel
 worktrees
 fullview
 winget
+# Python 분석 환경과 원본 데이터 명세의 컬럼 약어
+venv
+calcsize
+LOCALAPPDATA
+numpy
+pyarrow
+openpyxl
+matplotlib
+scipy
+statsmodels
+ipykernel
+selftest
+dtestbed
+TRNS
+TMRG
+INQR
+BLNC
+LEDG
+RNGE
+GNDR
+CHRG
+RSLT
+INBL

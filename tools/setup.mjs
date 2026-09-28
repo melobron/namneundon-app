@@ -125,6 +125,18 @@ if (!CHECK_ONLY) {
   if (!run('npm', ['run', 'check'])) fail('불러오는 순서 · core 규칙 검사 실패');
 }
 
+console.log('\nPython 분석 환경');
+if (process.argv.includes('--skip-python')) {
+  warn('건너뜀 (--skip-python, 웹 개발만 준비)');
+} else {
+  try {
+    const { setupPython } = await import('./setup-python.mjs');
+    await setupPython({ checkOnly: CHECK_ONLY });
+  } catch (error) {
+    fail(error.message, 'docs/development/setup.md 의 분석 환경 안내 확인');
+  }
+}
+
 // ── 결과 ─────────────────────────────────────────
 if (failed) {
   console.log(`\n✗ ${failed}개 문제가 있다. 위의 → 를 따라 고친다.`);
@@ -133,7 +145,9 @@ if (failed) {
 console.log(`
 ✓ ${CHECK_ONLY ? '점검 끝 — 모두 갖춰졌다' : '준비 끝'}
 
-  npm run serve   앱 띄우기 → http://localhost:4173
+  npm run serve   앱 :4173 · 소개 사이트 :4174
+  npm run notebook  분석 노트북
+  npm run analysis -- selftest  분석 도구 점검
   npm test        안전망 테스트
   npm run lint    코드 검사
   (make 가 있으면 make help 로 전체 명령을 본다)

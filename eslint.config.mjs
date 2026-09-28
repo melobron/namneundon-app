@@ -23,7 +23,16 @@ for (const f of readdirSync(SRC, { recursive: true }).filter((f) => String(f).en
 }
 
 export default [
-  { ignores: ['**/*.min.js', 'node_modules/', 'test-results/', 'google-drive/', 'landing/'] },
+  {
+    ignores: [
+      '**/*.min.js',
+      'node_modules/',
+      '.venv/',
+      'test-results/',
+      'google-drive/',
+      'landing/'
+    ]
+  },
   js.configs.recommended,
 
   // 앱 — 브라우저에서 도는 일반 <script>
