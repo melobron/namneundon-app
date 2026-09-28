@@ -38,3 +38,12 @@ npm-debug.log*
 
 # Obsidian 으로 docs 를 볼 때 생기는 설정 폴더
 .obsidian/
+
+# 분석 설치·실제 자료·실행 결과는 로컬에만 둔다.
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+/analysis/data/
+/analysis/work/
+/analysis/work_demo/

@@ -38,7 +38,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # 기본 설치 Python 과 무관하게 공식 자동 설치 경로도 실제 Windows 에서 확인한다.
+      - run: node --input-type=module -e "import { installWindowsPython } from './tools/setup-python.mjs'; await installWindowsPython();"
       - run: npm.cmd run setup
       - run: npm.cmd run doctor
+      - run: npm.cmd run analysis:check
+      - run: git diff --exit-code
       - run: npm.cmd run lint
       - run: npm.cmd test -- --workers=2

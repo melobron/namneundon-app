@@ -26,6 +26,7 @@ make setup         # 또는 npm run setup
 2. **`npm ci`** — `package-lock.json` 그대로 설치. `prepare` 스크립트가 husky 를 켜 커밋 전 검사(`.husky/pre-commit`)가 돈다
 3. **테스트용 Chromium** — Playwright 판에 맞는 것이 없을 때만 받는다. 받지 않으려면 `node tools/setup.mjs --skip-browser`
 4. **`npm run check`** — 불러오는 순서 · core 규칙 검사
+5. **Python 분석 환경** — `.venv` 에 고정된 패키지를 설치하고 기존 분석 도구 자체 점검 17개 실행. 실제 자료와 분석 설정은 건드리지 않는다.
 
 무엇이 빠졌는지만 보려면 `make doctor`(= `npm run doctor`). 아무것도 설치하지 않는다.
 
@@ -44,7 +45,7 @@ PowerShell 에서 `npm.ps1` 실행 정책 문제를 피하려고 `npm.cmd` 로 �
 - 설치가 끝나면 앱 실행(`npm.cmd run serve`)과 테스트(`npm.cmd test`)는 설치된 파일을 사용한다. 인터넷이 끊긴 뒤 점검만 하려면 `npm.cmd run doctor` 를 사용한다.
 - `--skip-browser` 는 브라우저 다운로드만 생략한다. 오프라인 설치 옵션이 아니며 `npm ci` 는 그대로 실행한다.
 - 저장소의 `.gitattributes` 는 Windows 에서도 LF 줄바꿈을 유지해 형식 검사와 스냅샷이 달라지지 않게 한다.
-- 현재 초기 설정은 웹 개발 환경을 준비한다. Python 분석 환경은 후속 단계다.
+- 기본 setup 은 Python 분석 환경까지 준비한다. 웹 개발만 필요하면 `npm.cmd run setup -- --skip-python`, 점검도 `npm.cmd run doctor -- --skip-python` 으로 범위를 맞춘다.
 
 ## 실행
 
@@ -62,6 +63,56 @@ npm run serve      # 앱 :4173 + 소개 사이트 :4174 를 함께 실행
 실제 은행 파일로 확인할 때는 파일을 **저장소 밖**(또는 `.gitignore` 된 `/data/`)에 둔다.
 
 자주 쓰는 명령은 [README](../../README.md#주요-명령), 검사는 [quality](quality.md), 테스트는 [testing](testing.md), 배포는 [deployment](deployment.md).
+
+## VDI 에서 인터넷이 되는 동안
+
+Git 과 Node 24 설치 후, 저장소 폴더에서 아래 순서대로 실행한다. `git pull` 은 main 을 사용 중일 때의 예시다.
+
+```powershell
+git pull --ff-only
+npm.cmd run setup
+npm.cmd run doctor
+npm.cmd run analysis:check
+```
+
+setup 이 끝나야 인터넷 없이 쓸 준비가 된 것이다. 실패하면 표시된 오류를 해결하고 인터넷이 되는 동안 다시 실행한다.
+GitHub 코드를 처음 받는 경우에는 먼저 저장소를 clone 해야 한다. 인증은 Git 의 로그인 절차를 사용한다.
+
+### Python 은 어떻게 준비하나
+
+- 64비트 Python **3.12 또는 3.13** 을 찾아 프로젝트 `.venv` 를 만든다. 기존 전역 패키지는 바꾸지 않는다.
+- Windows 에 Python 이 없으면 [공식 Python 3.13.15 설치 파일](https://www.python.org/downloads/release/python-31315/)을 받고 SHA-256 을 확인한 뒤 사용자 계정에 설치한다. PATH 와 파일 연결은 바꾸지 않는다. VDI 정책이 실행을 막으면 관리자에게 설치 허용을 요청해야 한다.
+- Mac 에서는 먼저 `brew install python@3.12` 로 준비할 수 있다. 다른 위치의 Python 을 쓰려면 `PYTHON` 환경 변수에 실행 파일 경로를 지정한다.
+- NumPy · pandas · Arrow · openpyxl · Matplotlib · SciPy · statsmodels · JupyterLab 과 하위 의존성은 `analysis/requirements.txt` 의 버전·해시로 설치한다. setup 을 다시 실행하면 이미 맞는 패키지는 재사용한다.
+- `.venv` 는 해당 PC 용이다. Mac 의 환경을 Windows 로 복사하지 않는다. 별도 대용량 배포 ZIP 은 만들지 않는다.
+- Node 패키지는 setup 마다 `npm ci` 로 다시 설치하므로 **인터넷 차단 후에는 setup 대신 doctor** 를 실행한다. doctor 는 다운로드하지 않는다.
+
+### 인터넷 차단 후
+
+```powershell
+npm.cmd run serve                 # 앱 :4173 · 소개 :4174
+# 별도 터미널에서
+npm.cmd run notebook              # 터미널에 표시되는 로컬 주소를 브라우저에서 연다
+npm.cmd run analysis -- selftest  # 기존 분석 도구 자체 점검
+npm.cmd run analysis:check        # 파일 읽기·통계·그래프·노트북 실행 점검
+npm.cmd test                      # 웹앱 테스트
+```
+
+노트북은 `data/notebooks/` 에 저장된다. 로컬 주소에 붙은 인증 토큰을 유지하며, 같은 PC 에서만 접속한다.
+Jupyter 의 업데이트 확인과 확장 다운로드 기능은 꺼 둔다. 새 패키지 설치, GitHub 갱신, 외부 링크, 배포에는 인터넷이 필요하다.
+
+기존 분석 도구는 [analysis/README.md](../../analysis/README.md)를 따른다. 예: `npm.cmd run analysis -- profile --data "D:\분석자료"`.
+`analysis/config/` 는 기본 설정이다. setup 은 설정을 변경하거나 `init`·`freeze` 를 자동 실행하지 않는다.
+실제 자료·분석 결과(`analysis/data/`, `analysis/work/`, `analysis/work_demo/`)와 노트북·가상 환경은 Git 에서 제외한다.
+직접 다른 출력 폴더를 지정했다면 그 폴더도 저장소 밖에 두어야 한다.
+
+분석 의존성을 갱신할 때는 `analysis/requirements.in` 을 수정하고 아래 명령으로 잠금 파일을 만든 뒤 Windows 와 Mac 에서 검증한다.
+
+```bash
+uv pip compile analysis/requirements.in --universal --python-version 3.12 --generate-hashes --output-file analysis/requirements.txt
+```
+
+`uv` 는 잠금 파일을 갱신하는 개발자만 필요하다. VDI 의 설치 명령은 계속 `npm run setup` 하나다.
 
 ## worktree
 

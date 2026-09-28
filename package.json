@@ -28,7 +28,10 @@
     "verify:prod": "node tools/verify-deploy.mjs",
     "test:core": "playwright test tests/core",
     "purity": "node tools/analyze-purity.mjs",
-    "screens": "node tools/compare-screens.mjs"
+    "screens": "node tools/compare-screens.mjs",
+    "analysis": "node tools/analysis.mjs",
+    "notebook": "node tools/analysis.mjs notebook",
+    "analysis:check": "node tools/analysis.mjs --check-environment"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,0 +1,18 @@
+{
+  "_설명": "실행 설정. target_basis(목표와 견줄 값)는 2026-09-21 GPT 확인으로 「가중」 점추정치. reviewer_mode: self(대표 단독, 내부 평가) 또는 independent(별도 검토자).",
+  "split_salt": "CHANGE_ME_ONCE",
+  "eval_ratio": 0.3,
+  "sample_per_stratum": 40,
+  "bootstrap_iterations": 1000,
+  "random_seed": 20260921,
+  "min_cell": 5,
+  "treat_identical_rows_as_duplicate": false,
+  "review_show_aux_evidence": false,
+  "amount_buckets": null,
+  "target_basis": "가중",
+  "reviewer_mode": "self",
+  "recheck_ratio": 0.2,
+  "recheck_min_days": 14,
+  "cms_success_if_no_failure": false,
+  "cms_evidence_note": ""
+}

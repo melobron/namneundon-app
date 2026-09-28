@@ -1,0 +1,101 @@
+{
+  "_설명": "금결원 명세서(2022.9) 기준 컬럼 이름. 실제 파일의 컬럼 이름이 다르면 오른쪽 값만 고친다. 왼쪽 이름은 코드가 쓰는 내부 이름이다.",
+  "HF_TRNS_TRAN": {
+    "date": "TRAN_DT",
+    "tmrg": "TRAN_TMRG",
+    "wd_fc": "WD_FC_SN",
+    "wd_ac": "WD_AC_SN",
+    "dps_fc": "DPS_FC_SN",
+    "dps_ac": "DPS_AC_SN",
+    "amt": "TRAN_AMT",
+    "md_type": "MD_TYPE",
+    "fnd_type": "FND_TYPE",
+    "ff_sp": "FF_SP_AI"
+  },
+  "CD_TRNS_TRAN": {
+    "date": "TRAN_DT",
+    "tmrg": "TRAN_TMRG",
+    "atm": "ATM_SN",
+    "hdl_fc": "HDL_FC_SN",
+    "wd_fc": "WD_FC_SN",
+    "wd_ac": "PAY_AC_SN",
+    "dps_fc": "DPS_FC_SN",
+    "dps_ac": "DPS_AC_SN",
+    "tran_code": "TRAN_CODE",
+    "amt": "TRAN_AMT",
+    "fee": "FEE",
+    "ff_sp": "FF_SP_AI"
+  },
+  "OB_TRNS_TRAN": {
+    "date": "TRAN_DT",
+    "tmrg": "TRAN_TMRG",
+    "api_id": "API_ID",
+    "trns_code": "TRNS_CODE",
+    "uo_name": "UO_NAME",
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "amt": "TRNS_AMT",
+    "uo_fc": "UO_FC_SN",
+    "uo_ac": "UO_AC_SN"
+  },
+  "OB_INQR_TRAN": {
+    "date": "TRAN_DT",
+    "tmrg": "TRAN_TMRG",
+    "api_id": "API_ID",
+    "inqr_code": "INQR_CODE",
+    "uo_name": "UO_NAME",
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "blnc": "INQR_BLNC_AMT"
+  },
+  "PI_WD_LEDG": {
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "uo": "UO_SN",
+    "pyr": "PYR_SN",
+    "svc_kind": "SVC_KIND",
+    "age": "AGE_RNGE",
+    "gndr": "GNDR"
+  },
+  "GR_JC_TRAN": {
+    "date": "TRAN_DT",
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "uo": "UO_SN",
+    "pyr": "PYR_SN",
+    "chrg_amt": "CHRG_AMT",
+    "rslt": "RSLT_CODE",
+    "amt": "AMT"
+  },
+  "GR_NJ_TRAN": {
+    "date": "TRAN_DT",
+    "dps_fc": "DPS_FC_SN",
+    "dps_ac": "DPS_AC_SN",
+    "amt": "AMT",
+    "wd_fc": "WD_FC_SN",
+    "wd_ac": "WD_AC_SN",
+    "rslt": "RSLT_CODE"
+  },
+  "CMS_REQ_TRAN": {
+    "date": "TRAN_DT",
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "uo": "UO_SN",
+    "pyr": "PYR_SN",
+    "req_amt": "WD_REQ_AMT",
+    "fnd_kind": "FND_KIND",
+    "wd_shp": "WD_SHP"
+  },
+  "CMS_RES_TRAN": {
+    "date": "TRAN_DT",
+    "fc": "FC_SN",
+    "ac": "AC_SN",
+    "uo": "UO_SN",
+    "pyr": "PYR_SN",
+    "inbl_amt": "WD_INBL_AMT",
+    "wd_yn": "WD_YN",
+    "inbl_cd": "WD_INBL_CD",
+    "fnd_kind": "FND_KIND",
+    "wd_shp": "WD_SHP"
+  }
+}
