@@ -29,6 +29,23 @@ make setup         # 또는 npm run setup
 
 무엇이 빠졌는지만 보려면 `make doctor`(= `npm run doctor`). 아무것도 설치하지 않는다.
 
+## Windows 에서 처음 준비
+
+Git 과 Node 24 는 먼저 설치해야 한다. GitHub 에서 코드를 받은 폴더에서 실행한다.
+
+```powershell
+npm.cmd run setup
+npm.cmd run doctor
+```
+
+PowerShell 에서 `npm.ps1` 실행 정책 문제를 피하려고 `npm.cmd` 로 적었다. 명령 프롬프트에서는 `npm run setup` 으로 실행해도 된다. Windows 용 Makefile 이나 별도 실행 파일은 필요 없다.
+
+- 인터넷이 되는 동안 setup 을 실행해 개발 패키지와 테스트 브라우저를 받는다. 현재 setup 은 실행할 때마다 `npm ci` 로 개발 패키지를 다시 설치한다.
+- 설치가 끝나면 앱 실행(`npm.cmd run serve`)과 테스트(`npm.cmd test`)는 설치된 파일을 사용한다. 인터넷이 끊긴 뒤 점검만 하려면 `npm.cmd run doctor` 를 사용한다.
+- `--skip-browser` 는 브라우저 다운로드만 생략한다. 오프라인 설치 옵션이 아니며 `npm ci` 는 그대로 실행한다.
+- 저장소의 `.gitattributes` 는 Windows 에서도 LF 줄바꿈을 유지해 형식 검사와 스냅샷이 달라지지 않게 한다.
+- 현재 초기 설정은 웹앱 개발 환경만 준비한다. 소개 사이트의 별도 실행과 Python 분석 환경은 후속 단계다.
+
 ## 실행
 
 ```bash

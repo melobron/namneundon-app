@@ -8,13 +8,20 @@
 //
 // 사용: node tools/typecheck-app.mjs
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const BASELINE = 0;
 
 let out = '';
 let failed = null; // tsc 가 0 이 아닌 값으로 끝났나 (오류가 있을 때도 그렇다)
 try {
-  execFileSync('npx', ['tsc', '-p', 'tsconfig.app.json'], { encoding: 'utf8', stdio: 'pipe' });
+  // Windows 의 npx.cmd 실행 차이를 피하고 설치된 검사기만 사용한다.
+  const compiler = fileURLToPath(new URL('../node_modules/typescript/bin/tsc', import.meta.url));
+  execFileSync(process.execPath, [compiler, '-p', 'tsconfig.app.json'], {
+    cwd: fileURLToPath(new URL('../', import.meta.url)),
+    encoding: 'utf8',
+    stdio: 'pipe'
+  });
 } catch (e) {
   out = (e.stdout || '') + (e.stderr || '');
   failed = e;
