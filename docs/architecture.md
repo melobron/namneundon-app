@@ -5,9 +5,9 @@
 
 ## 한눈에
 
-- 서버 코드가 없다. `app/` 폴더의 정적 파일(HTML · CSS · JS · 이미지)을 Cloudflare 가 그대로 내준다.
+- 고객 앱에는 서버 코드가 없다. `app/` 폴더의 정적 파일(HTML · CSS · JS · 이미지)을 Cloudflare 가 그대로 내준다. 팀 전용 대시보드 · 짧은 링크 Worker(`services/`)는 고객 앱과 따로다 — 아래 「유입·사용 집계 경계」.
 - 빌드 · 번들 · 트랜스파일 단계가 없다. 저장소의 파일이 곧 배포되는 파일이다.
-- 앱 JS 는 **모듈이 아닌 일반 `<script>` 30개**(`core/` 13 + `src/` 17)다. 한 파일이었던 것을 나눈 것이라 모든 최상위 `function` · `var` 가 전역이다.
+- 앱 JS 는 **모듈이 아닌 일반 `<script>` 32개**(`core/` 13 + `src/` 19)다. 한 파일이었던 것을 나눈 것이라 모든 최상위 `function` · `var` 가 전역이다.
 
 ## 폴더와 경계
 
@@ -20,11 +20,13 @@
 | `.github/`         | CI · 자동 배포 · 비밀 값 검사 · 의존성 업데이트                                                 | —                                            |
 | `wrangler.jsonc`   | 앱 Worker 설정 (정적 자산만, 서버 코드 없음)                                                    | —                                            |
 | `docs/` · `plans/` | 현재 지식 · 진행 중 작업 계획과 틀                                                              | 배포 안 됨                                   |
+| `services/`        | 팀 대시보드 Worker(`usage-dashboard/`) · 짧은 링크 Worker(`short-link/`) · 공통 규칙 · 글 목록  | 아직 배포 안 됨 (각자 `wrangler.jsonc`)      |
+| `team-dashboard/`  | 팀 대시보드 화면 (HTML · CSS · ES 모듈). 고객 앱 폴더에 넣지 않는다                             | 아직 배포 안 됨 (`usage-dashboard` 가 낸다)  |
 
 `analysis/`는 테스트베드용 Python 분석 코드·기본 설정·고정 의존성이다. 웹 배포에 포함되지 않고
 웹앱의 서버도 아니다. 실행 절차와 평가 규칙은 [analysis/README.md](../analysis/README.md)에 둔다.
 
-랜딩과 앱은 코드를 나눠 쓰지 않는다. 랜딩은 「시작하기」 링크(`APP_URL`)로 앱 주소만 안다.
+랜딩과 앱은 코드를 나눠 쓰지 않는다. 랜딩은 「시작하기」 링크(`APP_URL`)로 앱 주소만 알고, 홍보 글 코드(`?s=`)가 있으면 그 링크에 붙여 넘긴다.
 
 ## `app/` 안
 
@@ -70,25 +72,27 @@ app/
 
 ### `src/` 파일
 
-| 파일                     | 하는 일                                                                                                                                             |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `00-storage.js`          | **브라우저 저장소의 모든 것** — 저장 이름 표, 매장별 저장 이름, 읽기 · 쓰기 함수. 다른 파일은 `localStorage` 를 직접 쓰지 않는다 (ESLint 가 막는다) |
-| `00-early.js`            | 첫 화면부터 필요한 함수 (연 날 기록)                                                                                                                |
-| `01-biz-demo.js`         | 업종별 문구(`BIZ`), **예시 거래(`DEMO_TX`)** 와 예시 분류                                                                                           |
-| `02-text-loaders.js`     | 금액 · 조사 표기, 엑셀 · PDF 도구를 필요할 때 불러오기                                                                                              |
-| `06-classify.js`         | 연결 함수 `groupPayees` · `keyOf` (계산은 `core/classify.js`)                                                                                       |
-| `07-state-categories.js` | 앱 상태 `UP` 선언, 항목 · 업종 정의                                                                                                                 |
-| `08-ui-start-upload.js`  | 시작 화면, 업로드 창                                                                                                                                |
-| `09-ui-panel-install.js` | 글씨 크기, 창 열고 닫기, 홈 화면 설치 · 카톡 안내                                                                                                   |
-| `10-demo-read-files.js`  | 예시 시작, 파일 읽기, 은행 알아보기                                                                                                                 |
-| `11-upload-flow.js`      | 파일 목록, 시작하기(`UP` 만들기), 잔액 끊김 확인 카드                                                                                               |
-| `12-storage.js`          | 저장 · 불러오기, 사용 기록, 직접 넣은 금액                                                                                                          |
-| `13-onboard.js`          | 매장 이름 · 대표자, 거래처 확인(차례로 정하기) 화면 · 저장 (계산은 `core/onboard.js`)                                                               |
-| `14-compute.js`          | 연결 함수 (`monthNumbers` 등 → `core/compute.js` 의 `…In(UP, …)`)                                                                                   |
-| `15-result-panels.js`    | 결과 보여주기, 항목 관리, 분류 내보내기 · 불러오기, 매장 이름 바꾸기                                                                                |
-| `16-due.js`              | 예상 잔액의 캐시(`dueTable`) · 예정 지출 저장(`planBox`) · 창구 `DUE_ENV` · 카드 · 그래프 그리기                                                    |
-| `17-result.js`           | 결과 화면 본문(`drawResultInner`), 확인 카드                                                                                                        |
-| `18-charts-year.js`      | 그래프, 1년 보기. **맨 끝에서 앱을 시작한다** (`startDemo()` → `drawStart()`)                                                                       |
+| 파일                     | 하는 일                                                                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `00-storage.js`          | **브라우저 저장소의 모든 것** — 저장 이름 표, 매장별 저장 이름, 읽기 · 쓰기 함수(탭 저장 `ssGet` · `ssSet` 포함). 다른 파일은 `localStorage` · `sessionStorage` 를 직접 쓰지 않는다 (ESLint 가 막는다) |
+| `00-early.js`            | 첫 화면부터 필요한 함수 (연 날 기록)                                                                                                                                                                   |
+| `01-biz-demo.js`         | 업종별 문구(`BIZ`), **예시 거래(`DEMO_TX`)** 와 예시 분류                                                                                                                                              |
+| `02-text-loaders.js`     | 금액 · 조사 표기, 엑셀 · PDF 도구를 필요할 때 불러오기                                                                                                                                                 |
+| `03-usage-config.js`     | 이용 단계 집계 설정 `USAGE_CONFIG` (수신 주소 · 보관 기간 · 문의처). **비어 있으면 집계 · 집계 안내가 모두 꺼진다** — 지금 비어 있다                                                                   |
+| `04-usage-events.js`     | 이용 단계 집계 창구 `USAGE` (단계 이름만 받는다) · 데이터 처리 안내. 탭 저장 `nd.analytics.v1` 만 쓴다                                                                                                 |
+| `06-classify.js`         | 연결 함수 `groupPayees` · `keyOf` (계산은 `core/classify.js`)                                                                                                                                          |
+| `07-state-categories.js` | 앱 상태 `UP` 선언, 항목 · 업종 정의                                                                                                                                                                    |
+| `08-ui-start-upload.js`  | 시작 화면, 업로드 창                                                                                                                                                                                   |
+| `09-ui-panel-install.js` | 글씨 크기, 창 열고 닫기, 홈 화면 설치 · 카톡 안내                                                                                                                                                      |
+| `10-demo-read-files.js`  | 예시 시작, 파일 읽기, 은행 알아보기                                                                                                                                                                    |
+| `11-upload-flow.js`      | 파일 목록, 시작하기(`UP` 만들기), 잔액 끊김 확인 카드                                                                                                                                                  |
+| `12-storage.js`          | 저장 · 불러오기, 사용 기록, 직접 넣은 금액                                                                                                                                                             |
+| `13-onboard.js`          | 매장 이름 · 대표자, 거래처 확인(차례로 정하기) 화면 · 저장 (계산은 `core/onboard.js`)                                                                                                                  |
+| `14-compute.js`          | 연결 함수 (`monthNumbers` 등 → `core/compute.js` 의 `…In(UP, …)`)                                                                                                                                      |
+| `15-result-panels.js`    | 결과 보여주기, 항목 관리, 분류 내보내기 · 불러오기, 매장 이름 바꾸기                                                                                                                                   |
+| `16-due.js`              | 예상 잔액의 캐시(`dueTable`) · 예정 지출 저장(`planBox`) · 창구 `DUE_ENV` · 카드 · 그래프 그리기                                                                                                       |
+| `17-result.js`           | 결과 화면 본문(`drawResultInner`), 확인 카드                                                                                                                                                           |
+| `18-charts-year.js`      | 그래프, 1년 보기. **맨 끝에서 앱을 시작한다** (`startDemo()` → `drawStart()`)                                                                                                                          |
 
 ## 흐름 — 입력에서 화면까지
 
@@ -136,6 +140,28 @@ flowchart TD
     end
     CF["Cloudflare<br/>정적 파일"] --> H
 ```
+
+## 유입·사용 집계 경계
+
+NAM-20 · 21 · 22 (2026-09-29). **코드는 있지만 운영에서는 아직 켜지지 않았다** — 앱의 수신 주소가 비어 있고, 두 Worker 는 배포하지 않았으며, 대시보드는 집계 원본에 연결되지 않았다.
+
+```mermaid
+flowchart LR
+  P[홍보 글] --> S["짧은 링크 /t/D08<br/>services/short-link"]
+  S --> L["소개 페이지 ?s=D08"]
+  L --> A["고객 앱 ?s=D08<br/>03 · 04"]
+  A -->|"{ step, s } 만"| E["수신 /ev<br/>기존 서버 · 미연결"]
+  E --> C[날짜 · 글 · 단계별 건수]
+  T[팀원] --> X[Cloudflare Access]
+  X --> D["services/usage-dashboard<br/>화면 + /api/usage"]
+  D -.원본 연결 전 503.-> C
+```
+
+- 고객 앱은 단계 이름과 글 코드만 보낸다. `UP` · 파일 · 사용 기록(`fc_use`)은 집계 창구에 들어가지 않는다. 보내기는 기다리지 않고, 실패해도 분석은 계속된다.
+- 결과 단계는 새 파일로 만든 `UP` 객체를 `USAGE.markNew` 로 표시해 두고 그 객체의 결과가 처음 그려질 때만 센다 (`startFromBanks` · `drawResult`). 예시 · 저장본 되살리기 · 다시 그리기는 세지 않는다.
+- 팀 대시보드 Worker 는 모든 요청(화면 파일 포함)에서 Access 토큰의 서명 · aud · iss · 만료를 확인한다(`services/access-auth.js`). 설정이 비면 모두 막는다. 집계 원본 어댑터가 없으면 조회는 503 이다.
+- 짧은 링크 Worker 는 `services/campaigns.js` 에 등록한 코드만 소개 페이지로 302 한다. Pages `_redirects` 는 리디렉트 응답에 `_headers` 를 붙이지 않아 no-store 를 보장하지 못해 쓰지 않았다.
+- 규칙(`services/usage-rules.js`)과 표시 규칙(`team-dashboard/view.js`)은 Node 에서 시험한다 (`tests/usage/`).
 
 ## 테스트 · 검사 · 배포와의 경계
 

@@ -83,3 +83,8 @@ declare var bankKeysNow: any;
 declare var breaksOver: any;
 declare var manualLeft: any;
 declare var goMonth: any;
+declare var USAGE: any;
+declare var drawStart: any;
+declare var drawResult: any;
+declare var openUpPanel: any;
+declare var showResult: any;

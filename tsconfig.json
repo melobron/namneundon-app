@@ -12,5 +12,12 @@
     "skipLibCheck": true,
     "strict": false
   },
-  "include": ["tests/**/*.mjs", "tests/**/*.d.ts", "tools/**/*.mjs", "*.mjs"]
+  "include": [
+    "tests/**/*.mjs",
+    "tests/**/*.d.ts",
+    "tools/**/*.mjs",
+    "*.mjs",
+    "services/**/*.js",
+    "team-dashboard/**/*.js"
+  ]
 }

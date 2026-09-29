@@ -16,8 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:js": "eslint . --max-warnings 0",
-    "lint:css": "stylelint \"app/**/*.css\" --max-warnings 48",
-    "lint:html": "html-validate app/index.html landing/index.html landing/404.html --max-warnings 0",
+    "lint:css": "stylelint \"app/**/*.css\" --max-warnings 48 && stylelint \"team-dashboard/**/*.css\" --max-warnings 0",
+    "lint:html": "html-validate app/index.html landing/index.html landing/404.html team-dashboard/index.html --max-warnings 0",
     "lint:spell": "cspell --no-progress \"**/*.{js,mjs,json,jsonc,md,yml,yaml,css,html}\"",
     "typecheck": "tsc -p tsconfig.json && node tools/typecheck-app.mjs",
     "test": "npm run check && playwright test",
@@ -31,7 +31,8 @@
     "screens": "node tools/compare-screens.mjs",
     "analysis": "node tools/analysis.mjs",
     "notebook": "node tools/analysis.mjs notebook",
-    "analysis:check": "node tools/analysis.mjs --check-environment"
+    "analysis:check": "node tools/analysis.mjs --check-environment",
+    "dashboard": "node tools/usage-dev.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

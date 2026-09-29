@@ -6400,3 +6400,38 @@ table.o tr:last-child td {
   color: var(--gray);
   text-align: right;
 }
+
+/* ── NAM-21 · 데이터 처리 안내 (이용 단계 집계를 켰을 때만 나온다) ──
+   ★ 새 색을 만들지 않는다 — 안심 고지(.upnote)보다 한 단계 약한 회색 글로 둔다 */
+.usenote {
+  margin: 10px 0 14px;
+  font-size: calc(12 * var(--fu));
+  line-height: 1.6;
+  color: var(--gray);
+}
+.usenote p {
+  margin: 0;
+}
+.usemore {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--now);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.usedetail {
+  margin: 8px 0 0;
+  padding: 10px 12px 10px 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--rad);
+  background: var(--panel);
+  color: var(--ink);
+}
+.usedetail[hidden] {
+  display: none;
+}
+.usedetail li + li {
+  margin-top: 4px;
+}

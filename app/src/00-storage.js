@@ -20,6 +20,9 @@
    fc.inapp.later           「앱 안 브라우저」 안내 나중에        없음   09-ui-panel-install.js
    (fc_log)                 옛 로그 — 열 때 지운다 (39차)                12-storage.js
 
+   탭 저장 (sessionStorage — 탭을 닫으면 사라진다)
+   nd.analytics.v1          이용 단계 집계 — 판 · 홍보 글 코드 · 단계별 전송 시도 여부   없음   04-usage-events.js
+
    ★ 내보내기(분류 파일)에 들어가는 것은 fc.picks 하나다. 금액이 든 통은 이 기기 밖으로 안 나간다.
    ★ <매장> 이 비면 '(기본)' 이다. 이름을 고치면 renameStore 가 매장 통 다섯을 함께 옮긴다 */
 
@@ -35,6 +38,7 @@ var FONT_KEY = 'fc.font';
 var A2HS_KEY = 'fc.a2hs.later';
 var INAPP_KEY = 'fc.inapp.later';
 var PLAN_KEY = 'fc.plan.';
+var USAGE_KEY = 'nd.analytics.v1'; /* sessionStorage — localStorage 가 아니다 */
 
 /* 매장별 저장 이름 — 매장 이름이 없으면 지금 매장(UP.store), 그것도 없으면 '(기본)' */
 function storeKey(name) {
@@ -88,6 +92,25 @@ function lsDel(k) {
     return true;
   } catch (e) {
     LS_OK = false;
+    return false;
+  }
+}
+
+/* ── 탭 저장 (sessionStorage) — NAM-20 이용 단계 집계만 쓴다 (2026-09-29).
+   ★ 탭을 닫으면 사라지는 것이 목적이다. 방문자 번호를 만들지 않으려는 것이다.
+   ★ 막혀 있어도 앱은 그대로 돈다. LS_OK 는 건드리지 않는다 — 분류 저장과 다른 일이다 */
+function ssGet(k) {
+  try {
+    return sessionStorage.getItem(k);
+  } catch (e) {
+    return null;
+  }
+}
+function ssSet(k, v) {
+  try {
+    sessionStorage.setItem(k, v);
+    return true;
+  } catch (e) {
     return false;
   }
 }

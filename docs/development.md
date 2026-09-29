@@ -131,7 +131,7 @@ npm run lint
 npm test
 ```
 
-lint는 Prettier → ESLint → Stylelint → HTML → 영어 철자 → 타입 검사를 한다.
+lint는 Prettier → ESLint → Stylelint → HTML → 영어 철자 → 타입 검사를 한다. `services/`·`team-dashboard/`도 검사 대상이다 (팀 대시보드 CSS 경고 0).
 현재 허용치는 ESLint·HTML·앱 타입 오류 0, CSS 경고 48이며 **설정 파일이 원본**이다.
 `package.json`의 `--max-warnings`와 `tools/typecheck-app.mjs`의 `BASELINE`을 올리거나 검사를 끄지 않는다.
 기존 문제를 고쳐 경고가 줄면 기준선도 낮춘다. 이 원칙은 2026-09-25 PR #8에서 도입됐다.
@@ -150,6 +150,7 @@ lint는 Prettier → ESLint → Stylelint → HTML → 영어 철자 → 타입 
 실제 앱 파일을 로컬 서버(4173)에서 읽으므로 다른 worktree의 서버가 그 포트에 떠 있지 않은지 확인한다.
 `tests/core/`는 Node 계산과 브라우저 계산을 대조하며, `tests/ledger.spec.mjs`는 잔액 검산식을 지킨다.
 업로드·저장 복원·예정 지출 등 사용자 흐름과 오프라인 앱·랜딩 연결도 테스트한다.
+`tests/usage/`는 이용 단계 집계(시험 설정으로 켜서 요청을 가로챔)·소개 페이지 글 코드 전달·팀 대시보드 화면·Worker 인증과 짧은 링크를 본다. 실제 서버로는 아무것도 보내지 않는다.
 
 - 기본 뷰포트는 390×844, 한국어·서울 시간대다. 공통 예시 테스트는 시계를 2026-09-23 10:00으로 고정한다 (`tests/helpers.mjs`).
 - 예시 거래와 가짜 은행 파일만 쓴다. 실제 금융 자료는 넣지 않는다.
@@ -202,6 +203,33 @@ CI가 lint·test를 통과해야 배포된다. 앱은 배포 후 `verify:prod`�
 
 수동 배포는 사용자 요청이 있을 때 필요한 범위만 한다. 로컬 lint·test 확인 후 `npx wrangler login`,
 `npm run deploy:app` 또는 `npm run deploy:landing`을 쓰고 실제 운영 검증 결과를 남긴다.
+
+### 유입·사용 현황 (배포 전)
+
+NAM-20·21·22와 팀 대시보드는 **구현만 되어 있고 운영에 연결·배포하지 않았다** (2026-09-29).
+구조는 [아키텍처](architecture.md#유입사용-집계-경계), 고객에게 보이는 규칙은 [제품](product.md#이용-단계-집계-nam-2021-코드만-있고-꺼져-있음)에 있다.
+
+로컬 확인 (운영과 무관, 모의 자료):
+
+```bash
+npm run dashboard
+```
+
+- 팀 대시보드 <http://localhost:4180> — 「모의 자료」 띠가 늘 보인다. 로그인 없이 열리는 것은 127.0.0.1 에만 열기 때문이다.
+- 고객 앱 <http://localhost:4181> — 시험 설정으로 집계를 켠 상태. 보낸 이벤트가 대시보드 숫자에 더해진다(메모리, 끄면 사라짐).
+- 소개 페이지 <http://localhost:4182/?s=D08>, 짧은 링크 <http://localhost:4180/t/D08> (모의 글 목록).
+
+운영에 켜기 전에 필요한 것 (순서대로, 각 단계 사용자 확인):
+
+1. 기존 수신 서버 `worker_v27.js` 의 관리 원본·배포 설정·단계 이름·일별 저장·동시 증가·보관 기간·CORS·조회 인증을 확인한다. 원본 없이 추정해 연결하지 않는다.
+2. 대시보드 Worker 에 집계 원본 어댑터를 붙인다(`services/usage-dashboard/worker.js` 의 `source`). 조회 키는 Worker Secret·서버 사이 머리글 또는 service binding 으로만 쓴다.
+3. Cloudflare Access 앱(허용 계정·요금제)을 만들고 `ACCESS_TEAM_DOMAIN`·`ACCESS_AUD` 를 넣는다. 주소(제안 `team.namneundon.com`)를 정해 routes 를 넣는다. `workers_dev`·`preview_urls` 는 끈 채로 둔다. 미인증·만료·직접 API 접근을 운영에서 확인한다.
+4. 문의처·보관 기간을 정하고 `app/src/03-usage-config.js` 세 값을 채운다. 안내 문구(04)가 실제 서버 동작과 맞는지 다시 읽는다. 시험 코드로 짧은 링크→소개→앱→결과→대시보드를 확인한다.
+5. 글 목록(`services/campaigns.js`)을 채우고 짧은 링크 Worker 를 `namneundon.com/t/*` 경로에만 붙인다.
+
+끄기·복구: `03-usage-config.js` 의 `endpoint` 를 비우면 보내기와 집계 안내가 함께 꺼지고 분석은 그대로다.
+대시보드 장애는 고객 앱과 따로 복구한다. 짧은 링크는 목적지를 소개 첫 화면으로 돌리거나 경로를 떼면 된다.
+서버 집계를 자동으로 지우거나 과거 숫자를 덮어쓰는 롤백은 하지 않는다.
 
 ### 주소 변경과 복구
 
