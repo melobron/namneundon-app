@@ -22,81 +22,10 @@ function viewableMonth(months, notThis) {
 function bigOutDay(months, m) {
   return bigOutDayIn(UP, months, m);
 }
-/* ★ 101차 ①. 이 매장에 한 번만 묻는다. 한 번 답하시면 다시 안 묻는다 —
-   카드를 펼치면 언제든 바꾸실 수 있다 */
-function needDueAsk() {
-  if (!UP || UP.demo) return false;
-  if (UP.dueAsked) return false;
-  var o = null;
-  try {
-    o = loadPicks(UP.store);
-  } catch (e) {}
-  if (o && o.목표일) return false; /* 저장통에 이미 답이 있다 */
-  return true;
-}
-function drawDueAsk(months) {
-  var host = document.querySelector('#up-duedate .ddwrap');
-  if (!host) return;
-  host.innerHTML = '';
-  var m = UP.month && months.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(months);
-  var 권함 = bigOutDay(months, m);
-  var 고른날 = 권함 || dueDay();
-  document.getElementById('uptitle').textContent = '한 가지만 여쭙겠습니다';
-
-  host.appendChild(el('div', 'ddq', '매달 지출이 가장 많은 날은 언제인가요?'));
-  /* ★ 왜 묻는지 한 줄. 이유를 안 적으면 그냥 절차가 된다 */
-  host.appendChild(
-    el(
-      'div',
-      'ddsub',
-      '고르신 날까지의 예상 잔액 흐름을 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'
-    )
-  );
-  /* ★ 지어내지 않는다. 자료로 찾은 것이 있을 때만 근거를 적는다 */
-  if (권함) {
-    host.appendChild(
-      el(
-        'div',
-        'ddsub',
-        '지난 3달에는 ' + dueDayText(권함) + '에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'
-      )
-    );
-  }
-  var days = el('div', 'duedays');
-  for (var i = 1; i <= 31; i++) {
-    /* ★ 103차 ③. 29·30·말일까지 */
-    (function (n) {
-      var b = el('button', n === 고른날 ? 'on' : '', dueDayShort(n));
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        고른날 = n;
-        drawDueAsk2(days, n);
-      });
-      days.appendChild(b);
-    })(i);
-  }
-  host.appendChild(days);
-
-  var row = el('div', 'ddgo');
-  var go = el('button', 'b on big', '이대로 보기');
-  go.type = 'button';
-  go.addEventListener('click', function () {
-    setDueDay(고른날);
-    UP.dueAsked = true;
-    savePicks();
-    showResult();
-  });
-  row.appendChild(go);
-  host.appendChild(row);
-  upShow('up-duedate');
-}
-/* 눌린 날만 바꿔 그린다 — 화면을 통째로 다시 그리면 스크롤이 튄다 */
-function drawDueAsk2(days, n) {
-  var bs = days.querySelectorAll('button'),
-    i;
-  for (i = 0; i < bs.length; i++) bs[i].className = i + 1 === n ? 'on' : '';
-}
-
+/* ★ NAM-9 (2026-09-29). 결과 전에 「매달 지출이 가장 많은 날」(분석 종료일)을 묻던
+   needDueAsk · drawDueAsk 를 없앴다. 예상 기간은 묻지 않고 정한다 —
+   자료 기준일이 속한 달의 다음 달 말일까지다 (core/due.js 의 dueDayIn).
+   ★ 저장통의 목표일(UP.dueDay)은 지우지도 새로 쓰지도 않는다. 저장 형식을 그대로 둔다 */
 function showResult() {
   utStop(); /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
   /* ★ 119차. 보류 원인 경로에서 다른 길로 결과에 왔어도 원래 차례로 되돌린다 */
@@ -104,16 +33,6 @@ function showResult() {
   PAGE_DEMO = !!(UP && UP.demo);
   syncCloseLabel();
   syncUpOpen();
-  /* ★ 101차 ①. 이 매장에 아직 안 물어봤으면 한 가지만 먼저 여쭙는다.
-     ★ 한 번만이다. 답하시면 UP.dueAsked 와 저장통(목표일)이 둘 다 남는다.
-     ★ 예시 화면에서는 안 묻는다 — 남의 가게 자료에 목표일을 정하는 것이 된다.
-     ★ 되살린 매장(저장통에 목표일이 있는 곳)도 안 묻는다 */
-  if (needDueAsk()) {
-    var ms0 = monthList();
-    UP.month = UP.month && ms0.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(ms0);
-    drawDueAsk(ms0);
-    return;
-  }
   document.getElementById('uptitle').textContent = '남는돈';
   upShow('up-done');
   /* ★ 119차. 예시 전환 보정 — 결과로 가는 길에서는 시작 화면을 다시 그리지 않는다.
@@ -1184,7 +1103,7 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
   var 함께 = [];
   if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet)
     함께.push('항목 목록');
-  if (o.목표일) 함께.push('분석 종료일');
+  /* ★ NAM-9. 분석 종료일은 이제 고르는 값이 아니라 안내하지 않는다 (저장통의 값은 그대로 읽는다) */
   if (o.업종 && TRADES[o.업종]) 함께.push('업종');
   if (o.xfer && o.xfer.length) 함께.push('이체 설정');
   if (함께.length) {

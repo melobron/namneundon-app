@@ -28,9 +28,6 @@ function dueUnknownOut(t) {
 function dueHold(t, i, 남은날수, dd) {
   return dueHoldIn(UP, t, i, 남은날수, dd);
 }
-/* 그래프가 열려 있으면 닫을 수 있게 들고 있는다 —
-   보류로 바뀌었는데 예전 그림이 떠 있으면 안 보여주기로 한 값이 그대로 남는다 */
-var DUE_GRAPH_CLOSE = null;
 /* 카드가 낸 보류를 목록 쪽이 그대로 본다 — 두 자리가 따로 세면 또 어긋난다 */
 var DUE_HOLD_NOW = null;
 /* ── 116차 · 예정 지출 ─────────────────────────────────────────────
@@ -191,69 +188,43 @@ function dueCurve(months, c) {
 function dueGraphPts(c, cv) {
   return dueGraphPtsIn(UP, DUE_ENV, c, cv);
 }
-/* ── 116차 앞 · 분석 종료일 고르는 자리 ──────────────────────────────
-   보통 카드와 보류 카드가 같은 것을 쓴다. 두 벌로 만들면 한쪽만 고쳐지는 날이 온다 (49차).
-   ★ 글자·값·동작은 110차 ④ 그대로다. 자리를 함수로 뺀 것뿐이다 */
-function duePickBox(months) {
-  var day = dueDay();
-  var pick = el('div', 'duepick');
-  var prow = el('div', 'duesel');
-  prow.appendChild(el('label', 'dueselab', '분석 종료일'));
-  var sel = el('select', 'duedrop');
-  sel.id = 'duedrop';
-  for (var i = 1; i <= 31; i++) {
-    var op = el('option', null, dueDayText(i));
-    op.value = String(i);
-    if (i === day) op.selected = true;
-    sel.appendChild(op);
-  }
-  sel.addEventListener('change', function () {
-    setDueDay(+sel.value);
-    savePicks();
-    drawResult(months);
-  });
-  prow.appendChild(sel);
-  pick.appendChild(prow);
-  pick.appendChild(el('div', 'duewhy', '매달 지출이 가장 많은 날을 고르시면 됩니다'));
-  var sp0 = null;
-  try {
-    sp0 = dueSpread();
-  } catch (e) {}
-  if (sp0) {
-    pick.appendChild(
-      el(
-        'div',
-        'duewhy',
-        '올려주신 자료에서 사업 지출의 ' + sp0.비율[sp0.제일] + '%가 ' + sp0.이름 + '에 나갔습니다'
-      )
-    );
-  }
-  return pick;
+/* 계산은 core/due.js 의 dueNextMonthLowIn — 다음 달 1일 ~ 말일 가운데 가장 낮은 예상 잔액 */
+function dueNextMonthLow(c, pts) {
+  return dueNextMonthLowIn(c, pts);
+}
+/* ── NAM-9 · 예상 영역의 기간 이름 ────────────────────────────────
+   「8월 22일 자료 기준 · 9월 말까지 예상 잔액」 — 보통 카드와 보류 카드가 같이 쓴다.
+   ★ 실제 달을 적는다. 「다음 달」만 쓰지 않는다.
+   ★ 자료가 올해 것이 아니면 해도 적는다 — 옛 자료로 낸 값을 지금 시점의 전망처럼 읽지 않게.
+     오늘 날짜는 해를 적을지 말지에만 쓴다. 예상 기간은 자료 기준일로만 정한다.
+   ★ 비교 자료가 모자라 계산이 앞당겨 끝났으면(c.잘림) 계산된 마지막 날을 적는다 */
+function dueSpanText(c) {
+  var 기준해 = c.오늘.slice(0, 4),
+    끝해 = c.목표.slice(0, 4);
+  var 앞 = 날글(c.오늘, 기준해 !== String(new Date().getFullYear())) + ' 자료 기준';
+  var 뒤해 = 끝해 !== 기준해 ? +끝해 + '년 ' : '';
+  var 뒤 = c.잘림 ? 뒤해 + 날글(c.목표) : 뒤해 + +c.목표.slice(5, 7) + '월 말';
+  return 앞 + ' · ' + 뒤 + '까지 예상 잔액';
 }
 /* ── 116차 앞 ④ · 보류 카드 ─────────────────────────────────────────
    ★ 예상 잔액 카드 자리에 안내를 한 번만 둔다.
    ★ 종료일 예상 잔액·최저 예상 잔액과 그 날짜·그래프와 진입 단추를 안 낸다.
    ★ 0원으로 적지 않는다. 이전에 계산한 숫자나 열려 있던 그림도 남기지 않는다.
-   ★ 분석 종료일 선택은 그대로 둔다 — 종료일을 바꾸면 같은 규칙으로 다시 판단한다.
+   ★ NAM-9. 분석 종료일을 고르는 자리를 없앴다. 기간은 보통 카드와 같다 (다음 달 말일).
+     접어서 감출 것이 없어져 여닫는 머리도 뺐다 — 안내와 단추가 늘 보인다.
    ★ 색과 세모 느낌표를 안 쓴다. 보여드릴 결과가 없는데 색이 붙으면 뜻이 생긴다 */
 function drawDueHoldCard(host, c, months) {
-  if (DUE_GRAPH_CLOSE) {
-    try {
-      DUE_GRAPH_CLOSE();
-    } catch (e) {}
-  }
-  var open = !!UP.open.__dueOpen;
   var box = el('div', 'duecard noicon');
-  var top = el('div', 'duetop tapx');
+  var top = el('div', 'duetop');
   var res = el('div', 'dueres');
+  /* ★ NAM-9. 무엇이 보류됐는지 — 보통 카드와 같은 기간 이름을 먼저 적는다 */
+  res.appendChild(el('div', 'duereslab', dueSpanText(c)));
   res.appendChild(
     el('div', 'dueholdlab', '예상 지출에서 빠진 거래가 있어 분류 확인이 필요합니다.')
   );
   res.appendChild(el('div', 'dueholdn', '확인이 필요한 출금 ' + won(c.보류.건수) + '건'));
   top.appendChild(res);
-  top.appendChild(foldChip(open));
   box.appendChild(top);
-  /* ★ 이 단추는 카드 머리의 접기·펴기를 건드리지 않는다 */
   /* ★ 119차 A. 목록으로 내려가는 대신 기존 거래처 확인 화면에서 원인부터 묻는다.
      물을 거래처가 없으면(출금 쪽이 다 정해졌거나 섞인 카드뿐) 예전처럼 목록을 편다 */
   var go = el('button', 'fcopen', '분류하고 예상 잔액 보기');
@@ -284,13 +255,6 @@ function drawDueHoldCard(host, c, months) {
     openDuePlan(c, months);
   });
   box.appendChild(pgo);
-  box.appendChild(
-    el(
-      'div',
-      'duewhy dueas',
-      '자료 기준일 ' + +c.오늘.slice(5, 7) + '월 ' + +c.오늘.slice(8, 10) + '일'
-    )
-  );
   if (c.공통기준) {
     box.appendChild(
       el(
@@ -317,12 +281,6 @@ function drawDueHoldCard(host, c, months) {
       )
     );
   }
-  if (!open) box.classList.add('shut');
-  top.addEventListener('click', function () {
-    UP.open.__dueOpen = !UP.open.__dueOpen;
-    drawResult(months);
-  });
-  if (open) box.appendChild(duePickBox(months));
   host.appendChild(box);
 }
 /* ── 116차 앞 ⑤ · 보류 원인 거래 목록 ───────────────────────────────
@@ -1326,112 +1284,9 @@ function 머리줄(body, c, base) {
   );
 }
 
-/* ── 114차 · 그래프 화면 ──────────────────────────────────────────
-   ★ 카드 안에 펼침을 또 만들지 않는다. 이건 새 화면이지 카드 속 펼침이 아니다.
-     그래서 카드를 다시 그리지 않고, 닫아도 카드의 날짜와 펼침 상태가 그대로다.
-   ★ 78차 전체보기(.imgprev*)의 머리·바닥을 그대로 쓴다 (49차) */
-function openDueGraph(c, cv) {
-  if (document.querySelector('.fcback')) return;
-  var pts = dueGraphPts(c, cv);
-  if (!pts) return;
-  useScreen('예상 잔액 그래프');
-  var 뒤스크롤 = document.body.style.overflow;
-  document.body.style.overflow = 'hidden';
-
-  var back = el('div', 'fcback');
-  var pane = el('div', 'fcpane');
-  pane.setAttribute('role', 'dialog');
-  pane.setAttribute('aria-modal', 'true');
-  pane.setAttribute('aria-label', '예상 잔액 흐름');
-
-  var head = el('div', 'imgprevhead');
-  head.appendChild(el('div', 'imgprevtitle', '예상 잔액 흐름'));
-  var acts = el('div', 'imgprevheadacts');
-  var x = el('button', 'b', '닫기');
-  x.type = 'button';
-  acts.appendChild(x);
-  head.appendChild(acts);
-  pane.appendChild(head);
-
-  var body = el('div', 'fcbody');
-  /* 머리줄 — 카드와 같은 두 날짜다. 새 날짜를 만들지 않는다 */
-  body.appendChild(
-    el('div', 'duewhy', '자료 기준일 ' + 날글(c.오늘) + ' · 분석 종료일 ' + 날글(c.목표))
-  );
-  var wrap = el('div', 'fcwrap');
-  body.appendChild(wrap);
-  drawDueGraph(wrap, c, cv, pts);
-  /* ── 114차 보정 둘 ② · 계산이 중단됐을 때 그래프 안에도 알린다 ──────
-     고른 종료일이 9월 10일인데 머리에 「분석 종료일 9월 3일」만 있으면,
-     사장님은 자기가 고른 날짜가 바뀐 것으로 읽는다.
-     폰에서는 이 그림이 전체 화면이라 카드의 잘림 줄이 안 보인다.
-     ★ 날짜 둘 다 계산값으로 만든다. 글에 박지 않는다 —
-       c.잘림 이 고르신 종료일, c.목표 가 실제로 계산된 마지막 날이다.
-     ★ 전체 기간을 계산했으면 c.잘림 이 null 이라 이 줄이 아예 안 나온다 */
-  if (c.잘림) {
-    body.appendChild(
-      el('div', 'fccut', '선택한 종료일 ' + 날글(c.잘림) + ' · 계산된 마지막 날 ' + 날글(c.목표))
-    );
-    body.appendChild(
-      el(
-        'div',
-        'fcnote',
-        '이후 예상 지출을 계산할 비교 자료가 부족해 ' + 날글(c.목표) + '까지 표시했습니다.'
-      )
-    );
-  }
-  /* ★ 가정을 그림 아래에 적는다 (요청서 ④) */
-  body.appendChild(
-    el('div', 'fcnote', '같은 날에는 출금이 입금보다 먼저 이뤄지는 것으로 가정했습니다.')
-  );
-  body.appendChild(
-    el('div', 'fcnote', '과거 입출금을 바탕으로 한 예상이며 실제 잔액은 달라질 수 있습니다.')
-  );
-  pane.appendChild(body);
-
-  var foot = el('div', 'imgprevfoot');
-  var x2 = el('button', 'b on', '닫기');
-  x2.type = 'button';
-  foot.appendChild(x2);
-  pane.appendChild(foot);
-
-  back.appendChild(pane);
-  document.body.appendChild(back);
-  /* ★ 116차 앞 ④. 보류로 바뀌면 이 그림이 남아 있으면 안 된다.
-     닫는 길을 하나 들고 있는다 (닫기 는 함수 선언이라 여기서 이미 잡힌다) */
-  DUE_GRAPH_CLOSE = 닫기;
-
-  var 닫힘 = false;
-  function 닫기() {
-    if (닫힘) return;
-    닫힘 = true;
-    if (back.parentNode) back.parentNode.removeChild(back);
-    document.body.style.overflow = 뒤스크롤;
-    document.removeEventListener('keydown', 키);
-    DUE_GRAPH_CLOSE = null;
-  }
-  function 키(e) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      닫기();
-    }
-  }
-  x.addEventListener('click', 닫기);
-  x2.addEventListener('click', 닫기);
-  /* 바깥을 눌러도 닫힌다 — PC 대화상자에서 기대되는 동작이다.
-     상자 안을 누른 것은 안 닫는다 */
-  back.addEventListener('click', function (e) {
-    if (e.target === back) 닫기();
-  });
-  document.addEventListener('keydown', 키);
-  try {
-    x.focus({ preventScroll: true });
-  } catch (e) {
-    try {
-      x.focus();
-    } catch (e2) {}
-  }
-}
+/* ── 114차 · 예상 잔액 그래프 ─────────────────────────────────────
+   ★ NAM-9 (2026-09-29 요한). 따로 여는 창(openDueGraph)을 없애고 예상 카드 안에 바로 그린다.
+     그리는 셈은 114차 그대로다 — 점(dueGraphPts)·선·날 고르기가 한 줄도 안 바뀐다 */
 var FC_GH = 250; /* 그래프 높이 (날짜 줄 포함) */
 /* 점과 점을 곧은 선으로 잇는다. 부드러운 곡선 보간을 안 쓴다 —
    계산에 없는 고점·저점이 생긴다 (요청서 ④) */
@@ -1475,21 +1330,9 @@ function drawDueGraph(host, c, cv, pts) {
   var box = el('div', 'dchart');
   host.appendChild(box);
   drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 끝날, box);
-  /* 그림 아래 값 — 상세 금액은 원 단위다 (요청서 ③-5) */
-  var key = el('div', 'fckey');
-  var k1 = el('div');
-  k1.appendChild(document.createTextNode(날글(c.목표) + ' 예상 잔액 '));
-  k1.appendChild(el('b', null, won(c.예상) + '원'));
-  key.appendChild(k1);
-  var k2 = el('div');
-  /* ★ 114차 보정 ①. 기준일 잔액이 최저면 그 이름으로 부른다 */
-  var 기준최저 = cv.최저날수 === pts.시작;
-  k2.appendChild(
-    document.createTextNode(기준최저 ? '자료 기준일 잔액 ' : '기간 중 최저 ' + cv.최저날 + ' ')
-  );
-  k2.appendChild(el('b', null, won(cv.최저) + '원'));
-  key.appendChild(k2);
-  host.appendChild(key);
+  /* ★ NAM-9. 그림 아래에 따로 적던 「종료일 예상 잔액 · 기간 중 최저」 줄을 뺐다.
+     그래프가 카드 안으로 들어와, 같은 카드의 머리와 다음 달 최저 줄이 그 값을 이미 말한다.
+     특히 「기간 중 최저」는 이번 달을 포함한 최저라 다음 달 최저와 섞여 읽힌다 */
 
   /* ── 114차 보정 ④ · 고른 날의 상세 ────────────────────────────────
      같은 날의 두 시점을 각각 적는다. 잔액이 같아 마커가 하나로 보여도
@@ -1752,8 +1595,11 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       svg.appendChild(tt);
     }
     var 끝점 = 앞[앞.length - 1];
-    var 최저날 = cv.최저날수,
-      최저값 = cv.최저;
+    /* ★ NAM-9. 표시하는 최저는 다음 달 1일 ~ 말일 가운데의 최저다 — 카드의 다음 달 최저 줄과 같은 값이다.
+       다음 달에 닿지 못한 자료에서는 최저 표시를 안 한다 (선의 색이 0원 미만을 따로 보인다) */
+    var 월 = dueNextMonthLow(c, pts);
+    var 최저날 = 월 ? 월.날수 : null,
+      최저값 = 월 ? 월.값 : null;
     /* 최저 자리의 점을 찾는다 — 「입금 전」이면 그렇게 적는다 (요청서 ④) */
     var 최저점 = null;
     for (i = 앞.length - 1; i >= 0; i--) {
@@ -1790,7 +1636,11 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
         Y(최저점.값),
         최저점.갈래 === '기준'
           ? '자료 기준일 잔액 ' + won(최저값) + '원'
-          : '최저 ' + won(최저값) + '원' + (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
+          : +월.달.slice(5, 7) +
+              '월 최저 ' +
+              won(최저값) +
+              '원' +
+              (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
         최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
         true
       );
@@ -1990,7 +1840,7 @@ function drawDueCard(host, months) {
     return;
   }
   /* ★ 101차. 곡선을 여기서 한 번만 구한다 — 제목과 펼친 자리가 같이 쓴다 */
-  var cv = null;
+  var cv;
   try {
     cv = dueCurve(months, c);
   } catch (e) {
@@ -2064,89 +1914,55 @@ function drawDueCard(host, months) {
   else box.classList.add('noicon');
 
   /* ★ 100차 ③. 86차 ①의 「늘 펼친 채로」를 뒤집는다 (2026-09-19 요한).
-     자리는 맨 위 그대로다 — 무슨 카드인지는 접혀도 아이콘과 색과 % 로 보인다.
-     ★ 열쇠를 __dueShut(접힘) 에서 __dueOpen(열림) 으로 도로 뒤집는다.
-       UP.open 은 달을 옮길 때 비워지는 통이라, 비워졌을 때 어느 쪽이 되는지가
-       곧 기본값이다. 86차가 「늘 펼침」을 지키려고 접힘으로 뒀던 것과 같은 이치를
-       반대로 쓴다 — 열림으로 둬야 비워질 때마다 접힌 채로 돌아온다 */
+     ★ NAM-9. 여닫는 것은 계산 근거(자세히)뿐이다. 기간·예상 잔액·다음 달 최저·그래프는
+       접혀 있어도 늘 보인다 — 그래프를 따로 여는 단추를 없앴다 */
   var open = !!UP.open.__dueOpen;
-  /* ★ 109차 ⑥㉮. 결과를 접힌 카드로 올린다.
-     예전에는 「○월 ○일 예상 잔액」이 들어올 돈·나갈 돈과 똑같은 .orow 모양으로
-     펼친 표 안에 서 있어서, 932px 짜리 카드를 펴야 찾을 수 있었다.
-     기본 화면에 결과와 할 일을 먼저 두고, 「자세히」는 계산 근거 전용으로 만든다.
-     ★ 펼침은 지금처럼 하나뿐이다. 새 펼침도 새 열쇠도 안 만든다.
-     ★ 이 상자에는 색을 안 입힌다 — 양수라고 초록으로 두면 「안전하다」는 뜻이 된다.
-       카드 바깥 테두리와 아이콘 색은 c.비율 을 따르는 지금 규칙 그대로다.
-     ★ 이름은 「○월 ○일 예상 잔액」 그대로다. 「선택한 날짜의…」로 바꾸면
-       앱 다른 자리의 「분석 종료일」과 이름이 갈린다 (47차 ①) */
-  /* ★ 110차 ③. 카드 하나만 여닫는다. 109차가 「계산 근거 자세히」를 따로 둔 것을
-     되돌려, 결과 상자와 여닫는 단추를 한 줄에 둔다 — 펼침이 한 단계다.
-     열쇠는 지금 것(UP.open.__dueOpen)을 그대로 쓴다 */
+  /* ★ NAM-9 (2026-09-29 요한). 머리에 실제 날짜와 달을 적는다 — 「다음 달」만 쓰지 않는다.
+     「8월 22일 자료 기준 · 9월 말까지 예상 잔액」.
+     ★ 이 한 줄이 자료 기준일을 말하므로 따로 서던 「자료 기준일 ○월 ○일」 줄은 뺐다 (같은 날을 두 줄에 안 적는다) */
   var top = el('div', 'duetop tapx');
   var res = el('div', 'dueres');
-  res.appendChild(el('div', 'duereslab', 까지 + ' 예상 잔액'));
+  res.appendChild(el('div', 'duereslab', dueSpanText(c)));
   res.appendChild(el('div', 'duresnum', won(c.예상) + '원'));
   top.appendChild(res);
   top.appendChild(foldChip(open));
   box.appendChild(top);
-  /* ★ 110차 ②. 「예비비는 아직 반영하지 않았습니다」를 뺀다 —
-     예비비를 정하는 자리가 아직 앱에 없다. 못 만지는 기능을 되풀이해 설명하지 않는다.
-     대신 계산 근거 안에 한 문장만 둔다 (아래) */
 
-  /* ★ 109차 ⑥㉮㉯. 최저 줄. 결과 상자와 뜻이 다른 값이라 합치지 않는다.
-     ★ ㉯ 최저날이 자료 기준일이면 그 값은 예상이 아니라 자료에 적힌 실제 잔액이다.
-       「8월 21일 잔액이 가장 적습니다」는 이미 지난 날을 앞날처럼 말하는 것이고,
-       「예상」이라 부르면 아예 틀린 말이 된다. 그 경우만 갈라 적고 「입금 전」도 안 붙인다 */
-  var 기준날인가 = !!(cv && cv.최저날수 === dayNum(c.오늘));
-  /* ★ 110차 ③㉮. 최저점이 선택한 날짜의 예상 잔액과 날짜·시점·금액까지 모두 같을 때만
-     이 줄을 뺀다 — 그날 입금이 0이라 「입금 전」과 끝 잔액이 같아진 경우다.
-     ★ 날짜가 같아도 금액이 다르면 반드시 갈라 적는다.
-       하나는 「입금 전」 최저이고 하나는 그날 끝 잔액이다. 뜻이 다르다 */
-  var 겹침 = !!(cv && cv.최저날수 === dayNum(c.목표) && cv.최저 === c.예상);
-  drawDueLowestLine(c, cv, 색, box, 기준날인가, 겹침);
-  /* ★ 114차 ①. 그래프를 여는 단추. 카드에 그림을 상시로 두지 않는다.
-     ★ 자리는 예상 잔액 요약과 최저 줄이 있는 이 영역이고,
-       if (open) 밖이라 카드가 접혀 있어도 바로 닿는다 (완료 기준 1).
-     ★ 경고색을 안 쓴다 — 테두리와 차분한 배경으로 단추임을 보인다.
-     ★ 이건 새 화면을 여는 단추다. 카드 안에 펼침을 또 만드는 것이 아니다 (완료 기준 4).
-     ★ 곡선이 안 나오는 자료(표본 부족·하루짜리)에서는 단추도 안 나온다 —
-       눌러도 보여줄 것이 없는 단추를 두지 않는다 */
-  if (cv && cv.점 && cv.점.length) {
-    var gbtn = el('button', 'fcopen', '예상 잔액 그래프 보기');
-    gbtn.type = 'button';
-    gbtn.addEventListener('click', function (e) {
-      e.stopPropagation(); /* 카드 머리의 접기·펴기를 건드리지 않는다 */
-      openDueGraph(c, cv);
-    });
-    box.appendChild(gbtn);
+  /* ★ NAM-9. 다음 달 1일 ~ 말일 가운데 잔액이 가장 적을 것으로 예상되는 날.
+     이번 달을 포함한 전체 기간의 최저(cv.최저)와 섞지 않는다 */
+  var pts;
+  try {
+    pts = cv ? dueGraphPts(c, cv) : null;
+  } catch (e) {
+    pts = null;
+  }
+  var 월 = pts ? dueNextMonthLow(c, pts) : null;
+  drawDueNextLow(c, 월, box);
+  /* ★ 이번 달 남은 날에 잔액이 0원 밑으로 내려갈 수 있으면 그 사실은 늘 보인다.
+     다음 달 최저만 보여주면 그보다 앞선 날의 모자람이 가려진다 */
+  if (cv && cv.모자람 > 0 && !(월 && cv.최저날수 >= 월.첫날)) {
+    box.appendChild(
+      el('div', 'duewhy dueas', cv.최저날 + '에 ' + won(cv.모자람) + '원이 모자랄 수 있습니다')
+    );
+  }
+  /* ★ NAM-9. 그래프를 예상 영역 안에 바로 그린다 (114차의 「그래프 보기」 창을 대신한다).
+     ★ 곡선이 안 나오는 자료(표본 부족·하루짜리)에서는 그리지 않는다 — 지어내지 않는다 */
+  if (pts) {
+    var gw = el('div', 'fcwrap duegraph');
+    box.appendChild(gw);
+    drawDueGraph(gw, c, cv, pts);
+    box.appendChild(
+      el(
+        'div',
+        'fcnote',
+        '과거 입출금을 바탕으로 한 예상이며 실제 잔액은 달라질 수 있습니다. 지금 사용할 수 있는 금액을 뜻하지 않습니다.'
+      )
+    );
   }
   drawDueHeldPlans(months, c, box);
-  /* ★ 101차. 자료 기준일과 분석 종료일을 늘 보이게 둔다. 접혀 있을 때도 안 감춘다.
-     ★ 「오늘」이라고 쓰지 않는다 — 자료의 기준일이지 오늘이 아니다.
-     ★ 최저일과 종료일은 다를 수 있어 한 낱말로 섞지 않는다 */
-  /* ★ 102차 마무리. 카드의 「자료 기준일」은 카드가 실제로 선 날이어야 한다.
-     asOfText() 는 표의 마지막 날이라, 계좌마다 끝나는 날이 다르면
-     「자료 기준일 8월 21일 · 분석 종료일 8월 10일」처럼 종료일이 기준일보다 앞선다.
-     ★ asOfText() 자체는 안 건드린다 — 머리 배지와 105차 「마지막 분석」 줄이 쓴다.
-       카드 안에서만 c.오늘 을 쓴다.
-     ★ 계좌가 하나면 c.오늘 이 표의 마지막 날이라 예전과 똑같다 */
-  /* ★ 110차 ③㉮. 「분석 종료일」을 이 줄에서 뺀다 —
-     결과 상자가 이미 그 날짜를 말하고 있다. 같은 날을 두 줄에 적지 않는다.
-     종료일은 펼친 자리의 드롭다운이 보인다 */
-  box.appendChild(
-    el(
-      'div',
-      'duewhy dueas',
-      '자료 기준일 ' + +c.오늘.slice(5, 7) + '월 ' + +c.오늘.slice(8, 10) + '일'
-    )
-  );
   /* ★ 102차. 계좌마다 마지막 거래일이 다르면 그 사실을 말한다. 같으면 안 나온다.
      ★ 계좌를 지목하지 않는다 — 이름이 「계좌 2」인 경우가 있어 지목해도 뜻이 없다.
-     ★ 102차 추가 ②. 「모든 계좌에 자료가 있는 날」이라고 말할 수 없다 —
-       조회 기간을 파싱하지 않으므로 그 날의 완전함은 확인된 것이 아니다.
-       확인된 것은 「계좌별 최종 거래일 중 가장 이른 날」 하나뿐이다.
-     ★ 「최신 내역을 올리면 맞춰집니다」라고 하지 않는다. 다시 올려도 최종 거래일이
-       같을 수 있다 */
+     ★ 확인된 것은 「계좌별 최종 거래일 중 가장 이른 날」 하나뿐이다 */
   if (c.공통기준) {
     box.appendChild(
       el(
@@ -2160,19 +1976,10 @@ function drawDueCard(host, months) {
       )
     );
   }
-  /* ★ 60차 ④. 접힌 자리에는 바로 알아듣는 문장 하나만 둔다.
-     「지금과 가장 비슷했던 20일 중…」과 「1.82배」는 안 읽힌다는 지적을 받았다 —
-     못 알아들으면 빼는 게 낫다. 펼친 자리로 내렸다.
-     이 줄은 바로 읽히고, 왜 목표일이 그날인지도 같이 설명한다 */
-  /* ★ 87차 ①. 접으면 첫 줄 하나만 남는다. 근거 줄도 같이 접는다 —
-     접었는데 95px 이면 접은 뜻이 없다. 펼친 모습은 하나도 안 바뀐다.
-     ★ ⚠ 아이콘과 색은 접혀도 그대로 둔다. 무슨 카드인지는 알아야 한다 */
   if (!open) box.classList.add('shut');
-  /* ★ 105차 ①. 최저 예상 잔액이 표본이 줄어든 구간에서 나오면 접힌 카드에도 보인다.
-     접힌 채로 「최저 11,595만원」만 보고 나가시면 그 수가 무엇으로 계산된 것인지 모르신다.
-     ★ 잘림 줄은 늘 보인다 — 어디까지 계산했는지는 접든 펴든 같은 무게다 */
+  /* ★ 105차 ①③. 어디까지 계산했는지와 표본이 줄어든 자리는 접든 펴든 같은 무게다 */
   if (!open && 잘림줄) box.appendChild(el('div', 'duewhy dueas', 잘림줄));
-  if (!open && 표본줄 && cv && cv.최저날수 >= c.셈줄수) {
+  if (!open && 표본줄 && 월 && 월.날수 >= c.셈줄수) {
     box.appendChild(el('div', 'duewhy dueas', 표본줄));
   }
 
@@ -2180,6 +1987,7 @@ function drawDueCard(host, months) {
     UP.open.__dueOpen = !UP.open.__dueOpen;
     drawResult(months);
   });
+  var 기준날인가 = !!(cv && cv.최저날수 === dayNum(c.오늘));
   drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가);
   host.appendChild(box);
 }
@@ -2254,16 +2062,8 @@ function drawDueHeldPlans(months, c, box) {
 /* drawDueCard 에서 뺀 부분 (B-4) */
 function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가) {
   if (open) {
-    /* ★ 110차 ④. 31칸 격자를 드롭다운으로 바꾼다. 격자가 234px 로 카드에서 제일 큰
-       덩어리였다. 달을 고르는 자리에 이미 쓰는 방식이라 새 장치가 아니다.
-       ★ 값은 지금 화면에 있는 그대로 31개다 — 1~30 과 「말일」.
-         31일 칸은 없었다. 「말일」을 「31일」로 바꾸거나 둘을 합치지 않는다.
-         짧은 달 처리(nextDue·shiftMonth)도 한 줄도 안 건드린다.
-       ★ 이름은 「분석 종료일」이다. 결과 화면에서 실제로 바꾸는 값이 그것이다.
-       ★ 「왜 그 날을 고르는가」를 알려주는 줄은 없애지 않는다. 드롭다운 아래로 내린다 */
-    /* ★ 116차 앞. 종료일 고르는 자리를 duePickBox 로 뺐다 —
-       보류 카드와 같은 것을 쓰게 하려는 것이다. 글자와 동작은 110차 ④ 그대로다 */
-    box.appendChild(duePickBox(months));
+    /* ★ NAM-9 (2026-09-29). 여기 있던 분석 종료일 드롭다운(110차 ④)을 없앴다 —
+       예상 기간은 묻지 않고 다음 달 말일까지로 정한다 */
     var t = el('div', 'duepick');
     /* ★ B-4 (2026-09-28). 블록 안 함수 선언을 변수로 바꿨다 — 선언 뒤에서만 부르므로 같다. 블록을 함수로 뺄 수 있게 */
     var 줄 = function (name, v, sub, sign) {
@@ -2329,7 +2129,9 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
           'div',
           'duewhy',
           기준날인가
-            ? '예상한 입출금이 그대로 이뤄질 경우, 분석 종료일까지 잔액이 자료 기준일보다 낮아지지 않을 것으로 예상됩니다.'
+            ? '예상한 입출금이 그대로 이뤄질 경우, ' +
+                까지 +
+                '까지 잔액이 자료 기준일보다 낮아지지 않을 것으로 예상됩니다.'
             : '예상한 입출금이 그대로 이뤄질 경우, ' +
                 cv.최저날 +
                 '에는 당일 출금 후 입금 전 잔액이 ' +
@@ -2389,37 +2191,28 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
   }
 }
 
-/* drawDueCard 에서 뺀 부분 (B-4) */
-function drawDueLowestLine(c, cv, 색, box, 기준날인가, 겹침) {
-  /* ★ 111차 ①. 자료 기준일 잔액은 예상이 아니라 자료에 적힌 실제 값이다.
-     「최저 예상 잔액」이라고 부르지 않는다. 이름과 금액을 윗줄에, 뜻을 아랫줄에 둔다.
-     ★ 111차 ④㉮. 금액을 원 단위로 적는다. 폰에서 두 줄이 되는 것을 허용한다 —
-       한 줄에 맞추려고 글씨를 줄이거나 뜻을 생략하지 않는다.
-     ★ 같은 잔액이 이미 결과 상자에 보이면 금액을 두 번 세우지 않고 뜻만 적는다 */
-  if (cv && !겹침) {
-    var 같은값 = 기준날인가 && cv.최저 === c.예상;
-    var low = el('div', 'duelow');
-    var lowlab = el('div', 'duelab');
-    lowlab.appendChild(
-      document.createTextNode(
-        cv.모자람 > 0
-          ? cv.최저날 + '에 모자랄 수 있습니다'
-          : 기준날인가
-            ? '자료 기준일 잔액'
-            : cv.최저날 + ' 최저 예상 잔액 · 입금 전'
-      )
-    );
-    low.appendChild(lowlab);
-    if (!같은값) {
-      low.appendChild(
-        el('div', 'duepct money' + 색, won(cv.모자람 > 0 ? cv.모자람 : cv.최저) + '원')
-      );
-    }
-    box.appendChild(low);
-    if (기준날인가) {
-      box.appendChild(
-        el('div', 'duewhy dueas', '분석 기간에는 이보다 낮아지지 않을 것으로 예상됩니다')
-      );
-    }
+/* ── NAM-9 · 다음 달 최저 예상 잔액 두 줄 ─────────────────────────────
+   「9월 중 잔액이 가장 적을 것으로 예상되는 날: 9월 ○일」
+   「그날의 최저 예상 잔액: ○○원」 + 입금 전 조건 한 줄.
+   ★ 값은 dueGraphPts 의 「입금 전」 점이다 — 당일 출금 후·입금 전 잔액이라 그 조건을 짧게 남긴다.
+   ★ 미래의 확정 잔액이나 지금 쓸 수 있는 돈으로 부르지 않는다. 「예상」을 뗀 이름을 안 쓴다.
+   ★ 비교 자료가 모자라 다음 달 중간까지만 계산했으면 그 범위를 이름에 적는다.
+     다음 달에 아예 닿지 못했으면(월 === null) 아무 말도 안 한다 — 잘림 줄이 까닭을 말한다 */
+function drawDueNextLow(c, 월, box) {
+  if (!월) return;
+  var mm = +월.달.slice(5, 7);
+  var 범위 = 월.전부
+    ? mm + '월 중'
+    : mm + '월 1일 ~ ' + 날글(new Date(월.계산끝 * 86400000).toISOString().slice(0, 10)) + ' 중';
+  var 날 = 날글(new Date(월.날수 * 86400000).toISOString().slice(0, 10));
+  var low = el('div', 'duenext');
+  low.appendChild(el('div', 'duenextday', 범위 + ' 잔액이 가장 적을 것으로 예상되는 날: ' + 날));
+  var 값줄 = el('div', 'duenextval');
+  값줄.appendChild(document.createTextNode('그날의 최저 예상 잔액: '));
+  값줄.appendChild(el('b', 월.값 < 0 ? 'sgn-minus' : null, won(월.값) + '원'));
+  low.appendChild(값줄);
+  if (월.갈래 === '입금전') {
+    low.appendChild(el('div', 'duenextsub', '당일 출금 후 입금 전 기준'));
   }
+  box.appendChild(low);
 }

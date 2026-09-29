@@ -103,7 +103,11 @@ function drawResultInner(months) {
   /* 자료가 짧으면 견줄 것도 예상할 것도 없다. 왜 안 나오는지 알려준다 */
   if (months.length < 3) {
     host.appendChild(
-      el('div', 'shortnote', '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.')
+      el(
+        'div',
+        'shortnote',
+        '지난 1년치를 올리시면 지난달과 견주고 다음 달 말까지의 잔액도 예상해드립니다.'
+      )
     );
   }
   /* ★ 82차 ④. ○○ 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
@@ -227,11 +231,13 @@ function drawResultInner(months) {
     return;
   }
 
-  /* ★ 76-2차. 다음 달 초까지 모자랄 가능성은 월 결과의 첫 핵심정보다.
-     숫자 검산이 맞은 뒤, 손익 숫자와 그래프보다 먼저 한 번만 보여준다.
-   ★ 86차 ①. 82차 ②의 「여유가 뚜렷하면 아래로 내린다」를 철회했다.
-     어느 대표님이든 늘 맨 위에 · 늘 펼친 채로 둔다. 접는 것은 대표님이 정하신다 */
-  drawDueCard(host, months);
+  /* ★ NAM-9 (2026-09-29 요한). 76-2차의 「예상 카드를 손익보다 먼저」를 뒤집는다.
+     지난 거래로 확인되는 결과를 먼저 보고, 그다음 예상을 본다. 차례는 넷이다 —
+       ① 분석 기간과 자료 기준 (위 배지 · 손익 카드 머리)
+       ② 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익
+       ③ 예상 잔액과 그래프 (drawDueCard — 아래 손익 카드를 둘로 나눈 사이)
+       ④ 상세 내역과 계산 근거 (일별 흐름 · 계좌 잔액 · 안 정한 돈 · 확인할 것)
+     ★ 예상이 보류돼도 ②는 그대로 보인다 — 보류 안내는 ③ 자리 안에만 선다 */
 
   /* 눌러서 그 안의 거래처를 펼쳐 보는 줄 */
 
@@ -504,6 +510,17 @@ function drawResultInner(months) {
   /* ★ 74차. 핵심 숫자와 아직 안 정한 돈을 본 다음에만 다음 행동을 보여준다. */
   var 새로정할 = resultNewButton(restN);
   if (새로정할) host.appendChild(새로정할);
+
+  /* ★ NAM-9. 손익 카드를 여기서 끊고 예상 영역을 끼운다. 나머지(④ 상세)는 같은 모양의
+     두 번째 카드(pnl pnlmore)에 이어 그린다 — 줄 하나하나는 예전 그대로다 */
+  hostSave.appendChild(card);
+  var dueSec = el('div', 'duesec');
+  dueSec.appendChild(el('div', 'duesechead', '예상'));
+  drawDueCard(dueSec, months);
+  if (dueSec.childNodes.length > 1) hostSave.appendChild(dueSec);
+  card = el('div', 'pnl pnlmore');
+  host = card;
+
   /* ★ 66차 ④. 이 달이 어떻게 흘러왔는지. 위 숫자는 손대지 않고 그림만 더한다 */
   drawDayChart(host, UP.month, d, months);
   /* ── 덩어리 3 · 계산에 안 들어가는 것 ──

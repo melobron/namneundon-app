@@ -138,7 +138,9 @@ async function demoFlow(k, port, w, scheme) {
   await p.getByRole('button', { name: '1년' }).click();
   await snap('1년');
   await p.getByRole('button', { name: '한 달' }).click();
-  await p.getByRole('button', { name: '예상 잔액 그래프 보기' }).click();
+  /* NAM-9 부터는 그래프가 카드 안에 있다. 옛 판과 견줄 때만 단추가 있다 */
+  const gb = p.getByRole('button', { name: '예상 잔액 그래프 보기' });
+  if (await gb.count()) await gb.click();
   await snap('그래프');
   await ctx.close();
 }

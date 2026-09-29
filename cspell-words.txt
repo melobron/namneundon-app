@@ -173,6 +173,7 @@ duecard
 duedate
 duedays
 duedrop
+duegraph
 duehold
 dueholdlab
 dueholdn
@@ -183,10 +184,16 @@ dueline
 duelow
 duenone
 duenonelist
+duenext
+duenextday
+duenextsub
+duenextval
 duepct
 duepick
 dueres
 duereslab
+duesec
+duesechead
 duesel
 dueselab
 duetop
@@ -440,6 +447,7 @@ plansub
 planwarn
 pnleq
 pnlhead
+pnlmore
 pnlrule
 pnlthin
 projbox
@@ -541,6 +549,7 @@ upmust
 upnote
 upopen
 upread
+upsafe
 upstat
 upstorechg
 upstorehead

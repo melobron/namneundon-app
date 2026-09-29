@@ -15,8 +15,8 @@ function foldChip(open, 무엇) {
   return el('span', 'foldchip', (무엇 ? 무엇 + ' ' : '') + (open ? '접기 ▴' : '자세히 ▾'));
 }
 function upShow(which) {
-  /* ★ 101차 ①. up-duedate 를 이 목록에 같이 넣는다 — 여기 없으면
-     upShow('up-duedate') 가 다른 화면만 감추고 정작 이 화면은 안 켠다 */
+  /* ★ NAM-9 (2026-09-29). 결과 전에 분석 종료일을 묻던 up-duedate 화면을 없앴다.
+     예상 기간은 이제 묻지 않고 정해진다 (자료 기준일이 속한 달의 다음 달 말일) */
   [
     'up-trade',
     'up-pick',
@@ -25,7 +25,6 @@ function upShow(which) {
     'up-owner',
     'up-cats',
     'up-onboard',
-    'up-duedate',
     'up-done'
   ].forEach(function (id) {
     document.getElementById(id).hidden = id !== which;
@@ -241,13 +240,16 @@ function drawStart() {
   box.appendChild(el('div', 'welbig', '이번 달 번 돈과 쓴 돈을 확인하세요'));
   box.appendChild(el('div', 'welsub', '거래내역을 올리고, 거래처의 용도를 정해주세요'));
 
-  /* 안심 고지는 새로 쓰지 않고 이미 있는 것을 그대로 옮겨 온다 (49차) */
-  var note = document.querySelector('#up .upnote');
-  if (note) {
+  /* 안심 고지는 새로 쓰지 않고 이미 있는 것을 그대로 옮겨 온다 (49차)
+     ★ NAM-9. 「보내지 않습니다」는 파일 선택 단추 아래(.upsafe)로 옮겼다 —
+       그 줄을 먼저, 이 기기에 남는 것(.upnote)을 뒤에 붙여 예전과 같은 차례로 둔다 */
+  ['#up .upsafe', '#up .upnote'].forEach(function (sel) {
+    var note = document.querySelector(sel);
+    if (!note) return;
     var copy = el('div', 'upnote');
     copy.innerHTML = note.innerHTML;
     box.appendChild(copy);
-  }
+  });
 
   /* ★ 63-13. 돌아오신 분이 먼저 볼 것은 자기 매장이다. 타일 위에 둔다.
      처음 오신 분(저장 0)께는 이 구역이 아예 없다 — 62-2차 그대로다 */
@@ -723,7 +725,7 @@ function drawUpMine() {
           : '이 매장에 정해두신 것을 이어서 사용합니다.'
       )
     );
-    sbox.appendChild(el('div', 'upstoresub', '분석할 거래내역 파일을 올려주세요.'));
+    sbox.appendChild(el('div', 'upstoresub', '분석할 거래내역 파일을 선택해주세요.'));
     host.appendChild(sbox);
     updropAfter(host); /* 파일 고르는 자리를 바로 아래로 */
     drawImportStart(); /* ★ 119차. 불러오기 자리도 파일 고르는 자리를 따라간다 */
