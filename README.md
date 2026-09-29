@@ -42,10 +42,10 @@ flowchart LR
 
 ## 개발 시작
 
-Node.js 24 (`.nvmrc`) 와 git 만 있으면 됩니다. 나머지는 명령 하나가 갖춥니다. 자세한 것은 [docs/development/setup.md](docs/development/setup.md).
+Node.js 24 (`.nvmrc`)와 Git으로 시작합니다. 기본 setup은 Python 분석 환경까지 준비하므로 OS별 준비 사항을 확인하세요. 자세한 것은 [개발 안내](docs/development.md#개발-환경).
 
 ```bash
-make setup      # 또는 npm run setup — 도구 점검 · 의존성 설치 · 테스트용 크롬 · 커밋 전 검사
+make setup      # 또는 npm run setup — 도구 점검 · 의존성 · 테스트용 크롬 · 분석 환경
 make serve      # 또는 npm run serve — http://localhost:4173 에서 앱 띄우기
 ```
 
@@ -65,9 +65,26 @@ make serve      # 또는 npm run serve — http://localhost:4173 에서 앱 띄�
 
 **main 에 합치면 자동으로 운영에 배포됩니다.** main 에 직접 push 하지 않고 PR 로 합칩니다.
 
-## 더 읽을 곳
+## 레포에서 길 찾기
 
-- [docs/index.md](docs/index.md) — 모든 문서의 지도 (제품 · 구조 · 결정 · 개발 절차 · 할 일)
-- [specs/README.md](specs/README.md) — 큰 작업의 명세 · 계획 · 할 일과 진행 상태
-- [AGENTS.md](AGENTS.md) — AI(Claude Code · Codex 등)가 따르는 작업 규칙
-- 사업 자료(계획서 · 데이터 명세서 등)는 저장소 밖 Google Drive 에 있습니다.
+```text
+README.md             제품 소개와 시작 방법
+AGENTS.md             모든 AI의 공통 작업 규칙
+CLAUDE.md             Claude에만 필요한 안내
+app/ · landing/       웹앱과 소개 사이트
+analysis/             테스트베드 분석 도구와 상세 사용 안내
+tests/ · tools/       검사와 개발 도구
+docs/
+  product.md          현재 제품과 계산·저장 규칙
+  architecture.md     현재 코드 구조와 설계 이유
+  development.md      환경·협업·테스트·배포
+plans/
+  TEMPLATE.md         작업 계획을 작성하는 틀
+  <작업>.md           진행 중인 작업마다 한 파일
+```
+
+- 처음 참여했다면 [제품](docs/product.md) → [구조](docs/architecture.md) → [개발 안내](docs/development.md) 순서로 읽습니다.
+- 큰 변경은 [계획 틀](plans/TEMPLATE.md)을 복사해 요구사항·설계·실행 순서·검증을 한 파일에 적습니다. 브랜치마다 자동으로 만드는 것은 아닙니다.
+- 작업이 끝나면 현재 지식은 docs에 반영하고 검증·PR 근거를 남긴 뒤 계획을 삭제합니다. 이전 계획은 Git 이력에서 찾습니다.
+- 고객 요청·버그·운영·로드맵은 Linear에서 관리합니다. 사업 자료는 저장소 밖 Google Drive에 있습니다.
+- AI는 [AGENTS.md](AGENTS.md)를 먼저 읽고, 분석 작업은 [analysis/README.md](analysis/README.md)를 함께 읽습니다.
