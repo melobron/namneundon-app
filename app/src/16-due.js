@@ -201,24 +201,105 @@ function dueNextMonthLow(c, pts) {
 function dueSpanText(c) {
   var 기준해 = c.오늘.slice(0, 4),
     끝해 = c.목표.slice(0, 4);
-  var 앞 = 날글(c.오늘, 기준해 !== String(new Date().getFullYear())) + ' 자료 기준';
-  var 뒤해 = 끝해 !== 기준해 ? +끝해 + '년 ' : '';
-  var 뒤 = c.잘림 ? 뒤해 + 날글(c.목표) : 뒤해 + +c.목표.slice(5, 7) + '월 말';
-  return 앞 + ' · ' + 뒤 + '까지 예상 잔액';
+  /* ★ NAM-9 배포 전 보완. 예상 대상 기간을 실제 날짜로 적는다 (「9월 말」 → 「9월 30일」) */
+  var 앞 = 날글(c.오늘, dueIsOld(c) || 기준해 !== String(new Date().getFullYear())) + ' 자료 기준';
+  return 앞 + ' · ' + 날글(c.목표, 끝해 !== 기준해) + '까지 예상 잔액';
+}
+/* ── NAM-9 배포 전 보완 · 오래된 자료로 낸 예상 ─────────────────────────────
+   ★ 계산 기간은 자료 기준일로 정한 그대로다. 오늘 날짜로 늘리거나 옮기지 않는다.
+   ★ 오늘은 「예상 종료일이 이미 지났는가」를 가려 이름을 붙이는 데만 쓴다.
+   ★ 실제 이후 거래와 견준 것이 아니므로 「백테스트」라 부르지 않는다 */
+function dueToday() {
+  var d = new Date();
+  return (
+    d.getFullYear() +
+    '-' +
+    ('0' + (d.getMonth() + 1)).slice(-2) +
+    '-' +
+    ('0' + d.getDate()).slice(-2)
+  );
+}
+function dueIsOld(c) {
+  return !!c && (c.잘림 || c.목표) < dueToday();
+}
+function dueOldNote(c, box) {
+  if (!dueIsOld(c)) return;
+  box.appendChild(
+    el(
+      'div',
+      'duewhy dueas dueold',
+      날글(c.오늘, true) +
+        ' 자료를 기준으로 계산한 예상입니다.' +
+        (UP && UP.demo ? '' : ' 현재 잔액을 보려면 최근 거래내역을 추가해 주세요.')
+    )
+  );
+}
+/* 모자람 문장 — 오래된 자료면 지금의 자금 부족 경고로 읽히지 않게 「계산됐습니다」로 적는다 */
+function dueShortText(c, 날, 금액) {
+  return dueIsOld(c)
+    ? 날 + '에 ' + won(금액) + '원이 모자랄 수 있는 것으로 계산됐습니다'
+    : 날 + '에 ' + won(금액) + '원이 모자랄 수 있습니다';
+}
+/* 계산은 core/due.js 의 dueCurveWhyIn — 그래프가 안 나오는 까닭 */
+function dueCurveWhy(c) {
+  return dueCurveWhyIn(UP, DUE_ENV, c);
 }
 /* ── NAM-9 후속 · 여러 계좌의 공통 기준일 안내 ─────────────────────────
    ★ 기준은 102차 그대로다 — 모든 계좌에 자료가 있는 마지막 날(commonAsOf).
      가장 늦은 계좌의 날짜로 다른 계좌까지 최신인 것처럼 늘리지 않는다.
    ★ 그 때문에 기간이 짧아졌다는 것을 한 문장으로 알린다 */
 function dueCommonText(c) {
-  var 끝 = c.잘림 ? 날글(c.목표) : +c.목표.slice(5, 7) + '월 말';
   return (
     '여러 계좌를 함께 계산할 수 있는 ' +
     날글(c.오늘) +
     '을 기준으로, ' +
-    끝 +
+    날글(c.목표) +
     '까지 예상했습니다. 계좌별 자료 기간을 확인해주세요.'
   );
+}
+/* ── NAM-9 배포 전 보완 · 입금 보류 카드 ─────────────────────────────────
+   ★ 직전 30일에 매출로 정한 입금이 없고 아직 분류하지 않은 입금이 있을 때 (dueCardIn).
+   ★ 예상 숫자·그래프를 안 낸다. 미분류 입금을 매출로 치지 않는다.
+   ★ 결과 화면(실적)은 그대로 보인다 — 막는 것은 예측 하나뿐이다 */
+function drawDueInflowHold(host, c, months) {
+  var box = el('div', 'duecard noicon');
+  var top = el('div', 'duetop');
+  var res = el('div', 'dueres');
+  res.appendChild(el('div', 'duereslab', dueSpanText(c)));
+  res.appendChild(
+    el(
+      'div',
+      'dueholdlab',
+      '직전 30일에 매출로 분류한 입금이 없어 예상 입금을 계산하지 않았습니다.'
+    )
+  );
+  res.appendChild(
+    el(
+      'div',
+      'dueholdn',
+      '아직 분류하지 않은 입금 ' + won(c.입금보류.건수) + '건 · ' + won(c.입금보류.합) + '원'
+    )
+  );
+  top.appendChild(res);
+  box.appendChild(top);
+  box.appendChild(
+    el(
+      'div',
+      'duewhy dueas',
+      '이 가운데 매출이 있으면 매출로 정해 주세요. 그러면 예상 잔액을 계산합니다.'
+    )
+  );
+  var go = el('button', 'fcopen', '들어온 돈 분류하기');
+  go.type = 'button';
+  go.addEventListener('click', function (e) {
+    e.stopPropagation();
+    useScreen('입금 보류 분류');
+    moreFromResult();
+  });
+  box.appendChild(go);
+  dueOldNote(c, box);
+  if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
+  host.appendChild(box);
 }
 /* ── 116차 앞 ④ · 보류 카드 ─────────────────────────────────────────
    ★ 예상 잔액 카드 자리에 안내를 한 번만 둔다.
@@ -288,6 +369,7 @@ function drawDueHoldCard(host, c, months) {
     openDuePlan(c, months);
   });
   box.appendChild(pgo);
+  dueOldNote(c, box);
   if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
   /* ★ 어디까지의 비교 날짜를 보고 판단했는지는 접든 펴든 같은 무게다 (105차 ③) */
   if (c.잘림) {
@@ -1855,9 +1937,16 @@ function drawDueCard(host, months) {
   }
   /* ★ 116차 앞 ④. 보류면 예상 숫자 대신 안내를 낸다.
      곡선도 그림도 여기서부터 아예 안 만든다 */
+  /* ★ NAM-9 배포 전 보완. 오래된 자료면 예상 영역 머리에 그 사실을 붙인다 */
+  var 머리 = host.querySelector ? host.querySelector('.duesechead') : null;
+  if (머리 && dueIsOld(c)) 머리.textContent = '예상 · 과거 자료 기준';
   if (c.보류) {
     DUE_HOLD_NOW = c.보류;
     drawDueHoldCard(host, c, months);
+    return;
+  }
+  if (c.입금보류) {
+    drawDueInflowHold(host, c, months);
     return;
   }
   /* ★ 101차. 곡선을 여기서 한 번만 구한다 — 제목과 펼친 자리가 같이 쓴다 */
@@ -1948,6 +2037,7 @@ function drawDueCard(host, months) {
   top.appendChild(res);
   top.appendChild(foldChip(open));
   box.appendChild(top);
+  dueOldNote(c, box);
 
   /* ★ NAM-9. 다음 달 1일 ~ 말일 가운데 잔액이 가장 적을 것으로 예상되는 날.
      이번 달을 포함한 전체 기간의 최저(cv.최저)와 섞지 않는다 */
@@ -1958,13 +2048,11 @@ function drawDueCard(host, months) {
     pts = null;
   }
   var 월 = pts ? dueNextMonthLow(c, pts) : null;
-  drawDueNextLow(c, 월, box);
+  drawDueNextLow(c, 월, box, cv);
   /* ★ 이번 달 남은 날에 잔액이 0원 밑으로 내려갈 수 있으면 그 사실은 늘 보인다.
      다음 달 최저만 보여주면 그보다 앞선 날의 모자람이 가려진다 */
   if (cv && cv.모자람 > 0 && !(월 && cv.최저날수 >= 월.첫날)) {
-    box.appendChild(
-      el('div', 'duewhy dueas', cv.최저날 + '에 ' + won(cv.모자람) + '원이 모자랄 수 있습니다')
-    );
+    box.appendChild(el('div', 'duewhy dueas', dueShortText(c, cv.최저날, cv.모자람)));
   }
   /* ★ NAM-9. 그래프를 예상 영역 안에 바로 그린다 (114차의 「그래프 보기」 창을 대신한다).
      ★ 곡선이 안 나오는 자료(표본 부족·하루짜리)에서는 그리지 않는다 — 지어내지 않는다 */
@@ -1979,18 +2067,40 @@ function drawDueCard(host, months) {
         '과거 입출금을 바탕으로 한 예상이며 실제 잔액은 달라질 수 있습니다. 지금 사용할 수 있는 금액을 뜻하지 않습니다.'
       )
     );
+  } else {
+    /* ★ NAM-9 배포 전 보완. 그래프가 안 나오면 까닭을 적는다 — 빈자리로 두지 않는다 */
+    var 까닭 = null;
+    try {
+      까닭 = dueCurveWhy(c);
+    } catch (e) {}
+    if (까닭) {
+      box.appendChild(
+        el(
+          'div',
+          'duewhy dueas',
+          (까닭 === '3개월' ? '비교할 지난 3개월 자료가 모자라' : '비교할 과거 자료가 모자라') +
+            ' 그래프와 다음 달 최저 예상 잔액은 표시하지 않았습니다.'
+        )
+      );
+    }
   }
   /* ★ NAM-9 후속. 아직 분류하지 않은 출금을 예측에 넣었으면 그 사실을 한 줄로 알린다.
      분류하지 않아도 그래프가 나오는 대신, 무엇이 들어갔는지는 숨기지 않는다 */
+  /* ★ NAM-9 배포 전 보완. 입금 쪽도 같이 적는다 — 아직 분류하지 않은 입금은 예상 입금에 안 들어간다 */
+  var 미분류줄 = [];
   if (c.미분류) {
-    box.appendChild(
-      el(
-        'div',
-        'duewhy dueas',
-        '아직 분류하지 않은 출금 ' + won(c.미분류.건수) + '건도 예상 출금에 넣었습니다.'
-      )
+    미분류줄.push('아직 분류하지 않은 출금 ' + won(c.미분류.건수) + '건은 예상 출금에 넣었습니다.');
+  }
+  if (c.입금틈 && c.입금틈.건수) {
+    미분류줄.push(
+      '아직 분류하지 않은 입금 ' +
+        won(c.입금틈.건수) +
+        '건 · ' +
+        won(c.입금틈.합) +
+        '원(직전 30일)은 예상 입금에 넣지 않았습니다.'
     );
   }
+  if (미분류줄.length) box.appendChild(el('div', 'duewhy dueas', 미분류줄.join(' ')));
   drawDueHeldPlans(months, c, box);
   /* ★ 102차. 계좌마다 마지막 거래일이 다르면 그 사실을 말한다. 같으면 안 나온다.
      ★ 계좌를 지목하지 않는다 — 이름이 「계좌 2」인 경우가 있어 지목해도 뜻이 없다.
@@ -2123,9 +2233,7 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
     box.appendChild(t);
     /* ★ 단정하지 않는다 — 「모자랍니다」가 아니라 「모자랄 수 있습니다」 (마스터 ■2) */
     if (cv && cv.모자람 > 0) {
-      box.appendChild(
-        el('div', 'duewhy', cv.최저날 + '에 ' + won(cv.모자람) + '원이 모자랄 수 있습니다')
-      );
+      box.appendChild(el('div', 'duewhy', dueShortText(c, cv.최저날, cv.모자람)));
     } else if (cv && cv.바닥) {
       box.appendChild(
         el(
@@ -2228,13 +2336,13 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
    ★ 미래의 확정 잔액이나 지금 쓸 수 있는 돈으로 부르지 않는다. 「예상」을 뗀 이름을 안 쓴다.
    ★ 비교 자료가 모자라 다음 달 중간까지만 계산했으면 그 범위를 이름에 적는다.
      다음 달에 아예 닿지 못했으면(월 === null) 아무 말도 안 한다 — 잘림 줄이 까닭을 말한다 */
-function drawDueNextLow(c, 월, box) {
+function drawDueNextLow(c, 월, box, cv) {
   if (!월) return;
   var mm = +월.달.slice(5, 7);
-  var 범위 = 월.전부
-    ? mm + '월 중'
-    : mm + '월 1일 ~ ' + 날글(new Date(월.계산끝 * 86400000).toISOString().slice(0, 10)) + ' 중';
-  var 날 = 날글(new Date(월.날수 * 86400000).toISOString().slice(0, 10));
+  /* ★ NAM-9 배포 전 보완. 오래된 자료면 「9월」이 올해 9월로 읽히지 않게 해를 붙인다 */
+  var 달이름 = (dueIsOld(c) ? 월.달.slice(0, 4) + '년 ' : '') + mm + '월';
+  var 범위 = 월.전부 ? 달이름 + ' 중' : 달이름 + ' 1일 ~ ' + 날글(날짜값(월.계산끝)) + ' 중';
+  var 날 = 날글(날짜값(월.날수));
   var low = el('div', 'duenext');
   low.appendChild(el('div', 'duenextday', 범위 + ' 잔액이 가장 적을 것으로 예상되는 날: ' + 날));
   var 값줄 = el('div', 'duenextval');
@@ -2244,5 +2352,44 @@ function drawDueNextLow(c, 월, box) {
   if (월.갈래 === '입금전') {
     low.appendChild(el('div', 'duenextsub', '당일 출금 후 입금 전 기준'));
   }
+  /* ★ NAM-9 배포 전 보완. 임시 참고 범위 — 중심값 ± 다음 달 예상 출금 합계 × 0.5 (dueNextMonthRangeIn).
+     ★ 하한이 음수여도 자르지 않는다. 경고색을 안 쓴다 — 하한만으로 부족이 정해진 것이 아니다.
+     ★ 80%·적중률·신뢰구간 같은 말을 안 쓴다. 한 달 뒤 잔액 오차로 정한 임시 폭이다 */
+  var rg = null;
+  try {
+    rg = dueNextMonthRangeIn(c, cv, 월);
+  } catch (e) {}
+  if (rg) {
+    var r = el('div', 'duerange');
+    var 머리 = el('div', 'duerangeval');
+    머리.appendChild(document.createTextNode('임시 참고 범위: '));
+    머리.appendChild(el('b', null, won(rg.하한) + '원 ~ ' + won(rg.상한) + '원'));
+    머리.appendChild(document.createTextNode(' · ' + 주글(rg.주시작, rg.주끝) + ' 무렵'));
+    r.appendChild(머리);
+    var 설명 =
+      '예상 출금액을 기준으로 임시로 넓혀 표시한 참고 범위입니다. ' +
+      '예상에 없는 큰 입출금이 있으면 범위를 벗어날 수 있습니다. ' +
+      '실제로 가장 낮아지는 시점은 다른 주일 수 있습니다.';
+    if (!월.전부) {
+      설명 += ' ' + 달이름 + ' 1일 ~ ' + 날글(날짜값(월.계산끝)) + '의 예상 출금으로 넓혔습니다.';
+    }
+    r.appendChild(el('div', 'duenextsub', 설명));
+    if (rg.하한 < 0) {
+      r.appendChild(
+        el(
+          'div',
+          'duenextsub',
+          '음수는 예상대로 돈이 들어오고 나갈 경우, 계좌의 돈이 부족할 수 있다는 뜻입니다.'
+        )
+      );
+    }
+    low.appendChild(r);
+  }
   box.appendChild(low);
+}
+/* 주의 실제 날짜 범위 — 「9월 4일~10일」, 달이 바뀌면 「9월 29일~10월 5일」 */
+function 주글(a, b) {
+  var x = 날짜값(a),
+    y = 날짜값(b);
+  return 날글(x) + '~' + (x.slice(5, 7) === y.slice(5, 7) ? +y.slice(8, 10) + '일' : 날글(y));
 }

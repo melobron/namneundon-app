@@ -778,9 +778,11 @@ function drawUnsetShiftLine(months, host, d, unsetAmt) {
        문장은 회색으로 낮추고 금액 둘만 호박 굵게 — 눈이 숫자로 먼저 간다.
        ★ 글자는 한 글자도 안 바꾼다. 마디만 나눈다 */
     var er = el('div', 'errline tapx');
-    er.appendChild(document.createTextNode('▾ 아직 안 정한 ' + won(d.unknownN || 0) + '건 '));
+    /* ★ NAM-9 배포 전 보완. 분류가 덜 된 숫자를 완성된 실적으로 읽지 않게,
+       위 숫자에 무엇이 빠졌는지를 먼저 말한다. 금액·범위 값은 그대로다 */
+    er.appendChild(document.createTextNode('▾ 아직 분류하지 않은 ' + won(d.unknownN || 0) + '건 '));
     er.appendChild(el('b', 'errnum', won(unsetAmt) + '원'));
-    er.appendChild(document.createTextNode(' 때문에 '));
+    er.appendChild(document.createTextNode('은 위 숫자에 넣지 않았습니다. 분류에 따라 '));
     er.appendChild(el('b', 'errnum', won(d.lo) + '원까지'));
     er.appendChild(document.createTextNode(' 내려갈 수 있습니다'));
     er.addEventListener('click', function () {
@@ -814,14 +816,22 @@ function drawBalanceRow(months, host, d, full, calcRow) {
     months,
     host,
     '__bal',
-    (full ? +UP.month.slice(5, 7) + '월 말' : '현재') + ' 계좌 잔액',
+    /* ★ NAM-9 배포 전 보완. 「현재」는 오늘 잔액으로 읽힌다 — 자료의 마지막 날짜를 적는다 */
+    (full
+      ? +UP.month.slice(5, 7) + '월 말'
+      : +UP.month.slice(5, 7) + '월 ' + lastDayIn(UP.month) + '일') + ' 계좌 잔액',
     won(d.close),
     null,
     function () {
       host.appendChild(calcRow('　' + +UP.month.slice(5, 7) + '월 1일', won(d.open)));
       host.appendChild(calcRow('　들어온 돈', won(d.inTotal)));
       host.appendChild(calcRow('　나간 돈', won(d.outTotal)));
-      host.appendChild(calcRow('　' + (full ? '월말' : '현재'), won(d.close)));
+      host.appendChild(
+        calcRow(
+          '　' + (full ? '월말' : +UP.month.slice(5, 7) + '월 ' + lastDayIn(UP.month) + '일'),
+          won(d.close)
+        )
+      );
       if (UP.banks && UP.banks.length > 1) {
         var per = [];
         UP.banks.forEach(function (b, i) {

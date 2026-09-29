@@ -125,7 +125,45 @@ test('한 계좌 — 다른 계좌로 보낸 미분류 출금을 근거 없이 �
   // 화면에도 추가 분류 없이 그래프와 안내가 선다
   await expect(page.locator('#up-result .duecard .duegraph svg')).toHaveCount(1);
   await expect(
-    page.getByText(/아직 분류하지 않은 출금 [\d,]+건도 예상 출금에 넣었습니다/)
+    page.getByText(/아직 분류하지 않은 출금 [\d,]+건은 예상 출금에 넣었습니다/)
   ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+// NAM-9 배포 전 보완: 거래처를 하나도 정하지 않아도 결과를 볼 수 있다.
+// 매출 입금이 모두 미분류면 예측 입금을 0원으로 두지 않고 예측만 보류한다 — 실적은 그대로 보인다
+test('분류 0곳 — 결과로 갈 수 있고, 매출이 분류되지 않았으면 예측만 보류한다', async ({ page }) => {
+  const errors = await openApp(page);
+  const file = await demoAsBankXlsx(page);
+  await page.getByRole('button', { name: '식당' }).click();
+  await page.locator('input[type=file]').first().setInputFiles(file);
+  await page.getByRole('button', { name: '이 파일들로 시작하기' }).click();
+  await page.getByPlaceholder('예: 1호점').fill('테스트식당');
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await page.getByPlaceholder('예: 홍길동').fill('홍길동');
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await page.getByRole('button', { name: '파일 없이 직접 정하기' }).click();
+  await page.getByRole('button', { name: '분류는 나중에 하고 결과 보기' }).click();
+  await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.getByText(/은 위 숫자에 넣지 않았습니다/)).toBeVisible();
+
+  // 자동으로 매출이 된 거래처를 미분류로 되돌린다 — 매출 입금이 모두 분류되지 않은 매장을 만든다
+  const r = await page.evaluate(() => {
+    UP.payees.forEach((g) => {
+      if (g.cat === '매출' || g.catIn === '매출') unsetCatQuiet(g);
+    });
+    dueFresh();
+    const c = dueCard();
+    goMonth(UP.month);
+    return { 입금보류: !!(c && c.입금보류), 건수: c && c.입금보류 ? c.입금보류.건수 : 0 };
+  });
+  expect(r.입금보류).toBe(true);
+  expect(r.건수).toBeGreaterThan(0);
+  await expect(
+    page.getByText('직전 30일에 매출로 분류한 입금이 없어 예상 입금을 계산하지 않았습니다.')
+  ).toBeVisible();
+  await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
+  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
   expect(errors).toEqual([]);
 });

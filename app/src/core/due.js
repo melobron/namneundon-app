@@ -1216,6 +1216,14 @@ function dueCardIn(U, E) {
      ★ 보류면 과거 견주기(duePast)도 하지 않는다 — 안 보여줄 숫자를 만들지 않는다 */
   now.보류 = dueHoldIn(U, t, i, now.남은날수);
   if (now.보류) return now;
+  /* ★ NAM-9 배포 전 보완. 직전 30일에 「매출」로 정한 입금이 하나도 없는데 아직 분류하지 않은
+     입금이 있으면 예상 입금을 0원으로 두고 예측하지 않는다 — 매출 입금이 미분류로 남아 있을 수 있다.
+     미분류 입금을 매출로 치지 않는다. 숫자를 안 내고 까닭만 알린다 */
+  now.입금틈 = dueInflowGapIn(U, t, i);
+  if (now.입금틈.매출30 <= 0 && now.입금틈.건수 > 0) {
+    now.입금보류 = now.입금틈;
+    return now;
+  }
   /* ★ NAM-9 후속. 예측에 들어간 미분류 출금 — 카드가 건수를 한 줄로 알린다 */
   now.미분류 = dueUnsetUsedIn(U, t, i, now.남은날수);
   if (now.배 === null) return null;
@@ -1291,7 +1299,7 @@ function dueCardIn(U, E) {
    ★ months 는 이제 안 쓴다 — 뒤 회차의 「종료일 뒤 저점」이 쓸 자리라 남겨 둔다 */
 function dueCurveIn(U, E, months, c) {
   /* ★ 116차 앞 ③. 카드와 같은 보류 상태를 쓴다. 보류면 곡선을 아예 안 만든다 */
-  if (!c || c.보류 || c.잔액 === null) return null;
+  if (!c || c.보류 || c.입금보류 || c.잔액 === null) return null;
   var t = E.table();
   if (!t || !t.n) return null;
   var 시작 = dayNum(c.오늘),
@@ -1467,6 +1475,79 @@ function dueNextMonthLowIn(c, pts) {
     계산끝: 계산끝,
     전부: 계산끝 === 끝
   };
+}
+/* ── NAM-9 배포 전 보완 (2026-09-29 요한) · 다음 달 최저 예상 잔액의 임시 참고 범위 ──────
+   중심값 = 다음 달 1일 ~ 말일 안의 최저 예상 잔액 (dueNextMonthLowIn 의 값)
+   반폭   = 다음 달 예상 출금 합계 × 0.5
+   ★ 「다음 달 예상 출금 합계」는 다음 달 1일 ~ 계산된 마지막 날의 하루 출금(cv.출일)만 더한다.
+     기준일 다음 날부터의 전체 출금(c.나갈)과 다르다 — 이번 달 남은 날은 안 넣는다.
+   ★ 하한이 음수여도 0원으로 자르지 않는다.
+   ★ 한 달 뒤 잔액 오차를 보고 정한 임시 폭이다. 기간 중 최저 잔액까지 검증된 범위가 아니다 —
+     화면에서 신뢰구간·적중률처럼 부르지 않는다.
+   ★ 날짜는 최저 예상일이 든 주(월요일 ~ 일요일)다. 달이 바뀌어도 그 주의 실제 날짜를 그대로 쓴다 */
+var DUE_RANGE_HALF = 0.5;
+function dueWeekOf(n) {
+  var 요일 = (n + 4) % 7; /* 0 = 일요일 (1970-01-01 은 목요일) */
+  var 시작 = n - ((요일 + 6) % 7);
+  return { 시작: 시작, 끝: 시작 + 6 };
+}
+function dueNextMonthRangeIn(c, cv, 월) {
+  if (!c || !cv || !cv.출일 || !월) return null;
+  var 시작 = dayNum(c.오늘),
+    출합 = 0;
+  for (var i = 0; i < cv.출일.length; i++) {
+    var 날 = 시작 + 1 + i;
+    if (날 >= 월.첫날 && 날 <= 월.계산끝) 출합 += cv.출일[i];
+  }
+  var 반폭 = Math.round(출합 * DUE_RANGE_HALF);
+  var 주 = dueWeekOf(월.날수);
+  return {
+    중심: 월.값,
+    출합: 출합,
+    반폭: 반폭,
+    하한: 월.값 - 반폭,
+    상한: 월.값 + 반폭,
+    주시작: 주.시작,
+    주끝: 주.끝
+  };
+}
+/* ── NAM-9 배포 전 보완 · 직전 30일 입금 가운데 아직 분류하지 않은 것 ──────────────
+   ★ 예측 입금은 「매출」로 정한 거래만 센다 (dueInflowIn). 매출 입금이 아직 분류되지 않았으면
+     예측 입금이 그만큼 빠진다. 그 규모를 알려 주려고 센다 — 예측에 넣지는 않는다.
+   ★ 창은 dueInflowIn 과 같다 — 기준일 포함 직전 30일. 확인된 이체는 뺀다 */
+function dueInflowGapIn(U, t, i) {
+  var t0 = t.num[i],
+    j,
+    매출30 = 0,
+    건 = 0,
+    합 = 0;
+  for (j = 0; j < t.n; j++) {
+    if (t.num[j] <= t0 - 30) continue;
+    if (t.num[j] > t0) break;
+    매출30 += t.cs[j + 1] - t.cs[j];
+  }
+  (U.rows || []).forEach(function (r) {
+    if (!(r.amount > 0)) return;
+    var d = dayNum(r.at.slice(0, 10));
+    if (d <= t0 - 30 || d > t0) return;
+    if (xferOnIn(U, r)) return;
+    if (catOfIn(U, r) !== UNSET) return;
+    건++;
+    합 += r.amount;
+  });
+  return { 매출30: 매출30, 건수: 건, 합: 합 };
+}
+/* 곡선(그래프)이 안 나오는 까닭 — dueCurveIn 의 문턱을 그대로 따라 읽는다 (새 문턱을 안 만든다) */
+function dueCurveWhyIn(U, E, c) {
+  if (!c || c.보류 || c.입금보류) return '보류';
+  if (c.잔액 === null) return '잔액';
+  var 남은날수 = dayNum(c.목표) - dayNum(c.오늘);
+  if (남은날수 <= 1) return '짧음';
+  var t = E.table();
+  var dd = dueDailyUseIn(U, E, t, c.i).dd;
+  if (!dd || 남은날수 > dd.한계) return '표본';
+  if (dd.셈[0] < FC_MIN_MONTHS) return '3개월';
+  return null;
 }
 /* 자료에 적힌 실제 잔액 — 지나온 쪽이다. 예측이 아니다.
    ★ 새로 계산하지 않는다. dueTable 이 이미 날마다 들고 있는 값을 잘라 쓴다.

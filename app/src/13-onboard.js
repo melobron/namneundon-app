@@ -2016,7 +2016,20 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
 
 function appendReachedResult(reached, host) {
   if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
-  if (!reached) return;
+  if (!reached) {
+    /* ★ NAM-9 배포 전 보완 (2026-09-29 요한). 분류를 다 해야 결과로 갈 수 있게 막지 않는다.
+       목표 전에도 결과를 볼 수 있다 — 아직 분류하지 않은 거래는 결과 화면이 따로 알린다.
+       ★ 주 행동은 지금 거래처를 정하는 것이다. 이 단추는 한 단계 낮은 모양으로 둔다 */
+    var later = el('button', 'b', '분류는 나중에 하고 결과 보기');
+    later.type = 'button';
+    later.style.marginTop = '12px';
+    later.addEventListener('click', function () {
+      useScreen('분류 나중에 결과 보기');
+      showResult();
+    });
+    host.appendChild(later);
+    return;
+  }
   var resultGo = el('button', 'b on big', '결과 보기');
   resultGo.type = 'button';
   resultGo.style.marginTop = '12px';

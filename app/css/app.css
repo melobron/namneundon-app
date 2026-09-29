@@ -4568,6 +4568,20 @@ footer {
   font-size: calc(12 * var(--fu));
   color: var(--gray);
 }
+/* ★ NAM-9 배포 전 보완. 임시 참고 범위 — 다음 달 최저 줄 아래 한 덩어리. 경고색을 안 쓴다 */
+.duerange {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--dueline);
+}
+.duerangeval b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* 오래된 자료로 낸 예상 — 사실을 알리는 줄이라 본문 글자색으로 둔다 */
+.duecard .dueold {
+  color: var(--ink);
+}
 /* 카드 안 그래프. 아이콘 자리(왼쪽 54px)까지 폭을 써서 폰에서 선이 눌리지 않게 한다 */
 .duegraph {
   margin-top: 12px;

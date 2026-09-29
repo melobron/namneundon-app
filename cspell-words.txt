@@ -184,12 +184,15 @@ dueline
 duelow
 duenone
 duenonelist
+dueold
 duenext
 duenextday
 duenextsub
 duenextval
 duepct
 duepick
+duerange
+duerangeval
 dueres
 duereslab
 duesec
