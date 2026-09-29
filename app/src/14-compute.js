@@ -114,7 +114,11 @@ function xferSavedKeys(yes) {
   for (k in carry) if (Object.prototype.hasOwnProperty.call(carry, k)) out[k] = 1;
   var m = xferPairsByKey();
   for (k in m)
-    if (Object.prototype.hasOwnProperty.call(m, k) && m[k].length === 1) {
+    if (
+      Object.prototype.hasOwnProperty.call(m, k) &&
+      m[k].length === 1 &&
+      xferPairStableIn(UP, m[k][0]) /* 계좌를 가를 수 없으면 남기지 않는다 — 다음에 다시 묻는다 */
+    ) {
       var 답 = xferAnswer(m[k][0]);
       if (답 === (yes ? 'yes' : 'no')) out[k] = 1;
     }
@@ -130,9 +134,8 @@ function xferNoKeys() {
    ① xferOk · xferNo: 지금 후보 가운데 그 키에 맞는 쌍이 정확히 하나일 때만 답을 붙인다.
       둘 이상이면(같은 은행 두 계좌 · 같은 시각 · 같은 행번호 · 같은 거래처) 붙이지 않고 다시 묻는다.
       같은 쌍에 두 답이 다 있으면 어느 쪽도 붙이지 않는다.
-   ② xferOk 칸이 없는 옛 저장본: 옛 줄 키(xfer)로 되살리되, 두 줄 키가 각각 지금 자료의 한 줄에만 맞고
-      그 두 줄이 지금도 후보 한 쌍이며, 같은 은행 계좌가 둘 이상인 계좌가 끼지 않을 때만 붙인다.
-      옛 판처럼 키에 맞는 줄을 모두 빼지 않는다.
+      그리고 쌍의 두 계좌를 안정적으로 가를 수 있을 때만(xferPairStableIn) 붙인다.
+   ② 옛 줄 키(xfer)는 자동으로 적용하지 않는다 — 계좌를 가를 정보가 없다. 들고만 있다가 다시 남긴다.
    ★ 원본 거래 · 분류는 건드리지 않는다. 맞지 않은 키는 버리지 않고 들고 있다가 다시 남긴다 */
 function applyXferSaved(o) {
   if (!UP || !o) return;
@@ -158,47 +161,32 @@ function applyXferSaved(o) {
     if (!Object.prototype.hasOwnProperty.call(m, k) || m[k].length !== 1) continue;
     if (예[k] && 아니오[k]) continue;
     var p = m[k][0];
+    if (!xferPairStableIn(UP, p)) continue; /* 계좌를 가를 수 없으면 되살리지 않는다 */
     if (예[k]) {
       UP.xfer[rowId(p.out)] = 1;
       UP.xfer[rowId(p.into)] = 1;
     } else if (아니오[k]) UP.xferNo[xferPairIdIn(UP, p)] = 1;
   }
-  if (ok || !Array.isArray(o.xfer) || !o.xfer.length) return;
-  /* ② 옛 저장본 */
-  var 옛 = {},
-    셈 = {};
-  o.xfer.forEach(function (x) {
-    옛[x] = 1;
-  });
-  (UP.rows || []).forEach(function (r) {
-    var x = xferKey(r);
-    if (옛[x]) 셈[x] = (셈[x] || 0) + 1;
-  });
-  /* ★ 옛 줄 키에는 은행 이름이 들어 있다. 같은 은행 계좌가 둘이면 앱이 올린 차례대로 「국민은행 1 · 2」
-     (은행을 모르면 「계좌 1 · 2」)로 번호를 붙이므로, 차례가 바뀌면 키가 다른 계좌의 줄을 가리킬 수 있다.
-     그런 계좌가 낀 쌍은 옛 키로 되살리지 않고 다시 묻는다 */
-  var 밑 = {};
-  (UP.banks || []).forEach(function (bk) {
-    var n = String((bk && bk.bank) || '').replace(/\s+\d+$/, '');
-    밑[n] = (밑[n] || 0) + 1;
-  });
-  var 번호계좌 = function (r) {
-    var bk = UP.banks && UP.banks[r.acc || 0];
-    return 밑[String((bk && bk.bank) || '').replace(/\s+\d+$/, '')] > 1;
-  };
-  findTransfers().forEach(function (p) {
-    var a = xferKey(p.out),
-      b = xferKey(p.into);
-    if (번호계좌(p.out) || 번호계좌(p.into)) return;
-    if (셈[a] !== 1 || 셈[b] !== 1) return; /* 한 줄에만 맞아야 한다 */
-    if (xferNoIn(UP, p)) return;
-    UP.xfer[rowId(p.out)] = 1;
-    UP.xfer[rowId(p.into)] = 1;
-  });
+  /* ② 옛 줄 키(xfer: 날짜 | 은행 이름 | 행번호)에는 계좌를 가를 정보가 없다 — 은행 이름은 같은 은행 계좌가 둘이면
+     올린 차례로 붙은 「국민은행 1 · 2」다. 검증방 지적대로 자동으로 적용하지 않고 다시 묻는다.
+     키는 버리지 않고 들고 있다가 그대로 다시 남긴다 (옛 판과의 호환) */
+  UP.xferCarryLegacy = UP.xferCarryLegacy || {};
+  if (Array.isArray(o.xfer))
+    o.xfer.forEach(function (x) {
+      if (typeof x === 'string' && x) UP.xferCarryLegacy[x] = 1;
+    });
 }
-/* 계산은 core/compute.js 의 xferKeysIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
+/* 계산은 core/compute.js 의 xferKeysIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e).
+   ★ 들고 있던 옛 줄 키도 같이 남긴다 — 자동으로 쓰지는 않지만 지우지도 않는다 */
 function xferKeys() {
-  return xferKeysIn(UP);
+  var out = {};
+  xferKeysIn(UP).forEach(function (k) {
+    out[k] = 1;
+  });
+  Object.keys((UP && UP.xferCarryLegacy) || {}).forEach(function (k) {
+    out[k] = 1;
+  });
+  return Object.keys(out).sort();
 }
 /* 계산은 core/compute.js 의 bankNameIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function bankName(i) {

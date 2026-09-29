@@ -183,3 +183,67 @@ test('키가 한 쌍에만 맞으면 — 저장 · 재열기 · 파일 차례를
   ]);
   expect(errors).toEqual([]);
 });
+
+// 검증방 지적 (두 번째): 계좌를 안정적으로 가를 수 없으면 저장된 답을 자동으로 되살리지 않는다.
+// 이번 화면의 판단은 쓰되, 다음 파일 읽기에서는 다시 묻는다. 「맞음」 · 「아님」 모두.
+test('같은 은행 두 계좌 중 한 계좌 파일만 다시 올리면 — 답이 다른 계좌로 옮겨 붙지 않는다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  // 국민 두 계좌 (이름에 숫자 없음 → 계좌 열쇠가 서로 다르다). 개인 계좌 파일은 사업자 계좌와 거래 줄이 똑같다
+  const 사업자 = await bankFile(page, '국민은행 사업자.xlsx', 100000, 200000);
+  const 개인 = await bankFile(page, '국민은행 개인.xlsx', 100000, 200000);
+  const 신한 = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
+  await toResult(page, [사업자, 신한]);
+  await page.evaluate(() => {
+    const ps = findTransfers().sort((x, y) => x.amount - y.amount);
+    takeXfer([ps[0]]);
+    markNotXfer(ps[1]);
+  });
+  const 분류 = await page.evaluate(() => UP.payees.map((g) => [g.name, g.cat || null]));
+  await reopen(page);
+  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']); // 같은 계좌면 되살린다
+
+  // 다른 국민 계좌 파일만 다시 올린다 — 시각 · 행번호 · 거래처가 같아도 계좌가 달라 붙지 않는다
+  await page.goto('/');
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await toResult(page, [개인, 신한]);
+  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  // 원본 거래 · 분류는 그대로다 (같은 이름 거래처의 분류가 바뀌지 않았다)
+  const 뒤분류 = await page.evaluate(() => UP.payees.map((g) => [g.name, g.cat || null]));
+  for (const [n, c] of 분류) {
+    const x = 뒤분류.find((y) => y[0] === n);
+    if (x) expect(x[1]).toBe(c);
+  }
+  expect(errors).toEqual([]);
+});
+
+test('파일 이름에 숫자가 있으면 계좌를 가를 수 없다 — 이번 화면에서만 쓰고 다음에 다시 묻는다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  const a1 = await bankFile(page, '국민은행_1111.xlsx', 100000, 200000);
+  const a2 = await bankFile(page, '국민은행_2222.xlsx', 100000, 200000);
+  const 신한 = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
+  await toResult(page, [a1, 신한]);
+  await page.evaluate(() => {
+    const ps = findTransfers().sort((x, y) => x.amount - y.amount);
+    takeXfer([ps[0]]);
+    markNotXfer(ps[1]);
+  });
+  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']); // 이번 화면에서는 쓴다
+  const 저장 = await page.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
+    return JSON.parse(localStorage.getItem(k));
+  });
+  expect(저장.xferOk).toEqual([]);
+  expect(저장.xferNo).toEqual([]);
+  await reopen(page);
+  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  // 숫자만 다른 다른 계좌 파일을 올려도 붙지 않는다
+  await page.goto('/');
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await toResult(page, [a2, 신한]);
+  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  expect(errors).toEqual([]);
+});

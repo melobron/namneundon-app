@@ -1143,6 +1143,9 @@ function importApply(o, 자리) {
     xferNo: UP.xferNo ? JSON.parse(JSON.stringify(UP.xferNo)) : UP.xferNo,
     xferCarryOk: UP.xferCarryOk ? JSON.parse(JSON.stringify(UP.xferCarryOk)) : UP.xferCarryOk,
     xferCarryNo: UP.xferCarryNo ? JSON.parse(JSON.stringify(UP.xferCarryNo)) : UP.xferCarryNo,
+    xferCarryLegacy: UP.xferCarryLegacy
+      ? JSON.parse(JSON.stringify(UP.xferCarryLegacy))
+      : UP.xferCarryLegacy,
     queue: UP.queue,
     pos: UP.pos,
     hist: UP.hist,
@@ -1196,6 +1199,7 @@ function importApply(o, 자리) {
     UP.xferNo = 전.xferNo;
     UP.xferCarryOk = 전.xferCarryOk;
     UP.xferCarryNo = 전.xferCarryNo;
+    UP.xferCarryLegacy = 전.xferCarryLegacy;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
     if (tradeNow() !== 전.trade) setTrade(전.trade);
     전.g.forEach(function (v) {
