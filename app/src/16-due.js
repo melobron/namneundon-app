@@ -303,7 +303,7 @@ function drawDueHoldCard(host, c, months) {
     });
     box.appendChild(pgo);
   }
-  dueOldNote(c, box);
+  /* 보류 카드에는 「계산한 예상입니다」 줄을 안 붙인다 — 계산하지 않았다. 과거 자료라는 사실은 머리가 말한다 */
   if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
   /* ★ 어디까지의 비교 날짜를 보고 판단했는지는 접든 펴든 같은 무게다 (105차 ③) */
   if (c.잘림) {
