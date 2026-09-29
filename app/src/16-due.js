@@ -1660,9 +1660,14 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
        둘이 포개져 아무것도 안 읽힌다 (실측 — 9월 10일에 둘 다 섰다).
        놓은 자리를 기억해 두고, 겹치면 아래로 밀어 내린다 */
     var 놓은 = [];
-    function 알약(dx, vy, 글, 색, 아래로) {
-      var pw = Math.ceil(textW(글, 11)) + 16,
-        ph = 20;
+    /* ★ 2026-09-29 요한 확정 — 다음 달 계산상 최저가 그래프에서 가장 눈에 띄어야 한다.
+       굵기 '강' 은 최저(크게 · 채움), '약' 은 월말(작게 · 테두리만 · 회색 글씨) */
+    function 알약(dx, vy, 글, 색, 아래로, 굵기) {
+      var 강 = 굵기 === '강',
+        약 = 굵기 === '약';
+      var fs = 강 ? 12 : 약 ? 10 : 11;
+      var pw = Math.ceil(textW(글, fs)) + (강 ? 20 : 14),
+        ph = 강 ? 24 : 약 ? 18 : 20;
       var px = dx - pw / 2;
       if (px < LEFT) px = LEFT;
       if (px + pw > W - 1) px = W - 1 - pw;
@@ -1695,14 +1700,30 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
           })
         );
       }
-      svg.appendChild(svgEl('rect', { x: px, y: py, width: pw, height: ph, rx: 10, fill: 색 }));
+      svg.appendChild(
+        svgEl(
+          'rect',
+          약
+            ? {
+                x: px,
+                y: py,
+                width: pw,
+                height: ph,
+                rx: ph / 2,
+                fill: 'var(--paper)',
+                stroke: 'var(--line)',
+                'stroke-width': 1
+              }
+            : { x: px, y: py, width: pw, height: ph, rx: ph / 2, fill: 색 }
+        )
+      );
       var tt = svgEl('text', {
         x: px + pw / 2,
-        y: py + 14,
+        y: py + (강 ? 16.5 : 약 ? 12.5 : 14),
         'text-anchor': 'middle',
-        'font-size': '11',
-        'font-weight': '700',
-        fill: 'var(--paper)'
+        'font-size': String(fs),
+        'font-weight': 약 ? '600' : '700',
+        fill: 약 ? 'var(--gray)' : 'var(--paper)'
       });
       tt.textContent = 글;
       svg.appendChild(tt);
@@ -1730,13 +1751,24 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       }
     }
     if (최저점) {
+      var 최저색 = 최저값 < 0 ? 'var(--warn)' : 'var(--brand)';
+      /* 둘레에 옅은 고리를 깔고 점을 채운다 — 월말 점(속이 빈 작은 점)과 한눈에 갈린다 */
       svg.appendChild(
         svgEl('circle', {
           cx: X(최저점.날),
           cy: Y(최저점.값),
-          r: 3.6,
-          fill: 'var(--paper)',
-          stroke: 최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
+          r: 10,
+          fill: 최저색,
+          opacity: '0.18'
+        })
+      );
+      svg.appendChild(
+        svgEl('circle', {
+          cx: X(최저점.날),
+          cy: Y(최저점.값),
+          r: 5,
+          fill: 최저색,
+          stroke: 'var(--paper)',
           'stroke-width': 2
         })
       );
@@ -1753,8 +1785,9 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
               '월 계산상 최저 ' +
               dueWon(최저값) +
               (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
-        최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
-        true
+        최저색,
+        true,
+        '강'
       );
     }
     /* 끝값 — 최저와 같은 자리면 알약을 겹쳐 놓지 않는다 */
@@ -1765,14 +1798,15 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       svgEl('circle', {
         cx: X(끝점.날),
         cy: Y(끝점.값),
-        r: 3.2,
+        r: 2.6,
         fill: 'var(--paper)',
         stroke: 끝색,
-        'stroke-width': 2
+        'stroke-width': 1.5
       })
     );
+    /* ★ 월말은 보조 정보다 — 작은 회색 테두리 알약 (최저보다 눈에 띄지 않게) */
     if (!같자리) {
-      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + dueWon(c.예상), 끝색, true);
+      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + dueWon(c.예상), 끝색, true, '약');
     }
     /* 날짜 줄 — 양 끝과 기준일 */
     [
@@ -2037,15 +2071,6 @@ function drawDueCard(host, months) {
   /* ★ NAM-9 (2026-09-29 요한). 머리에 실제 날짜와 달을 적는다 — 「다음 달」만 쓰지 않는다.
      「8월 22일 자료 기준 · 9월 말까지 예상 잔액」.
      ★ 이 한 줄이 자료 기준일을 말하므로 따로 서던 「자료 기준일 ○월 ○일」 줄은 뺐다 (같은 날을 두 줄에 안 적는다) */
-  var top = el('div', 'duetop tapx');
-  var res = el('div', 'dueres');
-  res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-  res.appendChild(el('div', 'duresnum', dueWon(c.예상)));
-  top.appendChild(res);
-  top.appendChild(foldChip(open));
-  box.appendChild(top);
-  dueOldNote(c, box);
-
   /* ★ NAM-9. 다음 달 1일 ~ 말일 가운데 잔액이 가장 적을 것으로 예상되는 날.
      이번 달을 포함한 전체 기간의 최저(cv.최저)와 섞지 않는다 */
   var pts;
@@ -2055,7 +2080,38 @@ function drawDueCard(host, months) {
     pts = null;
   }
   var 월 = pts ? dueNextMonthLow(c, pts) : null;
-  drawDueNextLow(c, 월, box, cv);
+  var rg = null;
+  try {
+    rg = 월 ? dueNextMonthRangeIn(c, cv, 월) : null;
+  } catch (e) {}
+  /* ★ 2026-09-29 요한 확정 — 맨 위 큰 칸의 주인공은 「다음 달 최저 예상 잔액」이다.
+     임시 참고 범위(±30%, 원 단위)와 주 단위 시기를 적는다. 월말 예상 잔액은 「자세히」로 내린다.
+     ★ 다음 달에 닿지 못해 범위가 없으면 예전처럼 월말 예상 잔액을 적는다 — 빈칸으로 두지 않는다 */
+  var top = el('div', 'duetop tapx');
+  var res = el('div', 'dueres');
+  if (rg) {
+    res.appendChild(el('div', 'duereslab', dueLowLabel(c, 월)));
+    var 금액 = el('div', 'duresnum duereslow');
+    금액.appendChild(el('span', null, dueWon(rg.하한) + ' ~'));
+    금액.appendChild(document.createTextNode(' '));
+    금액.appendChild(el('span', null, dueWon(rg.상한)));
+    res.appendChild(금액);
+    res.appendChild(
+      el(
+        'div',
+        'dueresday',
+        '가장 낮은 시기: ' + 주글(rg.주시작, rg.주끝) + ' 무렵 · 임시 참고 범위'
+      )
+    );
+  } else {
+    res.appendChild(el('div', 'duereslab', dueSpanText(c)));
+    res.appendChild(el('div', 'duresnum', dueWon(c.예상)));
+  }
+  top.appendChild(res);
+  top.appendChild(foldChip(open));
+  box.appendChild(top);
+  dueOldNote(c, box);
+  drawDueNextLow(c, 월, box, rg);
   /* ★ 이번 달 남은 날에 잔액이 0원 밑으로 내려갈 수 있으면 그 사실은 늘 보인다.
      다음 달 최저만 보여주면 그보다 앞선 날의 모자람이 가려진다 */
   if (cv && cv.모자람 > 0 && !(월 && cv.최저날수 >= 월.첫날)) {
@@ -2127,7 +2183,7 @@ function drawDueCard(host, months) {
     drawResult(months);
   });
   var 기준날인가 = !!(cv && cv.최저날수 === dayNum(c.오늘));
-  drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가, 월);
+  drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가, 월, rg);
   host.appendChild(box);
 }
 /* drawDueCard 에서 뺀 부분 (B-4) */
@@ -2199,8 +2255,18 @@ function drawDueHeldPlans(months, c, box) {
 }
 
 /* drawDueCard 에서 뺀 부분 (B-4) */
-function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가, 월) {
+function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가, 월, rg) {
   if (open) {
+    /* ★ 2026-09-29 요한 확정 — 월말 예상 잔액은 보조 정보다. 위 큰 칸이 다음 달 최저 범위일 때 여기로 내린다 */
+    if (rg) {
+      box.appendChild(
+        el(
+          'div',
+          'duewhy dueend',
+          (c.잘림 ? 날글(c.목표) : '월말(' + 날글(c.목표) + ')') + ' 예상 잔액: ' + dueWon(c.예상)
+        )
+      );
+    }
     /* ★ NAM-9 (2026-09-29). 여기 있던 분석 종료일 드롭다운(110차 ④)을 없앴다 —
        예상 기간은 묻지 않고 다음 달 말일까지로 정한다 */
     var t = el('div', 'duepick');
@@ -2343,9 +2409,9 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
 }
 
 /* ── NAM-9 · 다음 달 예상 잔액이 가장 낮은 시기 (검증방 지적 보완, 2026-09-29) ────────────
-   주된 표시는 **날짜 범위와 금액 범위**다 —
-     「9월 중 예상 잔액이 가장 낮은 시기: 9월 4일~10일 무렵」
-     「그 시기 예상 잔액: 4,850만원 ~ 10,225만원 (임시 참고 범위)」
+   주된 표시는 **날짜 범위와 금액 범위**다. 2026-09-29 요한 확정으로 카드 맨 위 큰 칸에 둔다 (drawDueCard) —
+     「8월 22일 자료 기준 · 9월 최저 예상 잔액」 「48,507,077원 ~ 102,242,103원」
+     「가장 낮은 시기: 9월 4일~10일 무렵 · 임시 참고 범위」. 월말 예상 잔액은 「자세히」로 내렸다
    ★ 계산상 최저일 하루와 중심값은 지우지 않고 「자세히」로 옮겼다 (drawDueLowDetail).
      하루 · 한 금액을 앞에 두면 확정된 날짜 · 금액처럼 읽힌다.
    ★ 계산 숫자는 그대로다 — 중심값 · 반폭 · 주 범위 모두 dueNextMonthRangeIn 이 낸 값이다.
@@ -2355,31 +2421,20 @@ function dueMonthName(c, 월) {
   /* 오래된 자료면 「9월」이 올해 9월로 읽히지 않게 해를 붙인다 */
   return (dueIsOld(c) ? 월.달.slice(0, 4) + '년 ' : '') + +월.달.slice(5, 7) + '월';
 }
-function drawDueNextLow(c, 월, box, cv) {
-  if (!월) return;
+/* 큰 칸 머리 — 「8월 22일 자료 기준 · 9월 최저 예상 잔액」. 다음 달 중간까지만 계산했으면 그 범위를 적는다 */
+function dueLowLabel(c, 월) {
   var 달이름 = dueMonthName(c, 월);
-  var 범위 = 월.전부 ? 달이름 + ' 중' : 달이름 + ' 1일 ~ ' + 날글(날짜값(월.계산끝)) + ' 중';
-  /* ★ 임시 참고 범위 — 중심값 ± 다음 달 예상 출금 합계 × 0.3 (dueNextMonthRangeIn).
-     ★ 하한이 음수여도 자르지 않는다. 경고색을 안 쓴다 — 하한만으로 부족이 정해진 것이 아니다.
-     ★ 80% · 적중률 · 신뢰구간 같은 말을 안 쓴다. 근거는 dueNextMonthRangeIn 주석 참고 */
-  var rg = null;
-  try {
-    rg = dueNextMonthRangeIn(c, cv, 월);
-  } catch (e) {}
-  if (!rg) return;
+  var 범위 = 월.전부 ? 달이름 : 달이름 + ' 1일 ~ ' + 날글(날짜값(월.계산끝)) + ' 중';
+  return dueSpanText(c).split(' · ')[0] + ' · ' + 범위 + ' 최저 예상 잔액';
+}
+/* ★ 임시 참고 범위 — 중심값 ± 다음 달 예상 출금 합계 × 0.3 (dueNextMonthRangeIn).
+   ★ 하한이 음수여도 자르지 않는다. 경고색을 안 쓴다 — 하한만으로 부족이 정해진 것이 아니다.
+   ★ 80% · 적중률 · 신뢰구간 같은 말을 안 쓴다. 근거는 dueNextMonthRangeIn 주석 참고
+   ★ 2026-09-29 요한 확정 — 범위와 시기는 맨 위 큰 칸(drawDueCard)으로 올렸다. 여기는 한계 안내만 둔다 */
+function drawDueNextLow(c, 월, box, rg) {
+  if (!월 || !rg) return;
+  var 달이름 = dueMonthName(c, 월);
   var low = el('div', 'duenext');
-  low.appendChild(
-    el(
-      'div',
-      'duenextday',
-      범위 + ' 예상 잔액이 가장 낮은 시기: ' + 주글(rg.주시작, rg.주끝) + ' 무렵'
-    )
-  );
-  var 값줄 = el('div', 'duenextval');
-  값줄.appendChild(document.createTextNode('그 시기 예상 잔액: '));
-  값줄.appendChild(el('b', null, dueWon(rg.하한) + ' ~ ' + dueWon(rg.상한)));
-  값줄.appendChild(document.createTextNode(' (임시 참고 범위)'));
-  low.appendChild(값줄);
   var 설명 =
     /* ★ 요한 승인 문구 두 문장은 글자 그대로 둔다 */
     '이 범위는 예상 출금액을 기준으로 임시로 넓혀 표시한 참고 범위입니다. ' +

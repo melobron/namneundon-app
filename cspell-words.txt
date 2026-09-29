@@ -652,3 +652,6 @@ xfacts
 xfrow
 xfstate
 backtest
+dueend
+dueresday
+duereslow
