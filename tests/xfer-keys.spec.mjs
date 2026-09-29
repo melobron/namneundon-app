@@ -1,7 +1,9 @@
-// 이체 판단 저장 키 — 같은 은행 두 계좌에서 키가 겹칠 때 (검증방 지적, 2026-09-29).
+// 이체 판단 저장 · 되살리기 (검증방 지적, 2026-09-29 — 세 번째 기준).
 // ★ 화면 안에서는 한 쌍의 답이 다른 쌍으로 번지지 않는다 (쌍 ID = 두 줄의 rowId).
-// ★ 저장 키가 지금 자료의 두 쌍 이상에 맞으면 되살리지 않고 다시 묻는다 — 새 키 · 옛 줄 키 모두.
-// ★ 키가 한 쌍에만 맞으면 파일을 올린 차례가 바뀌어도 같은 거래에 붙는다.
+// ★ 파일 이름 · 시트 이름 · 은행 이름으로는 계좌를 가를 수 없다 — 새로 읽은 파일에는 저장된 답을 붙이지 않고 다시 묻는다.
+//   「옮긴 돈입니다」 · 「아닙니다」 모두. 새 키 · 옛 줄 키 모두.
+// ★ 이 기기에 저장한 거래내역(fc.data)을 그대로 다시 열 때만, 그 자료에 함께 남긴 쌍 ID 로 되살린다.
+// ★ 계좌번호는 저장하지 않는다. 원본 거래 · 분류는 그대로다.
 import { test, expect } from '@playwright/test';
 import { openApp } from './helpers.mjs';
 
@@ -60,6 +62,7 @@ const state = (page) =>
       .map((p) => ({ 금액: p.amount, 답: xferAnswer(p), 키: xferPairKeyIn(UP, p) }))
       .sort((a, b) => a.금액 - b.금액)
   );
+// 같은 저장 자료를 그대로 다시 연다 — 시작 화면의 저장된 매장 단추 (파일을 새로 고르지 않는다)
 async function reopen(page) {
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'detached' });
@@ -70,97 +73,94 @@ async function reopen(page) {
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
 }
 
-test('키가 겹치는 두 쌍 — 답이 번지지 않고, 되살리지 않고 다시 묻는다 (새 키 · 옛 줄 키)', async ({
-  page
-}) => {
-  const errors = await openApp(page);
-  // 파일 이름이 숫자만 달라 계좌 열쇠가 같다
-  const a = await bankFile(page, '국민은행_1111.xlsx', 100000, 200000);
-  const b = await bankFile(page, '국민은행_2222.xlsx', 200000, 100000);
-  await toResult(page, [a, b]);
-  const 처음 = await state(page);
-  expect(처음.length).toBe(2);
-  expect(처음[0].키).toBe(처음[1].키); // 저장 키가 똑같은 두 쌍
-  const 줄수 = await page.evaluate(() => UP.rows.length);
-
-  await page.evaluate(() => {
+// 새 파일을 읽는다 — 시작 화면으로 가서 파일을 고른다
+async function readNew(page, files) {
+  await page.goto('/');
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await toResult(page, files);
+}
+const 저장통 = (page) =>
+  page.evaluate(() => {
+    const pk = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
+    const dk = Object.keys(localStorage).find((x) => x.startsWith('fc.data.'));
+    return {
+      pk,
+      picks: JSON.parse(localStorage.getItem(pk)),
+      data: JSON.parse(localStorage.getItem(dk))
+    };
+  });
+const 분류 = (page) => page.evaluate(() => UP.payees.map((g) => [g.name, g.cat || null]).sort());
+const 답하기 = (page) =>
+  page.evaluate(() => {
     const ps = findTransfers().sort((x, y) => x.amount - y.amount);
     takeXfer([ps[0]]);
     markNotXfer(ps[1]);
   });
-  // 화면 안에서는 각 쌍의 답이 따로 선다
-  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']);
-  // 겹치는 키는 저장하지 않는다 — 되살릴 수 없는 답을 남기지 않는다
-  const 저장 = await page.evaluate(() => {
-    const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
-    return { k, v: JSON.parse(localStorage.getItem(k)) };
-  });
-  expect(저장.v.xferOk).toEqual([]);
-  expect(저장.v.xferNo).toEqual([]);
 
-  // 다시 열면 어느 쪽에도 붙이지 않고 다시 묻는다. 거래 줄 수는 그대로다
-  await reopen(page);
-  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
-  expect(await page.evaluate(() => UP.rows.length)).toBe(줄수);
+test('서로 다른 두 계좌가 같은 기본 파일 이름 · 시트 이름이면 — 새로 읽을 때 저장된 답을 붙이지 않는다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  // 국민 두 계좌가 둘 다 은행 기본 이름 「국민은행_거래내역.xlsx」 · 시트 「거래내역」으로 내려받아졌다.
+  // 거래 줄(시각 · 행번호 · 적요 · 금액)까지 같게 만들어, 파일 이름 · 시트 · 은행 · 저장 키가 모두 같다
+  const 사업자 = await bankFile(page, '국민은행_거래내역.xlsx', 100000, 200000);
+  const 개인 = await bankFile(page, '국민은행_거래내역.xlsx', 100000, 200000);
+  const 신한 = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
+  await toResult(page, [사업자, 신한]);
+  const 키 = (await state(page)).map((x) => x.키);
+  await 답하기(page);
+  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']); // 이번 화면에서는 쓴다
+  const 앞분류 = await 분류(page);
 
-  // 겹치는 키가 저장통에 이미 있어도 (다른 판 등) 붙이지 않는다
+  // 다른 계좌(개인) 파일을 새로 읽는다 — 이름 · 시트 · 은행 · 저장 키가 모두 같아도 답을 붙이지 않는다
+  await readNew(page, [개인, 신한]);
+  const 뒤 = await state(page);
+  expect(뒤.map((x) => x.키)).toEqual(키); // 파일 이름만으로는 가를 수 없는 경우다
+  expect(뒤.map((x) => x.답)).toEqual([null, null]); // 「맞음」 · 「아님」 모두 다시 묻는다
+  expect(await 분류(page)).toEqual(앞분류); // 분류는 그대로
+  // 저장통에 옛 판이 남긴 쌍 키가 있어도 붙이지 않는다
+  const 통 = await 저장통(page);
   await page.evaluate(
-    ({ k, key }) => {
+    ({ k, 키 }) => {
       const o = JSON.parse(localStorage.getItem(k));
-      o.xferOk = [key];
+      o.xferOk = [키[0]];
+      o.xferNo = [키[1]];
       localStorage.setItem(k, JSON.stringify(o));
     },
-    { k: 저장.k, key: 처음[0].키 }
+    { k: 통.pk, 키 }
   );
-  await reopen(page);
-  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
-
-  // 옛 저장본: 줄 키(날짜 | 은행 이름 | 행번호)의 은행 이름은 올린 차례대로 붙은 「국민은행 1 · 2」다.
-  // 차례가 바뀌면 다른 계좌를 가리킬 수 있어, 같은 은행 계좌가 둘이면 옛 키로 붙이지 않는다
-  const 옛키 = await page.evaluate(() => {
-    const p = findTransfers().sort((x, y) => x.amount - y.amount)[0];
-    return [xferKey(p.out), xferKey(p.into)];
-  });
-  await page.evaluate(
-    ({ k, 옛키 }) => {
-      const o = JSON.parse(localStorage.getItem(k));
-      delete o.xferOk;
-      delete o.xferNo;
-      o.xfer = 옛키;
-      localStorage.setItem(k, JSON.stringify(o));
-    },
-    { k: 저장.k, 옛키 }
-  );
-  await reopen(page);
+  await readNew(page, [개인, 신한]);
   expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
   expect(errors).toEqual([]);
 });
 
-test('키가 한 쌍에만 맞으면 — 저장 · 재열기 · 파일 차례를 바꿔 다시 올려도 같은 거래에 붙는다', async ({
+test('같은 저장 자료를 그대로 다시 열면 되살리고, 같은 파일이라도 새로 읽으면 다시 묻는다', async ({
   page
 }) => {
   const errors = await openApp(page);
-  // 은행이 달라 계좌 열쇠가 다르다
   const a = await bankFile(page, '국민은행_거래내역.xlsx', 100000, 200000);
   const b = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
   await toResult(page, [a, b]);
-  await page.evaluate(() => {
-    const ps = findTransfers().sort((x, y) => x.amount - y.amount);
-    takeXfer([ps[0]]);
-    markNotXfer(ps[1]);
-  });
-  const 저장 = await page.evaluate(() => {
-    const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
-    return JSON.parse(localStorage.getItem(k));
-  });
-  expect(저장.xferOk.length).toBe(1);
-  expect(저장.xferNo.length).toBe(1);
+  const 줄수 = await page.evaluate(() => UP.rows.length);
+  await 답하기(page);
+  const 앞분류 = await 분류(page);
+
+  // 저장: 분류 저장통(fc.picks)에는 새 답을 남기지 않는다. 거래내역 저장통(fc.data)에 쌍 ID 로 남는다
+  const 통 = await 저장통(page);
+  expect(통.picks.xferOk).toEqual([]);
+  expect(통.picks.xferNo).toEqual([]);
+  expect([통.data.xfer.ok.length, 통.data.xfer.no.length]).toEqual([1, 1]);
+  expect(JSON.stringify(통.picks)).not.toMatch(/\d{3,6}-\d{2,6}-\d{4,}/); // 계좌번호 모양 없음
+
+  // 같은 저장 자료를 그대로 다시 연다 → 되살린다 (맞음 · 아님 모두). 거래 줄 · 분류 그대로
   await reopen(page);
   expect((await state(page)).map((x) => [x.금액, x.답])).toEqual([
     [100000, 'yes'],
     [200000, 'no']
   ]);
-  // 판단 바꾸기도 남는다
+  expect(await page.evaluate(() => UP.rows.length)).toBe(줄수);
+  expect(await 분류(page)).toEqual(앞분류);
+  // 판단을 바꾸면 그것도 저장 자료와 함께 남는다
   await page.evaluate(() => {
     const ps = findTransfers().sort((x, y) => x.amount - y.amount);
     clearXferAnswer(ps[0]);
@@ -172,78 +172,63 @@ test('키가 한 쌍에만 맞으면 — 저장 · 재열기 · 파일 차례를
     [200000, 'yes']
   ]);
 
-  // 파일을 반대 차례로 다시 올린다 — 계좌 차례가 바뀌어도 답은 같은 거래를 따라간다
-  await page.goto('/');
-  await page.locator('#splash').waitFor({ state: 'detached' });
-  await toResult(page, [b, a]);
-  expect(await page.evaluate(() => UP.banks.map((x) => x.bank))).not.toEqual(['국민', '신한']);
-  expect((await state(page)).map((x) => [x.금액, x.답])).toEqual([
-    [100000, null],
-    [200000, 'yes']
-  ]);
+  // 같은 파일이라도 새로 읽으면 (차례를 바꿔도 · 그대로도) 다시 묻는다 — 새 파일에는 계좌를 이어 줄 근거가 없다
+  await readNew(page, [b, a]);
+  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  await readNew(page, [a, b]);
+  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  expect(await 분류(page)).toEqual(앞분류);
   expect(errors).toEqual([]);
 });
 
-// 검증방 지적 (두 번째): 계좌를 안정적으로 가를 수 없으면 저장된 답을 자동으로 되살리지 않는다.
-// 이번 화면의 판단은 쓰되, 다음 파일 읽기에서는 다시 묻는다. 「맞음」 · 「아님」 모두.
-test('같은 은행 두 계좌 중 한 계좌 파일만 다시 올리면 — 답이 다른 계좌로 옮겨 붙지 않는다', async ({
+test('키가 겹치는 두 쌍 — 화면에서 답이 번지지 않고, 저장 자료를 다시 열면 쌍마다 제 답으로 돌아온다', async ({
   page
 }) => {
   const errors = await openApp(page);
-  // 국민 두 계좌 (이름에 숫자 없음 → 계좌 열쇠가 서로 다르다). 개인 계좌 파일은 사업자 계좌와 거래 줄이 똑같다
-  const 사업자 = await bankFile(page, '국민은행 사업자.xlsx', 100000, 200000);
-  const 개인 = await bankFile(page, '국민은행 개인.xlsx', 100000, 200000);
-  const 신한 = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
-  await toResult(page, [사업자, 신한]);
-  await page.evaluate(() => {
-    const ps = findTransfers().sort((x, y) => x.amount - y.amount);
-    takeXfer([ps[0]]);
-    markNotXfer(ps[1]);
-  });
-  const 분류 = await page.evaluate(() => UP.payees.map((g) => [g.name, g.cat || null]));
+  // 파일 이름이 숫자만 달라 계좌 열쇠가 같다 → 두 쌍의 저장 키가 똑같다
+  const a = await bankFile(page, '국민은행_1111.xlsx', 100000, 200000);
+  const b = await bankFile(page, '국민은행_2222.xlsx', 200000, 100000);
+  await toResult(page, [a, b]);
+  const 처음 = await state(page);
+  expect(처음.length).toBe(2);
+  expect(처음[0].키).toBe(처음[1].키);
+  await 답하기(page);
+  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']);
+  // 같은 저장 자료 다시 열기 — 쌍 ID 는 두 줄을 그대로 가리켜 겹치지 않는다
   await reopen(page);
-  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']); // 같은 계좌면 되살린다
-
-  // 다른 국민 계좌 파일만 다시 올린다 — 시각 · 행번호 · 거래처가 같아도 계좌가 달라 붙지 않는다
-  await page.goto('/');
-  await page.locator('#splash').waitFor({ state: 'detached' });
-  await toResult(page, [개인, 신한]);
+  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']);
+  // 새로 읽기 — 다시 묻는다
+  await readNew(page, [a, b]);
   expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
-  // 원본 거래 · 분류는 그대로다 (같은 이름 거래처의 분류가 바뀌지 않았다)
-  const 뒤분류 = await page.evaluate(() => UP.payees.map((g) => [g.name, g.cat || null]));
-  for (const [n, c] of 분류) {
-    const x = 뒤분류.find((y) => y[0] === n);
-    if (x) expect(x[1]).toBe(c);
-  }
   expect(errors).toEqual([]);
 });
 
-test('파일 이름에 숫자가 있으면 계좌를 가를 수 없다 — 이번 화면에서만 쓰고 다음에 다시 묻는다', async ({
+test('옛 줄 키(xfer)만 있는 저장본 — 새로 읽을 때 자동 적용하지 않고 지우지도 않는다', async ({
   page
 }) => {
   const errors = await openApp(page);
-  const a1 = await bankFile(page, '국민은행_1111.xlsx', 100000, 200000);
-  const a2 = await bankFile(page, '국민은행_2222.xlsx', 100000, 200000);
-  const 신한 = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
-  await toResult(page, [a1, 신한]);
-  await page.evaluate(() => {
-    const ps = findTransfers().sort((x, y) => x.amount - y.amount);
-    takeXfer([ps[0]]);
-    markNotXfer(ps[1]);
+  const a = await bankFile(page, '국민은행_거래내역.xlsx', 100000, 200000);
+  const b = await bankFile(page, '신한은행_거래내역.xlsx', 200000, 100000);
+  await toResult(page, [a, b]);
+  const 옛키 = await page.evaluate(() => {
+    const p = findTransfers().sort((x, y) => x.amount - y.amount)[0];
+    return [xferKey(p.out), xferKey(p.into)];
   });
-  expect((await state(page)).map((x) => x.답)).toEqual(['yes', 'no']); // 이번 화면에서는 쓴다
-  const 저장 = await page.evaluate(() => {
-    const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
-    return JSON.parse(localStorage.getItem(k));
-  });
-  expect(저장.xferOk).toEqual([]);
-  expect(저장.xferNo).toEqual([]);
-  await reopen(page);
+  const 통 = await 저장통(page);
+  await page.evaluate(
+    ({ k, 옛키 }) => {
+      const o = JSON.parse(localStorage.getItem(k));
+      delete o.xferOk;
+      delete o.xferNo;
+      o.xfer = 옛키;
+      localStorage.setItem(k, JSON.stringify(o));
+    },
+    { k: 통.pk, 옛키 }
+  );
+  await readNew(page, [a, b]);
   expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
-  // 숫자만 다른 다른 계좌 파일을 올려도 붙지 않는다
-  await page.goto('/');
-  await page.locator('#splash').waitFor({ state: 'detached' });
-  await toResult(page, [a2, 신한]);
-  expect((await state(page)).map((x) => x.답)).toEqual([null, null]);
+  await page.evaluate(() => /** @type {any} */ (window).savePicks());
+  const 뒤 = await 저장통(page);
+  expect(뒤.picks.xfer).toEqual(expect.arrayContaining(옛키)); // 버리지 않고 들고 간다
   expect(errors).toEqual([]);
 });

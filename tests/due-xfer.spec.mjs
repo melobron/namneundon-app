@@ -264,13 +264,20 @@ test('이체 후보 2건 — 한 건씩 확인 · 고치기 · 저장 후 유지
   await 답(1, '계좌끼리 옮긴 돈이 아닙니다').click();
   expect(await 남은()).toBe(0);
 
-  // 저장 · 재열기 뒤에도 두 답이 그대로다
+  // 같은 저장 자료를 그대로 다시 열면 두 답이 그대로다 (검증방 지적 2026-09-29 세 번째)
+  // ★ 답은 이 기기의 거래내역 저장통(fc.data)에 쌍 ID 로 남는다. 분류 저장통(fc.picks)에는 새 답을 남기지 않는다
   const 저장 = await page.evaluate(() => {
     const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
-    return { k, v: JSON.parse(localStorage.getItem(k)) };
+    const d = Object.keys(localStorage).find((x) => x.startsWith('fc.data.'));
+    return {
+      k,
+      v: JSON.parse(localStorage.getItem(k)),
+      x: JSON.parse(localStorage.getItem(d)).xfer
+    };
   });
-  expect(저장.v.xferNo.length).toBe(1);
-  expect(저장.v.xferNo[0]).not.toMatch(/\d{6,}/); // 금액을 담지 않는다 (시각 · 행번호만 숫자)
+  expect(저장.v.xferOk).toEqual([]);
+  expect(저장.v.xferNo).toEqual([]);
+  expect([저장.x.ok.length, 저장.x.no.length]).toEqual([1, 1]);
   await page.reload();
   await page.locator('#splash').waitFor({ state: 'detached' });
   await page
@@ -284,7 +291,7 @@ test('이체 후보 2건 — 한 건씩 확인 · 고치기 · 저장 후 유지
   ]);
   await expect(page.locator('#up-result .duecard .duegraph svg')).toHaveCount(1);
 
-  // 옛 저장본(xferNo 칸 없음)도 열린다 — 「아님」 답만 없고 나머지는 그대로다
+  // 옛 저장본(xferNo 칸 없음)도 열린다 — 답은 저장 자료에 있으므로 그대로다
   await page.evaluate((k) => {
     const o = JSON.parse(localStorage.getItem(k));
     delete o.xferNo;
@@ -299,9 +306,9 @@ test('이체 후보 2건 — 한 건씩 확인 · 고치기 · 저장 후 유지
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
   expect(await page.evaluate(() => findTransfers().map((p) => xferAnswer(p)))).toEqual([
     'yes',
-    null
+    'no'
   ]);
-  expect(await 남은()).toBe(1);
+  expect(await 남은()).toBe(0);
 
   // 마지막 후보를 처리해도 다른 보류 사유(매출 분류 없음)가 있으면 계속 보류
   await page.evaluate(() => {

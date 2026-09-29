@@ -620,6 +620,12 @@ function afterFiles() {
     recountBreaks();
     UP.tileTrade = tradeNow();
     startOnboard();
+    /* ★ 같은 저장 자료를 그대로 다시 연 길 — 그 자료에 함께 남긴 이체 답만 쌍 ID 로 되살린다 */
+    applyXferFromData(저장분.xfer);
+    /* startOnboard 가 답을 붙이기 전에 저장 자료를 한 번 새로 썼다 — 되살린 답을 다시 함께 남긴다 */
+    try {
+      saveData();
+    } catch (e) {}
     showResult();
     return;
   }

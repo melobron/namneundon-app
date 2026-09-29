@@ -98,30 +98,13 @@ function xferCarryDrop(p) {
   if (UP.xferCarryOk) delete UP.xferCarryOk[k];
   if (UP.xferCarryNo) delete UP.xferCarryNo[k];
 }
-/* 지금 후보 쌍을 저장 키로 묶는다 — 한 키에 쌍이 여럿이면 그 키는 되살리지 않는다 */
-function xferPairsByKey() {
-  var m = {};
-  findTransfers().forEach(function (p) {
-    var k = xferPairKeyIn(UP, p);
-    (m[k] || (m[k] = [])).push(p);
-  });
-  return m;
-}
+/* ★ 검증방 지적 (2026-09-29 세 번째). 파일 이름으로는 계좌를 가를 수 없어, fc.picks 에는 새 답을 더 남기지 않는다.
+   예전 판이 남긴 키만 버리지 않고 그대로 들고 간다 (옛 판과의 호환). 이 키로는 아무것도 되살리지 않는다 */
 function xferSavedKeys(yes) {
   var out = {},
     carry = (yes ? UP.xferCarryOk : UP.xferCarryNo) || {},
     k;
   for (k in carry) if (Object.prototype.hasOwnProperty.call(carry, k)) out[k] = 1;
-  var m = xferPairsByKey();
-  for (k in m)
-    if (
-      Object.prototype.hasOwnProperty.call(m, k) &&
-      m[k].length === 1 &&
-      xferPairStableIn(UP, m[k][0]) /* 계좌를 가를 수 없으면 남기지 않는다 — 다음에 다시 묻는다 */
-    ) {
-      var 답 = xferAnswer(m[k][0]);
-      if (답 === (yes ? 'yes' : 'no')) out[k] = 1;
-    }
   return Object.keys(out).sort();
 }
 function xferOkKeys() {
@@ -130,13 +113,12 @@ function xferOkKeys() {
 function xferNoKeys() {
   return UP ? xferSavedKeys(false) : [];
 }
-/* 되살리기. o = 저장통 또는 불러온 분류 파일.
-   ① xferOk · xferNo: 지금 후보 가운데 그 키에 맞는 쌍이 정확히 하나일 때만 답을 붙인다.
-      둘 이상이면(같은 은행 두 계좌 · 같은 시각 · 같은 행번호 · 같은 거래처) 붙이지 않고 다시 묻는다.
-      같은 쌍에 두 답이 다 있으면 어느 쪽도 붙이지 않는다.
-      그리고 쌍의 두 계좌를 안정적으로 가를 수 있을 때만(xferPairStableIn) 붙인다.
-   ② 옛 줄 키(xfer)는 자동으로 적용하지 않는다 — 계좌를 가를 정보가 없다. 들고만 있다가 다시 남긴다.
-   ★ 원본 거래 · 분류는 건드리지 않는다. 맞지 않은 키는 버리지 않고 들고 있다가 다시 남긴다 */
+/* 저장통 · 불러온 분류 파일의 이체 답 — 새로 읽은 파일에는 붙이지 않는다 (검증방 지적 2026-09-29 세 번째).
+   ① xferOk · xferNo: 파일 이름 · 시트 이름 · 은행 이름이 같아도 다른 계좌일 수 있어 자동 적용하지 않는다.
+      키는 버리지 않고 들고 있다가 그대로 다시 남긴다. 새 파일에서는 이체 후보를 다시 묻는다.
+   ② 옛 줄 키(xfer)도 같다 — 자동으로 적용하지 않고 들고만 있다.
+   ★ 같은 저장 자료를 그대로 다시 열 때는 applyXferFromData 가 그 자료의 쌍 ID 로 되살린다.
+   ★ 원본 거래 · 분류는 건드리지 않는다 */
 function applyXferSaved(o) {
   if (!UP || !o) return;
   var ok = Array.isArray(o.xferOk) ? o.xferOk : null,
@@ -153,20 +135,9 @@ function applyXferSaved(o) {
   no.forEach(function (k) {
     if (typeof k === 'string' && k) 아니오[k] = 1;
   });
-  var m = xferPairsByKey(),
-    k;
+  var k;
   for (k in 예) if (Object.prototype.hasOwnProperty.call(예, k)) UP.xferCarryOk[k] = 1;
   for (k in 아니오) if (Object.prototype.hasOwnProperty.call(아니오, k)) UP.xferCarryNo[k] = 1;
-  for (k in m) {
-    if (!Object.prototype.hasOwnProperty.call(m, k) || m[k].length !== 1) continue;
-    if (예[k] && 아니오[k]) continue;
-    var p = m[k][0];
-    if (!xferPairStableIn(UP, p)) continue; /* 계좌를 가를 수 없으면 되살리지 않는다 */
-    if (예[k]) {
-      UP.xfer[rowId(p.out)] = 1;
-      UP.xfer[rowId(p.into)] = 1;
-    } else if (아니오[k]) UP.xferNo[xferPairIdIn(UP, p)] = 1;
-  }
   /* ② 옛 줄 키(xfer: 날짜 | 은행 이름 | 행번호)에는 계좌를 가를 정보가 없다 — 은행 이름은 같은 은행 계좌가 둘이면
      올린 차례로 붙은 「국민은행 1 · 2」다. 검증방 지적대로 자동으로 적용하지 않고 다시 묻는다.
      키는 버리지 않고 들고 있다가 그대로 다시 남긴다 (옛 판과의 호환) */
@@ -175,6 +146,50 @@ function applyXferSaved(o) {
     o.xfer.forEach(function (x) {
       if (typeof x === 'string' && x) UP.xferCarryLegacy[x] = 1;
     });
+}
+/* ── 같은 저장 자료를 다시 열 때만 되살리는 이체 답 (검증방 지적 2026-09-29 세 번째) ──────────
+   이 기기의 거래내역 저장통(fc.data)에 지금 후보 쌍의 답을 쌍 ID(두 줄의 rowId)로 함께 남긴다.
+   ★ 쌍 ID 는 그 저장 자료의 줄을 그대로 가리킨다 — 같은 자료를 다시 열면 같은 줄이 같은 ID 로 돌아온다.
+   ★ 새 파일을 읽거나 보태면 저장 자료가 새로 쓰이므로, 그때는 답이 따라가지 않고 다시 묻는다.
+   ★ fc.data 는 이미 금액 · 잔액을 담는 이 기기 전용 통이다. 계좌번호는 넣지 않는다 */
+function xferDataAnswers() {
+  var ok = [],
+    no = [];
+  if (UP && UP.rows)
+    findTransfers().forEach(function (p) {
+      var 답 = xferAnswer(p);
+      if (답 === 'yes') ok.push(xferPairIdIn(UP, p));
+      else if (답 === 'no') no.push(xferPairIdIn(UP, p));
+    });
+  return { ok: ok.sort(), no: no.sort() };
+}
+function applyXferFromData(x) {
+  if (!UP || !x) return 0;
+  var 예 = {},
+    아니오 = {},
+    n = 0;
+  (Array.isArray(x.ok) ? x.ok : []).forEach(function (k) {
+    if (typeof k === 'string') 예[k] = 1;
+  });
+  (Array.isArray(x.no) ? x.no : []).forEach(function (k) {
+    if (typeof k === 'string') 아니오[k] = 1;
+  });
+  UP.xfer = UP.xfer || {};
+  UP.xferNo = UP.xferNo || {};
+  findTransfers().forEach(function (p) {
+    var id = xferPairIdIn(UP, p);
+    if (예[id] && 아니오[id]) return;
+    if (예[id]) {
+      UP.xfer[rowId(p.out)] = 1;
+      UP.xfer[rowId(p.into)] = 1;
+      n++;
+    } else if (아니오[id]) {
+      UP.xferNo[id] = 1;
+      n++;
+    }
+  });
+  UP.__due = null;
+  return n;
 }
 /* 계산은 core/compute.js 의 xferKeysIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e).
    ★ 들고 있던 옛 줄 키도 같이 남긴다 — 자동으로 쓰지는 않지만 지우지도 않는다 */

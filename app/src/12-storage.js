@@ -131,6 +131,8 @@ function dataPayload() {
   return {
     dv: 1,
     저장일: dataDay(),
+    /* ★ 검증방 지적 (2026-09-29 세 번째). 이 자료의 이체 후보에 한 답 — 쌍 ID 로. 이 자료를 그대로 다시 열 때만 쓴다 */
+    xfer: xferDataAnswers(),
     store: UP.store || null,
     owner: UP.owner || null,
     trade: UP.trade || null,
@@ -164,7 +166,8 @@ function saveFail() {
 }
 function saveData() {
   if (!UP || UP.demo || !UP.banks || !UP.banks.length) return false;
-  var sig = dataSig();
+  /* 이체 답만 바뀌어도 다시 남긴다 — 답은 이 저장 자료에 함께 붙어 있다 */
+  var sig = dataSig() + '|x' + JSON.stringify(xferDataAnswers());
   if (sig === DATA_SIG) return true; /* 안 바뀌었다 */
   var body;
   try {

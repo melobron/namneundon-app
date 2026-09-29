@@ -460,9 +460,11 @@ function xferOnIn(U, r) {
      저장 키로 들고 있으면 키가 겹치는 두 쌍에 한 번의 답이 함께 붙는다 (검증방 지적).
    ★ 저장 키는 줄마다 「계좌 열쇠 | 파일에서 찾은 은행 | 거래 시각 | 엑셀 행번호 | 원문 거래처」다. 금액은 넣지 않는다.
      계좌 열쇠(bankKeyOf: 시트 이름 + 숫자를 뺀 파일 이름)는 계좌를 올린 차례 · 은행 이름 고치기와 상관없다.
-   ★ 검증방 지적 (2026-09-29 두 번째): 「지금 후보 중 한 쌍만 맞는다」만으로는 같은 계좌의 같은 거래라고
-     보장되지 않는다. 그래서 계좌를 안정적으로 가를 수 있을 때만 저장하고 되살린다 (xferAccStableIn).
-     아니면 이번 화면에서만 쓰고 다음 파일 읽기에서 다시 묻는다. 계좌번호는 저장하지 않는다 */
+   ★ 검증방 지적 (2026-09-29 세 번째): 파일 이름 · 시트 이름 · 은행 이름으로는 계좌를 가를 수 없다 —
+     서로 다른 두 국민은행 계좌가 둘 다 「국민은행_거래내역.xlsx」로 내려받아질 수 있다.
+     그래서 새로 읽은 파일에는 저장된 이체 답을 자동으로 붙이지 않는다 (fc.picks 의 xferOk · xferNo 는 들고만 있다).
+     되살리는 길은 하나 — 이 기기에 저장한 거래내역(fc.data)을 그대로 다시 열 때, 그 자료에 함께 남긴
+     쌍 ID(두 줄의 rowId)로만 붙인다 (xferDataAnswers · applyXferFromData). 계좌번호는 저장하지 않는다 */
 function xferPairIdIn(U, p) {
   return rowId(p.out) + ' > ' + rowId(p.into);
 }
@@ -477,25 +479,6 @@ function xferSideKeyIn(U, r) {
     '|' +
     (r.payee || '')
   );
-}
-/* 계좌를 안정적으로 가를 수 있는가 — 셋 다 맞아야 한다.
-   ① 계좌 열쇠의 재료(시트 이름 · 파일 이름)에 숫자가 없다 — 숫자를 지워 만든 열쇠는
-      「국민은행_1111」 · 「국민은행_2222」 처럼 다른 계좌와 같아질 수 있다
-   ② 파일에서 은행을 찾았다 (b.found)
-   ③ 지금 올린 계좌 가운데 같은 열쇠가 하나뿐이다 */
-function xferAccStableIn(U, acc) {
-  var b = U.banks && U.banks[acc || 0];
-  if (!b || !b.found) return false;
-  if (/[0-9]/.test(String((b.sheet || '') + '|' + (b.name || b.file || '')))) return false;
-  var k = bankKeyOf(b),
-    n = 0;
-  (U.banks || []).forEach(function (x) {
-    if (x && bankKeyOf(x) === k) n++;
-  });
-  return n === 1;
-}
-function xferPairStableIn(U, p) {
-  return xferAccStableIn(U, p.out.acc) && xferAccStableIn(U, p.into.acc);
 }
 function xferPairKeyIn(U, p) {
   return xferSideKeyIn(U, p.out) + ' → ' + xferSideKeyIn(U, p.into);
