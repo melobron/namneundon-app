@@ -307,7 +307,7 @@ function dueXferCandIn(U) {
 }
 /* 아직 안 정한 출금을 날짜별로 모아 둔다 — 표를 한 번만 만들고 t 와 함께 사라진다.
    ★ NAM-9 후속. 둘로 가른다.
-     보류(t.__unkOut) = 아직 안 정한 출금 가운데 포함된 계좌 사이 이체 후보(확인 전).
+     보류(t.__unkOut) = 포함된 계좌 사이 이체 후보(확인 전) — 요한 승인으로 분류된 후보도 여기다.
        합친 잔액에서 이것을 나간 돈으로 치면 계좌 안에서 옮긴 돈이 밖으로 나간 것처럼 두 번 빠지고,
        빼 버리면 확인 안 된 이체를 근거 없이 빼는 것이 된다. 그래서 넣지도 빼지도 않고 보류한다.
      포함(t.__unkIn) = 그 밖의 아직 안 정한 출금. 계좌에서 실제로 나간 돈이라 잔액 예측용 출금에 넣는다
@@ -325,9 +325,12 @@ function dueUnsetOutSplitIn(U, t) {
   (U.rows || []).forEach(function (r) {
     if (!(r.amount < 0)) return; /* ⑤ 출금만 · 0원은 안 센다 */
     if (xferOnIn(U, r)) return; /* ⑥ 빼기로 정한 계좌 간 이체 */
-    if (catOfIn(U, r) !== UNSET) return; /* ④ 아직 안 정한 거래만 */
+    /* ★ NAM-9 요한 승인 (2026-09-29). 확인 전 이체 후보는 분류와 상관없이 보류로 간다.
+       분류된 후보도 합친 잔액에서는 두 번 빠질 수 있다. 그 밖에는 아직 안 정한 출금만 담는다 */
+    var 후보인가 = !!후보[rowId(r)];
+    if (!후보인가 && catOfIn(U, r) !== UNSET) return; /* ④ 아직 안 정한 거래만 */
     var d = dayNum(r.at.slice(0, 10)),
-      m = 후보[rowId(r)] ? 보류 : 포함;
+      m = 후보인가 ? 보류 : 포함;
     (m[d] || (m[d] = [])).push({
       rid: rowId(r),
       날: d,
@@ -1009,7 +1012,9 @@ function dueTableBuildIn(U) {
        ★ 매출로 정한 출금(취소·환불)은 예전처럼 매출 쪽에서 빠진다. 여기서 두 번 세지 않는다.
        ★ 월별 사업 수입·지출·계좌 순이익의 정의는 안 바뀐다 — 그쪽은 cost(cc)다.
        ★ 갈래·항목을 줄마다 적어 두어 분류별 기여분을 가를 수 있게 한다 (dueCostSplit) */
-    if (r.amount < 0) {
+    /* ★ NAM-9 요한 승인. 확인 전 이체 후보는 분류됐어도 예측 출금에 안 넣는다 — 보류 규칙이 맡는다.
+       사업 지출(dCost)·월별 손익은 그대로다 */
+    if (r.amount < 0 && !후보[rowId(r)]) {
       dFc += -r.amount;
       지출줄.push({
         날: dayNum(day),
@@ -1214,16 +1219,17 @@ function dueCardIn(U, E) {
      아직 안 정한 출금이 있으면 예상 잔액 표시를 보류한다.
      ★ 예측 공식·표본 선택·금액 계산은 한 줄도 안 바꾼다. 내놓을지 말지만 정한다.
      ★ 보류면 과거 견주기(duePast)도 하지 않는다 — 안 보여줄 숫자를 만들지 않는다 */
+  /* ★ NAM-9 요한 승인 (2026-09-29). 보류 사유를 한꺼번에 센다 — 여러 개면 화면이 함께 보여준다.
+     ① 이체: 예측에 쓰인 비교 날짜에 확인 전 이체 후보가 있다 (분류와 상관없이)
+     ② 입금: 직전 30일에 「매출」로 정한 입금이 한 건도 없다 — 미분류 입금을 매출로 치지 않는다
+     ③ 자료: 첫 예상일조차 비교할 과거 구간이 3개가 안 된다 (곡선의 기존 문턱 FC_MIN_MONTHS)
+     ★ 숫자를 안 낸다. 실적 화면은 그대로다 */
   now.보류 = dueHoldIn(U, t, i, now.남은날수);
-  if (now.보류) return now;
-  /* ★ NAM-9 배포 전 보완. 직전 30일에 「매출」로 정한 입금이 하나도 없는데 아직 분류하지 않은
-     입금이 있으면 예상 입금을 0원으로 두고 예측하지 않는다 — 매출 입금이 미분류로 남아 있을 수 있다.
-     미분류 입금을 매출로 치지 않는다. 숫자를 안 내고 까닭만 알린다 */
   now.입금틈 = dueInflowGapIn(U, t, i);
-  if (now.입금틈.매출30 <= 0 && now.입금틈.건수 > 0) {
-    now.입금보류 = now.입금틈;
-    return now;
-  }
+  if (!now.입금틈.매출건) now.입금보류 = now.입금틈;
+  var 쓸것 = dueDailyUseIn(U, E, t, i).dd;
+  if (쓸것 && 쓸것.셈[0] < FC_MIN_MONTHS) now.자료보류 = { 셈: 쓸것.셈[0] };
+  if (now.보류 || now.입금보류 || now.자료보류) return now;
   /* ★ NAM-9 후속. 예측에 들어간 미분류 출금 — 카드가 건수를 한 줄로 알린다 */
   now.미분류 = dueUnsetUsedIn(U, t, i, now.남은날수);
   if (now.배 === null) return null;
@@ -1299,7 +1305,7 @@ function dueCardIn(U, E) {
    ★ months 는 이제 안 쓴다 — 뒤 회차의 「종료일 뒤 저점」이 쓸 자리라 남겨 둔다 */
 function dueCurveIn(U, E, months, c) {
   /* ★ 116차 앞 ③. 카드와 같은 보류 상태를 쓴다. 보류면 곡선을 아예 안 만든다 */
-  if (!c || c.보류 || c.입금보류 || c.잔액 === null) return null;
+  if (!c || c.보류 || c.입금보류 || c.자료보류 || c.잔액 === null) return null;
   var t = E.table();
   if (!t || !t.n) return null;
   var 시작 = dayNum(c.오늘),
@@ -1476,6 +1482,24 @@ function dueNextMonthLowIn(c, pts) {
     전부: 계산끝 === 끝
   };
 }
+/* ── NAM-9 요한 승인 · 예상 금액의 만원 표기 ──────────────────────────────
+   ★ 예상값만 만원 단위로 보인다. 계산은 원 단위 그대로다. 실제 거래·실적 금액은 원 단위다.
+   ★ 반올림하면 0이 되는 작은 값은 「1만원 미만」으로 적는다 — 작은 음수가 0원처럼 보이지 않게.
+   ★ 참고 범위는 하한을 내림, 상한을 올림 한다 (범위가 좁아 보이지 않게) */
+function dueManText(m) {
+  return (m < 0 ? '−' : '') + won(Math.abs(m)) + '만원';
+}
+function dueMan(v) {
+  var m = Math.round(v / 10000);
+  if (m === 0 && v !== 0) return (v < 0 ? '−' : '') + '1만원 미만';
+  return dueManText(m);
+}
+function dueManFloor(v) {
+  return dueManText(Math.floor(v / 10000));
+}
+function dueManCeil(v) {
+  return dueManText(Math.ceil(v / 10000));
+}
 /* ── NAM-9 배포 전 보완 (2026-09-29 요한) · 다음 달 최저 예상 잔액의 임시 참고 범위 ──────
    중심값 = 다음 달 1일 ~ 말일 안의 최저 예상 잔액 (dueNextMonthLowIn 의 값)
    반폭   = 다음 달 예상 출금 합계 × 0.5
@@ -1519,8 +1543,11 @@ function dueInflowGapIn(U, t, i) {
   var t0 = t.num[i],
     j,
     매출30 = 0,
+    매출건 = 0,
+    입금건 = 0,
     건 = 0,
-    합 = 0;
+    합 = 0,
+    매출 = baseNameIn(U, '매출');
   for (j = 0; j < t.n; j++) {
     if (t.num[j] <= t0 - 30) continue;
     if (t.num[j] > t0) break;
@@ -1531,15 +1558,18 @@ function dueInflowGapIn(U, t, i) {
     var d = dayNum(r.at.slice(0, 10));
     if (d <= t0 - 30 || d > t0) return;
     if (xferOnIn(U, r)) return;
-    if (catOfIn(U, r) !== UNSET) return;
+    입금건++;
+    var c = catOfIn(U, r);
+    if (c === 매출) 매출건++;
+    if (c !== UNSET) return;
     건++;
     합 += r.amount;
   });
-  return { 매출30: 매출30, 건수: 건, 합: 합 };
+  return { 매출30: 매출30, 매출건: 매출건, 입금건: 입금건, 건수: 건, 합: 합 };
 }
 /* 곡선(그래프)이 안 나오는 까닭 — dueCurveIn 의 문턱을 그대로 따라 읽는다 (새 문턱을 안 만든다) */
 function dueCurveWhyIn(U, E, c) {
-  if (!c || c.보류 || c.입금보류) return '보류';
+  if (!c || c.보류 || c.입금보류 || c.자료보류) return '보류';
   if (c.잔액 === null) return '잔액';
   var 남은날수 = dayNum(c.목표) - dayNum(c.오늘);
   if (남은날수 <= 1) return '짧음';

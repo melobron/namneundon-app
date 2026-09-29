@@ -175,6 +175,8 @@ duedays
 duedrop
 duegraph
 duehold
+duehold1
+dueholdtxt
 dueholdlab
 dueholdn
 dueholdsub

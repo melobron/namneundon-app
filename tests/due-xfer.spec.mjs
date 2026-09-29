@@ -83,7 +83,7 @@ test('두 계좌 — 확인 전 이체 후보가 미분류면 보류, 확인하�
     // ② 대표님이 「맞습니다」 — 확인된 이체는 예측 출금에서 뺀다
     takeXfer([p]);
     const 확인 = state();
-    // ③ 이체가 아니라고 보고 분류만 한 경우 — 분류된 출금이라 예측 출금에 넣는다 (118차 규칙 그대로)
+    // ③ 이체로 확인하지 않고 분류만 한 경우 — 요한 승인(2026-09-29): 분류와 상관없이 확인 전 후보는 보류
     dropXfer(p);
     setCatQuiet(g, '기타');
     const 분류 = state();
@@ -94,8 +94,8 @@ test('두 계좌 — 확인 전 이체 후보가 미분류면 보류, 확인하�
   expect(r.미분류후보).toEqual({ held: true, heldHasIt: true, inFc: false, graph: false });
   // 확인된 이체: 빼고, 보류가 풀려 그래프가 나온다
   expect(r.확인).toEqual({ held: false, heldHasIt: false, inFc: false, graph: true });
-  // 분류만 한 경우: 분류된 출금으로 넣는다 (기존 규칙)
-  expect(r.분류).toEqual({ held: false, heldHasIt: false, inFc: true, graph: true });
+  // 분류만 한 경우: 여전히 확인 전 후보라 예측 출금에 안 넣고 보류한다
+  expect(r.분류).toEqual({ held: true, heldHasIt: true, inFc: false, graph: false });
   expect(errors).toEqual([]);
 });
 
@@ -161,9 +161,50 @@ test('분류 0곳 — 결과로 갈 수 있고, 매출이 분류되지 않았으
   expect(r.입금보류).toBe(true);
   expect(r.건수).toBeGreaterThan(0);
   await expect(
-    page.getByText('직전 30일에 매출로 분류한 입금이 없어 예상 입금을 계산하지 않았습니다.')
+    page.getByText(
+      /아직 매출로 확인된 입금이 없습니다\. 미분류 입금 [\d,]+건 중 매출이 있는지 확인해 주세요\./
+    )
   ).toBeVisible();
+  await expect(page.getByRole('button', { name: '들어온 돈 확인하기' })).toBeVisible();
   await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
   await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  expect(errors).toEqual([]);
+});
+
+// NAM-9 요한 승인: 보류 사유가 여럿이면 함께 보이고, 자료 3개월 미만이면 예상 전체를 보류한다
+test('보류 사유 여럿 · 자료 3개월 미만', async ({ page }) => {
+  const errors = await openApp(page);
+  const a = await demoAsBankXlsx(page);
+  await toResult(page, [a, await secondBank(page, a)]);
+  // 이체 후보(확인 전) + 매출 미분류 → 사유 둘
+  await page.evaluate(() => {
+    UP.payees.forEach((g) => {
+      if (g.cat === '매출' || g.catIn === '매출') unsetCatQuiet(g);
+    });
+    goMonth(UP.month);
+  });
+  const card = page.locator('#up-result .duecard');
+  await expect(card).toContainText('확인할 것이 2가지 있습니다.');
+  await expect(card).toContainText(/계좌끼리 옮긴 돈인지 [\d,]+건을 확인해 주세요/);
+  await expect(card).toContainText('아직 매출로 확인된 입금이 없습니다.');
+
+  // 7 · 8월만 있는 자료 → 그래프 · 최저 · 종료일 예상 잔액을 함께 보류, 실적과 잔액은 그대로
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/');
+  await openApp(page);
+  await page.evaluate(() => {
+    const keep = DEMO_TX.filter((s) => s.startsWith('07-') || s.startsWith('08-'));
+    const drop = DEMO_TX.filter((s) => !(s.startsWith('07-') || s.startsWith('08-')));
+    window.DEMO_OPEN += drop.reduce((x, s) => x + +s.split('|')[2], 0);
+    window.DEMO_TX = keep;
+  });
+  await toResult(page, [await demoAsBankXlsx(page)]);
+  const c2 = page.locator('#up-result .duecard');
+  await expect(c2).toContainText('예상 잔액을 보려면 3개월 이상의 거래내역을 추가해 주세요.');
+  await expect(c2).not.toContainText('만원');
+  await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
+  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.locator('#up-result')).toContainText('8월 22일 계좌 잔액');
   expect(errors).toEqual([]);
 });

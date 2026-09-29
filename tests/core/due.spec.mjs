@@ -237,3 +237,15 @@ test.describe('임시 참고 범위', () => {
     expect(day(rg.주시작) + '~' + day(rg.주끝)).toBe('2023-09-11~2023-09-17');
   });
 });
+
+// NAM-9 요한 승인: 예상값만 만원 표기. 작은 음수가 0처럼 보이지 않고, 범위는 하한 내림 · 상한 올림
+test('예상 금액 만원 표기', () => {
+  expect(core.dueMan(107747567)).toBe('10,775만원');
+  expect(core.dueMan(-4625410)).toBe('−463만원');
+  expect(core.dueMan(-3000)).toBe('−1만원 미만');
+  expect(core.dueMan(3000)).toBe('1만원 미만');
+  expect(core.dueMan(0)).toBe('0만원');
+  expect(core.dueManFloor(30595402)).toBe('3,059만원');
+  expect(core.dueManCeil(120153778)).toBe('12,016만원');
+  expect(core.dueManFloor(-3000)).toBe('−1만원');
+});

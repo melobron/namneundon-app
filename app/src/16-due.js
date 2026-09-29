@@ -237,8 +237,8 @@ function dueOldNote(c, box) {
 /* 모자람 문장 — 오래된 자료면 지금의 자금 부족 경고로 읽히지 않게 「계산됐습니다」로 적는다 */
 function dueShortText(c, 날, 금액) {
   return dueIsOld(c)
-    ? 날 + '에 ' + won(금액) + '원이 모자랄 수 있는 것으로 계산됐습니다'
-    : 날 + '에 ' + won(금액) + '원이 모자랄 수 있습니다';
+    ? 날 + '에 ' + dueMan(금액) + '이 모자랄 수 있는 것으로 계산됐습니다'
+    : 날 + '에 ' + dueMan(금액) + '이 모자랄 수 있습니다';
 }
 /* 계산은 core/due.js 의 dueCurveWhyIn — 그래프가 안 나오는 까닭 */
 function dueCurveWhy(c) {
@@ -257,50 +257,6 @@ function dueCommonText(c) {
     '까지 예상했습니다. 계좌별 자료 기간을 확인해주세요.'
   );
 }
-/* ── NAM-9 배포 전 보완 · 입금 보류 카드 ─────────────────────────────────
-   ★ 직전 30일에 매출로 정한 입금이 없고 아직 분류하지 않은 입금이 있을 때 (dueCardIn).
-   ★ 예상 숫자·그래프를 안 낸다. 미분류 입금을 매출로 치지 않는다.
-   ★ 결과 화면(실적)은 그대로 보인다 — 막는 것은 예측 하나뿐이다 */
-function drawDueInflowHold(host, c, months) {
-  var box = el('div', 'duecard noicon');
-  var top = el('div', 'duetop');
-  var res = el('div', 'dueres');
-  res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-  res.appendChild(
-    el(
-      'div',
-      'dueholdlab',
-      '직전 30일에 매출로 분류한 입금이 없어 예상 입금을 계산하지 않았습니다.'
-    )
-  );
-  res.appendChild(
-    el(
-      'div',
-      'dueholdn',
-      '아직 분류하지 않은 입금 ' + won(c.입금보류.건수) + '건 · ' + won(c.입금보류.합) + '원'
-    )
-  );
-  top.appendChild(res);
-  box.appendChild(top);
-  box.appendChild(
-    el(
-      'div',
-      'duewhy dueas',
-      '이 가운데 매출이 있으면 매출로 정해 주세요. 그러면 예상 잔액을 계산합니다.'
-    )
-  );
-  var go = el('button', 'fcopen', '들어온 돈 분류하기');
-  go.type = 'button';
-  go.addEventListener('click', function (e) {
-    e.stopPropagation();
-    useScreen('입금 보류 분류');
-    moreFromResult();
-  });
-  box.appendChild(go);
-  dueOldNote(c, box);
-  if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
-  host.appendChild(box);
-}
 /* ── 116차 앞 ④ · 보류 카드 ─────────────────────────────────────────
    ★ 예상 잔액 카드 자리에 안내를 한 번만 둔다.
    ★ 종료일 예상 잔액·최저 예상 잔액과 그 날짜·그래프와 진입 단추를 안 낸다.
@@ -312,63 +268,41 @@ function drawDueHoldCard(host, c, months) {
   var box = el('div', 'duecard noicon');
   var top = el('div', 'duetop');
   var res = el('div', 'dueres');
-  /* ★ NAM-9. 무엇이 보류됐는지 — 보통 카드와 같은 기간 이름을 먼저 적는다 */
   res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-  /* ★ NAM-9 후속. 아직 안 정한 출금은 이제 예측에 넣는다. 남은 보류 사유는 하나 —
-     함께 올린 계좌 사이에서 옮긴 돈일 수 있는데 아직 확인하지 않은 출금이다 (dueUnsetOutSplitIn) */
-  res.appendChild(
-    el('div', 'dueholdlab', '계좌끼리 옮긴 돈일 수 있는 출금이 있어 확인이 필요합니다.')
-  );
-  res.appendChild(el('div', 'dueholdn', '확인이 필요한 출금 ' + won(c.보류.건수) + '건'));
+  res.appendChild(el('div', 'dueholdlab', '예상 잔액을 아직 계산하지 않았습니다.'));
   top.appendChild(res);
   box.appendChild(top);
-  /* ★ NAM-9 후속. 주 행동은 결과 화면의 「계좌끼리 옮긴 것」 카드를 펴서 확인하는 것이다.
-     새 확인 화면을 만들지 않는다 — 있는 카드(drawTransferCards)를 펴고 그 자리로 간다 */
-  var xgo = el('button', 'fcopen', '계좌끼리 옮긴 돈 확인하기');
-  xgo.type = 'button';
-  xgo.addEventListener('click', function (e) {
-    e.stopPropagation();
-    useScreen('보류 원인 이체 확인');
-    UP.open = UP.open || {};
-    UP.open.__xfer = true;
-    drawResult(months);
-    setTimeout(function () {
-      var bx = document.querySelector('#up-result .xferbox');
-      if (bx) bx.scrollIntoView({ block: 'start' });
-    }, 0);
+  /* ★ NAM-9 요한 승인 (2026-09-29). 보류될 때만 이유와 할 일을 적는다. 사유가 여럿이면 함께 적고,
+     하나를 끝내면 반드시 열린다고 약속하지 않는다 */
+  var 사유 = dueHoldReasons(c);
+  if (사유.length > 1) {
+    box.appendChild(el('div', 'duewhy dueas', '확인할 것이 ' + 사유.length + '가지 있습니다.'));
+  }
+  사유.forEach(function (x) {
+    var row = el('div', 'duehold1');
+    row.appendChild(el('div', 'dueholdtxt', x.글));
+    if (x.단추) {
+      var b = el('button', 'fcopen', x.단추);
+      b.type = 'button';
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        x.할일(months);
+      });
+      row.appendChild(b);
+    }
+    box.appendChild(row);
   });
-  box.appendChild(xgo);
-  /* ★ 119차 A. 목록으로 내려가는 대신 기존 거래처 확인 화면에서 원인부터 묻는다.
-     물을 거래처가 없으면(출금 쪽이 다 정해졌거나 섞인 카드뿐) 예전처럼 목록을 편다.
-     ★ NAM-9 후속. 이체가 아니면 그 거래처를 분류해도 보류가 풀린다. 한 단계 낮은 단추로 둔다 */
-  var go = el('button', 'b dueholdsub', '이체가 아니면 분류하기');
-  go.type = 'button';
-  go.addEventListener('click', function (e) {
-    e.stopPropagation();
-    useScreen('보류 원인 분류');
-    if (holdAskStart(c.보류, months)) return;
-    UP.open = UP.open || {};
-    UP.open.__unset = true;
-    UP.open.__hold = true;
-    drawResult(months);
-    /* 폈는데 화면 밖이면 안 누른 것과 같다 (49차 ⑤ 와 같은 셈) */
-    setTimeout(function () {
-      var row = document.querySelector('#up-result .holdrow');
-      if (row) row.scrollIntoView({ block: 'center' });
-    }, 0);
-  });
-  box.appendChild(go);
-  /* ★ 116차 통합 ④. 보류 중에도 예정 지출은 미리 고치실 수 있게 둔다.
-     주 행동은 위의 [안 정한 거래 보기] 그대로고, 이것은 한 단계 낮은 단추다.
-     새 펼침을 만들지 않고 보통 카드와 같은 편집 화면을 연다.
-     ★ 저장해도 보류는 풀리지 않는다 — 보류 판단은 계획과 상관없는 기본 예측에서 한다 */
-  var pgo = el('button', 'b dueholdsub', '예정 지출 확인·수정');
-  pgo.type = 'button';
-  pgo.addEventListener('click', function (e) {
-    e.stopPropagation();
-    openDuePlan(c, months);
-  });
-  box.appendChild(pgo);
+  /* ★ 116차 통합 ④. 보류 중에도 예정 지출은 미리 고치실 수 있게 둔다 (한 단계 낮은 단추).
+     ★ 자료가 모자라 표본이 없으면 편집 화면도 뜻이 없어 안 둔다 */
+  if (!c.자료보류) {
+    var pgo = el('button', 'b dueholdsub', '예정 지출 확인·수정');
+    pgo.type = 'button';
+    pgo.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openDuePlan(c, months);
+    });
+    box.appendChild(pgo);
+  }
   dueOldNote(c, box);
   if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
   /* ★ 어디까지의 비교 날짜를 보고 판단했는지는 접든 펴든 같은 무게다 (105차 ③) */
@@ -385,6 +319,82 @@ function drawDueHoldCard(host, c, months) {
     );
   }
   host.appendChild(box);
+}
+/* 보류 사유마다 한 줄과 할 일 — 순서: 자료 → 이체 → 입금 */
+function dueHoldReasons(c) {
+  var out = [];
+  if (c.자료보류) {
+    out.push({
+      글: '예상 잔액을 보려면 3개월 이상의 거래내역을 추가해 주세요.',
+      단추: UP && !UP.demo && UP.banks && UP.banks.length ? '거래내역 추가하기' : null,
+      할일: function () {
+        useScreen('보류 거래내역 추가');
+        if (!openAddFiles()) return;
+        var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
+        if (inp) {
+          inp.value = '';
+          inp.click();
+        }
+      }
+    });
+  }
+  if (c.보류) {
+    /* 건수 = 확인할 이체 후보 쌍의 수 (후보 하나에 출금 한 줄). 확인할 때마다 다시 센다 */
+    out.push({
+      글: '예상 잔액을 보려면 계좌끼리 옮긴 돈인지 ' + won(c.보류.건수) + '건을 확인해 주세요.',
+      단추: '계좌끼리 옮긴 돈 확인하기',
+      할일: function (months) {
+        useScreen('보류 원인 이체 확인');
+        UP.open = UP.open || {};
+        UP.open.__xfer = true;
+        drawResult(months);
+        setTimeout(function () {
+          var bx = document.querySelector('#up-result .xferbox');
+          if (bx) bx.scrollIntoView({ block: 'start' });
+        }, 0);
+      }
+    });
+  }
+  if (c.입금보류) {
+    var g = c.입금보류;
+    if (g.건수) {
+      out.push({
+        글:
+          '아직 매출로 확인된 입금이 없습니다. 미분류 입금 ' +
+          won(g.건수) +
+          '건 중 매출이 있는지 확인해 주세요.',
+        단추: '들어온 돈 확인하기',
+        할일: function (months) {
+          useScreen('보류 원인 입금 확인');
+          if (!listAskStart(dueUnsetInNames(c), months)) moreFromResult();
+        }
+      });
+    } else if (!g.입금건) {
+      out.push({ 글: '직전 30일에 들어온 돈이 없어 예상 입금을 계산할 수 없습니다.' });
+    } else {
+      out.push({
+        글: '직전 30일에 들어온 돈 가운데 매출로 분류한 거래가 없어 예상 입금을 계산할 수 없습니다.'
+      });
+    }
+  }
+  return out;
+}
+/* 직전 30일에 아직 분류하지 않은 입금이 있는 거래처 이름 — 확인 차례(listAskStart)에 넘긴다 */
+function dueUnsetInNames(c) {
+  var t0 = dayNum(c.오늘),
+    본 = {},
+    out = [];
+  (UP.rows || []).forEach(function (r) {
+    if (!(r.amount > 0) || xferOn(r)) return;
+    var d = dayNum(r.at.slice(0, 10));
+    if (d <= t0 - 30 || d > t0) return;
+    if (catOf(r) !== UNSET) return;
+    var k = keyOf(r);
+    if (본[k]) return;
+    본[k] = 1;
+    out.push(k);
+  });
+  return out;
 }
 /* ── 116차 앞 ⑤ · 보류 원인 거래 목록 ───────────────────────────────
    ★ 전체 미정 목록만 열어 대표님이 원인을 다시 찾게 하지 않는다.
@@ -1741,8 +1751,7 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
           ? '자료 기준일 잔액 ' + won(최저값) + '원'
           : +월.달.slice(5, 7) +
               '월 최저 ' +
-              won(최저값) +
-              '원' +
+              dueMan(최저값) +
               (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
         최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
         true
@@ -1763,7 +1772,7 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       })
     );
     if (!같자리) {
-      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + won(c.예상) + '원', 끝색, true);
+      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + dueMan(c.예상), 끝색, true);
     }
     /* 날짜 줄 — 양 끝과 기준일 */
     [
@@ -1866,9 +1875,8 @@ function drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det) {
           후 = 후 || p;
         }
       });
-      if (전) det.appendChild(el('div', 'fcdetrow', '입금 전 ' + won(Math.round(전.값)) + '원'));
-      if (후)
-        det.appendChild(el('div', 'fcdetrow', '당일 반영 후 ' + won(Math.round(후.값)) + '원'));
+      if (전) det.appendChild(el('div', 'fcdetrow', '입금 전 ' + dueMan(전.값)));
+      if (후) det.appendChild(el('div', 'fcdetrow', '당일 반영 후 ' + dueMan(후.값)));
       /* ★ 계산값으로 견준다. 반올림한 표시값이 아니다 */
       if (전 && 후 && 전.값 === 후.값) {
         det.appendChild(el('div', 'fcdetsame', '입금 전·당일 반영 후 잔액 동일'));
@@ -1940,13 +1948,10 @@ function drawDueCard(host, months) {
   /* ★ NAM-9 배포 전 보완. 오래된 자료면 예상 영역 머리에 그 사실을 붙인다 */
   var 머리 = host.querySelector ? host.querySelector('.duesechead') : null;
   if (머리 && dueIsOld(c)) 머리.textContent = '예상 · 과거 자료 기준';
-  if (c.보류) {
-    DUE_HOLD_NOW = c.보류;
+  /* ★ NAM-9 요한 승인. 보류 사유(이체·입금·자료)는 한 카드가 함께 보여준다.
+     ★ DUE_HOLD_NOW 는 더 안 채운다 — 그 목록의 [정하기](분류)로는 이체 후보 보류가 풀리지 않는다 */
+  if (c.보류 || c.입금보류 || c.자료보류) {
     drawDueHoldCard(host, c, months);
-    return;
-  }
-  if (c.입금보류) {
-    drawDueInflowHold(host, c, months);
     return;
   }
   /* ★ 101차. 곡선을 여기서 한 번만 구한다 — 제목과 펼친 자리가 같이 쓴다 */
@@ -2033,7 +2038,8 @@ function drawDueCard(host, months) {
   var top = el('div', 'duetop tapx');
   var res = el('div', 'dueres');
   res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-  res.appendChild(el('div', 'duresnum', won(c.예상) + '원'));
+  /* ★ NAM-9 요한 승인. 예상값은 만원 단위로 보인다 (계산은 원 단위 그대로) */
+  res.appendChild(el('div', 'duresnum', dueMan(c.예상)));
   top.appendChild(res);
   top.appendChild(foldChip(open));
   box.appendChild(top);
@@ -2092,12 +2098,14 @@ function drawDueCard(host, months) {
     미분류줄.push('아직 분류하지 않은 출금 ' + won(c.미분류.건수) + '건은 예상 출금에 넣었습니다.');
   }
   if (c.입금틈 && c.입금틈.건수) {
+    /* ★ NAM-9 요한 승인 문구. 건수·금액은 사실(원 단위)이고, 「꼭 분류할 개수」로 부르지 않는다 */
     미분류줄.push(
-      '아직 분류하지 않은 입금 ' +
+      '직전 30일 미분류 입금 ' +
         won(c.입금틈.건수) +
         '건 · ' +
         won(c.입금틈.합) +
-        '원(직전 30일)은 예상 입금에 넣지 않았습니다.'
+        '원. 아직 분류하지 않은 입금은 예상 입금에 넣지 않았습니다. ' +
+        '매출이 포함돼 있다면 예상 잔액이 낮게 계산될 수 있습니다.'
     );
   }
   if (미분류줄.length) box.appendChild(el('div', 'duewhy dueas', 미분류줄.join(' ')));
@@ -2196,12 +2204,15 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
        예상 기간은 묻지 않고 다음 달 말일까지로 정한다 */
     var t = el('div', 'duepick');
     /* ★ B-4 (2026-09-28). 블록 안 함수 선언을 변수로 바꿨다 — 선언 뒤에서만 부르므로 같다. 블록을 함수로 뺄 수 있게 */
-    var 줄 = function (name, v, sub, sign) {
+    /* ★ NAM-9 요한 승인. 예상(들어올·나갈)은 만원, 자료에 적힌 잔액은 원 단위다 (예상 = true) */
+    var 줄 = function (name, v, sub, sign, 예상) {
       var r = el('div', 'orow');
       var l = el('div', 'lab', '　' + name);
       if (sub) l.appendChild(el('span', 'gcount', sub));
       r.appendChild(l);
-      r.appendChild(el('div', 'v num', (sign || '') + won(Math.abs(v))));
+      r.appendChild(
+        el('div', 'v num', (sign || '') + (예상 ? dueMan(Math.abs(v)) : won(Math.abs(v))))
+      );
       t.appendChild(r);
     };
     /* ★ 113차 ①④⑤ (수정). 자료 범위의 출처와 제한은 「자세히」 안에만 둔다.
@@ -2217,7 +2228,7 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
     });
     /* ★ 103차 ⑤. 「현재」는 자료 기준일의 잔액이지 지금 잔액이 아니다 */
     줄('자료 기준일 계좌 잔액', c.잔액, null, c.잔액 < 0 ? '− ' : '');
-    줄(까지 + '까지 들어올 돈', c.들어올, '직전 30일 매출 기준', '+ ');
+    줄(까지 + '까지 들어올 돈', c.들어올, '직전 30일 매출 기준', '+ ', true);
     /* ★ 105차 ②. 창 안에서 표본이 줄면 「지난 3달」이 사실이 아니다 */
     줄(
       까지 + '까지 나갈 돈',
@@ -2225,7 +2236,8 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
       c.셈최소 < 3
         ? '지난 3달 · 뒷부분은 과거 구간 ' + c.셈최소 + '개 기준'
         : '지난 3달 같은 구간 기준',
-      '− '
+      '− ',
+      true
     );
     /* ★ 109차 ⑥㉰. 「○월 ○일 예상 잔액」과 「잔액이 가장 적을 날」 두 줄을 뺀다 —
        접힌 카드의 결과 상자와 최저 줄이 그 자리를 대신한다.
@@ -2263,8 +2275,8 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
             : '예상한 입출금이 그대로 이뤄질 경우, ' +
                 cv.최저날 +
                 '에는 당일 출금 후 입금 전 잔액이 ' +
-                won(cv.최저) +
-                '원으로 예상됩니다.'
+                dueMan(cv.최저) +
+                '으로 예상됩니다.'
         )
       );
       /* ★ 110차 ②. 「예비비」를 안 부른다 — 정하는 자리가 아직 앱에 없다.
@@ -2347,7 +2359,7 @@ function drawDueNextLow(c, 월, box, cv) {
   low.appendChild(el('div', 'duenextday', 범위 + ' 잔액이 가장 적을 것으로 예상되는 날: ' + 날));
   var 값줄 = el('div', 'duenextval');
   값줄.appendChild(document.createTextNode('그날의 최저 예상 잔액: '));
-  값줄.appendChild(el('b', 월.값 < 0 ? 'sgn-minus' : null, won(월.값) + '원'));
+  값줄.appendChild(el('b', 월.값 < 0 ? 'sgn-minus' : null, dueMan(월.값)));
   low.appendChild(값줄);
   if (월.갈래 === '입금전') {
     low.appendChild(el('div', 'duenextsub', '당일 출금 후 입금 전 기준'));
@@ -2363,7 +2375,8 @@ function drawDueNextLow(c, 월, box, cv) {
     var r = el('div', 'duerange');
     var 머리 = el('div', 'duerangeval');
     머리.appendChild(document.createTextNode('임시 참고 범위: '));
-    머리.appendChild(el('b', null, won(rg.하한) + '원 ~ ' + won(rg.상한) + '원'));
+    /* 하한은 내림, 상한은 올림 — 만원으로 줄이며 범위가 좁아지지 않게 */
+    머리.appendChild(el('b', null, dueManFloor(rg.하한) + ' ~ ' + dueManCeil(rg.상한)));
     머리.appendChild(document.createTextNode(' · ' + 주글(rg.주시작, rg.주끝) + ' 무렵'));
     r.appendChild(머리);
     var 설명 =
