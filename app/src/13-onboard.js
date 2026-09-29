@@ -329,8 +329,7 @@ function startOnboard() {
     if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
     if (saved.unskip) UP.unskip = saved.unskip.slice();
     if (saved.목표일) setDueDay(saved.목표일); /* 57차 ⑦ · 60차 ① */
-    if (saved.xfer) applyXferKeys(saved.xfer); /* 37차 6번 */
-    if (saved.xferNo) applyXferNoKeys(saved.xferNo); /* NAM-9 */
+    applyXferSaved(saved); /* 37차 6번 · NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
     UP.manual = manualLoad(); /* 36차 J. 저장통이 따로다 */
     UP.payees.forEach(function (g) {
       /* 원본 표기로 먼저 맞춰본다. 옛 저장값은 다듬은 이름으로 되어 있어 그것도 본다 */

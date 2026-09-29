@@ -453,21 +453,27 @@ function prevMonthOf(m) {
 function xferOnIn(U, r) {
   return !!(U.xfer && U.xfer[rowId(r)]);
 }
-/* ── NAM-9 요한 승인 (2026-09-29) · 「계좌끼리 옮긴 돈이 아닙니다」 ──────────────────
-   ★ 후보 한 쌍(나간 줄 → 들어온 줄)에 대한 판단이다. 한 줄만 보지 않는다 —
+/* ── NAM-9 요한 승인 (2026-09-29) · 이체 후보 한 쌍에 대한 답 ──────────────────
+   ★ 답은 후보 한 쌍(나간 줄 → 들어온 줄)에 붙는다. 한 줄만 보지 않는다 —
      같은 줄이 다른 입금과 짝지어지면 그건 다른 후보라 다시 묻는다.
-   ★ 키는 줄마다 「거래 시각 | 은행 이름 | 엑셀 행번호 | 원문 거래처」다.
-     기존 이체 키(xferKey: 날짜 | 은행 이름 | 행번호)는 같은 은행 계좌가 둘이면 겹칠 수 있어
-     시각과 원문 거래처를 더했다. 금액은 넣지 않는다 (fc.picks 에는 금액을 담지 않는다).
-   ★ 이 판단은 분류를 바꾸지 않는다. 후보에서 빠질 뿐이고, 예측은 일반 거래 규칙을 따른다 */
+   ★ 화면 안에서는 쌍 ID(두 줄의 rowId — 계좌 차례 · 잔액이 들어 있어 이 화면 안에서 유일)로 들고 있는다.
+     저장 키로 들고 있으면 키가 겹치는 두 쌍에 한 번의 답이 함께 붙는다 (검증방 지적).
+   ★ 저장 키는 줄마다 「계좌 열쇠 | 거래 시각 | 엑셀 행번호 | 원문 거래처」다. 금액은 넣지 않는다.
+     계좌 열쇠(bankKeyOf: 시트 이름 + 숫자를 뺀 파일 이름)는 계좌를 올린 차례 · 은행 이름 고치기와 상관없다.
+     다만 같은 은행 두 계좌의 파일 이름이 숫자만 다르면 열쇠가 같다 — 그래서 되살릴 때는
+     지금 자료의 후보 가운데 **정확히 한 쌍**과 맞을 때만 쓴다 (applyXferSaved). 아니면 다시 묻는다 */
+function xferPairIdIn(U, p) {
+  return rowId(p.out) + ' > ' + rowId(p.into);
+}
 function xferSideKeyIn(U, r) {
-  return r.at + '|' + bankNameIn(U, r.acc || 0) + '|' + (r.excelRow || 0) + '|' + (r.payee || '');
+  var b = U.banks && U.banks[r.acc || 0];
+  return (b ? bankKeyOf(b) : '') + '|' + r.at + '|' + (r.excelRow || 0) + '|' + (r.payee || '');
 }
 function xferPairKeyIn(U, p) {
   return xferSideKeyIn(U, p.out) + ' → ' + xferSideKeyIn(U, p.into);
 }
 function xferNoIn(U, p) {
-  return !!(U.xferNo && U.xferNo[xferPairKeyIn(U, p)]);
+  return !!(U.xferNo && U.xferNo[xferPairIdIn(U, p)]);
 }
 /* 저장할 목록 — 금액이 없는 키만 */
 function xferKeysIn(U) {

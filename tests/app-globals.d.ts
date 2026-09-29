@@ -92,3 +92,6 @@ declare var dueFresh: any;
 declare var rowId: any;
 declare var markNotXfer: any;
 declare var xferAnswer: any;
+declare var xferPairKeyIn: any;
+declare var xferKey: any;
+declare var clearXferAnswer: any;

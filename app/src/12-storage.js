@@ -266,6 +266,8 @@ function pickPayload() {
     /* ★ NAM-9 요한 승인. 「계좌끼리 옮긴 돈이 아닙니다」로 답한 후보 쌍 — 키에 금액이 없다.
        옛 저장본에는 이 칸이 없다. 없으면 빈 목록으로 읽는다 */
     xferNo: xferNoKeys(),
+    /* 검증방 지적 보완. 「옮긴 돈입니다」도 쌍 저장 키로 남긴다 — 옛 줄 키(xfer)는 옛 판과 맞추려고 같이 쓴다 */
+    xferOk: xferOkKeys(),
     unskip: (UP.unskip || []).slice() /* 36차 F. 손수 되돌리신 곳 — 이름만, 숫자 없음 */,
     accounts: UP.accounts.slice(),
     hidden: (UP.hidden || []).slice(),
