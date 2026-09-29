@@ -4512,13 +4512,7 @@ footer {
   font-variant-numeric: tabular-nums;
   word-break: break-all;
 }
-/* ★ 2026-09-29 요한 확정 — 다음 달 최저 예상 잔액 범위. 폰에서는 「~」 뒤에서 줄을 바꾼다 (금액은 쪼개지 않는다) */
-.duereslow {
-  word-break: keep-all;
-}
-.duereslow span {
-  white-space: nowrap;
-}
+/* ★ 큰 칸 셋째 줄 — 「9월 10일로 예상됩니다」 · 표시할 수 없을 때의 할 일 */
 .dueresday {
   margin-top: 3px;
   font-size: calc(13 * var(--fu));
