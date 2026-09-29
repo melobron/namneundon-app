@@ -174,7 +174,7 @@ function syncUpOpen() {
   var b = document.getElementById('upopen');
   if (!b) return;
   var 내것 = !!(UP && !UP.demo && UP.payees);
-  b.textContent = 내것 ? '파일 더 올리기' : '내 거래내역 올려보기';
+  b.textContent = 내것 ? '거래내역 추가하기' : '내 거래내역으로 확인하기';
 }
 document.getElementById('upclose').addEventListener('click', closeUpPanel);
 
@@ -593,7 +593,7 @@ function showUnreadable(found) {
   unreadableBody(box, found);
 
   var acts = el('div', 'upacts');
-  var again = el('button', 'b on', '다른 파일 올리기');
+  var again = el('button', 'b on', '다른 파일 선택하기');
   again.type = 'button';
   again.addEventListener('click', function () {
     host.innerHTML = '';

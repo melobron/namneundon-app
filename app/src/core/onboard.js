@@ -607,9 +607,21 @@ function clockText(at) {
    36차에서 진행 바를 넣으면서 그게 역효과가 됐다 —
    눌러도 바가 거의 안 오르는 순간이 생기면 「도대체 얼마나 눌러야 하나」로 읽힌다.
    ★ 추천(✨)은 그대로 둔다. 차례만 금액순이고 걸린 곳에는 여전히 ✨가 붙는다.
-   ★ G(비슷한 이름 묶기)로 당기는 것은 그대로다 —
-     「방금 ○○를 찍으셔서 앞에 두었습니다」는 방금 하신 일과 이어져 있어 뜻이 다르다.
+   ★ 비슷한 이름(「○○도 같은 곳인가요?」)과 묶음 카드(G)는 차례를 바꾸지 않는다 — 그 카드가 떠 있는 동안만
+     관련 거래처를 모아 보여 주고, 답한 거래처는 목록에서 빠진다. 끝나면 남은 목록은 그대로 금액순이다
+     (2026-09-29 확인. 예전 주석의 「앞에 두었습니다」는 38차 11번 뒤로 사실이 아니었다).
    금액이 같으면 이름 순으로 갈라 회차마다 같은 차례가 되게 한다 */
+/* 되돌린 거래처를 아직 안 물은 자리(from 뒤)에 금액순으로 다시 끼운다 — orderQueue 와 같은 차례 규칙.
+   ★ 묶음을 되돌렸을 때 맨 뒤로 가서 금액순이 깨지던 것을 막는다 (2026-09-29 요한 확정: 기능이 끝나면 큰 금액순) */
+function queueInsertByAmount(queue, from, g) {
+  var j = Math.max(0, from);
+  while (
+    j < queue.length &&
+    (queue[j].abs > g.abs || (queue[j].abs === g.abs && queue[j].name < g.name))
+  )
+    j++;
+  queue.splice(j, 0, g);
+}
 function orderQueue(list) {
   return list.slice().sort(function (a, b) {
     if (b.abs !== a.abs) return b.abs - a.abs;

@@ -453,6 +453,39 @@ function prevMonthOf(m) {
 function xferOnIn(U, r) {
   return !!(U.xfer && U.xfer[rowId(r)]);
 }
+/* ── NAM-9 요한 승인 (2026-09-29) · 이체 후보 한 쌍에 대한 답 ──────────────────
+   ★ 답은 후보 한 쌍(나간 줄 → 들어온 줄)에 붙는다. 한 줄만 보지 않는다 —
+     같은 줄이 다른 입금과 짝지어지면 그건 다른 후보라 다시 묻는다.
+   ★ 화면 안에서는 쌍 ID(두 줄의 rowId — 계좌 차례 · 잔액이 들어 있어 이 화면 안에서 유일)로 들고 있는다.
+     저장 키로 들고 있으면 키가 겹치는 두 쌍에 한 번의 답이 함께 붙는다 (검증방 지적).
+   ★ 저장 키는 줄마다 「계좌 열쇠 | 파일에서 찾은 은행 | 거래 시각 | 엑셀 행번호 | 원문 거래처」다. 금액은 넣지 않는다.
+     계좌 열쇠(bankKeyOf: 시트 이름 + 숫자를 뺀 파일 이름)는 계좌를 올린 차례 · 은행 이름 고치기와 상관없다.
+   ★ 검증방 지적 (2026-09-29 세 번째): 파일 이름 · 시트 이름 · 은행 이름으로는 계좌를 가를 수 없다 —
+     서로 다른 두 국민은행 계좌가 둘 다 「국민은행_거래내역.xlsx」로 내려받아질 수 있다.
+     그래서 새로 읽은 파일에는 저장된 이체 답을 자동으로 붙이지 않는다 (fc.picks 의 xferOk · xferNo 는 들고만 있다).
+     되살리는 길은 하나 — 이 기기에 저장한 거래내역(fc.data)을 그대로 다시 열 때, 그 자료에 함께 남긴
+     쌍 ID(두 줄의 rowId)로만 붙인다 (xferDataAnswers · applyXferFromData). 계좌번호는 저장하지 않는다 */
+function xferPairIdIn(U, p) {
+  return rowId(p.out) + ' > ' + rowId(p.into);
+}
+function xferSideKeyIn(U, r) {
+  var b = U.banks && U.banks[r.acc || 0];
+  return (
+    (b ? bankKeyOf(b) + '|' + (b.found || '') : '') +
+    '|' +
+    r.at +
+    '|' +
+    (r.excelRow || 0) +
+    '|' +
+    (r.payee || '')
+  );
+}
+function xferPairKeyIn(U, p) {
+  return xferSideKeyIn(U, p.out) + ' → ' + xferSideKeyIn(U, p.into);
+}
+function xferNoIn(U, p) {
+  return !!(U.xferNo && U.xferNo[xferPairIdIn(U, p)]);
+}
 /* 저장할 목록 — 금액이 없는 키만 */
 function xferKeysIn(U) {
   if (!U.xfer) return [];
