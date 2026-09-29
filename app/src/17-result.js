@@ -106,7 +106,7 @@ function drawResultInner(months) {
       el(
         'div',
         'shortnote',
-        '지난 1년치를 올리시면 지난달과 견주고 다음 달 말까지의 잔액도 예상해드립니다.'
+        '지난 1년치를 불러오시면 지난달과 견주고 다음 달 말까지의 잔액도 예상해드립니다.'
       )
     );
   }
@@ -213,7 +213,7 @@ function drawResultInner(months) {
       see.textContent = trades.hidden ? '확인할 거래 보기' : '거래 접기';
     });
     acts.appendChild(see);
-    var again = el('button', 'b', '파일 다시 올리기');
+    var again = el('button', 'b', '파일 다시 선택하기');
     again.type = 'button';
     again.addEventListener('click', function () {
       PENDING = [];
@@ -1258,7 +1258,7 @@ function drawSaveFailNote(host) {
       sv.appendChild(document.createElement('br'));
       sv.appendChild(
         document.createTextNode(
-          '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 올려야 합니다.'
+          '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 불러와야 합니다.'
         )
       );
     }

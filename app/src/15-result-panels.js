@@ -407,7 +407,7 @@ function drawNames() {
           el(
             'div',
             'addq',
-            '「' + r.name + '」에 저장된 것을 지금 올리신 파일에 덮어씁니다. 할까요?'
+            '「' + r.name + '」에 저장된 것을 지금 불러온 파일에 덮어씁니다. 할까요?'
           )
         );
         var ar = el('div', 'addrow');
@@ -476,7 +476,7 @@ function openCats() {
 function drawCats() {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
-  host.appendChild(el('div', 'catspan', monthSpan() + ' 올리신 거래 전체 기준입니다'));
+  host.appendChild(el('div', 'catspan', monthSpan() + ' 불러온 거래 전체 기준입니다'));
   host.appendChild(
     el(
       'div',
@@ -1097,7 +1097,7 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
       새매장
         ? '파일의 거래처 분류로 새 매장을 만듭니다.'
         : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
-            (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')
+            (저장통만 ? '' : ' 지금 불러온 거래내역에 있는 거래처에만 적용됩니다.')
     )
   );
   var 함께 = [];
@@ -1285,8 +1285,8 @@ function importToStore(o, 이름, 새매장) {
   PICKED_STORE = { key: storeKey(이름), name: 이름 || '(기본)', n: n곳, 불러옴: true };
   drawUpMine();
   drawImportStart();
-  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 올려주세요.', true, 'start');
-  var go = el('button', 'b on', '거래내역 올리기');
+  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 불러와 주세요.', true, 'start');
+  var go = el('button', 'b on', '거래내역 불러오기');
   go.type = 'button';
   go.style.marginLeft = '8px';
   go.addEventListener('click', function () {
@@ -1992,7 +1992,7 @@ var SHORT_SPAN_MONTHS = 6;
    ○○ 약사가 파일 용량 때문에 5개월치만 넣으셨다.
    ★ 두 가지를 다 말해야 한다. 「합쳐진다」만 있으면
      「그럼 처음부터 다시 분류해야 하나」 싶어 안 하시게 된다 */
-var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
+var SPLIT_UPLOAD_TIP = '나눠 불러와도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
 
 /* 화면 맨 아래 면책 문구. 숫자를 가리지 않게 회색 작은 글씨로 끝에만 둔다 */
 /* 「추정치」가 아니다 — 계좌에 찍힌 것을 더한 것이고 검산까지 맞춰놨다.

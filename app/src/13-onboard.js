@@ -1547,7 +1547,7 @@ function drawOnboard() {
     if (allDone) {
       /* 다음 달엔 이 일을 안 해도 된다는 걸 알려준다 */
       host.appendChild(
-        el('div', 'obnext', '이제 매달 새로 올리셔도 이 거래처들은 자동으로 잡힙니다.')
+        el('div', 'obnext', '이제 매달 새로 불러오셔도 이 거래처들은 자동으로 잡힙니다.')
       );
     }
     var acts = el('div', 'obdoneacts');

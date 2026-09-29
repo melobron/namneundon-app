@@ -238,7 +238,7 @@ function drawStart() {
   box.appendChild(wmk);
   /* ★ 119차 문구 보정. 시간(10분)과 거래처 수(20곳)를 약속하지 않는다 */
   box.appendChild(el('div', 'welbig', '이번 달 번 돈과 쓴 돈을 확인하세요'));
-  box.appendChild(el('div', 'welsub', '거래내역을 올리고, 거래처의 용도를 정해주세요'));
+  box.appendChild(el('div', 'welsub', '거래내역 파일을 불러오고, 거래처의 용도를 정해주세요'));
 
   /* 안심 고지는 새로 쓰지 않고 이미 있는 것을 그대로 옮겨 온다 (49차)
      ★ NAM-9. 「보내지 않습니다」는 파일 선택 단추 아래(.upsafe)로 옮겼다 —
@@ -394,7 +394,7 @@ function drawStart() {
   }
 
   box.appendChild(
-    el('div', 'tradehead', mine.length ? '새로 올리기' : '어떤 곳의 거래내역인가요?')
+    el('div', 'tradehead', mine.length ? '새로 불러오기' : '어떤 곳의 거래내역인가요?')
   );
   box.appendChild(
     el(
@@ -654,7 +654,7 @@ function tradeNotice(host) {
     el(
       'div',
       null,
-      '예시는 식당 자료로 만든 것입니다. 파일을 올리면 ' + name + ' 항목으로 나옵니다.'
+      '예시는 식당 자료로 만든 것입니다. 파일을 불러오면 ' + name + ' 항목으로 나옵니다.'
     )
   );
   if (t.카드고지) {
@@ -762,7 +762,7 @@ function drawUpMine() {
    한 번 다음 단계로 넘어가면 up-pick 이 숨겨진 채로 남아,
    창을 닫았다 열어도 아무도 되살리지 않는다 */
 function openPick() {
-  document.getElementById('uptitle').textContent = '내 거래내역 올려보기';
+  document.getElementById('uptitle').textContent = '내 거래내역으로 확인하기';
   document.getElementById('upbad').innerHTML = ''; /* 지난 파일의 확인 카드 */
   upStat(''); /* 지난 파일의 안내문 */
   upReadState(false); /* ★ 119차 업로드 안내. 새로 고르는 화면이라 안내를 펼친다 */

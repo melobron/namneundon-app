@@ -206,6 +206,20 @@ function dueSpanText(c) {
   var 뒤 = c.잘림 ? 뒤해 + 날글(c.목표) : 뒤해 + +c.목표.slice(5, 7) + '월 말';
   return 앞 + ' · ' + 뒤 + '까지 예상 잔액';
 }
+/* ── NAM-9 후속 · 여러 계좌의 공통 기준일 안내 ─────────────────────────
+   ★ 기준은 102차 그대로다 — 모든 계좌에 자료가 있는 마지막 날(commonAsOf).
+     가장 늦은 계좌의 날짜로 다른 계좌까지 최신인 것처럼 늘리지 않는다.
+   ★ 그 때문에 기간이 짧아졌다는 것을 한 문장으로 알린다 */
+function dueCommonText(c) {
+  var 끝 = c.잘림 ? 날글(c.목표) : +c.목표.slice(5, 7) + '월 말';
+  return (
+    '여러 계좌를 함께 계산할 수 있는 ' +
+    날글(c.오늘) +
+    '을 기준으로, ' +
+    끝 +
+    '까지 예상했습니다. 계좌별 자료 기간을 확인해주세요.'
+  );
+}
 /* ── 116차 앞 ④ · 보류 카드 ─────────────────────────────────────────
    ★ 예상 잔액 카드 자리에 안내를 한 번만 둔다.
    ★ 종료일 예상 잔액·최저 예상 잔액과 그 날짜·그래프와 진입 단추를 안 낸다.
@@ -219,15 +233,34 @@ function drawDueHoldCard(host, c, months) {
   var res = el('div', 'dueres');
   /* ★ NAM-9. 무엇이 보류됐는지 — 보통 카드와 같은 기간 이름을 먼저 적는다 */
   res.appendChild(el('div', 'duereslab', dueSpanText(c)));
+  /* ★ NAM-9 후속. 아직 안 정한 출금은 이제 예측에 넣는다. 남은 보류 사유는 하나 —
+     함께 올린 계좌 사이에서 옮긴 돈일 수 있는데 아직 확인하지 않은 출금이다 (dueUnsetOutSplitIn) */
   res.appendChild(
-    el('div', 'dueholdlab', '예상 지출에서 빠진 거래가 있어 분류 확인이 필요합니다.')
+    el('div', 'dueholdlab', '계좌끼리 옮긴 돈일 수 있는 출금이 있어 확인이 필요합니다.')
   );
   res.appendChild(el('div', 'dueholdn', '확인이 필요한 출금 ' + won(c.보류.건수) + '건'));
   top.appendChild(res);
   box.appendChild(top);
+  /* ★ NAM-9 후속. 주 행동은 결과 화면의 「계좌끼리 옮긴 것」 카드를 펴서 확인하는 것이다.
+     새 확인 화면을 만들지 않는다 — 있는 카드(drawTransferCards)를 펴고 그 자리로 간다 */
+  var xgo = el('button', 'fcopen', '계좌끼리 옮긴 돈 확인하기');
+  xgo.type = 'button';
+  xgo.addEventListener('click', function (e) {
+    e.stopPropagation();
+    useScreen('보류 원인 이체 확인');
+    UP.open = UP.open || {};
+    UP.open.__xfer = true;
+    drawResult(months);
+    setTimeout(function () {
+      var bx = document.querySelector('#up-result .xferbox');
+      if (bx) bx.scrollIntoView({ block: 'start' });
+    }, 0);
+  });
+  box.appendChild(xgo);
   /* ★ 119차 A. 목록으로 내려가는 대신 기존 거래처 확인 화면에서 원인부터 묻는다.
-     물을 거래처가 없으면(출금 쪽이 다 정해졌거나 섞인 카드뿐) 예전처럼 목록을 편다 */
-  var go = el('button', 'fcopen', '분류하고 예상 잔액 보기');
+     물을 거래처가 없으면(출금 쪽이 다 정해졌거나 섞인 카드뿐) 예전처럼 목록을 편다.
+     ★ NAM-9 후속. 이체가 아니면 그 거래처를 분류해도 보류가 풀린다. 한 단계 낮은 단추로 둔다 */
+  var go = el('button', 'b dueholdsub', '이체가 아니면 분류하기');
   go.type = 'button';
   go.addEventListener('click', function (e) {
     e.stopPropagation();
@@ -255,19 +288,7 @@ function drawDueHoldCard(host, c, months) {
     openDuePlan(c, months);
   });
   box.appendChild(pgo);
-  if (c.공통기준) {
-    box.appendChild(
-      el(
-        'div',
-        'duewhy dueas',
-        '계좌별 최종 거래일이 달라 ' +
-          +c.오늘.slice(5, 7) +
-          '월 ' +
-          +c.오늘.slice(8, 10) +
-          '일 기준으로 합산했습니다. 계좌별 자료 기간을 확인해주세요.'
-      )
-    );
-  }
+  if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
   /* ★ 어디까지의 비교 날짜를 보고 판단했는지는 접든 펴든 같은 무게다 (105차 ③) */
   if (c.잘림) {
     box.appendChild(
@@ -1959,23 +1980,22 @@ function drawDueCard(host, months) {
       )
     );
   }
-  drawDueHeldPlans(months, c, box);
-  /* ★ 102차. 계좌마다 마지막 거래일이 다르면 그 사실을 말한다. 같으면 안 나온다.
-     ★ 계좌를 지목하지 않는다 — 이름이 「계좌 2」인 경우가 있어 지목해도 뜻이 없다.
-     ★ 확인된 것은 「계좌별 최종 거래일 중 가장 이른 날」 하나뿐이다 */
-  if (c.공통기준) {
+  /* ★ NAM-9 후속. 아직 분류하지 않은 출금을 예측에 넣었으면 그 사실을 한 줄로 알린다.
+     분류하지 않아도 그래프가 나오는 대신, 무엇이 들어갔는지는 숨기지 않는다 */
+  if (c.미분류) {
     box.appendChild(
       el(
         'div',
         'duewhy dueas',
-        '계좌별 최종 거래일이 달라 ' +
-          +c.오늘.slice(5, 7) +
-          '월 ' +
-          +c.오늘.slice(8, 10) +
-          '일 기준으로 합산했습니다. 계좌별 자료 기간을 확인해주세요.'
+        '아직 분류하지 않은 출금 ' + won(c.미분류.건수) + '건도 예상 출금에 넣었습니다.'
       )
     );
   }
+  drawDueHeldPlans(months, c, box);
+  /* ★ 102차. 계좌마다 마지막 거래일이 다르면 그 사실을 말한다. 같으면 안 나온다.
+     ★ 계좌를 지목하지 않는다 — 이름이 「계좌 2」인 경우가 있어 지목해도 뜻이 없다.
+     ★ 확인된 것은 「계좌별 최종 거래일 중 가장 이른 날」 하나뿐이다 */
+  if (c.공통기준) box.appendChild(el('div', 'duewhy dueas', dueCommonText(c)));
   if (!open) box.classList.add('shut');
   /* ★ 105차 ①③. 어디까지 계산했는지와 표본이 줄어든 자리는 접든 펴든 같은 무게다 */
   if (!open && 잘림줄) box.appendChild(el('div', 'duewhy dueas', 잘림줄));
@@ -2158,13 +2178,23 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
           'div',
           'duewhy',
           (c.입금방식 === '요일'
-            ? '입금은 직전 30일 같은 요일의 매출 평균을 날짜마다 놓고, '
-            : '입금은 직전 30일 매출 평균을 매일 같은 금액으로 놓고, ') +
-            '출금은 과거 계좌 출금을 기준으로 지난 3개월 같은 구간의 날짜별 평균을 반영했습니다. ' +
-            '사업 외 출금도 포함합니다.' +
+            ? '입금은 직전 30일 동안 매출로 분류한 거래의 같은 요일 평균을 날짜마다 놓았습니다. '
+            : '입금은 직전 30일 동안 매출로 분류한 거래의 평균을 매일 같은 금액으로 놓았습니다. ') +
+            '매출이 아닌 입금과 아직 분류하지 않은 입금은 넣지 않았습니다.' +
             (c.대체요일 && c.대체요일.length
               ? ' 매출 자료가 없는 요일은 30일 평균으로 채웠습니다.'
               : '')
+        )
+      );
+      /* ★ NAM-9 후속. 출금 범위를 사실대로 적는다 — 분류와 상관없이 계좌에서 나간 돈이다.
+         한 번만 있었던 출금도 같은 셈(지난 3개월 같은 자리 날의 평균)에 들어간다 */
+      box.appendChild(
+        el(
+          'div',
+          'duewhy',
+          '출금은 지난 3개월 같은 구간의 날짜별 계좌 출금 평균입니다. ' +
+            '사업 외 출금과 아직 분류하지 않은 출금도 넣고, 계좌끼리 옮긴 것으로 확인한 돈은 뺐습니다. ' +
+            '한 번만 있었던 출금도 같은 방식으로 평균에 들어갑니다.'
         )
       );
       /* ★ 104차 정정 ㉲ · 105차 ①. 날짜마다 비교한 과거 구간 수가 다를 수 있다.
