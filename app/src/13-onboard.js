@@ -1175,7 +1175,8 @@ function undoPick() {
         m.g.autoIn = m.autoIn;
         m.g.autoOut = m.autoOut;
       }
-      if (UP.queue.indexOf(m.g) === -1) UP.queue.push(m.g);
+      /* 묶음에서 빠졌던 곳은 아직 안 물은 자리에 금액순으로 되돌린다 (맨 뒤로 보내지 않는다) */
+      if (UP.queue.indexOf(m.g) === -1) queueInsertByAmount(UP.queue, h.i + 1, m.g);
     });
     UP.pos = h.i;
     UP.said = null;

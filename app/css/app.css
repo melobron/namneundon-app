@@ -3768,11 +3768,6 @@ footer {
 .fcdetrow {
   color: var(--ink);
 }
-.fcdetsame {
-  margin-top: 3px;
-  color: var(--gray);
-  font-size: calc(12 * var(--fu));
-}
 .fcdet .oslink {
   margin-top: 7px;
 }

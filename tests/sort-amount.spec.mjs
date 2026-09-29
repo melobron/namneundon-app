@@ -128,3 +128,17 @@ test('1년 표 — 펼친 세부 줄도 이 기간 합계가 큰 순서', async 
   expect(표.쓴.length).toBe(2);
   for (const l of [표.번, 표.쓴]) expectDesc(l.map((r) => r[1]));
 });
+
+test('묶음을 되돌리면 빠졌던 거래처는 남은 목록에 금액순으로 돌아간다', () => {
+  const q = [
+    { name: '지금', abs: 900 },
+    { name: '다', abs: 500 },
+    { name: '라', abs: 100 }
+  ];
+  // 지금 보는 것(0번) 뒤에만 끼운다 — 금액이 더 커도 이미 물은 자리 앞으로 가지 않는다
+  core.queueInsertByAmount(q, 1, { name: '나', abs: 700 });
+  core.queueInsertByAmount(q, 1, { name: '마', abs: 50 });
+  core.queueInsertByAmount(q, 1, { name: '가', abs: 5000 });
+  core.queueInsertByAmount(q, 1, { name: '라2', abs: 100 });
+  expect(q.map((x) => x.name)).toEqual(['지금', '가', '나', '다', '라', '라2', '마']);
+});

@@ -320,21 +320,28 @@ function drawDueHoldCard(host, c, months) {
   }
   host.appendChild(box);
 }
+/* 거래내역을 더 올리는 길 — 보류 카드와 「최저 예상 잔액을 표시할 수 없음」 안내가 같이 쓴다 */
+function dueCanAddFiles() {
+  return !!(UP && !UP.demo && UP.banks && UP.banks.length);
+}
+function dueAddFilesGo(단계) {
+  useScreen(단계);
+  if (!openAddFiles()) return;
+  var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
+  if (inp) {
+    inp.value = '';
+    inp.click();
+  }
+}
 /* 보류 사유마다 한 줄과 할 일 — 순서: 자료 → 이체 → 입금 */
 function dueHoldReasons(c) {
   var out = [];
   if (c.자료보류) {
     out.push({
       글: '예상 잔액을 보려면 3개월 이상의 거래내역을 추가해 주세요.',
-      단추: UP && !UP.demo && UP.banks && UP.banks.length ? '거래내역 추가하기' : null,
+      단추: dueCanAddFiles() ? '거래내역 추가하기' : null,
       할일: function () {
-        useScreen('보류 거래내역 추가');
-        if (!openAddFiles()) return;
-        var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
-        if (inp) {
-          inp.value = '';
-          inp.click();
-        }
+        dueAddFilesGo('보류 거래내역 추가');
       }
     });
   }
@@ -1779,12 +1786,11 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       알약(
         X(최저점.날),
         Y(최저점.값),
+        /* ★ 2026-09-29 요한 확정 — 「입금 전」을 라벨에 적지 않는다. 계산 방식(같은 날 출금 먼저)은 그대로이고
+           그 가정은 「자세히」 한 줄이 말한다 */
         최저점.갈래 === '기준'
           ? '자료 기준일 잔액 ' + won(최저값) + '원'
-          : +월.달.slice(5, 7) +
-              '월 계산상 최저 ' +
-              dueWon(최저값) +
-              (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
+          : '계산상 최저 예상 잔액 ' + dueWon(최저값),
         최저색,
         true,
         '강'
@@ -1911,11 +1917,13 @@ function drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det) {
           후 = 후 || p;
         }
       });
-      if (전) det.appendChild(el('div', 'fcdetrow', '예상 · 입금 전 ' + dueWon(전.값)));
-      if (후) det.appendChild(el('div', 'fcdetrow', '예상 · 당일 반영 후 ' + dueWon(후.값)));
-      /* ★ 계산값으로 견준다. 반올림한 표시값이 아니다 */
-      if (전 && 후 && 전.값 === 후.값) {
-        det.appendChild(el('div', 'fcdetsame', '입금 전·당일 반영 후 잔액 동일'));
+      /* ★ 2026-09-29 요한 확정 — 「입금 전 · 당일 반영 후」라는 말을 쓰지 않는다.
+         한 날에 값이 둘이면 그날 가장 낮은 값과 그날 마지막 값으로 부른다. 같으면 한 줄만 (계산값으로 견준다) */
+      if (전 && 후 && 전.값 !== 후.값) {
+        det.appendChild(el('div', 'fcdetrow', '그날 가장 낮은 예상 잔액 ' + dueWon(전.값)));
+        det.appendChild(el('div', 'fcdetrow', '그날 마지막 예상 잔액 ' + dueWon(후.값)));
+      } else if (전 || 후) {
+        det.appendChild(el('div', 'fcdetrow', '예상 잔액 ' + dueWon((전 || 후).값)));
       }
     }
     var 끄기 = el('button', 'oslink', '선택 해제');
@@ -2086,7 +2094,9 @@ function drawDueCard(host, months) {
   } catch (e) {}
   /* ★ 2026-09-29 요한 확정 — 맨 위 큰 칸의 주인공은 「다음 달 최저 예상 잔액」이다.
      임시 참고 범위(±30%, 원 단위)와 주 단위 시기를 적는다. 월말 예상 잔액은 「자세히」로 내린다.
-     ★ 다음 달에 닿지 못해 범위가 없으면 예전처럼 월말 예상 잔액을 적는다 — 빈칸으로 두지 않는다 */
+     ★ 범위를 낼 수 없으면(다음 달에 닿지 못함 · 비교 자료 부족 등) 큰 칸에 월말 값을 올리지 않는다.
+       표시할 수 없는 까닭과 할 일을 적는다 (2026-09-29 요한 확정). 월말 값은 「자세히」에만 둔다.
+     ★ 보류 조건(자료 · 이체 · 입금)은 이 함수 앞에서 이미 보류 카드로 갈렸다 — 여기서 우회하지 않는다 */
   var top = el('div', 'duetop tapx');
   var res = el('div', 'dueres');
   if (rg) {
@@ -2104,8 +2114,19 @@ function drawDueCard(host, months) {
       )
     );
   } else {
-    res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-    res.appendChild(el('div', 'duresnum', dueWon(c.예상)));
+    var 못 = dueNoLowWhy(c, pts);
+    res.appendChild(el('div', 'duereslab', 못.머리));
+    res.appendChild(el('div', 'dueholdlab', 못.글));
+    res.appendChild(el('div', 'dueresday', 못.할일));
+    if (못.단추) {
+      var 추가 = el('button', 'fcopen', 못.단추);
+      추가.type = 'button';
+      추가.addEventListener('click', function (e) {
+        e.stopPropagation(); /* 카드 머리의 접기 · 펴기를 건드리지 않는다 */
+        dueAddFilesGo('최저 예상 거래내역 추가');
+      });
+      res.appendChild(추가);
+    }
   }
   top.appendChild(res);
   top.appendChild(foldChip(open));
@@ -2130,23 +2151,8 @@ function drawDueCard(host, months) {
         '과거 입출금을 바탕으로 한 예상이며 실제 잔액은 달라질 수 있습니다. 지금 사용할 수 있는 금액을 뜻하지 않습니다.'
       )
     );
-  } else {
-    /* ★ NAM-9 배포 전 보완. 그래프가 안 나오면 까닭을 적는다 — 빈자리로 두지 않는다 */
-    var 까닭 = null;
-    try {
-      까닭 = dueCurveWhy(c);
-    } catch (e) {}
-    if (까닭) {
-      box.appendChild(
-        el(
-          'div',
-          'duewhy dueas',
-          (까닭 === '3개월' ? '비교할 지난 3개월 자료가 모자라' : '비교할 과거 자료가 모자라') +
-            ' 그래프와 다음 달 최저 예상 잔액은 표시하지 않았습니다.'
-        )
-      );
-    }
   }
+  /* ★ 그래프가 안 나오는 까닭은 맨 위 큰 칸이 말한다 (dueNoLowWhy) — 같은 말을 두 번 적지 않는다 */
   /* ★ NAM-9 후속. 아직 분류하지 않은 출금을 예측에 넣었으면 그 사실을 한 줄로 알린다.
      분류하지 않아도 그래프가 나오는 대신, 무엇이 들어갔는지는 숨기지 않는다 */
   /* ★ NAM-9 배포 전 보완. 입금 쪽도 같이 적는다 — 아직 분류하지 않은 입금은 예상 입금에 안 들어간다 */
@@ -2257,8 +2263,9 @@ function drawDueHeldPlans(months, c, box) {
 /* drawDueCard 에서 뺀 부분 (B-4) */
 function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, open, 기준날인가, 월, rg) {
   if (open) {
-    /* ★ 2026-09-29 요한 확정 — 월말 예상 잔액은 보조 정보다. 위 큰 칸이 다음 달 최저 범위일 때 여기로 내린다 */
-    if (rg) {
+    /* ★ 2026-09-29 요한 확정 — 월말 예상 잔액은 보조 정보라 「자세히」에만 둔다.
+       보류 카드는 여기까지 오지 않는다. 기준일 잔액을 모르면 계산값이 아니므로 안 적는다 */
+    if (c.잔액 !== null && isFinite(c.예상)) {
       box.appendChild(
         el(
           'div',
@@ -2339,11 +2346,11 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
             ? '예상한 입출금이 그대로 이뤄질 경우, ' +
                 까지 +
                 '까지 잔액이 자료 기준일보다 낮아지지 않을 것으로 예상됩니다.'
-            : '예상한 입출금이 그대로 이뤄질 경우, ' +
+            : '예상한 입출금이 그대로 이뤄질 경우, 계산상 최저 예상 잔액은 ' +
                 cv.최저날 +
-                '에는 당일 출금 후 입금 전 잔액이 ' +
+                ' ' +
                 dueWon(cv.최저) +
-                '으로 예상됩니다.'
+                '입니다.'
         )
       );
       /* ★ 110차 ②. 「예비비」를 안 부른다 — 정하는 자리가 아직 앱에 없다.
@@ -2392,7 +2399,7 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
          이건 가정이지 실제 거래 순서가 아니다. 가정이면 가정이라고 적는다 —
          「실제로 아침에 급여가 나갑니다」처럼 사실인 양 쓰지 않는다 */
       box.appendChild(
-        el('div', 'duewhy', '같은 날에는 출금이 입금보다 먼저 이뤄지는 것으로 가정했습니다.')
+        el('div', 'duewhy', '같은 날에는 출금이 입금보다 먼저 발생한다고 가정합니다.')
       );
     }
     /* ★ 116차 ⑤. 예정 지출 편집 화면을 여는 단추.
@@ -2420,6 +2427,41 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
 function dueMonthName(c, 월) {
   /* 오래된 자료면 「9월」이 올해 9월로 읽히지 않게 해를 붙인다 */
   return (dueIsOld(c) ? 월.달.slice(0, 4) + '년 ' : '') + +월.달.slice(5, 7) + '월';
+}
+/* 범위를 낼 수 없을 때 큰 칸의 머리 · 까닭 · 할 일.
+   ★ 약속하지 않는다 — 「추가하면 나옵니다」라고 하지 않고 할 일만 적는다 */
+function dueNoLowWhy(c, pts) {
+  var 기준달 = +c.오늘.slice(5, 7);
+  var 다음달 = (기준달 % 12) + 1 + '월';
+  var 머리 = dueSpanText(c).split(' · ')[0] + ' · ' + 다음달 + ' 최저 예상 잔액';
+  var 무엇 = '다음 달 최저 예상 잔액' + (pts ? '을' : '과 그래프를') + ' 표시하지 않았습니다.';
+  var 까닭 = null;
+  try {
+    까닭 = dueCurveWhy(c);
+  } catch (e) {}
+  if (c.잔액 === null || 까닭 === '잔액') {
+    return {
+      머리: 머리,
+      글: '자료 기준일 잔액을 확인할 수 없어 ' + 무엇,
+      할일: '계좌별 자료 기간과 잔액 정보를 확인해 주세요.',
+      단추: null
+    };
+  }
+  var 단추 = dueCanAddFiles() ? '거래내역 추가하기' : null;
+  if (까닭 === '3개월') {
+    return {
+      머리: 머리,
+      글: '비교할 지난 3개월 자료가 모자라 ' + 무엇,
+      할일: '3개월 이상의 거래내역을 추가해 주세요.',
+      단추: 단추
+    };
+  }
+  return {
+    머리: 머리,
+    글: '비교할 과거 자료가 모자라 ' + (c.잘림 ? 날글(c.목표) + '까지만 계산했고, ' : '') + 무엇,
+    할일: '더 이전 기간의 거래내역을 추가해 주세요.',
+    단추: 단추
+  };
 }
 /* 큰 칸 머리 — 「8월 22일 자료 기준 · 9월 최저 예상 잔액」. 다음 달 중간까지만 계산했으면 그 범위를 적는다 */
 function dueLowLabel(c, 월) {
@@ -2468,7 +2510,6 @@ function drawDueLowDetail(c, 월, box) {
         날글(날짜값(월.날수)) +
         ', 그날 예상 잔액은 ' +
         dueWon(월.값) +
-        (월.갈래 === '입금전' ? ' (당일 출금 후 입금 전 기준)' : '') +
         '입니다. 과거 평균으로 계산한 값이며 확정된 날짜 · 금액이 아닙니다.'
     )
   );
