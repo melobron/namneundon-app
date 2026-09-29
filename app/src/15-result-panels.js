@@ -354,6 +354,7 @@ function drawNames() {
           if (saved.baseCats && saved.baseCats.length) UP.baseCats = saved.baseCats.slice();
           if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
           if (saved.unskip) UP.unskip = saved.unskip.slice();
+          if (saved.xferNo) applyXferNoKeys(saved.xferNo); /* NAM-9 */
           UP.payees.forEach(function (g) {
             if (saved.xfer) applyXferKeys(saved.xfer);
             var c = null,
@@ -1140,6 +1141,7 @@ function importApply(o, 자리) {
     dueDay: UP.dueDay,
     trade: tradeNow(),
     xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
+    xferNo: UP.xferNo ? JSON.parse(JSON.stringify(UP.xferNo)) : UP.xferNo,
     queue: UP.queue,
     pos: UP.pos,
     hist: UP.hist,
@@ -1165,6 +1167,7 @@ function importApply(o, 자리) {
   if (o.목표일) setDueDay(o.목표일); /* 57차 ⑦ · 60차 ① */
   if (o.업종 && TRADES[o.업종]) setTrade(o.업종); /* 62차 ② */
   if (o.xfer) applyXferKeys(o.xfer);
+  if (o.xferNo) applyXferNoKeys(o.xferNo); /* NAM-9 */
   /* ★ 119차. 파일의 매장 이름으로 UP.store 를 덮지 않는다 */
   var n = 0;
   UP.payees.forEach(function (g) {
@@ -1190,6 +1193,7 @@ function importApply(o, 자리) {
     UP.keepSet = 전.keepSet;
     UP.unskip = 전.unskip;
     UP.xfer = 전.xfer;
+    UP.xferNo = 전.xferNo;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
     if (tradeNow() !== 전.trade) setTrade(전.trade);
     전.g.forEach(function (v) {
@@ -1254,6 +1258,7 @@ function importToStore(o, 이름, 새매장) {
   if (o2.목표일) body.목표일 = o2.목표일;
   if (o2.업종 && TRADES[o2.업종]) body.업종 = o2.업종;
   if (o2.xfer) body.xfer = 합(기존 && 기존.xfer, o2.xfer);
+  if (o2.xferNo) body.xferNo = 합(기존 && 기존.xferNo, o2.xferNo); /* NAM-9 */
   if (o2.cardMixed) body.cardMixed = 합(기존 && 기존.cardMixed, o2.cardMixed);
   body.계좌 = (기존 && 기존.계좌) || o2.계좌 || [];
   body.store = 이름 || null;

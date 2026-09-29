@@ -45,6 +45,7 @@ function takeXfer(pairs) {
   pairs.forEach(function (p) {
     UP.xfer[rowId(p.out)] = 1;
     UP.xfer[rowId(p.into)] = 1;
+    if (UP.xferNo) delete UP.xferNo[xferPairKeyIn(UP, p)]; /* 두 답은 함께 설 수 없다 */
   });
   savePicks(); /* 37차 6번. 다음 달에 또 안 누르시게 */
 }
@@ -54,6 +55,49 @@ function dropXfer(p) {
   delete UP.xfer[rowId(p.out)];
   delete UP.xfer[rowId(p.into)];
   savePicks();
+}
+/* ── NAM-9 요한 승인 · 이체 후보 한 쌍의 세 가지 답 ─────────────────────────
+   「계좌끼리 옮긴 돈입니다」 = takeXfer · 「계좌끼리 옮긴 돈이 아닙니다」 = markNotXfer ·
+   「나중에 확인」 = clearXferAnswer (확인 전으로 되돌린다 — 잘못 누른 답을 고치는 길이기도 하다).
+   ★ 「아닙니다」는 분류를 건드리지 않는다. 사업 지출로 자동 분류하지 않는다 */
+function markNotXfer(p) {
+  if (UP) UP.__due = null;
+  if (UP.xfer) {
+    delete UP.xfer[rowId(p.out)];
+    delete UP.xfer[rowId(p.into)];
+  }
+  UP.xferNo = UP.xferNo || {};
+  UP.xferNo[xferPairKeyIn(UP, p)] = 1;
+  savePicks();
+}
+function clearXferAnswer(p) {
+  if (UP) UP.__due = null;
+  if (UP.xfer) {
+    delete UP.xfer[rowId(p.out)];
+    delete UP.xfer[rowId(p.into)];
+  }
+  if (UP.xferNo) delete UP.xferNo[xferPairKeyIn(UP, p)];
+  savePicks();
+}
+/* 한 쌍이 지금 어느 답인가 — 'yes' · 'no' · null(확인 전) */
+function xferAnswer(p) {
+  if (xferOn(p.out)) return 'yes';
+  if (xferNoIn(UP, p)) return 'no';
+  return null;
+}
+/* 저장할 「이체 아님」 목록 — 들고 있는 키를 그대로 남긴다 (다른 파일을 다시 올렸을 때도 쓰인다) */
+function xferNoKeys() {
+  if (!UP || !UP.xferNo) return [];
+  return Object.keys(UP.xferNo).sort();
+}
+/* 되살리기 — 키 그대로 들고 있는다. 지금 자료의 후보와 맞는 것만 쓰인다 (xferNoIn) */
+function applyXferNoKeys(keys) {
+  if (!keys || !keys.length) return 0;
+  UP.xferNo = UP.xferNo || {};
+  keys.forEach(function (k) {
+    if (typeof k === 'string' && k) UP.xferNo[k] = 1;
+  });
+  return keys.length;
 }
 /* 계산은 core/compute.js 의 xferKeysIn — 지금 매장(UP)을 넘긴다 (리팩토링 B-1e) */
 function xferKeys() {

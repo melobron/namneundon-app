@@ -4590,6 +4590,20 @@ footer {
   color: var(--ink);
   word-break: keep-all;
 }
+/* ★ NAM-9 요한 승인. 이체 후보 한 쌍의 세 가지 답 — 줄 아래에 모아 두고 폰에서는 접혀 내려간다 */
+.xfacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0 10px;
+  border-bottom: 1px dashed var(--line);
+}
+.xfrow {
+  border-bottom: 0;
+}
+.dspan.xfstate {
+  color: var(--ink);
+}
 /* 오래된 자료로 낸 예상 — 사실을 알리는 줄이라 본문 글자색으로 둔다 */
 .duecard .dueold {
   color: var(--ink);

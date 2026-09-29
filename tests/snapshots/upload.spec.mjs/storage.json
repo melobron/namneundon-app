@@ -18966,6 +18966,7 @@
   "store": "테스트식당",
   "owner": "홍길동",
   "xfer": [],
+  "xferNo": [],
   "unskip": [],
   "accounts": [
    "사업 외 용도",

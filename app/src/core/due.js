@@ -301,7 +301,8 @@ function coverStart(cover) {
 function dueXferCandIn(U) {
   var m = {};
   findTransfersIn(U).forEach(function (p) {
-    if (!xferOnIn(U, p.out)) m[rowId(p.out)] = 1;
+    /* ★ NAM-9 요한 승인. 「계좌끼리 옮긴 돈이 아닙니다」로 답한 쌍은 후보가 아니다 — 일반 거래로 센다 */
+    if (!xferOnIn(U, p.out) && !xferNoIn(U, p)) m[rowId(p.out)] = 1;
   });
   return m;
 }
@@ -910,6 +911,12 @@ function dueInputSigIn(U, E) {
     n += s.length;
   }
   섞기(E.planAt() + '#' + accCountIn(U) + '#' + baseNameIn(U, '매출') + '#');
+  /* ★ NAM-9. 「이체 아님」 판단이 바뀌면 후보가 바뀌어 예측 재료가 달라진다 */
+  섞기(
+    Object.keys(U.xferNo || {})
+      .sort()
+      .join('\n') + '#'
+  );
   (U.banks || []).forEach(function (b) {
     var r = b && b.range;
     섞기(r && r.ok && r.asked ? r.asked.from + '~' + r.asked.to + ';' : '-;');
@@ -1489,9 +1496,13 @@ function dueNextMonthLowIn(c, pts) {
 function dueManText(m) {
   return (m < 0 ? '−' : '') + won(Math.abs(m)) + '만원';
 }
+/* ★ 요한 승인. 0원은 「0원」, −10,000원 초과 · 0원 미만은 「부족액 1만원 미만」,
+   정확히 −10,000원은 「−1만원」. 반올림으로 작은 음수가 −1만원이나 0으로 보이지 않게 먼저 가른다 */
 function dueMan(v) {
+  if (v === 0) return '0원';
+  if (v < 0 && v > -10000) return '부족액 1만원 미만';
   var m = Math.round(v / 10000);
-  if (m === 0 && v !== 0) return (v < 0 ? '−' : '') + '1만원 미만';
+  if (m === 0) return '1만원 미만';
   return dueManText(m);
 }
 function dueManFloor(v) {

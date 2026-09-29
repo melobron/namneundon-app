@@ -263,6 +263,9 @@ function pickPayload() {
     store: UP.store || null,
     owner: UP.owner || null,
     xfer: xferKeys(),
+    /* ★ NAM-9 요한 승인. 「계좌끼리 옮긴 돈이 아닙니다」로 답한 후보 쌍 — 키에 금액이 없다.
+       옛 저장본에는 이 칸이 없다. 없으면 빈 목록으로 읽는다 */
+    xferNo: xferNoKeys(),
     unskip: (UP.unskip || []).slice() /* 36차 F. 손수 되돌리신 곳 — 이름만, 숫자 없음 */,
     accounts: UP.accounts.slice(),
     hidden: (UP.hidden || []).slice(),

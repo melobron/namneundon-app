@@ -7,24 +7,27 @@ import { test, expect } from '@playwright/test';
 import { openApp, demoAsBankXlsx } from './helpers.mjs';
 
 // 예시(국민) + 두 번째 은행. 두 번째 은행에 예시의 6월 첫 100만원 이상 출금과 같은 금액·시각의 입금을 넣는다
-async function secondBank(page, base) {
-  const b64 = await page.evaluate(async () => {
-    const out = DEMO_TX.map((s) => s.split('|')).find(
-      (f) => f[0].startsWith('06-') && +f[2] <= -1000000
-    );
+async function secondBank(page, base, n = 1) {
+  const b64 = await page.evaluate(async (n) => {
+    // 예시의 6월 100만원 이상 출금 앞에서부터 n건과 같은 금액 · 같은 시각의 입금을 넣는다
+    const outs = DEMO_TX.map((s) => s.split('|'))
+      .filter((f) => f[0].startsWith('06-') && +f[2] <= -1000000)
+      .slice(0, n);
     /** @type {any[][]} */
     const rows = [['거래일시', '적요', '출금액', '입금액', '잔액']];
     let bal = 500000;
     bal -= 10000;
     rows.push([DEMO_YEAR + '-06-01 08:00:00', '관리비', 10000, 0, bal]);
-    bal += -out[2];
-    rows.push([DEMO_YEAR + '-' + out[0], '이체입금', 0, -out[2], bal]);
+    outs.forEach((out) => {
+      bal += -out[2];
+      rows.push([DEMO_YEAR + '-' + out[0], '이체입금', 0, -out[2], bal]);
+    });
     bal -= 10000;
     rows.push([DEMO_YEAR + '-07-05 10:00:00', '관리비', 10000, 0, bal]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '거래내역');
     return XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-  });
+  }, n);
   return {
     name: '신한은행_거래내역.xlsx',
     mimeType: base.mimeType,
@@ -206,5 +209,147 @@ test('보류 사유 여럿 · 자료 3개월 미만', async ({ page }) => {
   await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
   await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
   await expect(page.locator('#up-result')).toContainText('8월 22일 계좌 잔액');
+  expect(errors).toEqual([]);
+});
+
+// NAM-9 요한 승인: 이체 후보 한 쌍마다 「옮긴 돈입니다 / 아닙니다 / 나중에 확인」.
+// 한 건씩 답하면 남은 수가 줄고, 「아님」은 분류를 안 바꾸며, 저장 · 재열기 뒤에도 남는다
+test('이체 후보 2건 — 한 건씩 확인 · 고치기 · 저장 후 유지 · 옛 저장본', async ({ page }) => {
+  const errors = await openApp(page);
+  const a = await demoAsBankXlsx(page);
+  await toResult(page, [a, await secondBank(page, a, 2)]);
+  const hold = page.locator('#up-result .duecard');
+  const 남은 = async () => {
+    const t = await hold.innerText();
+    const m = t.match(/계좌끼리 옮긴 돈인지 ([\d,]+)건을 확인해 주세요/);
+    return m ? +m[1] : 0;
+  };
+  expect(await page.evaluate(() => findTransfers().length)).toBe(2);
+  expect(await 남은()).toBe(2);
+
+  await page.getByRole('button', { name: '계좌끼리 옮긴 돈 확인하기' }).click();
+  const 답 = (i, name) =>
+    page.locator('#up-result .xferbox .xfacts').nth(i).getByRole('button', { name, exact: true });
+
+  // 첫 후보: 옮긴 돈입니다 → 남은 1건
+  await 답(0, '계좌끼리 옮긴 돈입니다').click();
+  expect(await 남은()).toBe(1);
+
+  // 둘째 후보: 아닙니다 → 남은 0, 보류가 풀린다. 그 거래처의 분류는 그대로다
+  const 전분류 = await page.evaluate(() => {
+    const p = findTransfers()[1];
+    const g = UP.byName[keyOf(p.out)];
+    return g.cat || null;
+  });
+  await 답(1, '계좌끼리 옮긴 돈이 아닙니다').click();
+  expect(await 남은()).toBe(0);
+  await expect(page.locator('#up-result .duecard .duegraph svg')).toHaveCount(1);
+  const 후 = await page.evaluate(() => {
+    const ps = findTransfers();
+    const g = UP.byName[keyOf(ps[1].out)];
+    dueFresh();
+    return {
+      cat: g.cat || null,
+      답: ps.map((p) => xferAnswer(p)),
+      예측에들어감: dueTable().지출줄.some((x) => x.rid === rowId(ps[1].out))
+    };
+  });
+  expect(후.cat).toBe(전분류); // 사업 지출로 자동 분류하지 않는다
+  expect(후.답).toEqual(['yes', 'no']); // 한 쌍의 답이 다른 쌍에 번지지 않는다
+  expect(후.예측에들어감).toBe(true); // 일반 거래 규칙으로 예측 출금에 들어간다
+
+  // 잘못 눌렀으면 고친다 — 나중에 확인 → 다시 보류 1건
+  await 답(1, '나중에 확인').click();
+  expect(await 남은()).toBe(1);
+  await 답(1, '계좌끼리 옮긴 돈이 아닙니다').click();
+  expect(await 남은()).toBe(0);
+
+  // 저장 · 재열기 뒤에도 두 답이 그대로다
+  const 저장 = await page.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('fc.picks.'));
+    return { k, v: JSON.parse(localStorage.getItem(k)) };
+  });
+  expect(저장.v.xferNo.length).toBe(1);
+  expect(저장.v.xferNo[0]).not.toMatch(/\d{6,}/); // 금액을 담지 않는다 (시각 · 행번호만 숫자)
+  await page.reload();
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await page
+    .getByRole('button', { name: /테스트식당/ })
+    .first()
+    .click();
+  await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  expect(await page.evaluate(() => findTransfers().map((p) => xferAnswer(p)))).toEqual([
+    'yes',
+    'no'
+  ]);
+  await expect(page.locator('#up-result .duecard .duegraph svg')).toHaveCount(1);
+
+  // 옛 저장본(xferNo 칸 없음)도 열린다 — 「아님」 답만 없고 나머지는 그대로다
+  await page.evaluate((k) => {
+    const o = JSON.parse(localStorage.getItem(k));
+    delete o.xferNo;
+    localStorage.setItem(k, JSON.stringify(o));
+  }, 저장.k);
+  await page.reload();
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await page
+    .getByRole('button', { name: /테스트식당/ })
+    .first()
+    .click();
+  await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  expect(await page.evaluate(() => findTransfers().map((p) => xferAnswer(p)))).toEqual([
+    'yes',
+    null
+  ]);
+  expect(await 남은()).toBe(1);
+
+  // 마지막 후보를 처리해도 다른 보류 사유(매출 분류 없음)가 있으면 계속 보류
+  await page.evaluate(() => {
+    UP.payees.forEach((g) => {
+      if (g.cat === '매출' || g.catIn === '매출') unsetCatQuiet(g);
+    });
+    markNotXfer(findTransfers()[1]);
+    goMonth(UP.month);
+  });
+  expect(await 남은()).toBe(0);
+  await expect(hold).toContainText('아직 매출로 확인된 입금이 없습니다.');
+  await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+// 입금 쪽 보류 안내 — 입금이 없을 때 · 입금이 모두 매출 밖일 때 「0건을 확인해 주세요」로 적지 않는다
+test('입금 없음 · 입금 전부 매출 외', async ({ page }) => {
+  const errors = await openApp(page);
+  await toResult(page, [await demoAsBankXlsx(page)]);
+  // 직전 30일 입금을 모두 매출 밖(사업 외 용도 → 「내가 넣은 돈」)으로 정한다
+  await page.evaluate(() => {
+    const c = dueCard();
+    const t0 = Math.floor(Date.parse(c.오늘 + 'T00:00:00Z') / 86400000);
+    UP.rows.forEach((r) => {
+      const d = Math.floor(Date.parse(r.at.slice(0, 10) + 'T00:00:00Z') / 86400000);
+      if (r.amount > 0 && d > t0 - 30 && d <= t0) setCatQuiet(UP.byName[keyOf(r)], '사업 외 용도');
+    });
+    goMonth(UP.month);
+  });
+  const card = page.locator('#up-result .duecard');
+  await expect(card).toContainText(
+    '직전 30일에 들어온 돈 가운데 매출로 분류한 거래가 없어 예상 입금을 계산할 수 없습니다.'
+  );
+  await expect(card).not.toContainText('0건');
+
+  // 직전 30일 입금이 아예 없는 자료
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/');
+  await openApp(page);
+  await page.evaluate(() => {
+    const keep = DEMO_TX.filter((s) => !(s >= '07-24' && +s.split('|')[2] > 0));
+    window.DEMO_TX = keep;
+  });
+  await toResult(page, [await demoAsBankXlsx(page)]);
+  await expect(page.locator('#up-result .duecard')).toContainText(
+    '직전 30일에 들어온 돈이 없어 예상 입금을 계산할 수 없습니다.'
+  );
+  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
   expect(errors).toEqual([]);
 });

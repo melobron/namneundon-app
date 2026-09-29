@@ -648,3 +648,6 @@ GNDR
 CHRG
 RSLT
 INBL
+xfacts
+xfrow
+xfstate

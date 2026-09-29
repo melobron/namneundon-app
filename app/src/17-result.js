@@ -996,10 +996,6 @@ function drawTransferCards(months, host) {
      ★ 각 건을 따로 뺄 수 있다 — 금액이 같은 우연도 있다 */
   if (UP.banks && UP.banks.length > 1) {
     var pairs = findTransfers();
-    var onN = 0;
-    pairs.forEach(function (p) {
-      if (xferOn(p.out)) onN++;
-    });
     if (pairs.length) {
       var xsum = 0;
       pairs.forEach(function (p) {
@@ -1011,9 +1007,15 @@ function drawTransferCards(months, host) {
       var xOpen = !!UP.open.__xfer;
       var xb = el('div', 'xferbox');
       var xh = el('div', 'xfhead tapx');
+      var 확인전 = pairs.filter(function (p) {
+        return !xferAnswer(p);
+      }).length;
       xh.appendChild(
         document.createTextNode(
-          '계좌끼리 옮긴 것으로 보이는 거래가 ' + won(pairs.length) + '건 있습니다'
+          '계좌끼리 옮긴 것으로 보이는 거래가 ' +
+            won(pairs.length) +
+            '건 있습니다' +
+            (확인전 ? ' · 확인 전 ' + won(확인전) + '건' : ' · 모두 확인함')
         )
       );
       xh.appendChild(foldChip(xOpen));
@@ -1036,8 +1038,11 @@ function drawTransferCards(months, host) {
       var xl = el('div', 'dtl');
       if (xOpen)
         pairs.forEach(function (p) {
-          var on = xferOn(p.out);
-          var row = el('div', 'drow');
+          /* ★ NAM-9 요한 승인 (2026-09-29). 후보 한 쌍마다 세 가지 답.
+             예전 단추 「이 건은 아닙니다」는 누르면 이체로 보고 뺐다 — 이름과 동작이 반대로 읽혔다.
+             ★ 고른 답은 굵게 켜 둔다. 다른 답을 누르면 바뀌고, 「나중에 확인」은 확인 전으로 되돌린다 */
+          var 답 = xferAnswer(p);
+          var row = el('div', 'drow xfrow');
           var nm = el('div', 'dnm');
           nm.appendChild(
             document.createTextNode(
@@ -1052,35 +1057,61 @@ function drawTransferCards(months, host) {
           nm.appendChild(
             el('div', 'dspan', showName(p.out.payee) + ' → ' + showName(p.into.payee))
           );
+          nm.appendChild(
+            el(
+              'div',
+              'dspan xfstate',
+              답 === 'yes'
+                ? '확인함: 계좌끼리 옮긴 돈 — 매출·지출과 예상 출금에서 뺐습니다'
+                : 답 === 'no'
+                  ? '확인함: 계좌끼리 옮긴 돈이 아님 — 일반 거래로 계산합니다'
+                  : '확인 전 — 예상 잔액 계산을 보류합니다'
+            )
+          );
           row.appendChild(nm);
           row.appendChild(el('div', 'dv num', won(p.amount)));
-          var ch = el('div', 'dch');
-          var bt = el('button', 'chbtn' + (on ? ' on' : ''), on ? '뺐습니다' : '이 건은 아닙니다');
-          bt.type = 'button';
-          bt.addEventListener('click', function () {
-            if (on) dropXfer(p);
-            else takeXfer([p]);
-            drawResult(months);
-          });
-          ch.appendChild(bt);
-          row.appendChild(ch);
           xl.appendChild(row);
+          var 답들 = el('div', 'xfacts');
+          [
+            ['yes', '계좌끼리 옮긴 돈입니다'],
+            ['no', '계좌끼리 옮긴 돈이 아닙니다'],
+            [null, '나중에 확인']
+          ].forEach(function (x) {
+            var bt = el('button', 'chbtn' + (답 === x[0] ? ' on' : ''), x[1]);
+            bt.type = 'button';
+            bt.setAttribute('aria-pressed', 답 === x[0] ? 'true' : 'false');
+            bt.addEventListener('click', function () {
+              if (x[0] === 'yes') takeXfer([p]);
+              else if (x[0] === 'no') markNotXfer(p);
+              else clearXferAnswer(p);
+              drawResult(months);
+            });
+            답들.appendChild(bt);
+          });
+          xl.appendChild(답들);
         });
       var xa = el('div', 'addrow');
-      if (onN < pairs.length) {
-        var yes = el('button', 'b on', won(pairs.length) + '건 다 빼기');
+      var 전 = pairs.filter(function (p) {
+        return !xferAnswer(p);
+      }).length;
+      if (전) {
+        var yes = el('button', 'b on', '확인 전 ' + won(전) + '건 모두 계좌끼리 옮긴 돈입니다');
         yes.type = 'button';
         yes.addEventListener('click', function () {
-          takeXfer(pairs);
+          takeXfer(
+            pairs.filter(function (p) {
+              return !xferAnswer(p);
+            })
+          );
           drawResult(months);
         });
         xa.appendChild(yes);
       }
-      if (onN) {
-        var undo = el('button', 'b', '되돌리기');
+      if (전 < pairs.length) {
+        var undo = el('button', 'b', '모든 답을 확인 전으로');
         undo.type = 'button';
         undo.addEventListener('click', function () {
-          pairs.forEach(dropXfer);
+          pairs.forEach(clearXferAnswer);
           drawResult(months);
         });
         xa.appendChild(undo);

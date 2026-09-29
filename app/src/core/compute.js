@@ -453,6 +453,22 @@ function prevMonthOf(m) {
 function xferOnIn(U, r) {
   return !!(U.xfer && U.xfer[rowId(r)]);
 }
+/* ── NAM-9 요한 승인 (2026-09-29) · 「계좌끼리 옮긴 돈이 아닙니다」 ──────────────────
+   ★ 후보 한 쌍(나간 줄 → 들어온 줄)에 대한 판단이다. 한 줄만 보지 않는다 —
+     같은 줄이 다른 입금과 짝지어지면 그건 다른 후보라 다시 묻는다.
+   ★ 키는 줄마다 「거래 시각 | 은행 이름 | 엑셀 행번호 | 원문 거래처」다.
+     기존 이체 키(xferKey: 날짜 | 은행 이름 | 행번호)는 같은 은행 계좌가 둘이면 겹칠 수 있어
+     시각과 원문 거래처를 더했다. 금액은 넣지 않는다 (fc.picks 에는 금액을 담지 않는다).
+   ★ 이 판단은 분류를 바꾸지 않는다. 후보에서 빠질 뿐이고, 예측은 일반 거래 규칙을 따른다 */
+function xferSideKeyIn(U, r) {
+  return r.at + '|' + bankNameIn(U, r.acc || 0) + '|' + (r.excelRow || 0) + '|' + (r.payee || '');
+}
+function xferPairKeyIn(U, p) {
+  return xferSideKeyIn(U, p.out) + ' → ' + xferSideKeyIn(U, p.into);
+}
+function xferNoIn(U, p) {
+  return !!(U.xferNo && U.xferNo[xferPairKeyIn(U, p)]);
+}
 /* 저장할 목록 — 금액이 없는 키만 */
 function xferKeysIn(U) {
   if (!U.xfer) return [];

@@ -242,9 +242,13 @@ test.describe('임시 참고 범위', () => {
 test('예상 금액 만원 표기', () => {
   expect(core.dueMan(107747567)).toBe('10,775만원');
   expect(core.dueMan(-4625410)).toBe('−463만원');
-  expect(core.dueMan(-3000)).toBe('−1만원 미만');
+  // 요한 승인: −10,000원 초과 · 0원 미만은 「부족액 1만원 미만」, 0원은 「0원」, −10,000원은 「−1만원」
+  expect(core.dueMan(-3000)).toBe('부족액 1만원 미만');
+  expect(core.dueMan(-6000)).toBe('부족액 1만원 미만'); // 반올림하면 −1만원이 되는 값
+  expect(core.dueMan(-9999)).toBe('부족액 1만원 미만');
+  expect(core.dueMan(-10000)).toBe('−1만원');
+  expect(core.dueMan(0)).toBe('0원');
   expect(core.dueMan(3000)).toBe('1만원 미만');
-  expect(core.dueMan(0)).toBe('0만원');
   expect(core.dueManFloor(30595402)).toBe('3,059만원');
   expect(core.dueManCeil(120153778)).toBe('12,016만원');
   expect(core.dueManFloor(-3000)).toBe('−1만원');

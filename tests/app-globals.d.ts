@@ -90,3 +90,5 @@ declare var takeXfer: any;
 declare var dropXfer: any;
 declare var dueFresh: any;
 declare var rowId: any;
+declare var markNotXfer: any;
+declare var xferAnswer: any;
