@@ -1388,6 +1388,7 @@ footer {
      나갈 길을 찾으려면 위로 다시 올라가셔야 했다. 붙여 둔다 */
 .uptop {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 18px 0 12px;
@@ -1421,6 +1422,11 @@ footer {
   flex: 1;
   font-size: calc(17 * var(--fu));
   font-weight: 700;
+  /* ★ NAM-9 후속. 제목이 「내 거래내역으로 확인하기」로 길어져 폰에서 한두 글자씩 여섯 줄로 꺾였다.
+     낱말 단위로만 줄을 바꾸고, 자리가 모자라면 오른쪽 단추가 다음 줄로 내려간다 */
+  min-width: 8.5em;
+  line-height: 1.35;
+  word-break: keep-all;
 }
 /* ★ 66-9차 ③. 알약 박스로 통일 */
 .upclose {
