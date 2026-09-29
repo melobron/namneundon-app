@@ -245,18 +245,12 @@ test.describe('임시 참고 범위', () => {
   });
 });
 
-// NAM-9 요한 승인: 예상값만 만원 표기. 작은 음수가 0처럼 보이지 않고, 범위는 하한 내림 · 상한 올림
-test('예상 금액 만원 표기', () => {
-  expect(core.dueMan(107747567)).toBe('10,775만원');
-  expect(core.dueMan(-4625410)).toBe('−463만원');
-  // 요한 승인: −10,000원 초과 · 0원 미만은 「부족액 1만원 미만」, 0원은 「0원」, −10,000원은 「−1만원」
-  expect(core.dueMan(-3000)).toBe('부족액 1만원 미만');
-  expect(core.dueMan(-6000)).toBe('부족액 1만원 미만'); // 반올림하면 −1만원이 되는 값
-  expect(core.dueMan(-9999)).toBe('부족액 1만원 미만');
-  expect(core.dueMan(-10000)).toBe('−1만원');
-  expect(core.dueMan(0)).toBe('0원');
-  expect(core.dueMan(3000)).toBe('1만원 미만');
-  expect(core.dueManFloor(30595402)).toBe('3,059만원');
-  expect(core.dueManCeil(120153778)).toBe('12,016만원');
-  expect(core.dueManFloor(-3000)).toBe('−1만원');
+// 예상 금액은 원 단위 그대로 (2026-09-29 요한 확정 — 만원 표기 취소). 반올림 · 내림 · 올림 · 「1만원 미만」 없음
+test('예상 금액 원 단위 표기', () => {
+  expect(core.dueWon(75374590)).toBe('75,374,590원');
+  expect(core.dueWon(-5230)).toBe('−5,230원');
+  expect(core.dueWon(-3000)).toBe('−3,000원');
+  expect(core.dueWon(0)).toBe('0원');
+  expect(core.dueWon(48507077)).toBe('48,507,077원');
+  expect(core.dueWon(102242103.4)).toBe('102,242,103원');
 });

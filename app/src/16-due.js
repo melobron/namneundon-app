@@ -237,8 +237,8 @@ function dueOldNote(c, box) {
 /* 모자람 문장 — 오래된 자료면 지금의 자금 부족 경고로 읽히지 않게 「계산됐습니다」로 적는다 */
 function dueShortText(c, 날, 금액) {
   return dueIsOld(c)
-    ? 날 + '에 ' + dueMan(금액) + '이 모자랄 수 있는 것으로 계산됐습니다'
-    : 날 + '에 ' + dueMan(금액) + '이 모자랄 수 있습니다';
+    ? 날 + '에 ' + dueWon(금액) + '이 모자랄 수 있는 것으로 계산됐습니다'
+    : 날 + '에 ' + dueWon(금액) + '이 모자랄 수 있습니다';
 }
 /* 계산은 core/due.js 의 dueCurveWhyIn — 그래프가 안 나오는 까닭 */
 function dueCurveWhy(c) {
@@ -1751,7 +1751,7 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
           ? '자료 기준일 잔액 ' + won(최저값) + '원'
           : +월.달.slice(5, 7) +
               '월 계산상 최저 ' +
-              dueMan(최저값) +
+              dueWon(최저값) +
               (최저점.갈래 === '입금전' ? ' · 입금 전' : ''),
         최저값 < 0 ? 'var(--warn)' : 'var(--brand)',
         true
@@ -1772,7 +1772,7 @@ function drawDueGraphChart(host, c, cv, pts, 지난, 앞, rg, ticks, U, 첫날, 
       })
     );
     if (!같자리) {
-      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + dueMan(c.예상), 끝색, true);
+      알약(X(끝점.날), Y(끝점.값), 날글(c.목표) + ' ' + dueWon(c.예상), 끝색, true);
     }
     /* 날짜 줄 — 양 끝과 기준일 */
     [
@@ -1877,8 +1877,8 @@ function drawDueGraphDetail(host, c, cv, pts, 지난, 고른날, det) {
           후 = 후 || p;
         }
       });
-      if (전) det.appendChild(el('div', 'fcdetrow', '예상 · 입금 전 ' + dueMan(전.값)));
-      if (후) det.appendChild(el('div', 'fcdetrow', '예상 · 당일 반영 후 ' + dueMan(후.값)));
+      if (전) det.appendChild(el('div', 'fcdetrow', '예상 · 입금 전 ' + dueWon(전.값)));
+      if (후) det.appendChild(el('div', 'fcdetrow', '예상 · 당일 반영 후 ' + dueWon(후.값)));
       /* ★ 계산값으로 견준다. 반올림한 표시값이 아니다 */
       if (전 && 후 && 전.값 === 후.값) {
         det.appendChild(el('div', 'fcdetsame', '입금 전·당일 반영 후 잔액 동일'));
@@ -2040,8 +2040,7 @@ function drawDueCard(host, months) {
   var top = el('div', 'duetop tapx');
   var res = el('div', 'dueres');
   res.appendChild(el('div', 'duereslab', dueSpanText(c)));
-  /* ★ NAM-9 요한 승인. 예상값은 만원 단위로 보인다 (계산은 원 단위 그대로) */
-  res.appendChild(el('div', 'duresnum', dueMan(c.예상)));
+  res.appendChild(el('div', 'duresnum', dueWon(c.예상)));
   top.appendChild(res);
   top.appendChild(foldChip(open));
   box.appendChild(top);
@@ -2206,15 +2205,13 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
        예상 기간은 묻지 않고 다음 달 말일까지로 정한다 */
     var t = el('div', 'duepick');
     /* ★ B-4 (2026-09-28). 블록 안 함수 선언을 변수로 바꿨다 — 선언 뒤에서만 부르므로 같다. 블록을 함수로 뺄 수 있게 */
-    /* ★ NAM-9 요한 승인. 예상(들어올·나갈)은 만원, 자료에 적힌 잔액은 원 단위다 (예상 = true) */
+    /* 금액은 모두 원 단위다 (2026-09-29 요한 확정 — 만원 표기 취소). 예상 = true 는 예상 줄 표시다 */
     var 줄 = function (name, v, sub, sign, 예상) {
       var r = el('div', 'orow');
       var l = el('div', 'lab', '　' + name);
       if (sub) l.appendChild(el('span', 'gcount', sub));
       r.appendChild(l);
-      r.appendChild(
-        el('div', 'v num', (sign || '') + (예상 ? dueMan(Math.abs(v)) : won(Math.abs(v))))
-      );
+      r.appendChild(el('div', 'v num', (sign || '') + won(Math.abs(v))));
       t.appendChild(r);
     };
     /* ★ 113차 ①④⑤ (수정). 자료 범위의 출처와 제한은 「자세히」 안에만 둔다.
@@ -2279,7 +2276,7 @@ function drawDueCardDetail(months, c, cv, 까지, 표본줄, 잘림줄, box, ope
             : '예상한 입출금이 그대로 이뤄질 경우, ' +
                 cv.최저날 +
                 '에는 당일 출금 후 입금 전 잔액이 ' +
-                dueMan(cv.최저) +
+                dueWon(cv.최저) +
                 '으로 예상됩니다.'
         )
       );
@@ -2380,8 +2377,7 @@ function drawDueNextLow(c, 월, box, cv) {
   );
   var 값줄 = el('div', 'duenextval');
   값줄.appendChild(document.createTextNode('그 시기 예상 잔액: '));
-  /* 하한은 내림, 상한은 올림 — 만원으로 줄이며 범위가 좁아지지 않게 */
-  값줄.appendChild(el('b', null, dueManFloor(rg.하한) + ' ~ ' + dueManCeil(rg.상한)));
+  값줄.appendChild(el('b', null, dueWon(rg.하한) + ' ~ ' + dueWon(rg.상한)));
   값줄.appendChild(document.createTextNode(' (임시 참고 범위)'));
   low.appendChild(값줄);
   var 설명 =
@@ -2416,7 +2412,7 @@ function drawDueLowDetail(c, 월, box) {
         ' 중 가장 낮은 날은 ' +
         날글(날짜값(월.날수)) +
         ', 그날 예상 잔액은 ' +
-        dueMan(월.값) +
+        dueWon(월.값) +
         (월.갈래 === '입금전' ? ' (당일 출금 후 입금 전 기준)' : '') +
         '입니다. 과거 평균으로 계산한 값이며 확정된 날짜 · 금액이 아닙니다.'
     )
