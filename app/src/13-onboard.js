@@ -1031,8 +1031,9 @@ function drawBundle(host, b) {
     var box = el('div', 'dtl');
     b.mems
       .slice()
+      /* 금액 큰 순 — 들어오고 나간 돈을 상계하지 않고 절댓값을 더한 값(abs)으로 (2026-09-29 요한 확정) */
       .sort(function (x, y) {
-        return (y.net > 0 ? y.inSum : y.outSum) - (x.net > 0 ? x.inSum : x.outSum);
+        return y.abs - x.abs;
       })
       .forEach(function (m) {
         var r2 = el('div', 'drow');
@@ -1230,7 +1231,7 @@ function holdAskStart(hold, months) {
       합[g.name] = 0;
       list.push(g);
     }
-    합[g.name] += r.액;
+    합[g.name] += Math.abs(r.액); /* 상계하지 않고 절댓값으로 (2026-09-29 요한 확정) */
   });
   if (!list.length) return false;
   list.sort(function (a, b) {

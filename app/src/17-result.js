@@ -319,21 +319,24 @@ function drawResultInner(months) {
   /* 이 달의 나간 돈 속 항목들 — 아래 두 덩어리가 같이 쓴다 */
   /* 35차 E. 안 정한 돈은 이제 지출에 안 섞인다. 그 자체를 한 칸으로 보여준다 */
   var unsetAmt = d.unknown || 0;
-  /* ★ 43차. 항목 순서를 금액 큰 순에서 고정 순서로 바꾼다.
-     매달 자리가 바뀌면 지난달과 견줄 수가 없다 — 「식자재가 어디 갔지」가 된다.
-     UP.accounts 가 이미 사장님이 보시는 항목 차례다. 그 차례를 그대로 쓴다 */
+  /* ★ 2026-09-29 요한 확정 — 금액 큰 순. 43차의 고정 순서를 뒤집는다.
+     지금 고른 기간의 합계 금액(절댓값)이 큰 항목부터 보인다. 금액이 같으면 예전 고정 순서
+     (UP.accounts — 사장님이 보시는 항목 차례)를 그대로 둬 화면이 괜히 섞이지 않게 한다.
+     정렬만 바꾼다 — 계산 · 분류는 그대로다 */
   var catOrder = (UP.accounts || []).slice();
   var keys = Object.keys(d.cats)
     .filter(function (k) {
       return k !== UNSET;
     })
     .sort(function (a, b) {
+      var va = Math.abs(d.cats[a] || 0),
+        vb = Math.abs(d.cats[b] || 0);
+      if (va !== vb) return vb - va;
       var ia = catOrder.indexOf(a),
         ib = catOrder.indexOf(b);
       if (ia === -1) ia = 999;
       if (ib === -1) ib = 999;
-      if (ia !== ib) return ia - ib;
-      return d.cats[b] - d.cats[a];
+      return ia - ib;
     });
   var allKeys = keys.slice();
   if (d.cats[UNSET]) allKeys.push(UNSET);
@@ -1794,9 +1797,14 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
        ★ 열쇠는 항목 이름 그대로 쓴다 — drawDetail 이 UP.open[cat] 으로
          몇 개를 보일지도 정하기 때문에, 앞을 붙여 갈면 열려도 0개가 된다.
          keepRow 는 이미 'keep:…' 로 갈라져 있고 tapLine 은 아무도 안 부른다 */
-    subRow(months, host, '매출', '매출', won(d.sales), null, function () {
-      drawDetail(host, d, '매출');
-    });
+    /* ★ 2026-09-29 요한 확정 — 금액 큰 줄이 먼저. 같으면 매출이 먼저 (예전 차례) */
+    var 매출줄 = function () {
+      subRow(months, host, '매출', '매출', won(d.sales), null, function () {
+        drawDetail(host, d, '매출');
+      });
+    };
+    var 기타먼저 = !!d.otherIn && Math.abs(d.otherIn) > Math.abs(d.sales);
+    if (!기타먼저) 매출줄();
     if (d.otherIn) {
       /* drawInDetail 은 만들어만 두고 아무도 안 부르고 있었다.
            UP.open 을 안 보므로 subRow 가 열렸을 때만 부르면 그대로 된다.
@@ -1822,6 +1830,7 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
         );
       }
     }
+    if (기타먼저) 매출줄();
     if (d.salesOut) {
       회색줄(
         회색모음,
@@ -1849,9 +1858,7 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
         : '아직 다 정하지 않아 비율을 내지 않았습니다'
     )
   );
-  /* 나간 쪽 — 항목별.
-       ★ 43차. 금액 큰 순이 아니라 늘 같은 순서다.
-         매달 자리가 바뀌면 지난달과 견줄 수가 없다 */
+  /* 나간 쪽 — 항목별. 금액 큰 순 (2026-09-29 요한 확정, keys 를 만드는 곳에서 정렬) */
   keys.forEach(function (k) {
     subRow(
       months,

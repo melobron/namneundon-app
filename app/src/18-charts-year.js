@@ -1523,12 +1523,29 @@ function drawYear(host, allMonths) {
     }
   );
   그룹줄(months, 번돈줄, 'in', true);
-  drawYearInRows(function () {
-    return 연표줄.apply(
-      null,
-      [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
-    );
-  }, anyOtherIn);
+  /* ★ 2026-09-29 요한 확정 — 세부 줄은 이 기간(마감된 달) 합계가 큰 순서. 같으면 예전 차례 */
+  var 기간합 = function (get) {
+    var s = 0;
+    done.forEach(function (c) {
+      if (!c.blocked) s += Math.abs(get(c) || 0);
+    });
+    return s;
+  };
+  drawYearInRows(
+    function () {
+      return 연표줄.apply(
+        null,
+        [months, cols, 진행달, opening, done, tbody].concat([].slice.call(arguments))
+      );
+    },
+    anyOtherIn,
+    기간합(function (c) {
+      return c.otherIn;
+    }) >
+      기간합(function (c) {
+        return c.sales;
+      })
+  );
   var 쓴돈줄 = 연표줄(
     months,
     cols,
@@ -1558,8 +1575,22 @@ function drawYear(host, allMonths) {
   );
   그룹줄(months, 쓴돈줄, 'out', true);
   if (그룹열림('out')) {
-    항목줄(months, cols, 진행달, opening, done, tbody, '월세');
-    항목줄(months, cols, 진행달, opening, done, tbody, '인건비');
+    ['월세', '인건비']
+      .map(function (n, i) {
+        return {
+          n: n,
+          i: i,
+          v: 기간합(function (c) {
+            return catOfMonth(c, n);
+          })
+        };
+      })
+      .sort(function (a, b) {
+        return b.v - a.v || a.i - b.i;
+      })
+      .forEach(function (x) {
+        항목줄(months, cols, 진행달, opening, done, tbody, x.n);
+      });
   }
   drawYearProfitRow(function () {
     return 연표줄.apply(
@@ -1852,24 +1883,27 @@ function drawYearBalanceRow(진행달, row) {
 }
 
 /* drawYear 에서 뺀 부분 (B-4) */
-function drawYearInRows(row, anyOtherIn) {
+function drawYearInRows(row, anyOtherIn, 기타먼저) {
   if (그룹열림('in')) {
-    row(
-      '　매출',
-      'keeprow2',
-      function (c) {
-        return { txt: won(c.sales) };
-      },
-      function (l) {
-        return {
-          txt: won(
-            meanOf(l, function (c) {
-              return c.sales;
-            })
-          )
-        };
-      }
-    );
+    var 매출줄 = function () {
+      row(
+        '　매출',
+        'keeprow2',
+        function (c) {
+          return { txt: won(c.sales) };
+        },
+        function (l) {
+          return {
+            txt: won(
+              meanOf(l, function (c) {
+                return c.sales;
+              })
+            )
+          };
+        }
+      );
+    };
+    if (!(anyOtherIn && 기타먼저)) 매출줄();
     if (anyOtherIn) {
       row(
         '　그 밖의 입금',
@@ -1888,6 +1922,7 @@ function drawYearInRows(row, anyOtherIn) {
         }
       );
     }
+    if (anyOtherIn && 기타먼저) 매출줄();
   }
 }
 
