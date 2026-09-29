@@ -1,25 +1,28 @@
 # 아키텍처 — 지금 모습
 
-> **지금 코드의 사실**만 적는다. 앞으로 바꿀 구조(계산 핵심 분리 등)는 여기가 아니라 [backlog](../backlog.md) · [specs/](../../specs/README.md) 에 있다.
-> 기준: 2026-09-26 main (`c03baa8`, 리팩토링 B-1b 까지).
+> 현재 코드의 구조를 설명한다. 변경 계획은 [plans/](../plans/)에 둔다.
+> 확인 기준: 2026-09-29, main `50342ba`의 파일과 설정.
 
 ## 한눈에
 
 - 서버 코드가 없다. `app/` 폴더의 정적 파일(HTML · CSS · JS · 이미지)을 Cloudflare 가 그대로 내준다.
 - 빌드 · 번들 · 트랜스파일 단계가 없다. 저장소의 파일이 곧 배포되는 파일이다.
-- 앱 JS 는 **모듈이 아닌 일반 `<script>` 24개**(`core/` 7 + `src/` 17)다. 한 파일이었던 것을 나눈 것이라 모든 최상위 `function` · `var` 가 전역이다.
+- 앱 JS 는 **모듈이 아닌 일반 `<script>` 30개**(`core/` 13 + `src/` 17)다. 한 파일이었던 것을 나눈 것이라 모든 최상위 `function` · `var` 가 전역이다.
 
 ## 폴더와 경계
 
-| 폴더 · 파일                   | 무엇                                                                                            | 어디로 가나                                  |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `app/`                        | 앱 전부                                                                                         | Worker `namneundon-app` → app.namneundon.com |
-| `landing/`                    | 소개 페이지 (한 장짜리 HTML · 404 · 이미지 · robots · sitemap)                                  | Pages `namneundon` → namneundon.com          |
-| `tests/`                      | Playwright 안전망 테스트 · 스냅샷 · 테스트용 정적 서버(`serve.mjs`)                             | 배포 안 됨                                   |
-| `tools/`                      | 개발 도구 (`check-load-order.mjs`, `check-core.mjs`, `typecheck-app.mjs`, `analyze-purity.mjs`) | 배포 안 됨                                   |
-| `.github/`                    | CI · 자동 배포 · 비밀 값 검사 · 의존성 업데이트                                                 | —                                            |
-| `wrangler.jsonc`              | 앱 Worker 설정 (정적 자산만, 서버 코드 없음)                                                    | —                                            |
-| `docs/` `specs/` `templates/` | 문서 · 작업 명세 · 틀                                                                           | 배포 안 됨                                   |
+| 폴더 · 파일        | 무엇                                                                                            | 어디로 가나                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `app/`             | 앱 전부                                                                                         | Worker `namneundon-app` → app.namneundon.com |
+| `landing/`         | 소개 페이지 (한 장짜리 HTML · 404 · 이미지 · robots · sitemap)                                  | Pages `namneundon` → namneundon.com          |
+| `tests/`           | Playwright 안전망 테스트 · 스냅샷 · 테스트용 정적 서버(`serve.mjs`)                             | 배포 안 됨                                   |
+| `tools/`           | 개발 도구 (`check-load-order.mjs`, `check-core.mjs`, `typecheck-app.mjs`, `analyze-purity.mjs`) | 배포 안 됨                                   |
+| `.github/`         | CI · 자동 배포 · 비밀 값 검사 · 의존성 업데이트                                                 | —                                            |
+| `wrangler.jsonc`   | 앱 Worker 설정 (정적 자산만, 서버 코드 없음)                                                    | —                                            |
+| `docs/` · `plans/` | 현재 지식 · 진행 중 작업 계획과 틀                                                              | 배포 안 됨                                   |
+
+`analysis/`는 테스트베드용 Python 분석 코드·기본 설정·고정 의존성이다. 웹 배포에 포함되지 않고
+웹앱의 서버도 아니다. 실행 절차와 평가 규칙은 [analysis/README.md](../analysis/README.md)에 둔다.
 
 랜딩과 앱은 코드를 나눠 쓰지 않는다. 랜딩은 「시작하기」 링크(`APP_URL`)로 앱 주소만 안다.
 
@@ -39,7 +42,7 @@ app/
 └─ robots.txt            검색 노출 차단
 ```
 
-### `src/core/` — 순수한 계산 (리팩토링 B-1, 진행 중)
+### `src/core/` — 순수한 계산
 
 **화면 · 저장소 · 바뀌는 전역(`UP`)에 닿지 않는 계산**만 둔다. 같은 입력이면 늘 같은 답이 나오고,
 화면 없이 **Node 에서도 돈다** — 단위 테스트(`tests/core/`)와 테스트베드 VDI 계산에 쓴다.
@@ -48,7 +51,7 @@ app/
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `core/date.js`        | 날짜 → 날 번호 (`dayNum`, `dayMs`)                                                                                                                                                        |
 | `core/verify.js`      | 잔액 검산, 뒤바뀐 순서 바로잡기, 파일에 적힌 조회 기간 (옛 `05-verify.js`)                                                                                                                |
-| `core/parse-excel.js` | 은행 엑셀 · CSV · HTML 표 → 거래 행 (머리글 · 열 찾기, 숫자 · 날짜 해석, 은행 이름) (옛 `03-parse-excel.js`)                                                                              |
+| `core/parse-excel.js` | 은행 엑셀 · HTML 표 → 거래 행 (머리글 · 열 찾기, 숫자 · 날짜 해석, 은행 이름) (옛 `03-parse-excel.js`)                                                                                    |
 | `core/parse-pdf.js`   | PDF 글자 조각 → 표 → 거래 행, PDF 합계 확인 (옛 `04-parse-pdf.js`)                                                                                                                        |
 | `core/classify.js`    | 거래처 묶기(년월 · (주) 떼기), 이름으로 항목 짐작, 거래처별 항목 다루기 (옛 `06-classify.js`)                                                                                             |
 | `core/compute.js`     | 월별 집계(`monthNumbersIn`), 계좌 간 이체, 잔액, 예측 기초, 매출 전망 — 매장 자료를 매개변수 `U` 로 받는다 (옛 `14-compute.js`)                                                           |
@@ -112,11 +115,11 @@ flowchart LR
 | 계산 | `core/compute.js` `monthNumbersIn(U, m, cutDay)`, `16-due.js` 예상 잔액                   | 달마다 숫자 객체                    |
 | 표시 | `15` · `17` (`drawResultInner`) · `18`                                                    | DOM                                 |
 
-계산 규칙 자체는 [domain-rules](../product/domain-rules.md) 에 있다.
+계산 규칙 자체는 [제품과 계산 규칙](product.md) 에 있다.
 
 ## 의존 관계 — 지금 모습의 특징
 
-- **전역 상태 `UP`.** `07` 에서 `var UP = null` 로 선언하고, 파일을 올리거나 예시를 열 때 통째로 새로 만든다. 계산 함수(`monthNumbers` 등)는 인자가 아니라 `UP.rows` · `UP.byName` 을 직접 읽는다. 리팩토링 B-1e 부터 집계는 **`UP` 를 첫 매개변수 `U` 로 받는 core 함수**(`monthNumbersIn(U, 달)` 등)로 옮겼고, 원래 이름은 `UP` 를 넘기는 연결 함수로 남았다 — 그래서 Node 에서 매장 자료만 넘기면 같은 숫자가 나온다. 파일 읽기 · 검산 · 분류 · 집계가 `core/` 에 있다 (B-1 진행 중: 예측·예정 지출이 남음). 거래처 묶기는 합치기 규칙표를 `UP.merge` 에서 꺼내던 것을 매개변수로 받게 바꿨다 (`groupPayeesWith(rows, merge)`, 앱의 `groupPayees` 는 연결 함수).
+- **전역 상태 `UP`.** `07` 에서 `var UP = null` 로 선언하고, 파일을 올리거나 예시를 열 때 통째로 새로 만든다. 계산 함수(`monthNumbers` 등)는 인자가 아니라 `UP.rows` · `UP.byName` 을 직접 읽는다. 리팩토링 B-1e 부터 집계는 **`UP` 를 첫 매개변수 `U` 로 받는 core 함수**(`monthNumbersIn(U, 달)` 등)로 옮겼고, 원래 이름은 `UP` 를 넘기는 연결 함수로 남았다 — 그래서 Node 에서 매장 자료만 넘기면 같은 숫자가 나온다. 파일 해석 · 검산 · 분류 · 집계 · 예측 계산이 `core/`에 있고, 파일 입출력·저장·화면 처리는 앱 계층에 남아 있다. 거래처 묶기는 합치기 규칙표를 `UP.merge` 에서 꺼내던 것을 매개변수로 받게 바꿨다 (`groupPayeesWith(rows, merge)`, 앱의 `groupPayees` 는 연결 함수).
 - **DOM 직접 조작.** 화면은 문자열로 HTML 을 만들어 `innerHTML` 에 넣는 방식이 많다. 밖에서 온 글자(파일 이름 등)는 이스케이프해야 한다 — `tests/security.spec.mjs` 가 파일 이름 한 곳을 지킨다.
 - **저장소 한 길.** 모든 저장은 `00-storage.js` 의 함수를 거친다 (B-2, PR #17). `localStorage` 를 직접 쓰면 ESLint 가 막는다. 동기 호출이라 화면을 그리기 전에 값이 있다. 저장이 막혀도 앱은 메모리로 돈다.
 - **불러오는 순서.** 각 파일은 불러오는 순간 일부 코드를 실행한다. 그때 뒤 파일의 이름을 쓰면 `ReferenceError` 다. `tools/check-load-order.mjs` 가 파일마다 「즉시 실행되는 코드」에서 출발해 부르는 함수 안까지 따라가며 찾는다 (클릭 처리 등 나중에 도는 콜백은 따라가지 않는다).
@@ -138,4 +141,15 @@ flowchart TD
 
 - 테스트는 `tests/serve.mjs` 가 `app/` 을 그대로 내주고, Playwright 가 실제 크롬으로 연다. 앱 코드는 테스트를 위해 따로 내보내는 것이 없다 — 테스트는 전역 함수(`monthList` · `monthNumbers` 등)를 `page.evaluate` 로 부른다. **그래서 이 전역 이름들은 테스트가 기대는 인터페이스이기도 하다.**
 - 타입 검사 · 린트는 `app/src` 를 한 묶음으로 본다 (`tsconfig.app.json`, `eslint.config.mjs` 가 모든 파일의 최상위 이름을 「공용 전역」으로 알려준다).
-- 배포는 `app/` 과 `landing/` 을 그대로 올린다 ([deployment](../development/deployment.md)).
+- 배포는 `app/` 과 `landing/` 을 그대로 올린다 ([배포](development.md#배포)).
+
+## 구조를 이렇게 유지하는 이유
+
+- **빌드 없는 배포**: PR #2에서 한 파일을 나눌 때 배포 파일과 저장소 파일을 같게 유지했다. 2026-09-25 공통 규칙으로 명시했다. 번들러·프레임워크·모듈 체계 변경은 별도 계획과 사용자 결정이 필요하다.
+- **계산과 화면 분리**: B-1 리팩토링에서 계산을 Node에서도 실행할 수 있게 옮겼다. 브라우저의 기존 전역 함수는 연결 함수로 유지해 호출과 테스트 호환성을 지킨다. `whyOpen`·`whyKey` 같은 펼침 상태는 화면 계층에 둔다.
+- **큰 화면 함수 분리**: B-4는 동작을 유지하면서 함수를 나누는 작업이었다. 전역 상태 전체를 하나로 모으는 일은 사용자 요청으로 제외했다. 예정 지출 창은 창 상태를 매개변수로 전달한다.
+- **저장소 접근 통합**: `00-storage.js`가 유일한 읽기·쓰기 경로다. 서버 동기화가 이미 결정됐다는 뜻은 아니다.
+
+기존 명세의 승인·검증 기록은 [이전 명세 이력](https://github.com/melobron/namneundon-app/blob/50342ba88af7eacdbadf03aa553366d13c92d031/specs/README.md)에 남아 있다.
+온보딩·결과·나머지 계산 분리는 PR #27·#28·#29, 화면 함수 분리는 PR #34·#35·#36·#37·#43·#45에 기록돼 있다.
+이는 과거 기록의 위치이며 이번 문서 정리에서 당시 배포나 화면 비교를 다시 수행한 것은 아니다.

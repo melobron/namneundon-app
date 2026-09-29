@@ -133,7 +133,7 @@ if (process.argv.includes('--skip-python')) {
     const { setupPython } = await import('./setup-python.mjs');
     await setupPython({ checkOnly: CHECK_ONLY });
   } catch (error) {
-    fail(error.message, 'docs/development/setup.md 의 분석 환경 안내 확인');
+    fail(error.message, 'docs/development.md 의 분석 환경 안내 확인');
   }
 }
 

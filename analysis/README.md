@@ -2,7 +2,7 @@
 
 원본: 팀 Google Drive 의 `dtestbed_v3_2026-09-21.zip`. 실제 데이터 없이 코드와 기본 설정만 가져왔다.
 저장소 루트에서 `npm run setup` 후 `npm run analysis -- selftest` 로 실행한다.
-환경 설치와 노트북 사용은 [개발 환경](../docs/development/setup.md#vdi-에서-인터넷이-되는-동안)을 참고한다.
+환경 설치와 노트북 사용은 [개발 환경](../docs/development.md#분석-환경)을 참고한다.
 아래 `python run.py ...` 는 `npm run analysis -- ...` 로도 실행할 수 있다.
 `demo` 는 지정한 결과 폴더를 지우고 가짜 자료를 생성하므로 실제 자료·결과 경로를 주지 않는다.
 
