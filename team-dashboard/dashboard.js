@@ -19,8 +19,23 @@ import {
 
 /** 이 화면의 요소는 모두 index.html 에 있다 */
 const $ = (id) => /** @type {any} */ (document.getElementById(id));
-const today = seoulDate(Date.now());
-const state = { from: '', to: '', s: '', seq: 0, shown: null, shownKey: '', codes: new Set() };
+const state = {
+  from: '',
+  to: '',
+  s: '',
+  seq: 0,
+  shown: null,
+  shownKey: '',
+  codes: new Set(),
+  presetDays: null
+};
+
+function today() {
+  const value = seoulDate(Date.now());
+  $('from').max = value;
+  $('to').max = value;
+  return value;
+}
 
 function el(tag, text, cls) {
   const e = document.createElement(tag);
@@ -73,7 +88,11 @@ function drawChart(daily) {
   const w = Math.max(daily.length * 14, 280);
   svg.setAttribute('viewBox', `0 0 ${w} 160`);
   svg.setAttribute('preserveAspectRatio', 'none');
-  const max = Math.max(1, ...daily.filter((d) => d.collected).map((d) => d.arrival));
+  // 단계별 건수는 날짜 경계·전송 누락으로 결과가 도착보다 클 수 있다.
+  const max = Math.max(
+    1,
+    ...daily.filter((d) => d.collected).flatMap((d) => [d.arrival, d.resultShown])
+  );
   const step = w / daily.length;
   daily.forEach((d, i) => {
     const x = i * step;
@@ -113,7 +132,7 @@ function drawDaily(daily) {
   }
 }
 
-function drawCamps(list) {
+function drawCamps(list, hasCollected) {
   const body = $('camps').tBodies[0];
   body.replaceChildren();
   if (!list.length) {
@@ -137,11 +156,12 @@ function drawCamps(list) {
       cell.appendChild(a);
     } else cell.textContent = '—';
     tr.appendChild(cell);
-    tr.appendChild(el('td', count(c.arrival)));
-    tr.appendChild(el('td', count(c.fileSelected)));
-    tr.appendChild(el('td', count(c.resultShown)));
+    // 수집을 시작하지 않은 기간의 등록 글은 실제 0건으로 보이면 안 된다.
+    tr.appendChild(el('td', hasCollected ? count(c.arrival) : '미수집'));
+    tr.appendChild(el('td', hasCollected ? count(c.fileSelected) : '미수집'));
+    tr.appendChild(el('td', hasCollected ? count(c.resultShown) : '미수집'));
     const r = rate(c.resultShown, c.arrival);
-    tr.appendChild(el('td', r.text, r.over ? 'over' : null));
+    tr.appendChild(el('td', hasCollected ? r.text : '—', r.over ? 'over' : null));
     body.appendChild(tr);
     if (c.code) state.codes.add(c.code);
   }
@@ -171,7 +191,7 @@ function draw(data) {
   else $('rates').textContent = '';
   drawChart(data.daily);
   drawDaily(data.daily);
-  drawCamps(data.campaigns);
+  drawCamps(data.campaigns, any);
   syncCodes();
   const start = data.trackingStartedAt ? `집계 시작 ${data.trackingStartedAt}` : '집계 시작 전';
   const zero =
@@ -218,7 +238,8 @@ async function load() {
 }
 
 function usePreset(days) {
-  const r = presetRange(days, today);
+  const r = presetRange(days, today());
+  state.presetDays = days;
   state.from = r.from;
   state.to = r.to;
   $('from').value = r.from;
@@ -229,29 +250,36 @@ function usePreset(days) {
 }
 
 function init() {
-  $('from').max = today;
-  $('to').max = today;
+  today();
   for (const b of document.querySelectorAll('[data-days]'))
     b.addEventListener('click', () => usePreset(Number(b.getAttribute('data-days'))));
   $('apply').addEventListener('click', () => {
     const from = $('from').value;
     const to = $('to').value;
-    const bad = rangeProblem(from, to, today);
+    const bad = rangeProblem(from, to, today());
     if (bad) {
       setStatus(bad, true);
       return;
     }
     state.from = from;
     state.to = to;
+    state.presetDays = null;
     for (const b of document.querySelectorAll('[data-days]'))
       b.setAttribute('aria-pressed', 'false');
     load();
   });
   $('code').addEventListener('change', () => {
     state.s = $('code').value;
-    load();
+    if (state.presetDays) usePreset(state.presetDays);
+    else load();
   });
-  $('reload').addEventListener('click', load);
+  $('reload').addEventListener('click', () => {
+    if (state.presetDays) usePreset(state.presetDays);
+    else {
+      today();
+      load();
+    }
+  });
   usePreset(7);
 }
 

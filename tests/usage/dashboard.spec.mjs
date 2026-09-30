@@ -23,10 +23,13 @@ const TODAY = '2026-09-23'; // FIXED_NOW 의 서울 날짜
 const CAMPS = [{ code: 'D08', title: '시험 글', postUrl: 'https://example.com/d08' }];
 /**
  * @param {string} url
- * @param {{ rows?: any[], started?: string | null, source?: string, campaigns?: any[] }} [o]
+ * @param {{ rows?: any[], started?: string | null, source?: string, campaigns?: any[], today?: string }} [o]
  */
-function report(url, { rows, started = '2026-09-20', source = 'dev', campaigns = CAMPS } = {}) {
-  const q = parseQuery(new URL(url).searchParams, TODAY);
+function report(
+  url,
+  { rows, started = '2026-09-20', source = 'dev', campaigns = CAMPS, today = TODAY } = {}
+) {
+  const q = parseQuery(new URL(url).searchParams, today);
   if (!q.ok) throw new Error('bad query ' + url);
   return buildReport({
     rows: rows || [
@@ -38,7 +41,7 @@ function report(url, { rows, started = '2026-09-20', source = 'dev', campaigns =
     from: q.from,
     to: q.to,
     s: q.s,
-    today: TODAY,
+    today,
     trackingStartedAt: started,
     generatedAt: '2026-09-23T01:00:00.000Z',
     source
@@ -96,6 +99,8 @@ test('실제 0건과 미수집을 구분한다', async ({ page }) => {
   await page.getByRole('button', { name: '새로고침' }).click();
   await expect(page.locator('#n-arrival')).toHaveText('미수집');
   await expect(page.locator('#warns')).toContainText('아직 집계를 시작하지 않았습니다');
+  for (const cell of [3, 4, 5])
+    await expect(page.locator(`#camps tbody tr td:nth-child(${cell})`)).toHaveText('미수집');
 });
 
 /** @type {Array<{ name: string, reply: (r: any) => any, want: string }>} */
@@ -167,6 +172,26 @@ test('100% 를 넘는 비율은 그대로 두고 주의를 붙인다', async ({ 
   await open(page, (r, url) => r.fulfill(asJson(report(url, { rows }))));
   await expect(page.locator('#rates')).toContainText('결과/도착 150%');
   await expect(page.locator('#rates .over').last()).toContainText('100%를 넘을 수 있습니다');
+  const bars = await page.locator('#chart rect.r').evaluateAll((rects) =>
+    rects.map((e) => ({
+      top: Number(e.getAttribute('y')),
+      height: Number(e.getAttribute('height'))
+    }))
+  );
+  expect(bars.length).toBeGreaterThan(0);
+  expect(bars.every((b) => b.top >= 0 && b.height <= 160)).toBe(true);
+});
+
+test('자정 뒤 최근 기간을 다시 고르면 새로운 한국 날짜를 사용한다', async ({ page }) => {
+  const { calls } = await open(page, (r, url) =>
+    r.fulfill(asJson(report(url, { rows: [], today: '2026-09-24' })))
+  );
+  await expect(page.locator('#n-arrival')).toHaveText('0');
+  await page.clock.setFixedTime(new Date('2026-09-23T15:10:00.000Z'));
+  await page.getByRole('button', { name: '새로고침' }).click();
+  await expect.poll(() => calls.length).toBe(2);
+  expect(new URL(calls[1]).search).toBe('?from=2026-09-18&to=2026-09-24');
+  await expect(page.locator('#to')).toHaveAttribute('max', '2026-09-24');
 });
 
 test('날짜 고르기 — 90일 넘게는 요청하지 않고 알린다', async ({ page }) => {
