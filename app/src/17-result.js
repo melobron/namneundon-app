@@ -15,6 +15,10 @@ function drawResult(months) {
   try {
     markLastRun();
   } catch (e) {}
+  /* ★ NAM-20. 새 파일로 만든 자료의 결과가 처음 그려졌을 때만 센다 — 다시 그리기 · 예시 · 저장본은 아니다 */
+  try {
+    USAGE.resultShown(UP);
+  } catch (e) {}
 }
 /* ★ 77차. 진행 안내와 행동 단추를 한 문장으로 합친다.
    새 파일에서 생긴 곳으로 오해하지 않도록 「아직 안 정한 곳」이라고 부른다. */

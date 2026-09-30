@@ -258,6 +258,9 @@ function drawStart() {
     copy.innerHTML = note.innerHTML;
     box.appendChild(copy);
   });
+  /* ★ NAM-21. 이용 단계 집계를 켰을 때만 나온다 (꺼져 있으면 null) */
+  var 집계안내 = USAGE.notice();
+  if (집계안내) box.appendChild(집계안내);
 
   /* ★ 63-13. 돌아오신 분이 먼저 볼 것은 자기 매장이다. 타일 위에 둔다.
      처음 오신 분(저장 0)께는 이 구역이 아예 없다 — 62-2차 그대로다 */
@@ -434,6 +437,10 @@ function drawStart() {
   box.appendChild(see);
   host.appendChild(box);
   window.scrollTo(0, 0);
+  /* ★ NAM-20. 안내가 화면에 선 뒤에 센다. 첫 화면으로 돌아와도 탭에서 한 번뿐이다 */
+  try {
+    USAGE.arrive(host);
+  } catch (e) {}
 }
 /* ★ 119차. 예시 전환 보정 — 예시로 가기 전에 보던 내 매장 자료 (메모리에만 둔다).
    같은 매장을 「이어서 보기」로 다시 열면 이것을 그대로 되돌린다 — 저장하지 못한 변경도 잃지 않는다.

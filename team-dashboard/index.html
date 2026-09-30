@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>남는돈 · 유입·사용 현황</title>
+<link rel="stylesheet" href="dashboard.css">
+<script type="module" src="dashboard.js"></script>
+</head>
+<body>
+<!-- 팀 전용 화면 (NAM-20, 2026-09-29). Cloudflare Access 로그인 뒤에만 열린다 — services/usage-dashboard -->
+<header class="top">
+  <h1>남는돈 · 유입·사용 현황</h1>
+  <a class="out" href="/cdn-cgi/access/logout">로그아웃</a>
+</header>
+
+<main>
+  <div class="mock" id="mock" hidden>모의 자료입니다 — 실제 집계가 아닙니다.</div>
+
+  <section class="controls" aria-label="조회 조건">
+    <div class="presets">
+      <button type="button" data-days="7" aria-pressed="true">최근 7일</button>
+      <button type="button" data-days="30" aria-pressed="false">최근 30일</button>
+    </div>
+    <div class="custom">
+      <label>시작 <input type="date" id="from"></label>
+      <label>끝 <input type="date" id="to"></label>
+      <button type="button" id="apply">날짜 적용</button>
+    </div>
+    <label class="pick">글
+      <select id="code">
+        <option value="">전체 글</option>
+        <option value="-">출처 미확인</option>
+      </select>
+    </label>
+    <button type="button" id="reload">새로고침</button>
+  </section>
+
+  <p class="status" id="status" role="status" aria-live="polite">불러오는 중…</p>
+  <ul class="warns" id="warns"></ul>
+
+  <section class="funnel" aria-label="단계별 건수">
+    <div class="step"><span class="lab">앱 도착</span><b id="n-arrival">—</b></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="step"><span class="lab">파일 선택</span><b id="n-file">—</b></div>
+    <div class="arrow" aria-hidden="true">→</div>
+    <div class="step"><span class="lab">결과 표시</span><b id="n-result">—</b></div>
+  </section>
+  <p class="rates" id="rates"></p>
+  <p class="basis">※ 사용자 수가 아닌 단계별 발생 건수입니다. 같은 분이 여러 탭에서 쓰면 여러 번 셀 수 있습니다.</p>
+
+  <section aria-labelledby="h-daily">
+    <h2 id="h-daily">날짜별 도착 · 결과 표시</h2>
+    <div class="chart" id="chart" aria-hidden="true"></div>
+    <p class="legend"><span class="la">■</span> 도착 · <span class="lr">■</span> 결과 표시 · 회색 칸은 미수집 (아래 표와 같은 자료)</p>
+    <div class="tablewrap">
+      <table id="daily">
+        <caption>날짜별 건수 (한국 시간)</caption>
+        <thead><tr><th scope="col">날짜</th><th scope="col">도착</th><th scope="col">파일 선택</th><th scope="col">결과 표시</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-camp">
+    <h2 id="h-camp">글별</h2>
+    <div class="tablewrap">
+      <table id="camps">
+        <caption>결과 표시 건수가 많은 글부터</caption>
+        <thead><tr><th scope="col">글</th><th scope="col">원문</th><th scope="col">도착</th><th scope="col">파일 선택</th><th scope="col">결과</th><th scope="col">결과/도착</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="about" aria-labelledby="h-about">
+    <h2 id="h-about">측정 기준</h2>
+    <ul>
+      <li>세 단계: 앱 첫 화면 도착 · 파일을 고르거나 끌어다 놓음 · 새로 올린 파일로 만든 결과가 처음 보임. 예시 · 저장본 열기 · 다시 그리기는 세지 않습니다.</li>
+      <li>한 브라우저 탭에서 단계마다 한 번만 보냅니다. 새 탭 · 다른 기기 · 재방문은 따로 셀 수 있고, 광고 차단 · 전송 실패 · 저장 차단으로 빠질 수 있습니다.</li>
+      <li>글 코드는 그 탭에 처음 들어올 때의 것을 끝까지 씁니다. 코드가 없으면 「출처 미확인」입니다.</li>
+      <li>날짜는 각 단계가 일어난 한국 날짜입니다. 자정을 넘기면 단계가 다른 날에 찍힐 수 있어, 비율은 같은 사람 집단의 전환율이 아닙니다.</li>
+      <li>적은 건수로 어느 글이 낫다고 판정하지 않습니다. 줄어든 원인은 숫자만으로 정하지 않습니다.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

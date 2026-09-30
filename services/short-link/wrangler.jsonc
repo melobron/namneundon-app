@@ -1,0 +1,11 @@
+// 짧은 링크 배포 설정 (NAM-22, 2026-09-29, 아직 배포하지 않음).
+// ★ 배포할 때 routes 에 "namneundon.com/t/*" 하나만 넣는다 — 소개 페이지의 루트 · 정적 파일 ·
+//   앱 도메인 경로는 이 Worker 가 받지 않는다. 경로 설정은 사용자 확인 뒤에 넣는다.
+// ★ 글 코드 · 도착지는 services/campaigns.js 에서만 온다.
+{
+  "name": "namneundon-short-link",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-23",
+  "workers_dev": false,
+  "preview_urls": false
+}

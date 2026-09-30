@@ -562,8 +562,21 @@ footer a{color:var(--gray)}
 
 <script>
 (function(){
+  /* NAM-20. 홍보 글 코드(?s=D08)를 앱 링크에 넘긴다. 소개 페이지는 아무것도 보내지 않는다.
+     이 탭에서 처음 받은 코드를 끝까지 쓴다 (앱과 저장소가 달라 탭 저장에 따로 둔다).
+     모양이 틀리거나 두 번 적힌 코드는 넘기지 않는다 — 앱과 같은 규칙이다 */
+  var code = null;
+  try {
+    var all = new URLSearchParams(location.search).getAll('s');
+    var got = all.length === 1 && /^[A-Za-z0-9_]{1,12}$/.test(all[0]) ? all[0] : null;
+    var kept = null;
+    try { kept = sessionStorage.getItem('nd.landing.s'); } catch (e) {}
+    code = kept && /^[A-Za-z0-9_]{1,12}$/.test(kept) ? kept : got;
+    if (code && !kept) { try { sessionStorage.setItem('nd.landing.s', code); } catch (e) {} }
+  } catch (e) {}
+  var appHref = code ? APP_URL + '/?s=' + encodeURIComponent(code) : APP_URL;
   [].forEach.call(document.querySelectorAll('[data-appurl]'), function(e){
-    e.href = APP_URL; e.target = '_blank'; e.rel = 'noopener';
+    e.href = appHref; e.target = '_blank'; e.rel = 'noopener';
   });
   function link(sel, url){
     if (!url) return false;

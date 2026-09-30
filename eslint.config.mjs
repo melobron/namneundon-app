@@ -70,7 +70,7 @@ export default [
         },
         {
           name: 'sessionStorage',
-          message: '이 앱은 sessionStorage 를 쓰지 않는다. 저장은 00-storage.js 로'
+          message: '탭 저장(sessionStorage)도 00-storage.js 의 함수(ssGet·ssSet)로만 쓴다'
         }
       ],
       'no-restricted-properties': [
@@ -81,6 +81,24 @@ export default [
           message: '저장소는 00-storage.js 의 함수로만 쓴다'
         }
       ]
+    }
+  },
+  // 팀 대시보드 서버 · 짧은 링크 — Cloudflare Worker (ES 모듈, 웹 표준 API)
+  {
+    files: ['services/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: { ...globals.serviceworker }
+    }
+  },
+  // 팀 대시보드 화면 — 브라우저 ES 모듈 (고객 앱과 따로 배포)
+  {
+    files: ['team-dashboard/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: { ...globals.browser }
     }
   },
   {
