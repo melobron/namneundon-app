@@ -18,6 +18,9 @@ export default defineConfig({
     viewport: { width: 390, height: 844 }, // 사장님들이 주로 쓰는 휴대폰 너비
     trace: 'retain-on-failure'
   },
+  // 이미 떠 있는 4173 서버를 재사용할 때, 그 서버가 이 작업본의 app/ 을 서빙하는지 먼저 확인한다.
+  // 다른 worktree 의 미리보기 서버면 테스트 전체를 실패시킨다 (2026-09-29, 다른 판을 검사한 사례)
+  globalSetup: './tests/global-setup.mjs',
   webServer: {
     command: 'node tests/serve.mjs',
     url: 'http://localhost:4173',

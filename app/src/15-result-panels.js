@@ -22,81 +22,10 @@ function viewableMonth(months, notThis) {
 function bigOutDay(months, m) {
   return bigOutDayIn(UP, months, m);
 }
-/* ★ 101차 ①. 이 매장에 한 번만 묻는다. 한 번 답하시면 다시 안 묻는다 —
-   카드를 펼치면 언제든 바꾸실 수 있다 */
-function needDueAsk() {
-  if (!UP || UP.demo) return false;
-  if (UP.dueAsked) return false;
-  var o = null;
-  try {
-    o = loadPicks(UP.store);
-  } catch (e) {}
-  if (o && o.목표일) return false; /* 저장통에 이미 답이 있다 */
-  return true;
-}
-function drawDueAsk(months) {
-  var host = document.querySelector('#up-duedate .ddwrap');
-  if (!host) return;
-  host.innerHTML = '';
-  var m = UP.month && months.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(months);
-  var 권함 = bigOutDay(months, m);
-  var 고른날 = 권함 || dueDay();
-  document.getElementById('uptitle').textContent = '한 가지만 여쭙겠습니다';
-
-  host.appendChild(el('div', 'ddq', '매달 지출이 가장 많은 날은 언제인가요?'));
-  /* ★ 왜 묻는지 한 줄. 이유를 안 적으면 그냥 절차가 된다 */
-  host.appendChild(
-    el(
-      'div',
-      'ddsub',
-      '고르신 날까지의 예상 잔액 흐름을 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'
-    )
-  );
-  /* ★ 지어내지 않는다. 자료로 찾은 것이 있을 때만 근거를 적는다 */
-  if (권함) {
-    host.appendChild(
-      el(
-        'div',
-        'ddsub',
-        '지난 3달에는 ' + dueDayText(권함) + '에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'
-      )
-    );
-  }
-  var days = el('div', 'duedays');
-  for (var i = 1; i <= 31; i++) {
-    /* ★ 103차 ③. 29·30·말일까지 */
-    (function (n) {
-      var b = el('button', n === 고른날 ? 'on' : '', dueDayShort(n));
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        고른날 = n;
-        drawDueAsk2(days, n);
-      });
-      days.appendChild(b);
-    })(i);
-  }
-  host.appendChild(days);
-
-  var row = el('div', 'ddgo');
-  var go = el('button', 'b on big', '이대로 보기');
-  go.type = 'button';
-  go.addEventListener('click', function () {
-    setDueDay(고른날);
-    UP.dueAsked = true;
-    savePicks();
-    showResult();
-  });
-  row.appendChild(go);
-  host.appendChild(row);
-  upShow('up-duedate');
-}
-/* 눌린 날만 바꿔 그린다 — 화면을 통째로 다시 그리면 스크롤이 튄다 */
-function drawDueAsk2(days, n) {
-  var bs = days.querySelectorAll('button'),
-    i;
-  for (i = 0; i < bs.length; i++) bs[i].className = i + 1 === n ? 'on' : '';
-}
-
+/* ★ NAM-9 (2026-09-29). 결과 전에 「매달 지출이 가장 많은 날」(분석 종료일)을 묻던
+   needDueAsk · drawDueAsk 를 없앴다. 예상 기간은 묻지 않고 정한다 —
+   자료 기준일이 속한 달의 다음 달 말일까지다 (core/due.js 의 dueDayIn).
+   ★ 저장통의 목표일(UP.dueDay)은 지우지도 새로 쓰지도 않는다. 저장 형식을 그대로 둔다 */
 function showResult() {
   utStop(); /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
   /* ★ 119차. 보류 원인 경로에서 다른 길로 결과에 왔어도 원래 차례로 되돌린다 */
@@ -104,16 +33,6 @@ function showResult() {
   PAGE_DEMO = !!(UP && UP.demo);
   syncCloseLabel();
   syncUpOpen();
-  /* ★ 101차 ①. 이 매장에 아직 안 물어봤으면 한 가지만 먼저 여쭙는다.
-     ★ 한 번만이다. 답하시면 UP.dueAsked 와 저장통(목표일)이 둘 다 남는다.
-     ★ 예시 화면에서는 안 묻는다 — 남의 가게 자료에 목표일을 정하는 것이 된다.
-     ★ 되살린 매장(저장통에 목표일이 있는 곳)도 안 묻는다 */
-  if (needDueAsk()) {
-    var ms0 = monthList();
-    UP.month = UP.month && ms0.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(ms0);
-    drawDueAsk(ms0);
-    return;
-  }
   document.getElementById('uptitle').textContent = '남는돈';
   upShow('up-done');
   /* ★ 119차. 예시 전환 보정 — 결과로 가는 길에서는 시작 화면을 다시 그리지 않는다.
@@ -518,8 +437,8 @@ function drawNames(알림) {
           if (saved.baseCats && saved.baseCats.length) UP.baseCats = saved.baseCats.slice();
           if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
           if (saved.unskip) UP.unskip = saved.unskip.slice();
+          applyXferSaved(saved); /* NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
           UP.payees.forEach(function (g) {
-            if (saved.xfer) applyXferKeys(saved.xfer);
             var c = null,
               lst = g.rawList || [];
             for (var i = 0; i < lst.length && !c; i++) c = saved.picks[lst[i]];
@@ -571,7 +490,7 @@ function drawNames(알림) {
           el(
             'div',
             'addq',
-            '「' + r.name + '」에 저장된 것을 지금 올리신 파일에 덮어씁니다. 할까요?'
+            '「' + r.name + '」에 저장된 것을 지금 불러온 파일에 덮어씁니다. 할까요?'
           )
         );
         var ar = el('div', 'addrow');
@@ -640,7 +559,7 @@ function openCats() {
 function drawCats() {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
-  host.appendChild(el('div', 'catspan', monthSpan() + ' 올리신 거래 전체 기준입니다'));
+  host.appendChild(el('div', 'catspan', monthSpan() + ' 불러온 거래 전체 기준입니다'));
   host.appendChild(
     el(
       'div',
@@ -1261,13 +1180,13 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
       새매장
         ? '파일의 거래처 분류로 새 매장을 만듭니다.'
         : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
-            (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')
+            (저장통만 ? '' : ' 지금 불러온 거래내역에 있는 거래처에만 적용됩니다.')
     )
   );
   var 함께 = [];
   if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet)
     함께.push('항목 목록');
-  if (o.목표일) 함께.push('분석 종료일');
+  /* ★ NAM-9. 분석 종료일은 이제 고르는 값이 아니라 안내하지 않는다 (저장통의 값은 그대로 읽는다) */
   if (o.업종 && TRADES[o.업종]) 함께.push('업종');
   if (o.xfer && o.xfer.length) 함께.push('이체 설정');
   if (함께.length) {
@@ -1304,6 +1223,12 @@ function importApply(o, 자리) {
     dueDay: UP.dueDay,
     trade: tradeNow(),
     xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
+    xferNo: UP.xferNo ? JSON.parse(JSON.stringify(UP.xferNo)) : UP.xferNo,
+    xferCarryOk: UP.xferCarryOk ? JSON.parse(JSON.stringify(UP.xferCarryOk)) : UP.xferCarryOk,
+    xferCarryNo: UP.xferCarryNo ? JSON.parse(JSON.stringify(UP.xferCarryNo)) : UP.xferCarryNo,
+    xferCarryLegacy: UP.xferCarryLegacy
+      ? JSON.parse(JSON.stringify(UP.xferCarryLegacy))
+      : UP.xferCarryLegacy,
     queue: UP.queue,
     pos: UP.pos,
     hist: UP.hist,
@@ -1328,7 +1253,7 @@ function importApply(o, 자리) {
   if (o.unskip) UP.unskip = o.unskip.slice();
   if (o.목표일) setDueDay(o.목표일); /* 57차 ⑦ · 60차 ① */
   if (o.업종 && TRADES[o.업종]) setTrade(o.업종); /* 62차 ② */
-  if (o.xfer) applyXferKeys(o.xfer);
+  applyXferSaved(o); /* NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
   /* ★ 119차. 파일의 매장 이름으로 UP.store 를 덮지 않는다 */
   var n = 0;
   UP.payees.forEach(function (g) {
@@ -1354,6 +1279,10 @@ function importApply(o, 자리) {
     UP.keepSet = 전.keepSet;
     UP.unskip = 전.unskip;
     UP.xfer = 전.xfer;
+    UP.xferNo = 전.xferNo;
+    UP.xferCarryOk = 전.xferCarryOk;
+    UP.xferCarryNo = 전.xferCarryNo;
+    UP.xferCarryLegacy = 전.xferCarryLegacy;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
     if (tradeNow() !== 전.trade) setTrade(전.trade);
     전.g.forEach(function (v) {
@@ -1418,6 +1347,8 @@ function importToStore(o, 이름, 새매장) {
   if (o2.목표일) body.목표일 = o2.목표일;
   if (o2.업종 && TRADES[o2.업종]) body.업종 = o2.업종;
   if (o2.xfer) body.xfer = 합(기존 && 기존.xfer, o2.xfer);
+  if (o2.xferNo) body.xferNo = 합(기존 && 기존.xferNo, o2.xferNo); /* NAM-9 */
+  if (o2.xferOk) body.xferOk = 합(기존 && 기존.xferOk, o2.xferOk);
   if (o2.cardMixed) body.cardMixed = 합(기존 && 기존.cardMixed, o2.cardMixed);
   body.계좌 = (기존 && 기존.계좌) || o2.계좌 || [];
   body.store = 이름 || null;
@@ -1449,8 +1380,8 @@ function importToStore(o, 이름, 새매장) {
   PICKED_STORE = { key: storeKey(이름), name: 이름 || '(기본)', n: n곳, 불러옴: true };
   drawUpMine();
   drawImportStart();
-  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 올려주세요.', true, 'start');
-  var go = el('button', 'b on', '거래내역 올리기');
+  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 불러와 주세요.', true, 'start');
+  var go = el('button', 'b on', '거래내역 불러오기');
   go.type = 'button';
   go.style.marginLeft = '8px';
   go.addEventListener('click', function () {
@@ -2156,7 +2087,7 @@ var SHORT_SPAN_MONTHS = 6;
    ○○ 약사가 파일 용량 때문에 5개월치만 넣으셨다.
    ★ 두 가지를 다 말해야 한다. 「합쳐진다」만 있으면
      「그럼 처음부터 다시 분류해야 하나」 싶어 안 하시게 된다 */
-var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
+var SPLIT_UPLOAD_TIP = '나눠 불러와도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
 
 /* 화면 맨 아래 면책 문구. 숫자를 가리지 않게 회색 작은 글씨로 끝에만 둔다 */
 /* 「추정치」가 아니다 — 계좌에 찍힌 것을 더한 것이고 검산까지 맞춰놨다.

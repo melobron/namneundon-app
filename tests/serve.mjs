@@ -53,7 +53,9 @@ export function siteServer(root, links = {}) {
       }
       res.writeHead(200, {
         'Content-Type': TYPES[extname(file)] || 'application/octet-stream',
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        // 어느 작업본의 폴더를 서빙하는지 — 테스트가 다른 worktree 서버를 검사하지 않게 확인한다 (tests/global-setup.mjs)
+        'X-Serve-Root': encodeURIComponent(root)
       });
       res.end(req.method === 'HEAD' ? undefined : body);
     } catch {

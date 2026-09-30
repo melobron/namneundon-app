@@ -110,10 +110,98 @@ test.describe('목표일 계산', () => {
     expect(core.shiftMonth('2024-11-30', 3)).toBe('2025-02-28');
   });
 
-  test('dueDayIn — 정한 목표일이 없으면 기본값', () => {
-    expect(core.dueDayIn({})).toBe(core.DUE_DEFAULT);
-    expect(core.dueDayIn({ dueDay: 25 })).toBe(25);
-    expect(core.dueDayIn({ dueDay: 0 })).toBe(core.DUE_DEFAULT);
-    expect(core.dueDayIn(null)).toBe(core.DUE_DEFAULT);
+  // NAM-9 (2026-09-29): 예상 기간을 묻지 않는다. 저장통에 예전 목표일이 있어도 늘 다음 달 말일이다
+  test('dueDayIn — 예전에 고른 목표일과 상관없이 늘 말일', () => {
+    expect(core.DUE_END_DAY).toBe(31);
+    expect(core.dueDayIn({})).toBe(31);
+    expect(core.dueDayIn({ dueDay: 25 })).toBe(31);
+    expect(core.dueDayIn({ dueDay: 10 })).toBe(31);
+    expect(core.dueDayIn(null)).toBe(31);
   });
+
+  test('예상 종료일 — 자료 기준일이 속한 달의 다음 달 말일 (28·29·30·31일 · 해 넘김)', () => {
+    const end = (at) => core.nextDue(at, core.dueDayIn({}));
+    expect(end('2023-08-22')).toBe('2023-09-30'); // 30일
+    expect(end('2023-03-31')).toBe('2023-04-30');
+    expect(end('2023-07-01')).toBe('2023-08-31'); // 31일
+    expect(end('2023-01-31')).toBe('2023-02-28'); // 28일
+    expect(end('2024-01-10')).toBe('2024-02-29'); // 윤년 29일
+    expect(end('2023-12-28')).toBe('2024-01-31'); // 해를 넘긴다
+  });
+});
+
+// 다음 달 1일 ~ 말일 가운데 가장 낮은 예상 잔액. 점은 dueGraphPts 와 같은 모양이다
+test.describe('다음 달 최저 예상 잔액', () => {
+  const D = (at) => core.dayNum(at);
+  // 기준일 다음 날부터 끝날까지 날마다 [입금 전, 일말] 두 점. 값은 날짜 → [입금전, 일말]
+  const pts = (오늘, 끝, 값) => {
+    const 점 = [{ 날: D(오늘), 값: 1000, 갈래: '기준' }];
+    for (let d = D(오늘) + 1; d <= D(끝); d++) {
+      const v = 값(d);
+      점.push({ 날: d, 값: v[0], 갈래: '입금전', 같음: v[0] === v[1] });
+      점.push({ 날: d, 값: v[1], 갈래: '일말', 같음: v[0] === v[1] });
+    }
+    return { 점, 시작: D(오늘), 끝: D(끝) };
+  };
+  const card = (오늘, 목표, 잘림 = null) => ({ 오늘, 목표, 잘림 });
+
+  test('이번 달 최저와 다음 달 최저가 다르면 다음 달 것을 고른다', () => {
+    // 8월 25일이 전체 최저(−500), 9월 12일이 9월 최저(200)
+    const p = pts('2023-08-22', '2023-09-30', (d) =>
+      d === D('2023-08-25') ? [-500, 100] : d === D('2023-09-12') ? [200, 900] : [800, 900]
+    );
+    const low = core.dueNextMonthLowIn(card('2023-08-22', '2023-09-30'), p);
+    expect(low.달).toBe('2023-09');
+    expect(low.날수).toBe(D('2023-09-12'));
+    expect(low.값).toBe(200);
+    expect(low.갈래).toBe('입금전');
+    expect(low.전부).toBe(true);
+  });
+
+  test('다음 달 말일(1월 31일)까지 찾고 해를 넘긴다', () => {
+    const p = pts('2023-12-28', '2024-01-31', (d) =>
+      d === D('2024-01-31') ? [100, 400] : [500, 600]
+    );
+    const low = core.dueNextMonthLowIn(card('2023-12-28', '2024-01-31'), p);
+    expect(low.달).toBe('2024-01');
+    expect(low.날수).toBe(D('2024-01-31'));
+    expect(low.끝날).toBe(D('2024-01-31'));
+  });
+
+  test('윤년 2월 — 29일까지 찾는다', () => {
+    const p = pts('2024-01-10', '2024-02-29', (d) =>
+      d === D('2024-02-29') ? [50, 70] : [300, 300]
+    );
+    const low = core.dueNextMonthLowIn(card('2024-01-10', '2024-02-29'), p);
+    expect(low.날수).toBe(D('2024-02-29'));
+    expect(low.첫날).toBe(D('2024-02-01'));
+  });
+
+  test('같은 값이면 앞선 날의 입금 전 시점', () => {
+    const p = pts('2023-03-15', '2023-04-30', () => [300, 300]);
+    const low = core.dueNextMonthLowIn(card('2023-03-15', '2023-04-30'), p);
+    expect(low.날수).toBe(D('2023-04-01'));
+    expect(low.갈래).toBe('입금전');
+  });
+
+  test('비교 자료가 모자라 다음 달 중간에서 끝나면 계산된 날까지만 · 닿지 못하면 없음', () => {
+    const 중간 = pts('2023-08-22', '2023-09-15', () => [400, 500]);
+    const low = core.dueNextMonthLowIn(card('2023-08-22', '2023-09-15', '2023-09-30'), 중간);
+    expect(low.전부).toBe(false);
+    expect(low.계산끝).toBe(D('2023-09-15'));
+    const 못닿음 = pts('2023-08-22', '2023-08-29', () => [400, 500]);
+    expect(core.dueNextMonthLowIn(card('2023-08-22', '2023-08-29', '2023-09-30'), 못닿음)).toBe(
+      null
+    );
+  });
+});
+
+// 예상 금액은 원 단위 그대로 (2026-09-29 요한 확정 — 만원 표기 취소). 반올림 · 내림 · 올림 · 「1만원 미만」 없음
+test('예상 금액 원 단위 표기', () => {
+  expect(core.dueWon(75374590)).toBe('75,374,590원');
+  expect(core.dueWon(-5230)).toBe('−5,230원');
+  expect(core.dueWon(-3000)).toBe('−3,000원');
+  expect(core.dueWon(0)).toBe('0원');
+  expect(core.dueWon(48507077)).toBe('48,507,077원');
+  expect(core.dueWon(102242103.4)).toBe('102,242,103원');
 });

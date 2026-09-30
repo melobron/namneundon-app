@@ -329,7 +329,7 @@ function startOnboard() {
     if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
     if (saved.unskip) UP.unskip = saved.unskip.slice();
     if (saved.목표일) setDueDay(saved.목표일); /* 57차 ⑦ · 60차 ① */
-    if (saved.xfer) applyXferKeys(saved.xfer); /* 37차 6번 */
+    applyXferSaved(saved); /* 37차 6번 · NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
     UP.manual = manualLoad(); /* 36차 J. 저장통이 따로다 */
     UP.payees.forEach(function (g) {
       /* 원본 표기로 먼저 맞춰본다. 옛 저장값은 다듬은 이름으로 되어 있어 그것도 본다 */
@@ -1031,8 +1031,9 @@ function drawBundle(host, b) {
     var box = el('div', 'dtl');
     b.mems
       .slice()
+      /* 금액 큰 순 — 들어오고 나간 돈을 상계하지 않고 절댓값을 더한 값(abs)으로 (2026-09-29 요한 확정) */
       .sort(function (x, y) {
-        return (y.net > 0 ? y.inSum : y.outSum) - (x.net > 0 ? x.inSum : x.outSum);
+        return y.abs - x.abs;
       })
       .forEach(function (m) {
         var r2 = el('div', 'drow');
@@ -1174,7 +1175,8 @@ function undoPick() {
         m.g.autoIn = m.autoIn;
         m.g.autoOut = m.autoOut;
       }
-      if (UP.queue.indexOf(m.g) === -1) UP.queue.push(m.g);
+      /* 묶음에서 빠졌던 곳은 아직 안 물은 자리에 금액순으로 되돌린다 (맨 뒤로 보내지 않는다) */
+      if (UP.queue.indexOf(m.g) === -1) queueInsertByAmount(UP.queue, h.i + 1, m.g);
     });
     UP.pos = h.i;
     UP.said = null;
@@ -1230,7 +1232,7 @@ function holdAskStart(hold, months) {
       합[g.name] = 0;
       list.push(g);
     }
-    합[g.name] += r.액;
+    합[g.name] += Math.abs(r.액); /* 상계하지 않고 절댓값으로 (2026-09-29 요한 확정) */
   });
   if (!list.length) return false;
   list.sort(function (a, b) {
@@ -1547,7 +1549,7 @@ function drawOnboard() {
     if (allDone) {
       /* 다음 달엔 이 일을 안 해도 된다는 걸 알려준다 */
       host.appendChild(
-        el('div', 'obnext', '이제 매달 새로 올리셔도 이 거래처들은 자동으로 잡힙니다.')
+        el('div', 'obnext', '이제 매달 새로 불러오셔도 이 거래처들은 자동으로 잡힙니다.')
       );
     }
     var acts = el('div', 'obdoneacts');
@@ -2016,7 +2018,20 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
 
 function appendReachedResult(reached, host) {
   if (UP.holdAsk) return; /* ★ 119차. 원인 경로는 아래 [결과로 돌아가기]를 쓴다 */
-  if (!reached) return;
+  if (!reached) {
+    /* ★ NAM-9 배포 전 보완 (2026-09-29 요한). 분류를 다 해야 결과로 갈 수 있게 막지 않는다.
+       목표 전에도 결과를 볼 수 있다 — 아직 분류하지 않은 거래는 결과 화면이 따로 알린다.
+       ★ 주 행동은 지금 거래처를 정하는 것이다. 이 단추는 한 단계 낮은 모양으로 둔다 */
+    var later = el('button', 'b', '분류는 나중에 하고 결과 보기');
+    later.type = 'button';
+    later.style.marginTop = '12px';
+    later.addEventListener('click', function () {
+      useScreen('분류 나중에 결과 보기');
+      showResult();
+    });
+    host.appendChild(later);
+    return;
+  }
   var resultGo = el('button', 'b on big', '결과 보기');
   resultGo.type = 'button';
   resultGo.style.marginTop = '12px';

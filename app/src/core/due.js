@@ -40,7 +40,15 @@
         ★ 과거만 쓴다. 오늘보다 뒤의 날은 이웃으로 삼지 않는다.
    ⑦-6 카드의 「지금 계좌 잔액」은 표의 것과 늘 같다 —
         가수금을 뺀 잔액을 화면에 올리던 것이 49차 규칙 위반이었다 */
-var DUE_DEFAULT = 10; /* 다음 달 며칠까지를 볼 것인가 */
+/* ★ NAM-9 (2026-09-29 요한). 예상 기간을 대표님께 묻지 않는다 — 늘 다음 달 말일까지다.
+   「다음 달」은 자료 기준일(모든 계좌가 자료를 가진 마지막 날, commonAsOf)이 속한 달의 다음 달이다.
+   오늘 날짜·파일을 고른 날·다시 연 날로 기간을 늘리지 않는다.
+   ★ 새 계산을 만들지 않는다. 예전에 고를 수 있던 「말일」(31)을 늘 쓰는 것이다 —
+     nextDue 가 그 달에 없는 날을 그 달 마지막 날로 옮긴다 (28·29·30·31일).
+   ★ DUE_DEFAULT(옛 기본값 10일)는 테스트의 숫자 모음(collectNumbers)이 예전 기준과
+     견주는 데만 쓴다. 화면의 기간은 DUE_END_DAY 다 */
+var DUE_DEFAULT = 10;
+var DUE_END_DAY = 31;
 /* ★ 104차 ①. 날짜 대응을 종료일에서 떼어낸다.
    103차까지 과거 구간은 [오늘−k달, 목표−k달] 이었다. 종료일을 하루 늘리면
    과거 구간도 같이 늘어나고, 달 길이가 다르면 새로 들어온 과거 날이
@@ -284,21 +292,46 @@ function coverStart(cover) {
   }
   return 늦;
 }
+/* ── NAM-9 후속 (2026-09-29 요한) · 포함된 계좌 사이 이체 후보 ────────────────
+   ★ 새로 추정하지 않는다. 결과 화면의 「계좌끼리 옮긴 것으로 보이는 거래」 카드가 쓰는
+     findTransfersIn 을 그대로 쓴다 — 계좌가 둘 이상일 때, 한 계좌 출금과 다른 계좌 입금이
+     같은 금액·하루 안쪽이면 후보다. 계좌가 하나면 후보가 없다.
+   ★ 대표님이 「맞습니다」를 누른 것(xferOn)은 후보가 아니라 확인된 이체다 — 여기 안 담는다.
+   ★ 출금 쪽만 담는다. 예측 입금은 매출만 세므로 입금 쪽은 예측에 들어갈 일이 없다 */
+function dueXferCandIn(U) {
+  var m = {};
+  findTransfersIn(U).forEach(function (p) {
+    /* ★ NAM-9 요한 승인. 「계좌끼리 옮긴 돈이 아닙니다」로 답한 쌍은 후보가 아니다 — 일반 거래로 센다 */
+    if (!xferOnIn(U, p.out) && !xferNoIn(U, p)) m[rowId(p.out)] = 1;
+  });
+  return m;
+}
 /* 아직 안 정한 출금을 날짜별로 모아 둔다 — 표를 한 번만 만들고 t 와 함께 사라진다.
-   ★ 조건 ④⑤⑥ 을 여기서 건다. 기존 기준을 그대로 쓴다 —
-     catOf 의 UNSET · 출금(금액 0원 초과) · xferOn 으로 빠지는 계좌 간 이체.
+   ★ NAM-9 후속. 둘로 가른다.
+     보류(t.__unkOut) = 포함된 계좌 사이 이체 후보(확인 전) — 요한 승인으로 분류된 후보도 여기다.
+       합친 잔액에서 이것을 나간 돈으로 치면 계좌 안에서 옮긴 돈이 밖으로 나간 것처럼 두 번 빠지고,
+       빼 버리면 확인 안 된 이체를 근거 없이 빼는 것이 된다. 그래서 넣지도 빼지도 않고 보류한다.
+     포함(t.__unkIn) = 그 밖의 아직 안 정한 출금. 계좌에서 실제로 나간 돈이라 잔액 예측용 출금에 넣는다
+       (dueTableBuildIn). 사업 지출·매출에는 안 넣는다 — 월별 손익은 그대로다.
+   ★ 조건은 기존 그대로다 — catOf 의 UNSET · 출금(금액 0원 초과) · xferOn 으로 빠지는 이체는 제외.
    ★ 미정 입금은 담지 않는다. 입금으로 출금을 상계하지 않는다 (요청서 ②).
    ★ 조건 ① 은 따로 거르지 않는다 — dueTable 이 UP.rows 전체를 쓰므로
      예측이 선 계좌 집합과 여기 담기는 거래의 계좌 집합이 같다.
      계좌 집합이 갈리는 자료에서는 dueCard 가 dueUnknownAccs 로 이미 카드를 안 낸다 */
-function dueUnknownOutIn(U, t) {
-  if (t.__unkOut) return t.__unkOut;
-  var m = {};
+function dueUnsetOutSplitIn(U, t) {
+  if (t.__unkOut) return;
+  var 보류 = {},
+    포함 = {},
+    후보 = dueXferCandIn(U);
   (U.rows || []).forEach(function (r) {
     if (!(r.amount < 0)) return; /* ⑤ 출금만 · 0원은 안 센다 */
     if (xferOnIn(U, r)) return; /* ⑥ 빼기로 정한 계좌 간 이체 */
-    if (catOfIn(U, r) !== UNSET) return; /* ④ 아직 안 정한 거래만 */
-    var d = dayNum(r.at.slice(0, 10));
+    /* ★ NAM-9 요한 승인 (2026-09-29). 확인 전 이체 후보는 분류와 상관없이 보류로 간다.
+       분류된 후보도 합친 잔액에서는 두 번 빠질 수 있다. 그 밖에는 아직 안 정한 출금만 담는다 */
+    var 후보인가 = !!후보[rowId(r)];
+    if (!후보인가 && catOfIn(U, r) !== UNSET) return; /* ④ 아직 안 정한 거래만 */
+    var d = dayNum(r.at.slice(0, 10)),
+      m = 후보인가 ? 보류 : 포함;
     (m[d] || (m[d] = [])).push({
       rid: rowId(r),
       날: d,
@@ -307,8 +340,16 @@ function dueUnknownOutIn(U, t) {
       이름: keyOfIn(U, r)
     });
   });
-  t.__unkOut = m;
-  return m;
+  t.__unkOut = 보류;
+  t.__unkIn = 포함;
+}
+function dueUnknownOutIn(U, t) {
+  dueUnsetOutSplitIn(U, t);
+  return t.__unkOut;
+}
+function dueUnsetInIn(U, t) {
+  dueUnsetOutSplitIn(U, t);
+  return t.__unkIn;
 }
 /* 고르신 종료일까지의 예측에 실제로 쓰인 비교 날짜에서 미정 출금을 찾는다.
    ★ 비교 날짜를 따로 추정하지 않는다. dueDaily 가 채택한 날을 그대로 받는다 (③).
@@ -317,10 +358,17 @@ function dueUnknownOutIn(U, t) {
    ★ 같은 원본 거래가 여러 표본에 쓰여도 한 번만 센다 (rid 로 가린다).
    ★ 비율이나 금액 문턱을 두지 않는다. 한 건이면 한 건이다 */
 function dueHoldIn(U, t, i, 남은날수, dd) {
+  return dueUsedIn(U, t, i, 남은날수, dd, dueUnknownOutIn(U, t));
+}
+/* ★ NAM-9 후속. 예측에 실제로 쓰인 비교 날짜에 들어간 미분류 출금 — 카드에 건수를 알린다.
+   보류와 같은 고리(dueUsedIn)로 센다. 따로 추정하지 않는다 */
+function dueUnsetUsedIn(U, t, i, 남은날수, dd) {
+  return dueUsedIn(U, t, i, 남은날수, dd, dueUnsetInIn(U, t));
+}
+function dueUsedIn(U, t, i, 남은날수, dd, 표) {
   if (!dd) dd = dueDailyIn(U, t, i, true);
   if (!dd || !dd.채택) return null;
-  var 표 = dueUnknownOutIn(U, t),
-    본 = {},
+  var 본 = {},
     목록 = [],
     합 = 0,
     x,
@@ -556,9 +604,10 @@ function duePlanTotal(pl) {
   });
   return s;
 }
+/* ★ NAM-9. 저장통에 예전에 고르신 목표일(U.dueDay)이 있어도 기간에는 안 쓴다.
+   값은 지우지 않는다 — 저장 형식을 바꾸지 않으려는 것이다 */
 function dueDayIn(U) {
-  var d = U && U.dueDay;
-  return d >= 1 && d <= 31 ? d : DUE_DEFAULT;
+  return DUE_END_DAY;
 }
 /* ★ 103차 ③. 「매달 지출이 가장 많은 날」을 묻는데 고를 수 있는 것이 1~28 뿐이었다.
    말일에 정산이 몰리는 대표님은 정확히 답할 수가 없었다.
@@ -862,6 +911,12 @@ function dueInputSigIn(U, E) {
     n += s.length;
   }
   섞기(E.planAt() + '#' + accCountIn(U) + '#' + baseNameIn(U, '매출') + '#');
+  /* ★ NAM-9. 「이체 아님」 판단이 바뀌면 후보가 바뀌어 예측 재료가 달라진다 */
+  섞기(
+    Object.keys(U.xferNo || {})
+      .sort()
+      .join('\n') + '#'
+  );
   (U.banks || []).forEach(function (b) {
     var r = b && b.range;
     섞기(r && r.ok && r.asked ? r.asked.from + '~' + r.asked.to + ';' : '-;');
@@ -905,6 +960,7 @@ function dueTableBuildIn(U) {
      아래 걸러내기(이체·미정·매출)를 그대로 지난 줄만 담긴다.
      새 잣대를 만들지 않는다 — 합계는 예측용 출금(dFc)과 같은 줄에서 나온다 (118차) */
   var 지출줄 = [];
+  var 후보 = dueXferCandIn(U);
   function 닫기() {
     if (cur === null) return;
     var s = 0,
@@ -931,7 +987,25 @@ function dueTableBuildIn(U) {
     }
     last[accOf(r)] = r.balance;
     var c = catOfIn(U, r);
-    if (xferOnIn(U, r) || c === UNSET) return;
+    if (xferOnIn(U, r)) return;
+    if (c === UNSET) {
+      /* ★ NAM-9 후속 (2026-09-29 요한). 아직 안 정한 출금도 잔액 예측용 출금(dFc)에 넣는다 —
+         분류와 상관없이 계좌에서 실제로 나간 돈이다. 사업 지출(dCost)·매출에는 안 넣는다.
+         ★ 포함된 계좌 사이 이체 후보(확인 전)는 넣지 않고 보류 규칙이 맡는다 (dueUnsetOutSplitIn).
+         ★ 아직 안 정한 입금은 여기서도 예측 입금에 안 넣는다 — 예측 입금은 「매출」로 정한 거래만 센다 */
+      if (r.amount < 0 && !후보[rowId(r)]) {
+        dFc += -r.amount;
+        지출줄.push({
+          날: dayNum(day),
+          p: keyOfIn(U, r),
+          rid: rowId(r),
+          v: -r.amount,
+          갈래: '미분류',
+          항목: c
+        });
+      }
+      return;
+    }
     if (c === 매출) {
       dSale += r.amount;
       return;
@@ -939,13 +1013,15 @@ function dueTableBuildIn(U) {
     /* ★ 118차 ①. 잔액 예측용 출금 — 계좌 밖으로 실제 나간, 분류된 출금 전부.
        사업 지출만이 아니라 사업 외 용도·대표 인출·계산 밖(KEEP) 항목으로 정한 출금,
        자동으로 넘긴 작은 출금도 넣는다. 잔액은 그 돈이 나가도 줄기 때문이다.
-       ★ 빼는 것은 그대로다 — 계좌 간 이체(xferOn)와 아직 안 정한 거래(UNSET).
-         미정 출금은 평균에 몰래 넣지 않고 보류 규칙(dueHold)이 맡는다.
+       ★ 빼는 것 — 확인된 계좌 간 이체(xferOn).
+         ★ NAM-9 후속. 아직 안 정한 출금(UNSET)은 위에서 따로 넣는다. 확인 전 이체 후보만 보류 규칙(dueHold)이 맡는다.
        ★ 방향은 실제 금액 부호로만 가른다. 항목 이름(「대출」 등)으로 입금이라 여기지 않는다.
        ★ 매출로 정한 출금(취소·환불)은 예전처럼 매출 쪽에서 빠진다. 여기서 두 번 세지 않는다.
        ★ 월별 사업 수입·지출·계좌 순이익의 정의는 안 바뀐다 — 그쪽은 cost(cc)다.
        ★ 갈래·항목을 줄마다 적어 두어 분류별 기여분을 가를 수 있게 한다 (dueCostSplit) */
-    if (r.amount < 0) {
+    /* ★ NAM-9 요한 승인. 확인 전 이체 후보는 분류됐어도 예측 출금에 안 넣는다 — 보류 규칙이 맡는다.
+       사업 지출(dCost)·월별 손익은 그대로다 */
+    if (r.amount < 0 && !후보[rowId(r)]) {
       dFc += -r.amount;
       지출줄.push({
         날: dayNum(day),
@@ -1150,8 +1226,19 @@ function dueCardIn(U, E) {
      아직 안 정한 출금이 있으면 예상 잔액 표시를 보류한다.
      ★ 예측 공식·표본 선택·금액 계산은 한 줄도 안 바꾼다. 내놓을지 말지만 정한다.
      ★ 보류면 과거 견주기(duePast)도 하지 않는다 — 안 보여줄 숫자를 만들지 않는다 */
+  /* ★ NAM-9 요한 승인 (2026-09-29). 보류 사유를 한꺼번에 센다 — 여러 개면 화면이 함께 보여준다.
+     ① 이체: 예측에 쓰인 비교 날짜에 확인 전 이체 후보가 있다 (분류와 상관없이)
+     ② 입금: 직전 30일에 「매출」로 정한 입금이 한 건도 없다 — 미분류 입금을 매출로 치지 않는다
+     ③ 자료: 첫 예상일조차 비교할 과거 구간이 3개가 안 된다 (곡선의 기존 문턱 FC_MIN_MONTHS)
+     ★ 숫자를 안 낸다. 실적 화면은 그대로다 */
   now.보류 = dueHoldIn(U, t, i, now.남은날수);
-  if (now.보류) return now;
+  now.입금틈 = dueInflowGapIn(U, t, i);
+  if (!now.입금틈.매출건) now.입금보류 = now.입금틈;
+  var 쓸것 = dueDailyUseIn(U, E, t, i).dd;
+  if (쓸것 && 쓸것.셈[0] < FC_MIN_MONTHS) now.자료보류 = { 셈: 쓸것.셈[0] };
+  if (now.보류 || now.입금보류 || now.자료보류) return now;
+  /* ★ NAM-9 후속. 예측에 들어간 미분류 출금 — 카드가 건수를 한 줄로 알린다 */
+  now.미분류 = dueUnsetUsedIn(U, t, i, now.남은날수);
   if (now.배 === null) return null;
   /* ★ 58차 ⑦-3. 구간을 자르지 않는다. 지금 배수와 가장 가까웠던 과거 스무 날을 뽑는다 */
   var past = duePastIn(U, E, t, day, i);
@@ -1225,7 +1312,7 @@ function dueCardIn(U, E) {
    ★ months 는 이제 안 쓴다 — 뒤 회차의 「종료일 뒤 저점」이 쓸 자리라 남겨 둔다 */
 function dueCurveIn(U, E, months, c) {
   /* ★ 116차 앞 ③. 카드와 같은 보류 상태를 쓴다. 보류면 곡선을 아예 안 만든다 */
-  if (!c || c.보류 || c.잔액 === null) return null;
+  if (!c || c.보류 || c.입금보류 || c.자료보류 || c.잔액 === null) return null;
   var t = E.table();
   if (!t || !t.n) return null;
   var 시작 = dayNum(c.오늘),
@@ -1369,6 +1456,91 @@ function dueGraphPtsIn(U, E, c, cv) {
     bal = 끝;
   }
   return { 점: out, 시작: 시작, 끝: dayNum(c.목표) };
+}
+/* ── NAM-9 · 다음 달 가운데 잔액이 가장 적을 것으로 예상되는 날 ──────────────
+   ★ 찾는 범위는 다음 달 1일 ~ 말일이다. 이번 달 남은 날은 넣지 않는다 —
+     dueCurve 의 최저(cv.최저)는 이번 달을 포함한 전체 기간의 최저라 뜻이 다르다.
+   ★ 새 예측을 만들지 않는다. dueGraphPts 가 dueCurve 값으로 되살린 점을 그대로 고른다.
+     그래서 「입금 전」 값(당일 출금 후·입금 전)이 후보다 — 카드의 최저와 같은 자다.
+   ★ 같은 값이면 앞선 날·앞선 시점(입금 전)을 쓴다. dueCurve 가 최저를 고르는 방식과 같다.
+   ★ 비교 자료가 모자라 예측이 다음 달 중간에서 끝나면(c.잘림) 계산된 날까지만 찾고
+     전부 = false 로 알린다. 다음 달에 닿지 못했으면 null 이다 — 지어내지 않는다 */
+function dueNextMonthLowIn(c, pts) {
+  if (!c || !pts || !pts.점) return null;
+  var 달끝 = nextDue(c.오늘, DUE_END_DAY);
+  var 첫 = dayNum(달끝.slice(0, 8) + '01'),
+    끝 = dayNum(달끝);
+  var 최저 = null;
+  for (var k = 0; k < pts.점.length; k++) {
+    var p = pts.점[k];
+    if (p.갈래 === '기준' || p.날 < 첫 || p.날 > 끝) continue;
+    if (최저 === null || p.값 < 최저.값) 최저 = p;
+  }
+  if (!최저) return null;
+  var 계산끝 = Math.min(끝, pts.끝);
+  return {
+    날수: 최저.날,
+    값: Math.round(최저.값),
+    갈래: 최저.갈래,
+    달: 달끝.slice(0, 7),
+    첫날: 첫,
+    끝날: 끝,
+    계산끝: 계산끝,
+    전부: 계산끝 === 끝
+  };
+}
+/* ── 예상 금액 표시 — 원 단위 (2026-09-29 요한 확정, 앞서 승인한 만원 표기를 취소) ──────────────
+   ★ 계산된 값을 원 단위 그대로 보인다. 만원 반올림 · 하한 내림 · 상한 올림 · 「1만원 미만」을 쓰지 않는다.
+   ★ 원 단위는 계산값의 표시 정밀도일 뿐 예측 정확도가 아니다 — 「예상」과 한계 안내는 그대로 둔다.
+   ★ 계산값에 소수가 섞일 수 있어 원 단위로만 반올림한다 (보이는 자리수) */
+function dueWon(v) {
+  return won(Math.round(v)) + '원';
+}
+/* ── 다음 달 최저 예상 잔액의 ±30% 임시 참고 범위는 2026-09-30 요한 최종 변경으로 화면에서 뺐다 ──────
+   계산 함수(dueNextMonthRangeIn · dueWeekOf)도 함께 뺐다. 검토 기록(118차 분석 · ±50% → ±30%)은 docs/product.md 에만 둔다 */
+/* ── NAM-9 배포 전 보완 · 직전 30일 입금 가운데 아직 분류하지 않은 것 ──────────────
+   ★ 예측 입금은 「매출」로 정한 거래만 센다 (dueInflowIn). 매출 입금이 아직 분류되지 않았으면
+     예측 입금이 그만큼 빠진다. 그 규모를 알려 주려고 센다 — 예측에 넣지는 않는다.
+   ★ 창은 dueInflowIn 과 같다 — 기준일 포함 직전 30일. 확인된 이체는 뺀다 */
+function dueInflowGapIn(U, t, i) {
+  var t0 = t.num[i],
+    j,
+    매출30 = 0,
+    매출건 = 0,
+    입금건 = 0,
+    건 = 0,
+    합 = 0,
+    매출 = baseNameIn(U, '매출');
+  for (j = 0; j < t.n; j++) {
+    if (t.num[j] <= t0 - 30) continue;
+    if (t.num[j] > t0) break;
+    매출30 += t.cs[j + 1] - t.cs[j];
+  }
+  (U.rows || []).forEach(function (r) {
+    if (!(r.amount > 0)) return;
+    var d = dayNum(r.at.slice(0, 10));
+    if (d <= t0 - 30 || d > t0) return;
+    if (xferOnIn(U, r)) return;
+    입금건++;
+    var c = catOfIn(U, r);
+    if (c === 매출) 매출건++;
+    if (c !== UNSET) return;
+    건++;
+    합 += r.amount;
+  });
+  return { 매출30: 매출30, 매출건: 매출건, 입금건: 입금건, 건수: 건, 합: 합 };
+}
+/* 곡선(그래프)이 안 나오는 까닭 — dueCurveIn 의 문턱을 그대로 따라 읽는다 (새 문턱을 안 만든다) */
+function dueCurveWhyIn(U, E, c) {
+  if (!c || c.보류 || c.입금보류 || c.자료보류) return '보류';
+  if (c.잔액 === null) return '잔액';
+  var 남은날수 = dayNum(c.목표) - dayNum(c.오늘);
+  if (남은날수 <= 1) return '짧음';
+  var t = E.table();
+  var dd = dueDailyUseIn(U, E, t, c.i).dd;
+  if (!dd || 남은날수 > dd.한계) return '표본';
+  if (dd.셈[0] < FC_MIN_MONTHS) return '3개월';
+  return null;
 }
 /* 자료에 적힌 실제 잔액 — 지나온 쪽이다. 예측이 아니다.
    ★ 새로 계산하지 않는다. dueTable 이 이미 날마다 들고 있는 값을 잘라 쓴다.
