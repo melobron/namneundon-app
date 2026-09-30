@@ -1388,6 +1388,7 @@ footer {
      나갈 길을 찾으려면 위로 다시 올라가셔야 했다. 붙여 둔다 */
 .uptop {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 18px 0 12px;
@@ -1421,6 +1422,11 @@ footer {
   flex: 1;
   font-size: calc(17 * var(--fu));
   font-weight: 700;
+  /* ★ NAM-9 후속. 제목이 「내 거래내역으로 확인하기」로 길어져 폰에서 한두 글자씩 여섯 줄로 꺾였다.
+     낱말 단위로만 줄을 바꾸고, 자리가 모자라면 오른쪽 단추가 다음 줄로 내려간다 */
+  min-width: 8.5em;
+  line-height: 1.35;
+  word-break: keep-all;
 }
 /* ★ 66-9차 ③. 알약 박스로 통일 */
 .upclose {
@@ -1500,6 +1506,15 @@ footer {
 .upfile:active {
   background: var(--brand2);
   border-color: var(--brand2);
+}
+/* ★ NAM-9 (2026-09-29). 파일 선택 단추 바로 아래의 안내. 경고가 아니라 사실을 알리는 줄이라
+     경고색·아이콘을 안 쓴다. 단추와 한 덩어리로 읽히게 간격만 좁게 둔다 */
+.upsafe {
+  margin-top: 10px;
+  font-size: calc(12.5 * var(--fu));
+  line-height: 1.6;
+  color: var(--ink);
+  word-break: keep-all;
 }
 .dropsub {
   display: inline-block;
@@ -3753,11 +3768,6 @@ footer {
 .fcdetrow {
   color: var(--ink);
 }
-.fcdetsame {
-  margin-top: 3px;
-  color: var(--gray);
-  font-size: calc(12 * var(--fu));
-}
 .fcdet .oslink {
   margin-top: 7px;
 }
@@ -4502,36 +4512,12 @@ footer {
   font-variant-numeric: tabular-nums;
   word-break: break-all;
 }
-/* ★ 110차 ④. 분석 종료일 드롭다운. 달 고르기와 같은 방식이라 새 장치가 아니다 */
-.duesel {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.dueselab {
+/* ★ 큰 칸 셋째 줄 — 「9월 10일로 예상됩니다」 · 표시할 수 없을 때의 할 일 */
+.dueresday {
+  margin-top: 3px;
   font-size: calc(13 * var(--fu));
   font-weight: 700;
   color: var(--ink);
-}
-.duedrop {
-  font-family: inherit;
-  font-size: calc(13.5 * var(--fu));
-  font-weight: 700;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--edge);
-  border-radius: var(--rad);
-  padding: 6px 10px;
-  cursor: pointer;
-}
-/* 최저 줄 — 제목줄과 같은 자로 서되 누르는 자리가 아니다 */
-.duelow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 11px;
 }
 .duetop {
   display: flex;
@@ -4540,41 +4526,100 @@ footer {
   gap: 8px;
   cursor: pointer;
 }
-.duelab {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: calc(13.5 * var(--fu));
-  font-weight: 700;
-}
-.duepct {
-  flex: none;
-  font-size: calc(20 * var(--fu));
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
 .duetop .chev {
   flex: none;
   font-size: calc(13 * var(--fu));
   color: var(--gray);
   margin-left: 2px;
 }
-/* ★ 101차. 제목 오른쪽이 % 에서 날짜+금액으로 바뀐다. 20px 800 은 너무 크다 */
-.duepct.money {
-  font-size: calc(13.5 * var(--fu));
+/* ── NAM-9 (2026-09-29) · 결과 화면의 예상 영역 ────────────────────────
+     ★ 손익 카드(실적)와 예상 카드 사이에 「예상」 머리를 둔다. 예상 카드의 노란 바탕과 함께
+       지난 거래의 집계와 앞으로의 추정을 눈으로 가른다 */
+.duesec {
+  margin-top: 16px;
+}
+.duesechead {
+  /* 카드 밖 글줄은 좌우 16px 에 맞춘다 (115차 ②-2) */
+  padding: 0 16px;
+  font-size: calc(13 * var(--fu));
+  font-weight: 800;
+  color: var(--gray);
+  letter-spacing: 0.02em;
+}
+/* 보류 카드의 머리는 누르는 자리가 아니다 (여닫을 것이 없다) */
+.duecard.noicon .duetop:not(.tapx) {
+  cursor: default;
+}
+/* 다음 달 최저 예상 잔액 두 줄. 결과 상자 아래에 같은 폭으로 선다 */
+.duenext {
+  margin-top: 10px;
+  max-width: 420px;
+  font-size: calc(13 * var(--fu));
+  line-height: 1.6;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.duenextday {
   font-weight: 700;
-  letter-spacing: 0;
-  /* .duepct 는 flex:none 이다. 320px+130% 에서 3px 넘쳤다 —
-                    줄어들 수 있게만 풀어준다 (넓으면 max-content 그대로다) */
-  flex: 0 1 auto;
 }
-.duepct.good {
-  color: var(--good);
+.duenextval b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.duepct.est {
-  color: var(--est);
+.duenextsub {
+  font-size: calc(12 * var(--fu));
+  color: var(--gray);
 }
-.duepct.warn {
-  color: var(--warn);
+/* ★ NAM-9 배포 전 보완. 임시 참고 범위 — 다음 달 최저 줄 아래 한 덩어리. 경고색을 안 쓴다 */
+.duerange {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--dueline);
+}
+.duerangeval b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* ★ NAM-9 요한 승인. 보류 사유 한 줄과 그 할 일 단추 — 사유가 여럿이면 줄마다 선다 */
+.duehold1 {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--estline);
+}
+.dueholdtxt {
+  font-size: calc(13 * var(--fu));
+  line-height: 1.6;
+  color: var(--ink);
+  word-break: keep-all;
+}
+/* ★ NAM-9 요한 승인. 이체 후보 한 쌍의 세 가지 답 — 줄 아래에 모아 두고 폰에서는 접혀 내려간다 */
+.xfacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0 10px;
+  border-bottom: 1px dashed var(--line);
+}
+.xfrow {
+  border-bottom: 0;
+}
+.dspan.xfstate {
+  color: var(--ink);
+}
+/* 오래된 자료로 낸 예상 — 사실을 알리는 줄이라 본문 글자색으로 둔다 */
+.duecard .dueold {
+  color: var(--ink);
+}
+/* 카드 안 그래프. 아이콘 자리(왼쪽 54px)까지 폭을 써서 폰에서 선이 눌리지 않게 한다 */
+.duegraph {
+  margin-top: 12px;
+}
+.duecard:not(.noicon) .duegraph {
+  margin-left: -39px;
+}
+/* 손익 카드를 나눈 뒷부분 — 머리줄 없이 상세만 담는다 */
+.pnl.pnlmore {
+  margin-top: 16px;
 }
 /* ★ 66차 4-2. 줄글로 붙어 있던 것을 구획으로 가른다 —
      칸마다 옅은 선과 여백을 두어 ①가능성 ②근거 ③참고 기간이 따로 읽힌다.
@@ -4606,49 +4651,6 @@ footer {
   margin-top: 9px;
   padding-top: 9px;
   border-top: 1px solid var(--line);
-}
-.duedays {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 7px;
-}
-.duedays button {
-  border: 1px solid var(--edge);
-  background: var(--paper);
-  border-radius: 6px;
-  width: 38px;
-  padding: 5px 0;
-  font-family: inherit;
-  font-size: calc(12.5 * var(--fu));
-  color: var(--ink);
-  cursor: pointer;
-}
-.duedays button.on {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
-  font-weight: 700;
-}
-/* ★ 101차 ①. 결과 직전 한 질문. 카드 안 1~28 격자와 같은 모양을 쓴다 (49차) */
-.ddwrap {
-  max-width: 560px;
-  margin: 0 auto;
-}
-.ddq {
-  font-size: calc(17 * var(--fu));
-  font-weight: 700;
-  line-height: 1.5;
-  margin: 18px 0 6px;
-}
-.ddsub {
-  color: var(--gray);
-  font-size: calc(13 * var(--fu));
-  line-height: 1.6;
-  margin-bottom: 14px;
-}
-.ddgo {
-  margin-top: 20px;
 }
 .orow.sidebox .lab,
 .orow.sidebox .v {

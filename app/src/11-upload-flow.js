@@ -55,7 +55,7 @@ function handleFiles(fileList) {
             return !b.bad && b.file === one.name;
           })
         ) {
-          PENDING.push({ name: one.name, bad: '같은 파일을 두 번 올리셨습니다' });
+          PENDING.push({ name: one.name, bad: '같은 파일을 두 번 선택하셨습니다' });
           return;
         }
         /* 이름이 달라도 절반 넘게 겹치면 안 받는다. 자동으로 지우지는 않는다 */
@@ -68,7 +68,7 @@ function handleFiles(fileList) {
         if (ov > 0.5) {
           PENDING.push({
             name: one.name,
-            bad: '이미 올리신 것과 ' + Math.round(ov * 100) + '% 겹칩니다'
+            bad: '이미 불러온 것과 ' + Math.round(ov * 100) + '% 겹칩니다'
           });
           return;
         }
@@ -193,16 +193,16 @@ function drawFileList() {
       redrawBankHelp();
     } catch (e) {}
   }
-  document.getElementById('uptitle').textContent = '올리신 파일';
+  document.getElementById('uptitle').textContent = '불러온 파일';
   upShow('up-files');
   var host = document.getElementById('up-files');
   host.innerHTML = '';
   var ok = PENDING.filter(function (b) {
     return !b.bad;
   });
-  host.appendChild(el('div', 'obhead', '올리신 파일'));
+  host.appendChild(el('div', 'obhead', '불러온 파일'));
   host.appendChild(
-    el('div', 'obsub', '건수와 기간을 한 번 봐주세요. 계좌가 더 있으면 이어서 올리시면 됩니다.')
+    el('div', 'obsub', '건수와 기간을 한 번 봐주세요. 계좌가 더 있으면 이어서 불러오시면 됩니다.')
   );
 
   var list = el('div', 'flist');
@@ -305,7 +305,7 @@ function drawFileList() {
   host.appendChild(list);
 
   var acts = el('div', 'obdoneacts');
-  var add = el('button', 'b', '＋ 파일 더 올리기');
+  var add = el('button', 'b', '＋ 거래내역 추가하기');
   add.type = 'button';
   add.addEventListener('click', function () {
     var inp = /** @type {HTMLInputElement} */ (document.getElementById('upinput'));
@@ -331,7 +331,7 @@ function drawFileList() {
         return b2.why === 'empty';
       });
     if (전부빔) {
-      host.appendChild(el('div', 'obcov', '올리신 파일에 거래가 한 건도 없습니다.'));
+      host.appendChild(el('div', 'obcov', '불러온 파일에 거래가 한 건도 없습니다.'));
       host.appendChild(
         el(
           'div',
@@ -590,7 +590,7 @@ function startFromBanks(banks, dup, overlap) {
     bits.push(
       '건너뛴 파일 — ' +
         escHtml(o.name) +
-        ' (이미 올리신 것과 ' +
+        ' (이미 불러온 것과 ' +
         Math.round(o.pct * 100) +
         '% 겹칩니다)'
     );
@@ -630,6 +630,12 @@ function afterFiles() {
     recountBreaks();
     UP.tileTrade = tradeNow();
     startOnboard();
+    /* ★ 같은 저장 자료를 그대로 다시 연 길 — 그 자료에 함께 남긴 이체 답만 쌍 ID 로 되살린다 */
+    applyXferFromData(저장분.xfer);
+    /* startOnboard 가 답을 붙이기 전에 저장 자료를 한 번 새로 썼다 — 되살린 답을 다시 함께 남긴다 */
+    try {
+      saveData();
+    } catch (e) {}
     showResult();
     return;
   }
@@ -888,7 +894,7 @@ function showBreakError(over) {
       'div',
       'errb',
       '거래내역을 기간을 나눠 여러 번 내려받으셨다면, 중간이 빠졌을 수 있습니다. ' +
-        '은행 앱에서 기간을 한 번에 잡아 다시 내려받아 올려주시면 대개 맞아떨어집니다.'
+        '은행 앱에서 기간을 한 번에 잡아 다시 내려받아 선택하시면 대개 맞아떨어집니다.'
     )
   );
 
@@ -932,7 +938,7 @@ function showBreakError(over) {
     /* 멀쩡한 계좌가 남아 있을 때만 갈라 보여준다.
        하나뿐인데 둘로 나누면 같은 일을 하는 버튼이 둘이 된다 */
     over.forEach(function (b) {
-      var one = el('button', 'b on', (b.bank || '이 계좌') + '만 다시 올리기');
+      var one = el('button', 'b on', (b.bank || '이 계좌') + '만 다시 선택하기');
       one.type = 'button';
       one.addEventListener('click', function () {
         backWith(alive.slice());
@@ -944,7 +950,7 @@ function showBreakError(over) {
     all.addEventListener('click', startOver);
     acts.appendChild(all);
   } else {
-    var again = el('button', 'b on', '다시 올리기');
+    var again = el('button', 'b on', '다시 선택하기');
     again.type = 'button';
     again.addEventListener('click', startOver);
     acts.appendChild(again);

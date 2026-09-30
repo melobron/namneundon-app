@@ -22,81 +22,10 @@ function viewableMonth(months, notThis) {
 function bigOutDay(months, m) {
   return bigOutDayIn(UP, months, m);
 }
-/* ★ 101차 ①. 이 매장에 한 번만 묻는다. 한 번 답하시면 다시 안 묻는다 —
-   카드를 펼치면 언제든 바꾸실 수 있다 */
-function needDueAsk() {
-  if (!UP || UP.demo) return false;
-  if (UP.dueAsked) return false;
-  var o = null;
-  try {
-    o = loadPicks(UP.store);
-  } catch (e) {}
-  if (o && o.목표일) return false; /* 저장통에 이미 답이 있다 */
-  return true;
-}
-function drawDueAsk(months) {
-  var host = document.querySelector('#up-duedate .ddwrap');
-  if (!host) return;
-  host.innerHTML = '';
-  var m = UP.month && months.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(months);
-  var 권함 = bigOutDay(months, m);
-  var 고른날 = 권함 || dueDay();
-  document.getElementById('uptitle').textContent = '한 가지만 여쭙겠습니다';
-
-  host.appendChild(el('div', 'ddq', '매달 지출이 가장 많은 날은 언제인가요?'));
-  /* ★ 왜 묻는지 한 줄. 이유를 안 적으면 그냥 절차가 된다 */
-  host.appendChild(
-    el(
-      'div',
-      'ddsub',
-      '고르신 날까지의 예상 잔액 흐름을 보여드립니다. 나중에 언제든 바꾸실 수 있습니다.'
-    )
-  );
-  /* ★ 지어내지 않는다. 자료로 찾은 것이 있을 때만 근거를 적는다 */
-  if (권함) {
-    host.appendChild(
-      el(
-        'div',
-        'ddsub',
-        '지난 3달에는 ' + dueDayText(권함) + '에 제일 많이 나갔습니다. 그대로 두셔도 됩니다.'
-      )
-    );
-  }
-  var days = el('div', 'duedays');
-  for (var i = 1; i <= 31; i++) {
-    /* ★ 103차 ③. 29·30·말일까지 */
-    (function (n) {
-      var b = el('button', n === 고른날 ? 'on' : '', dueDayShort(n));
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        고른날 = n;
-        drawDueAsk2(days, n);
-      });
-      days.appendChild(b);
-    })(i);
-  }
-  host.appendChild(days);
-
-  var row = el('div', 'ddgo');
-  var go = el('button', 'b on big', '이대로 보기');
-  go.type = 'button';
-  go.addEventListener('click', function () {
-    setDueDay(고른날);
-    UP.dueAsked = true;
-    savePicks();
-    showResult();
-  });
-  row.appendChild(go);
-  host.appendChild(row);
-  upShow('up-duedate');
-}
-/* 눌린 날만 바꿔 그린다 — 화면을 통째로 다시 그리면 스크롤이 튄다 */
-function drawDueAsk2(days, n) {
-  var bs = days.querySelectorAll('button'),
-    i;
-  for (i = 0; i < bs.length; i++) bs[i].className = i + 1 === n ? 'on' : '';
-}
-
+/* ★ NAM-9 (2026-09-29). 결과 전에 「매달 지출이 가장 많은 날」(분석 종료일)을 묻던
+   needDueAsk · drawDueAsk 를 없앴다. 예상 기간은 묻지 않고 정한다 —
+   자료 기준일이 속한 달의 다음 달 말일까지다 (core/due.js 의 dueDayIn).
+   ★ 저장통의 목표일(UP.dueDay)은 지우지도 새로 쓰지도 않는다. 저장 형식을 그대로 둔다 */
 function showResult() {
   utStop(); /* 「결과 보기」·「그만 찍고 결과 보기」 둘 다 여기로 온다 */
   /* ★ 119차. 보류 원인 경로에서 다른 길로 결과에 왔어도 원래 차례로 되돌린다 */
@@ -104,16 +33,6 @@ function showResult() {
   PAGE_DEMO = !!(UP && UP.demo);
   syncCloseLabel();
   syncUpOpen();
-  /* ★ 101차 ①. 이 매장에 아직 안 물어봤으면 한 가지만 먼저 여쭙는다.
-     ★ 한 번만이다. 답하시면 UP.dueAsked 와 저장통(목표일)이 둘 다 남는다.
-     ★ 예시 화면에서는 안 묻는다 — 남의 가게 자료에 목표일을 정하는 것이 된다.
-     ★ 되살린 매장(저장통에 목표일이 있는 곳)도 안 묻는다 */
-  if (needDueAsk()) {
-    var ms0 = monthList();
-    UP.month = UP.month && ms0.indexOf(UP.month) !== -1 ? UP.month : defaultMonth(ms0);
-    drawDueAsk(ms0);
-    return;
-  }
   document.getElementById('uptitle').textContent = '남는돈';
   upShow('up-done');
   /* ★ 119차. 예시 전환 보정 — 결과로 가는 길에서는 시작 화면을 다시 그리지 않는다.
@@ -261,51 +180,109 @@ function drawCatAddHere(box, g) {
    성함은 isOwnerName 판정에 쓰이므로 틀리면 계속 틀린다.
    ★ 매장 이름을 고치면 저장된 것이 함께 따라가야 한다.
      안 따라가면 이름 하나 고친 것만으로 지난달 찍은 게 통째로 사라진다 */
-function renameStore(oldName, neu) {
-  if (!neu || neu === oldName) return;
-  var a = lsGet(storeKey(oldName));
-  if (a) {
-    lsSet(storeKey(neu), a);
-    try {
-      lsRemove(storeKey(oldName));
-    } catch (e) {}
+/* ★ 91차 ① 거래내역 · 116차 ⑪ 예정 지출 · NAM-14 분석일도 같이 따라간다 —
+     통 목록은 00-storage.js 의 storeKeysOf 여섯이다.
+   ★ NAM-14·15 (2026-09-29). 옮기다 무엇이 실패해도 원래 매장 자료는 한 글자도 안 잃는다.
+     예전에는 새 자리에 못 써도 옛 자리를 먼저 지웠고(NAM-14),
+     새 이름에 다른 매장 자료가 있으면 그대로 덮어썼다(NAM-15). 이제 차례는 이렇다:
+       ① 원본 · 새 자리 · 마지막 매장 표시를 다 읽는다 — 못 읽으면 「없다」로 치지 않고 멈춘다
+       ② 새 자리 여섯 통 중 하나라도 무엇이 있으면 멈춘다 (빈 글자 · 깨진 것도 자료다)
+       ③ 새 자리에 다 쓰고 다시 읽어 맞춘다 — 틀리면 이번에 쓴 새 자리만 지운다
+       ④ 다 맞은 뒤에야 옛 자리를 지운다. 여기서 실패해도 다 옮긴 새 자료는 안 지운다
+   ★ 분류(fc.picks)와 거래내역(fc.data) 안에 적힌 store · owner 도 새 것으로 맞춰 쓴다 —
+     openSavedData 가 열쇠가 아니라 안쪽 store 로 매장 이름을 되살리기 때문이다.
+     그 밖의 내용 · 판 번호 · 금액은 원문 그대로 옮긴다.
+   ★ 돌려주는 것 { ok, why, warn }. why: same · demo · done · taken · read · broken · write.
+     warn 은 성공이면 「옛 자리 일부가 남았다」, 실패면 「새 자리 일부가 남았을 수 있다」.
+   ★ 여러 열쇠를 한꺼번에 바꾸는 트랜잭션은 아니다 — 쓰는 도중 창이 닫히거나
+     다른 탭이 같은 매장을 고치는 것까지 막지는 못한다 */
+function renameStore(oldName, neu, owner) {
+  /* 예시 화면은 저장소에 닿지 않는다 — 같은 이름의 실제 매장 자료가 옮겨지면 안 된다 */
+  if (UP.demo) {
+    UP.store = neu;
+    return { ok: true, why: 'demo', warn: false };
   }
-  var b = lsGet(manualKey(oldName));
-  if (b) {
-    lsSet(manualKey(neu), b);
-    try {
-      lsRemove(manualKey(oldName));
-    } catch (e) {}
+  var fromId = storeIdOf(oldName),
+    toId = storeIdOf(neu);
+  if (fromId === toId) return { ok: true, why: 'same', warn: false };
+  var from = storeKeysOf(fromId),
+    to = storeKeysOf(toId),
+    src = [],
+    taken = false,
+    r,
+    i;
+  for (i = 0; i < from.length; i++) {
+    r = lsRead(from[i]);
+    if (!r.ok) return { ok: false, why: 'read', warn: false };
+    src.push(r.v);
   }
-  var c = lsGet(bankKey(oldName));
-  if (c) {
-    lsSet(bankKey(neu), c);
-    try {
-      lsRemove(bankKey(oldName));
-    } catch (e) {}
+  for (i = 0; i < to.length; i++) {
+    r = lsRead(to[i]);
+    if (!r.ok) return { ok: false, why: 'read', warn: false };
+    if (r.v !== null) taken = true;
   }
-  /* ★ 91차 ①. 거래내역(fc.data)도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
-     이 기기에 남겨둔 거래내역을 못 찾아 다시 올리셔야 한다 */
-  var d = lsGet(dataKey(oldName));
-  if (d) {
-    lsSet(dataKey(neu), d);
-    try {
-      lsRemove(dataKey(oldName));
-    } catch (e) {}
+  var last = lsRead(LAST_KEY);
+  if (!last.ok) return { ok: false, why: 'read', warn: false };
+  if (taken) return { ok: false, why: 'taken', warn: false };
+
+  var pairs = [];
+  for (i = 0; i < from.length; i++) {
+    if (src[i] === null) continue;
+    var v = src[i];
+    if (from[i] === storeKey(fromId) || from[i] === dataKey(fromId)) {
+      var o = null;
+      try {
+        o = JSON.parse(v);
+      } catch (e) {}
+      /* 깨진 것을 새로 만들어 채우지 않는다 — 원본을 그대로 두고 멈춘다 */
+      if (!o || typeof o !== 'object') return { ok: false, why: 'broken', warn: false };
+      o.store = neu || null;
+      if (owner !== undefined) o.owner = owner || null;
+      v = JSON.stringify(o);
+    }
+    pairs.push([to[i], v]);
   }
-  /* ★ 116차 ⑪. 예정 지출도 같이 따라간다 — 안 따라가면 이름 하나 고친 것만으로
-     정해두신 예정 지출을 못 찾는다. 열쇠는 storeKey 와 같은 매장 식별값이다 */
-  var e5 = lsGet(planKey(oldName));
-  if (e5) {
-    lsSet(planKey(neu), e5);
-    try {
-      lsRemove(planKey(oldName));
-    } catch (e) {}
+
+  var w = lsWriteAll(pairs);
+  if (!w.ok) return { ok: false, why: 'write', warn: !lsDropAll(w.tried) };
+  /* 마지막 매장 표시는 이 매장을 가리킬 때만 따라간다. 다른 매장을 가리키면 그대로 둔다 */
+  if (last.v === fromId) {
+    var moved = lsSet(LAST_KEY, toId);
+    var back = lsRead(LAST_KEY);
+    if (!moved || !back.ok || back.v !== toId) {
+      /* 못 바뀌어 아직 제자리면 다시 쓰지 않는다 — 바뀌었거나 알 수 없을 때만 되돌려 본다 */
+      var 되돌림 = (back.ok && back.v === fromId) || lsSet(LAST_KEY, fromId);
+      var 정리 = lsDropAll(w.tried);
+      return { ok: false, why: 'write', warn: !(되돌림 && 정리) };
+    }
   }
+
+  var gone = lsDropAll(
+    from.filter(function (k, j) {
+      return src[j] !== null;
+    })
+  );
   UP.__plan = null;
-  if (lsGet(LAST_KEY) === String(oldName || '(기본)')) lsSet(LAST_KEY, String(neu || '(기본)'));
   DATA_SIG = null; /* 열쇠가 바뀌었으니 다음 저장은 새 자리에 다시 쓴다 */
   UP.store = neu;
+  return { ok: true, why: 'done', warn: !gone };
+}
+/* renameStore 가 멈춘 까닭을 대표님께 드리는 말로 */
+function renameSay(r) {
+  if (r.ok) return '새 이름으로 자료를 저장했습니다. 이전 이름의 자료 일부는 정리하지 못했습니다.';
+  if (r.why === 'taken')
+    return (
+      '이미 저장된 ' +
+      BIZ.곳 +
+      ' 이름입니다. 다른 이름을 입력해 주세요. 두 ' +
+      BIZ.곳 +
+      '의 자료는 그대로 남아 있습니다.'
+    );
+  if (r.why === 'read')
+    return '저장된 자료를 확인할 수 없어 이름을 바꾸지 않았습니다. 잠시 후 다시 시도해 주세요.';
+  if (r.warn)
+    return '이름 변경을 완료하지 못했습니다. 기존 자료는 그대로이며, 새 이름으로 일부 자료가 남아 있을 수 있습니다.';
+  return '이름을 바꾸지 못했습니다. 기존 이름과 자료는 그대로 남아 있습니다.';
 }
 /* 이 브라우저에 저장된 매장 — 직접 넣기가 몇 달 있는지도 같이 센다 */
 function storeRows() {
@@ -346,7 +323,8 @@ function openNames() {
   upShow('up-cats');
   drawNames();
 }
-function drawNames() {
+/* 알림 — 이 화면을 다시 그리면서 위에 남길 말 (이름은 바꿨지만 옛 자리 정리가 남았을 때) */
+function drawNames(알림) {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
   host.appendChild(
@@ -387,10 +365,33 @@ function drawNames() {
   var acts = el('div', 'obdoneacts');
   var ok = el('button', 'b on', '저장');
   ok.type = 'button';
+  /* ★ NAM-14·15. 이름을 못 바꿨으면 이 화면에 그대로 두고 까닭을 적는다.
+     적어 두신 이름 · 성함도 지우지 않는다 — 고쳐서 다시 누르시면 된다 */
+  var note = null;
+  function say(글) {
+    if (!note) {
+      note = el('div', 'lswarn');
+      host.insertBefore(note, acts);
+    }
+    note.textContent = 글;
+  }
   ok.addEventListener('click', function () {
-    var neu = i1.value.trim();
-    if (neu && neu !== oldStore) renameStore(oldStore, neu);
-    UP.owner = i2.value.trim() || null;
+    var neu = i1.value.trim(),
+      who = i2.value.trim() || null;
+    if (neu && neu !== oldStore) {
+      var r = renameStore(oldStore, neu, who);
+      /* 못 바꿨으면 성함도 안 바꾸고, 저장 · 결과 화면으로 넘어가지도 않는다 */
+      if (!r.ok) return say(renameSay(r));
+      if (r.why === 'done') {
+        /* 이름 · 성함은 옮기면서 새 자리에 이미 적었다. savePicks 를 또 부르지 않는다 —
+           그 안의 saveData 실패는 결과를 돌려주지 않아, 옮긴 것의 성패와 섞이면 안 된다 */
+        UP.owner = who;
+        UP.manual = manualLoad();
+        if (r.warn) return drawNames(renameSay(r));
+        return showResult();
+      }
+    }
+    UP.owner = who;
     UP.manual = manualLoad();
     savePicks();
     showResult();
@@ -401,6 +402,7 @@ function drawNames() {
   acts.appendChild(ok);
   acts.appendChild(back);
   host.appendChild(acts);
+  if (알림) say(알림);
 
   /* H-4. 이 브라우저에 저장된 매장 — 이름을 잘못 적어 둘로 갈린 것도 여기서 보인다 */
   var rows = storeRows();
@@ -435,8 +437,8 @@ function drawNames() {
           if (saved.baseCats && saved.baseCats.length) UP.baseCats = saved.baseCats.slice();
           if (saved.keepSet) UP.keepSet = saved.keepSet.slice();
           if (saved.unskip) UP.unskip = saved.unskip.slice();
+          applyXferSaved(saved); /* NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
           UP.payees.forEach(function (g) {
-            if (saved.xfer) applyXferKeys(saved.xfer);
             var c = null,
               lst = g.rawList || [];
             for (var i = 0; i < lst.length && !c; i++) c = saved.picks[lst[i]];
@@ -488,7 +490,7 @@ function drawNames() {
           el(
             'div',
             'addq',
-            '「' + r.name + '」에 저장된 것을 지금 올리신 파일에 덮어씁니다. 할까요?'
+            '「' + r.name + '」에 저장된 것을 지금 불러온 파일에 덮어씁니다. 할까요?'
           )
         );
         var ar = el('div', 'addrow');
@@ -557,7 +559,7 @@ function openCats() {
 function drawCats() {
   var host = document.getElementById('up-cats');
   host.innerHTML = '';
-  host.appendChild(el('div', 'catspan', monthSpan() + ' 올리신 거래 전체 기준입니다'));
+  host.appendChild(el('div', 'catspan', monthSpan() + ' 불러온 거래 전체 기준입니다'));
   host.appendChild(
     el(
       'div',
@@ -1178,13 +1180,13 @@ function importAsk(o, 대상, 자리, 저장통만, 새매장) {
       새매장
         ? '파일의 거래처 분류로 새 매장을 만듭니다.'
         : '같은 거래처는 파일의 분류로 바뀌고, 파일에 없는 기존 분류는 유지됩니다.' +
-            (저장통만 ? '' : ' 지금 올린 거래내역에 있는 거래처에만 적용됩니다.')
+            (저장통만 ? '' : ' 지금 불러온 거래내역에 있는 거래처에만 적용됩니다.')
     )
   );
   var 함께 = [];
   if ((o.accounts && o.accounts.length) || (o.baseCats && o.baseCats.length) || o.keepSet)
     함께.push('항목 목록');
-  if (o.목표일) 함께.push('분석 종료일');
+  /* ★ NAM-9. 분석 종료일은 이제 고르는 값이 아니라 안내하지 않는다 (저장통의 값은 그대로 읽는다) */
   if (o.업종 && TRADES[o.업종]) 함께.push('업종');
   if (o.xfer && o.xfer.length) 함께.push('이체 설정');
   if (함께.length) {
@@ -1221,6 +1223,12 @@ function importApply(o, 자리) {
     dueDay: UP.dueDay,
     trade: tradeNow(),
     xfer: UP.xfer ? JSON.parse(JSON.stringify(UP.xfer)) : UP.xfer,
+    xferNo: UP.xferNo ? JSON.parse(JSON.stringify(UP.xferNo)) : UP.xferNo,
+    xferCarryOk: UP.xferCarryOk ? JSON.parse(JSON.stringify(UP.xferCarryOk)) : UP.xferCarryOk,
+    xferCarryNo: UP.xferCarryNo ? JSON.parse(JSON.stringify(UP.xferCarryNo)) : UP.xferCarryNo,
+    xferCarryLegacy: UP.xferCarryLegacy
+      ? JSON.parse(JSON.stringify(UP.xferCarryLegacy))
+      : UP.xferCarryLegacy,
     queue: UP.queue,
     pos: UP.pos,
     hist: UP.hist,
@@ -1245,7 +1253,7 @@ function importApply(o, 자리) {
   if (o.unskip) UP.unskip = o.unskip.slice();
   if (o.목표일) setDueDay(o.목표일); /* 57차 ⑦ · 60차 ① */
   if (o.업종 && TRADES[o.업종]) setTrade(o.업종); /* 62차 ② */
-  if (o.xfer) applyXferKeys(o.xfer);
+  applyXferSaved(o); /* NAM-9 — 후보 한 쌍에 유일하게 맞을 때만 */
   /* ★ 119차. 파일의 매장 이름으로 UP.store 를 덮지 않는다 */
   var n = 0;
   UP.payees.forEach(function (g) {
@@ -1271,6 +1279,10 @@ function importApply(o, 자리) {
     UP.keepSet = 전.keepSet;
     UP.unskip = 전.unskip;
     UP.xfer = 전.xfer;
+    UP.xferNo = 전.xferNo;
+    UP.xferCarryOk = 전.xferCarryOk;
+    UP.xferCarryNo = 전.xferCarryNo;
+    UP.xferCarryLegacy = 전.xferCarryLegacy;
     if (UP.dueDay !== 전.dueDay) UP.dueDay = 전.dueDay;
     if (tradeNow() !== 전.trade) setTrade(전.trade);
     전.g.forEach(function (v) {
@@ -1335,6 +1347,8 @@ function importToStore(o, 이름, 새매장) {
   if (o2.목표일) body.목표일 = o2.목표일;
   if (o2.업종 && TRADES[o2.업종]) body.업종 = o2.업종;
   if (o2.xfer) body.xfer = 합(기존 && 기존.xfer, o2.xfer);
+  if (o2.xferNo) body.xferNo = 합(기존 && 기존.xferNo, o2.xferNo); /* NAM-9 */
+  if (o2.xferOk) body.xferOk = 합(기존 && 기존.xferOk, o2.xferOk);
   if (o2.cardMixed) body.cardMixed = 합(기존 && 기존.cardMixed, o2.cardMixed);
   body.계좌 = (기존 && 기존.계좌) || o2.계좌 || [];
   body.store = 이름 || null;
@@ -1366,8 +1380,8 @@ function importToStore(o, 이름, 새매장) {
   PICKED_STORE = { key: storeKey(이름), name: 이름 || '(기본)', n: n곳, 불러옴: true };
   drawUpMine();
   drawImportStart();
-  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 올려주세요.', true, 'start');
-  var go = el('button', 'b on', '거래내역 올리기');
+  var 알림 = importNote('분류를 불러왔습니다. 이 매장의 거래내역을 불러와 주세요.', true, 'start');
+  var go = el('button', 'b on', '거래내역 불러오기');
   go.type = 'button';
   go.style.marginLeft = '8px';
   go.addEventListener('click', function () {
@@ -2073,7 +2087,7 @@ var SHORT_SPAN_MONTHS = 6;
    ○○ 약사가 파일 용량 때문에 5개월치만 넣으셨다.
    ★ 두 가지를 다 말해야 한다. 「합쳐진다」만 있으면
      「그럼 처음부터 다시 분류해야 하나」 싶어 안 하시게 된다 */
-var SPLIT_UPLOAD_TIP = '나눠 올려도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
+var SPLIT_UPLOAD_TIP = '나눠 불러와도 합쳐집니다. 이미 정하신 거래처는 다시 묻지 않습니다.';
 
 /* 화면 맨 아래 면책 문구. 숫자를 가리지 않게 회색 작은 글씨로 끝에만 둔다 */
 /* 「추정치」가 아니다 — 계좌에 찍힌 것을 더한 것이고 검산까지 맞춰놨다.

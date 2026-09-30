@@ -47,15 +47,10 @@ test('업로드부터 결과, 복원까지', async ({ page }) => {
   }
   expect(await screenText(page, up)).toMatchSnapshot('4-onboard-done.txt');
 
+  // NAM-9: 결과 전에 분석 종료일을 묻지 않는다 — 곧바로 결과다
   await page.getByRole('button', { name: '결과 보기', exact: true }).click();
-  // 처음이면 목표일을 한 번 묻는다
-  const dueAsk = await screenText(page, up);
-  expect(dueAsk).toMatchSnapshot('5-due-ask.txt');
-  const dueBtn = page
-    .locator(`${up} button:visible`)
-    .filter({ hasText: /^(확인|이대로 보기|결과 보기|다음)$/ });
-  if (await dueBtn.count()) await dueBtn.first().click();
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  await expect(page.getByText('매달 지출이 가장 많은 날은 언제인가요?')).toHaveCount(0);
 
   const numbers = asJson(await collectNumbers(page));
   expect(numbers).toMatchSnapshot('numbers.json');

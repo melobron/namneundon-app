@@ -107,7 +107,11 @@ function drawResultInner(months) {
   /* 자료가 짧으면 견줄 것도 예상할 것도 없다. 왜 안 나오는지 알려준다 */
   if (months.length < 3) {
     host.appendChild(
-      el('div', 'shortnote', '지난 1년치를 올리시면 지난달과 견주고 이번 달 말도 예상해드립니다.')
+      el(
+        'div',
+        'shortnote',
+        '지난 1년치를 불러오시면 지난달과 견주고 다음 달 말까지의 잔액도 예상해드립니다.'
+      )
     );
   }
   /* ★ 82차 ④. ○○ 약사가 5개월치를 넣고 「진짜 수익이 어떤지는 아직 잘 모르겠다」고 했다.
@@ -213,7 +217,7 @@ function drawResultInner(months) {
       see.textContent = trades.hidden ? '확인할 거래 보기' : '거래 접기';
     });
     acts.appendChild(see);
-    var again = el('button', 'b', '파일 다시 올리기');
+    var again = el('button', 'b', '파일 다시 선택하기');
     again.type = 'button';
     again.addEventListener('click', function () {
       PENDING = [];
@@ -231,11 +235,13 @@ function drawResultInner(months) {
     return;
   }
 
-  /* ★ 76-2차. 다음 달 초까지 모자랄 가능성은 월 결과의 첫 핵심정보다.
-     숫자 검산이 맞은 뒤, 손익 숫자와 그래프보다 먼저 한 번만 보여준다.
-   ★ 86차 ①. 82차 ②의 「여유가 뚜렷하면 아래로 내린다」를 철회했다.
-     어느 대표님이든 늘 맨 위에 · 늘 펼친 채로 둔다. 접는 것은 대표님이 정하신다 */
-  drawDueCard(host, months);
+  /* ★ NAM-9 (2026-09-29 요한). 76-2차의 「예상 카드를 손익보다 먼저」를 뒤집는다.
+     지난 거래로 확인되는 결과를 먼저 보고, 그다음 예상을 본다. 차례는 넷이다 —
+       ① 분석 기간과 자료 기준 (위 배지 · 손익 카드 머리)
+       ② 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익
+       ③ 예상 잔액과 그래프 (drawDueCard — 아래 손익 카드를 둘로 나눈 사이)
+       ④ 상세 내역과 계산 근거 (일별 흐름 · 계좌 잔액 · 안 정한 돈 · 확인할 것)
+     ★ 예상이 보류돼도 ②는 그대로 보인다 — 보류 안내는 ③ 자리 안에만 선다 */
 
   /* 눌러서 그 안의 거래처를 펼쳐 보는 줄 */
 
@@ -317,21 +323,24 @@ function drawResultInner(months) {
   /* 이 달의 나간 돈 속 항목들 — 아래 두 덩어리가 같이 쓴다 */
   /* 35차 E. 안 정한 돈은 이제 지출에 안 섞인다. 그 자체를 한 칸으로 보여준다 */
   var unsetAmt = d.unknown || 0;
-  /* ★ 43차. 항목 순서를 금액 큰 순에서 고정 순서로 바꾼다.
-     매달 자리가 바뀌면 지난달과 견줄 수가 없다 — 「식자재가 어디 갔지」가 된다.
-     UP.accounts 가 이미 사장님이 보시는 항목 차례다. 그 차례를 그대로 쓴다 */
+  /* ★ 2026-09-29 요한 확정 — 금액 큰 순. 43차의 고정 순서를 뒤집는다.
+     지금 고른 기간의 합계 금액(절댓값)이 큰 항목부터 보인다. 금액이 같으면 예전 고정 순서
+     (UP.accounts — 사장님이 보시는 항목 차례)를 그대로 둬 화면이 괜히 섞이지 않게 한다.
+     정렬만 바꾼다 — 계산 · 분류는 그대로다 */
   var catOrder = (UP.accounts || []).slice();
   var keys = Object.keys(d.cats)
     .filter(function (k) {
       return k !== UNSET;
     })
     .sort(function (a, b) {
+      var va = Math.abs(d.cats[a] || 0),
+        vb = Math.abs(d.cats[b] || 0);
+      if (va !== vb) return vb - va;
       var ia = catOrder.indexOf(a),
         ib = catOrder.indexOf(b);
       if (ia === -1) ia = 999;
       if (ib === -1) ib = 999;
-      if (ia !== ib) return ia - ib;
-      return d.cats[b] - d.cats[a];
+      return ia - ib;
     });
   var allKeys = keys.slice();
   if (d.cats[UNSET]) allKeys.push(UNSET);
@@ -508,6 +517,17 @@ function drawResultInner(months) {
   /* ★ 74차. 핵심 숫자와 아직 안 정한 돈을 본 다음에만 다음 행동을 보여준다. */
   var 새로정할 = resultNewButton(restN);
   if (새로정할) host.appendChild(새로정할);
+
+  /* ★ NAM-9. 손익 카드를 여기서 끊고 예상 영역을 끼운다. 나머지(④ 상세)는 같은 모양의
+     두 번째 카드(pnl pnlmore)에 이어 그린다 — 줄 하나하나는 예전 그대로다 */
+  hostSave.appendChild(card);
+  var dueSec = el('div', 'duesec');
+  dueSec.appendChild(el('div', 'duesechead', '예상'));
+  drawDueCard(dueSec, months);
+  if (dueSec.childNodes.length > 1) hostSave.appendChild(dueSec);
+  card = el('div', 'pnl pnlmore');
+  host = card;
+
   /* ★ 66차 ④. 이 달이 어떻게 흘러왔는지. 위 숫자는 손대지 않고 그림만 더한다 */
   drawDayChart(host, UP.month, d, months);
   /* ── 덩어리 3 · 계산에 안 들어가는 것 ──
@@ -765,9 +785,11 @@ function drawUnsetShiftLine(months, host, d, unsetAmt) {
        문장은 회색으로 낮추고 금액 둘만 호박 굵게 — 눈이 숫자로 먼저 간다.
        ★ 글자는 한 글자도 안 바꾼다. 마디만 나눈다 */
     var er = el('div', 'errline tapx');
-    er.appendChild(document.createTextNode('▾ 아직 안 정한 ' + won(d.unknownN || 0) + '건 '));
+    /* ★ NAM-9 배포 전 보완. 분류가 덜 된 숫자를 완성된 실적으로 읽지 않게,
+       위 숫자에 무엇이 빠졌는지를 먼저 말한다. 금액·범위 값은 그대로다 */
+    er.appendChild(document.createTextNode('▾ 아직 분류하지 않은 ' + won(d.unknownN || 0) + '건 '));
     er.appendChild(el('b', 'errnum', won(unsetAmt) + '원'));
-    er.appendChild(document.createTextNode(' 때문에 '));
+    er.appendChild(document.createTextNode('은 위 숫자에 넣지 않았습니다. 분류에 따라 '));
     er.appendChild(el('b', 'errnum', won(d.lo) + '원까지'));
     er.appendChild(document.createTextNode(' 내려갈 수 있습니다'));
     er.addEventListener('click', function () {
@@ -801,14 +823,22 @@ function drawBalanceRow(months, host, d, full, calcRow) {
     months,
     host,
     '__bal',
-    (full ? +UP.month.slice(5, 7) + '월 말' : '현재') + ' 계좌 잔액',
+    /* ★ NAM-9 배포 전 보완. 「현재」는 오늘 잔액으로 읽힌다 — 자료의 마지막 날짜를 적는다 */
+    (full
+      ? +UP.month.slice(5, 7) + '월 말'
+      : +UP.month.slice(5, 7) + '월 ' + lastDayIn(UP.month) + '일') + ' 계좌 잔액',
     won(d.close),
     null,
     function () {
       host.appendChild(calcRow('　' + +UP.month.slice(5, 7) + '월 1일', won(d.open)));
       host.appendChild(calcRow('　들어온 돈', won(d.inTotal)));
       host.appendChild(calcRow('　나간 돈', won(d.outTotal)));
-      host.appendChild(calcRow('　' + (full ? '월말' : '현재'), won(d.close)));
+      host.appendChild(
+        calcRow(
+          '　' + (full ? '월말' : +UP.month.slice(5, 7) + '월 ' + lastDayIn(UP.month) + '일'),
+          won(d.close)
+        )
+      );
       if (UP.banks && UP.banks.length > 1) {
         var per = [];
         UP.banks.forEach(function (b, i) {
@@ -973,10 +1003,6 @@ function drawTransferCards(months, host) {
      ★ 각 건을 따로 뺄 수 있다 — 금액이 같은 우연도 있다 */
   if (UP.banks && UP.banks.length > 1) {
     var pairs = findTransfers();
-    var onN = 0;
-    pairs.forEach(function (p) {
-      if (xferOn(p.out)) onN++;
-    });
     if (pairs.length) {
       var xsum = 0;
       pairs.forEach(function (p) {
@@ -988,9 +1014,15 @@ function drawTransferCards(months, host) {
       var xOpen = !!UP.open.__xfer;
       var xb = el('div', 'xferbox');
       var xh = el('div', 'xfhead tapx');
+      var 확인전 = pairs.filter(function (p) {
+        return !xferAnswer(p);
+      }).length;
       xh.appendChild(
         document.createTextNode(
-          '계좌끼리 옮긴 것으로 보이는 거래가 ' + won(pairs.length) + '건 있습니다'
+          '계좌끼리 옮긴 것으로 보이는 거래가 ' +
+            won(pairs.length) +
+            '건 있습니다' +
+            (확인전 ? ' · 확인 전 ' + won(확인전) + '건' : ' · 모두 확인함')
         )
       );
       xh.appendChild(foldChip(xOpen));
@@ -1013,8 +1045,11 @@ function drawTransferCards(months, host) {
       var xl = el('div', 'dtl');
       if (xOpen)
         pairs.forEach(function (p) {
-          var on = xferOn(p.out);
-          var row = el('div', 'drow');
+          /* ★ NAM-9 요한 승인 (2026-09-29). 후보 한 쌍마다 세 가지 답.
+             예전 단추 「이 건은 아닙니다」는 누르면 이체로 보고 뺐다 — 이름과 동작이 반대로 읽혔다.
+             ★ 고른 답은 굵게 켜 둔다. 다른 답을 누르면 바뀌고, 「나중에 확인」은 확인 전으로 되돌린다 */
+          var 답 = xferAnswer(p);
+          var row = el('div', 'drow xfrow');
           var nm = el('div', 'dnm');
           nm.appendChild(
             document.createTextNode(
@@ -1029,35 +1064,61 @@ function drawTransferCards(months, host) {
           nm.appendChild(
             el('div', 'dspan', showName(p.out.payee) + ' → ' + showName(p.into.payee))
           );
+          nm.appendChild(
+            el(
+              'div',
+              'dspan xfstate',
+              답 === 'yes'
+                ? '확인함: 계좌끼리 옮긴 돈 — 매출·지출과 예상 출금에서 뺐습니다'
+                : 답 === 'no'
+                  ? '확인함: 계좌끼리 옮긴 돈이 아님 — 일반 거래로 계산합니다'
+                  : '확인 전 — 예상 잔액 계산을 보류합니다'
+            )
+          );
           row.appendChild(nm);
           row.appendChild(el('div', 'dv num', won(p.amount)));
-          var ch = el('div', 'dch');
-          var bt = el('button', 'chbtn' + (on ? ' on' : ''), on ? '뺐습니다' : '이 건은 아닙니다');
-          bt.type = 'button';
-          bt.addEventListener('click', function () {
-            if (on) dropXfer(p);
-            else takeXfer([p]);
-            drawResult(months);
-          });
-          ch.appendChild(bt);
-          row.appendChild(ch);
           xl.appendChild(row);
+          var 답들 = el('div', 'xfacts');
+          [
+            ['yes', '계좌끼리 옮긴 돈입니다'],
+            ['no', '계좌끼리 옮긴 돈이 아닙니다'],
+            [null, '나중에 확인']
+          ].forEach(function (x) {
+            var bt = el('button', 'chbtn' + (답 === x[0] ? ' on' : ''), x[1]);
+            bt.type = 'button';
+            bt.setAttribute('aria-pressed', 답 === x[0] ? 'true' : 'false');
+            bt.addEventListener('click', function () {
+              if (x[0] === 'yes') takeXfer([p]);
+              else if (x[0] === 'no') markNotXfer(p);
+              else clearXferAnswer(p);
+              drawResult(months);
+            });
+            답들.appendChild(bt);
+          });
+          xl.appendChild(답들);
         });
       var xa = el('div', 'addrow');
-      if (onN < pairs.length) {
-        var yes = el('button', 'b on', won(pairs.length) + '건 다 빼기');
+      var 전 = pairs.filter(function (p) {
+        return !xferAnswer(p);
+      }).length;
+      if (전) {
+        var yes = el('button', 'b on', '확인 전 ' + won(전) + '건 모두 계좌끼리 옮긴 돈입니다');
         yes.type = 'button';
         yes.addEventListener('click', function () {
-          takeXfer(pairs);
+          takeXfer(
+            pairs.filter(function (p) {
+              return !xferAnswer(p);
+            })
+          );
           drawResult(months);
         });
         xa.appendChild(yes);
       }
-      if (onN) {
-        var undo = el('button', 'b', '되돌리기');
+      if (전 < pairs.length) {
+        var undo = el('button', 'b', '모든 답을 확인 전으로');
         undo.type = 'button';
         undo.addEventListener('click', function () {
-          pairs.forEach(dropXfer);
+          pairs.forEach(clearXferAnswer);
           drawResult(months);
         });
         xa.appendChild(undo);
@@ -1245,7 +1306,7 @@ function drawSaveFailNote(host) {
       sv.appendChild(document.createElement('br'));
       sv.appendChild(
         document.createTextNode(
-          '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 올려야 합니다.'
+          '현재 분석은 계속 볼 수 있지만, 다음에 이용할 때 파일을 다시 불러와야 합니다.'
         )
       );
     }
@@ -1740,9 +1801,14 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
        ★ 열쇠는 항목 이름 그대로 쓴다 — drawDetail 이 UP.open[cat] 으로
          몇 개를 보일지도 정하기 때문에, 앞을 붙여 갈면 열려도 0개가 된다.
          keepRow 는 이미 'keep:…' 로 갈라져 있고 tapLine 은 아무도 안 부른다 */
-    subRow(months, host, '매출', '매출', won(d.sales), null, function () {
-      drawDetail(host, d, '매출');
-    });
+    /* ★ 2026-09-29 요한 확정 — 금액 큰 줄이 먼저. 같으면 매출이 먼저 (예전 차례) */
+    var 매출줄 = function () {
+      subRow(months, host, '매출', '매출', won(d.sales), null, function () {
+        drawDetail(host, d, '매출');
+      });
+    };
+    var 기타먼저 = !!d.otherIn && Math.abs(d.otherIn) > Math.abs(d.sales);
+    if (!기타먼저) 매출줄();
     if (d.otherIn) {
       /* drawInDetail 은 만들어만 두고 아무도 안 부르고 있었다.
            UP.open 을 안 보므로 subRow 가 열렸을 때만 부르면 그대로 된다.
@@ -1768,6 +1834,7 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
         );
       }
     }
+    if (기타먼저) 매출줄();
     if (d.salesOut) {
       회색줄(
         회색모음,
@@ -1795,9 +1862,7 @@ function drawSideParts(d, months, host, 회색모음, pd, pLab, keys, side) {
         : '아직 다 정하지 않아 비율을 내지 않았습니다'
     )
   );
-  /* 나간 쪽 — 항목별.
-       ★ 43차. 금액 큰 순이 아니라 늘 같은 순서다.
-         매달 자리가 바뀌면 지난달과 견줄 수가 없다 */
+  /* 나간 쪽 — 항목별. 금액 큰 순 (2026-09-29 요한 확정, keys 를 만드는 곳에서 정렬) */
   keys.forEach(function (k) {
     subRow(
       months,

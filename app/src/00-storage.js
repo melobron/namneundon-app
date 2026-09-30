@@ -24,7 +24,7 @@
    nd.analytics.v1          이용 단계 집계 — 판 · 홍보 글 코드 · 단계별 전송 시도 여부   없음   04-usage-events.js
 
    ★ 내보내기(분류 파일)에 들어가는 것은 fc.picks 하나다. 금액이 든 통은 이 기기 밖으로 안 나간다.
-   ★ <매장> 이 비면 '(기본)' 이다. 이름을 고치면 renameStore 가 매장 통 다섯을 함께 옮긴다 */
+   ★ <매장> 이 비면 '(기본)' 이다. 이름을 고치면 renameStore 가 매장 통 여섯(storeKeysOf)을 함께 옮긴다 */
 
 var PICK_KEY = 'fc.picks.';
 var MANUAL_KEY = 'fc.manual.';
@@ -64,6 +64,16 @@ function bankKey(name) {
 function planKey(name) {
   var s = String(name != null ? name : (UP && UP.store) || '').trim();
   return PLAN_KEY + (s || '(기본)');
+}
+/* ★ NAM-14·15 (2026-09-29). 매장 이름이 저장소에서 가리키는 값 — 위 열쇠들의 <매장> 자리,
+   fc.last 에 적히는 값과 같다. 이름 둘이 같은 매장인지는 이것으로 견준다 */
+function storeIdOf(name) {
+  return String(name == null ? '' : name).trim() || '(기본)';
+}
+/* 한 매장의 통 여섯 — 이름을 고칠 때 함께 옮기는 것 전부. 차례도 옮기는 차례다 */
+function storeKeysOf(name) {
+  var s = storeIdOf(name);
+  return [storeKey(s), manualKey(s), bankKey(s), dataKey(s), planKey(s), lastRunKey(s)];
 }
 
 /* ── 안전한 읽기·쓰기 — 저장이 막힌 브라우저(시크릿 모드 등)에서도 앱이 멈추지 않는다.
@@ -113,6 +123,41 @@ function ssSet(k, v) {
   } catch (e) {
     return false;
   }
+}
+/* ── ★ NAM-14·15 (2026-09-29). 여러 통을 한꺼번에 옮길 때 쓰는 것.
+   lsGet 은 「못 읽음」과 「없음」이 둘 다 null 이라, 없다고 믿고 덮어쓰거나 지울 수 있다.
+   이 셋은 실패를 결과로 돌려준다. LS_OK 는 앞선 오류로 이미 false 일 수 있어 그것만 보고 판단하지 않는다 */
+function lsRead(k) {
+  try {
+    return { ok: true, v: localStorage.getItem(k) };
+  } catch (e) {
+    LS_OK = false;
+    return { ok: false, v: null };
+  }
+}
+/* [열쇠, 값] 들을 차례로 쓰고, 다 쓴 뒤 하나하나 다시 읽어 쓴 값과 같은지 본다.
+   tried 에는 쓰려고 손댄 열쇠가 다 들어간다 — 실패하면 부르는 쪽이 이것만 정리한다 */
+function lsWriteAll(pairs) {
+  var tried = [];
+  for (var i = 0; i < pairs.length; i++) {
+    tried.push(pairs[i][0]);
+    if (!lsSet(pairs[i][0], pairs[i][1])) return { ok: false, tried: tried };
+  }
+  for (var j = 0; j < pairs.length; j++) {
+    var r = lsRead(pairs[j][0]);
+    if (!r.ok || r.v !== pairs[j][1]) return { ok: false, tried: tried };
+  }
+  return { ok: true, tried: tried };
+}
+/* 열쇠들을 지우고 정말 없어졌는지 본다. 하나가 안 지워져도 나머지는 마저 지운다 */
+function lsDropAll(keys) {
+  var ok = true;
+  keys.forEach(function (k) {
+    if (!lsDel(k)) ok = false;
+    var r = lsRead(k);
+    if (!r.ok || r.v !== null) ok = false;
+  });
+  return ok;
 }
 
 /* ── 저장소 전체를 훑거나 한꺼번에 다루는 곳에 쓰는 것.

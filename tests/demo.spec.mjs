@@ -35,9 +35,10 @@ test('예시 결과 화면 — 달마다 · 1년 · 그래프 · 자세히', asy
   await page.getByRole('button', { name: '1년' }).click();
   expect(await screenText(page)).toMatchSnapshot('result-year.txt');
 
+  // NAM-9: 그래프는 따로 여는 창이 아니라 예상 카드 안에 바로 있다
   await page.getByRole('button', { name: '한 달' }).click();
-  await page.getByRole('button', { name: '예상 잔액 그래프 보기' }).click();
-  expect(await screenText(page)).toMatchSnapshot('result-due-graph.txt');
+  await expect(page.locator('#up-result .duecard .duegraph svg')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '예상 잔액 그래프 보기' })).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });
