@@ -454,12 +454,13 @@ function daySplitIn(U, m, day) {
   U.rows.forEach(function (r) {
     if (monthOf(r.at) !== m) return;
     if (+r.at.slice(8, 10) !== day) return;
-    if (isUnknownIn(U, r)) {
-      rest.push({ r: r, why: '아직 안 정한 돈' });
-      return;
-    }
+    /* ★ 2026-10-15. 확인된 이체를 아직 안 정한 것보다 먼저 본다 — monthNumbers 와 같은 차례다 */
     if (xferOnIn(U, r)) {
       rest.push({ r: r, why: XFER_PART });
+      return;
+    }
+    if (isUnknownIn(U, r)) {
+      rest.push({ r: r, why: '아직 안 정한 돈' });
       return;
     }
     var c = catOfIn(U, r);

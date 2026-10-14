@@ -98,3 +98,101 @@ test.describe('monthNumbersIn — 작은 매장으로', () => {
     expect(JSON.stringify(U)).toBe(before);
   });
 });
+
+// 2026-10-15 · 확인된 계좌 간 이체가 「아직 안 정한 돈」에 남던 문제 (A안).
+// 거래처를 안 정한 채 이체로 확인하면 그 줄은 미정이 아니라 「계좌끼리 옮긴 돈」이다.
+// ★ 거래처 전체가 아니라 줄 단위다 — 같은 거래처의 이체 아닌 줄은 미정으로 남는다
+test.describe('확인된 이체가 미정보다 먼저 판정된다', () => {
+  const row = (acc, at, payee, amount, balance) => ({ acc, at, payee, amount, balance });
+  const 매출입금 = row(0, '2024-04-01 09:00:00', '카드사', 500000, 1500000);
+  const 이체출금 = row(0, '2024-04-02 10:00:00', '운영비이체', -300000, 1200000);
+  const 이체입금 = row(1, '2024-04-02 10:05:00', '매출통장입금', 300000, 300000);
+  const 일반출금 = row(0, '2024-04-05 10:00:00', '운영비이체', -100000, 1100000); // 같은 거래처 · 짝 없음
+  const 식자재 = row(1, '2024-04-06 10:00:00', '식자재', -50000, 250000);
+  const group = (name, cat) => ({ name, cat, auto: false, mixed: false });
+  const store = (byName, extra) => ({
+    rows: [매출입금, 이체출금, 이체입금, 일반출금, 식자재],
+    banks: [{ bank: '가은행' }, { bank: '나은행' }],
+    byName: { 카드사: group('카드사', '매출'), 식자재: group('식자재', '식자재'), ...byName },
+    merge: {},
+    baseCats: core.UP_CATS.slice(),
+    manual: {},
+    ...extra
+  });
+  const 확인 = () => ({ [core.rowId(이체출금)]: 1, [core.rowId(이체입금)]: 1 });
+  const 같은값 = (d) => ({
+    sales: d.sales,
+    cost: d.cost,
+    profit: d.profit,
+    otherIn: d.otherIn,
+    inTotal: d.inTotal,
+    outTotal: d.outTotal,
+    open: d.open,
+    close: d.close
+  });
+
+  test('확인 전 — 거래처를 안 정한 이체 두 줄과 일반 출금이 모두 미정이다', () => {
+    const d = core.monthNumbersIn(store({}, {}), '2024-04');
+    expect(core.findTransfersIn(store({}, {})).length).toBe(1);
+    expect(d.unknown).toBe(700000);
+    expect(d.unknownN).toBe(3);
+    expect(d.unkPayees).toEqual({ 운영비이체: 400000, 매출통장입금: 300000 });
+  });
+
+  test('확인 후 — 이체 두 줄만 미정에서 빠지고 계좌끼리 옮긴 돈이 된다', () => {
+    const before = core.monthNumbersIn(store({}, {}), '2024-04');
+    const d = core.monthNumbersIn(store({}, { xfer: 확인() }), '2024-04');
+    expect(d.unknown).toBe(100000);
+    expect(d.unknownN).toBe(1);
+    // 같은 거래처의 짝 없는 출금은 미정으로 남는다 — 거래처 전체를 빼지 않는다
+    expect(d.unkPayees).toEqual({ 운영비이체: 100000 });
+    expect(d.unkGroups).toBe(1);
+    expect(d.unkRatio).toBe(100000 / d.volume);
+    expect(d.uOut).toBe(100000);
+    expect(d.uIn).toBe(0);
+    expect(d.keepParts[core.XFER_PART]).toBe(0);
+    expect(d.keepInParts[core.XFER_PART]).toBe(300000);
+    expect(d.keepOutParts[core.XFER_PART]).toBe(300000);
+    // 매출 · 지출 · 순이익 · 통장 합계 · 잔액은 확인 전과 같다
+    expect(같은값(d)).toEqual(같은값(before));
+    expect(d.volume).toBe(before.volume);
+  });
+
+  test('일별 거래 — 확인된 이체 줄은 「계좌끼리 옮긴 돈」, 같은 거래처 일반 줄은 미정', () => {
+    const U = store({}, { xfer: 확인() });
+    const 둘째날 = core.daySplitIn(U, '2024-04', 2);
+    expect(둘째날.rest.map((x) => [x.r.payee, x.why])).toEqual([
+      ['운영비이체', core.XFER_PART],
+      ['매출통장입금', core.XFER_PART]
+    ]);
+    const 다섯째날 = core.daySplitIn(U, '2024-04', 5);
+    expect(다섯째날.rest.map((x) => [x.r.payee, x.why])).toEqual([
+      ['운영비이체', '아직 안 정한 돈']
+    ]);
+  });
+
+  test('「아닙니다」·「나중에 확인」 — 확인된 이체가 아니므로 미정으로 남는다', () => {
+    const p = core.findTransfersIn(store({}, {}))[0];
+    const 아님 = store({}, { xfer: {}, xferNo: { [core.xferPairIdIn(null, p)]: 1 } });
+    expect(core.monthNumbersIn(아님, '2024-04').unknown).toBe(700000);
+    expect(core.daySplitIn(아님, '2024-04', 2).rest.map((x) => x.why)).toEqual([
+      '아직 안 정한 돈',
+      '아직 안 정한 돈'
+    ]);
+    const 나중 = store({}, { xfer: {} });
+    expect(core.monthNumbersIn(나중, '2024-04').unknown).toBe(700000);
+  });
+
+  test('거래처를 정한 뒤 이체로 확인한 경우는 예전과 같다', () => {
+    const 정함 = {
+      운영비이체: group('운영비이체', '기타'),
+      매출통장입금: group('매출통장입금', '기타')
+    };
+    const d = core.monthNumbersIn(store(정함, { xfer: 확인() }), '2024-04');
+    expect(d.unknown).toBe(0);
+    expect(d.keepInParts[core.XFER_PART]).toBe(300000);
+    expect(d.keepOutParts[core.XFER_PART]).toBe(300000);
+    expect(d.cats['기타']).toBe(100000); // 같은 거래처의 이체 아닌 출금은 지출이다
+    expect(d.sales).toBe(500000);
+  });
+});
