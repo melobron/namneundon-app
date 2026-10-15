@@ -1474,30 +1474,6 @@ footer {
 .upnote[hidden] {
   display: none;
 }
-/* ★ 122차. D-테스트베드 참여 표기 — 안내 아래 한 줄.
-     로고 76×20px — 가로 120px 안쪽이고, 이 창의 남는돈 로고(84×22)보다 작다. 둘레 여백 12px 은 로고 높이의 절반(10px) 이상이다.
-     좁은 화면에서는 문구가 로고 아래로 내려간다 (옆이나 아래) */
-.testbed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-  padding: 12px;
-  background: var(--paper);
-}
-.testbed[hidden] {
-  display: none;
-}
-.testbed-logo {
-  display: block;
-  width: 76px;
-  height: auto;
-}
-.testbed-text {
-  font-size: calc(12.5 * var(--fu));
-  color: var(--gray);
-}
 .updrop {
   margin-top: 16px;
   border: 2px dashed var(--edge);
@@ -1576,7 +1552,38 @@ footer {
 .applinks {
   margin: 16px 30px 0;
   display: flex;
+  /* ★ 122차. 참여 표기가 안 들어가면 아이콘 위 한 줄로 내려간다 (같은 오른쪽 정렬) */
+  flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+/* ★ 122차. D-테스트베드 참여 표기 (첫 화면 아이콘 줄).
+     판 표기 줄(#buildstamp 10.5px · --gray)과 같은 결로 작고 차분하게 — 아이콘보다 안 튀게.
+     로고 58×15px — 가로 120px 안쪽, 남는돈 로고보다 작다. 둘레 여백 8px 은 로고 높이 절반(7.6px) 이상이다 */
+.testbed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--paper);
+}
+.testbed-logo {
+  display: block;
+  width: 58px;
+  height: auto;
+}
+.testbed-text {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--gray);
+}
+/* 첫 화면에서만 — 결과 화면·예시에서는 #welcome 이 감춰진다 */
+#welcome[hidden] ~ .applinks .testbed {
+  display: none;
+}
+.app-icons {
+  display: flex;
   align-items: center;
   gap: 10px;
 }
