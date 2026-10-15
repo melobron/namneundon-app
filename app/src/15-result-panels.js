@@ -112,8 +112,7 @@ function setCatSide(g, name, isIn) {
   if (g.mixed && typeof isIn === 'boolean') {
     gSetCat(g, isIn, name, false);
   } else if (g.mixed) {
-    gSetCat(g, true, name, false);
-    gSetCat(g, false, name, false);
+    gSetCatAnswer(g, name); /* 123차. 한쪽을 손수 정해 두신 곳은 남은 쪽에만 */
   } else {
     g.cat = name;
     g.auto = false;
@@ -160,11 +159,6 @@ function drawChangeMenu(box, g, after, isIn) {
     return !isHidden(n) || now.indexOf(n) !== -1;
   });
   if (names.indexOf('매출') === -1) names.unshift('매출');
-  /* ★ 123차. 섞인 거래처의 나간 쪽 줄에서는 「매출」을 고를 수 없다 — 출금이 매출이 되면 매출이 마이너스가 된다 */
-  if (g && g.mixed && isIn === false)
-    names = names.filter(function (n) {
-      return n !== '매출';
-    });
   names.forEach(function (name) {
     var b = el('button', 'mi', name);
     b.type = 'button';
@@ -175,12 +169,7 @@ function drawChangeMenu(box, g, after, isIn) {
       b.appendChild(el('span', 'msub', note2));
     }
     b.addEventListener('click', function () {
-      if (after) {
-        setCatQuiet(g, name, isIn);
-        after(name);
-        return;
-      }
-      setCat(g, name, isIn);
+      pickInMenu(box, g, after, isIn, name);
     });
     box.appendChild(b);
   });
@@ -207,13 +196,73 @@ function drawChangeMenu(box, g, after, isIn) {
   }
 }
 
+/* ★ 123차 (2026-10-16 결정). 출금을 「매출」로 두는 것은 막지 않는다 — 카드 취소 · 환불 같은 「매출 차감」일 수 있다.
+   다만 묻지 않고 들어가지 않게, 출금 쪽에 매출이 들어갈 때는 한 번 더 확인한다.
+   섞인 거래처의 나간 줄 · 출금만 있는 거래처 · 들어온 쪽을 정해 두셔서 나간 쪽만 남은 곳이 그렇다.
+   쪽을 모르는 자리에서 섞인 거래처에 매출을 고르시면 들어온 쪽에만 들어가므로(gSetCatAnswer) 묻지 않는다 */
+function salesOutAsks(g, isIn) {
+  if (!g) return false;
+  if (g.mixed) return isIn === false || (typeof isIn !== 'boolean' && gOpenSideByHand(g) === false);
+  return gOutOnly(g);
+}
+function pickInMenu(box, g, after, isIn, name) {
+  var go = function (side) {
+    if (after) {
+      setCatQuiet(g, name, side);
+      after(name);
+      return;
+    }
+    setCat(g, name, side);
+  };
+  if (name !== '매출' || !salesOutAsks(g, isIn)) {
+    go(isIn);
+    return;
+  }
+  salesOutAsk(
+    box,
+    function () {
+      /* 확인하셨으니 나간 쪽에 넣는다. 한쪽만 있는 거래처는 그 한 벌(cat)이다 */
+      go(g.mixed ? false : isIn);
+    },
+    function () {
+      drawChangeMenu(box, g, after, isIn);
+    }
+  );
+}
+/* 확인 창 — [매출 차감으로 정하기] · [취소] */
+function salesOutAsk(box, onYes, onNo) {
+  box.innerHTML = '';
+  box.hidden = false;
+  var w = el('div', 'addbox sales-out');
+  w.appendChild(
+    el(
+      'div',
+      'addq',
+      '나간 돈을 매출로 정하면 매출을 줄이는 출금(환불·취소)으로 반영됩니다. 이렇게 정할까요?'
+    )
+  );
+  var row = el('div', 'addrow');
+  var yes = el('button', 'b on', '매출 차감으로 정하기');
+  yes.type = 'button';
+  yes.addEventListener('click', onYes);
+  var no = el('button', 'b', '취소');
+  no.type = 'button';
+  no.addEventListener('click', onNo);
+  row.appendChild(yes);
+  row.appendChild(no);
+  w.appendChild(row);
+  box.appendChild(w);
+}
+/* 출금이 「매출」로 정해진 줄에 붙이는 작은 안내 (오류 표시가 아니다) */
+var SALES_OUT_NOTE = '매출을 줄이는 출금으로 반영됩니다';
+
 function drawCatAddHere(box, g, isIn) {
   drawNameBox(box, {
     onCancel: function () {
       drawChangeMenu(box, g, undefined, isIn);
     },
     onDone: function (name) {
-      setCat(g, name, isIn);
+      pickInMenu(box, g, undefined, isIn, name);
     }
   });
 }
@@ -1764,6 +1813,9 @@ function drawDetail(host, d, cat) {
     if (auto) nm.appendChild(el('span', 'autotag', '(앱이 넣음)'));
     /* 나간 쪽 목록의 들어온 줄은 이 항목 금액에 안 들어가고 그 밖의 입금으로 간다 */
     if (split && side && cat !== '매출') nm.appendChild(el('span', 'autotag', '(그 밖의 입금)'));
+    /* ★ 123차. 출금이 매출로 정해진 줄 — 오류가 아니라 매출 차감이라고 알린다. 옛 저장 자료도 여기서 보인다 */
+    if (cat === '매출' && (split ? !side : gOutOnly(g)))
+      nm.appendChild(el('div', 'dspan', SALES_OUT_NOTE));
     row.appendChild(nm);
     row.appendChild(el('div', 'dv num', won(split ? Math.abs(e.sum) : e.sum)));
     var ch = el('div', 'dch');

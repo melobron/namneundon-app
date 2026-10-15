@@ -443,12 +443,8 @@ function gAutoFor(g, isIn) {
   if (g.mixed) return isIn ? !!g.autoIn : !!g.autoOut;
   return !!g.auto;
 }
-/* ★ 123차. 섞인 거래처의 나간 쪽에는 「매출」을 넣지 않는다 — 출금이 매출이 되면 그 달 매출이 마이너스가 된다.
-   한 번에 양쪽을 정하는 길(질문 카드 · 같은 곳 · 묶음 · 거래처 목록)에서 매출을 고르시면 들어온 쪽만 매출이 되고,
-   나간 쪽은 두던 대로(대개 아직 안 정함) 남는다. 한쪽만 있는 거래처는 예전 그대로다 */
 function gSetCat(g, isIn, cat, auto) {
   if (g.mixed) {
-    if (!isIn && cat === '매출') return;
     if (isIn) {
       g.catIn = cat;
       g.autoIn = !!auto;
@@ -460,6 +456,34 @@ function gSetCat(g, isIn, cat, auto) {
     g.cat = cat;
     g.auto = !!auto;
   }
+}
+/* 섞인 거래처에서 대표님이 한쪽만 손수 정해 두셨으면 남은 쪽 (true 들어온 돈 · false 나간 돈), 아니면 null.
+   앱이 넣은 것(auto)은 「정한 쪽」으로 치지 않는다 */
+function gOpenSideByHand(g) {
+  if (!g || !g.mixed) return null;
+  if (g.catIn && !g.autoIn && !g.catOut) return false;
+  if (g.catOut && !g.autoOut && !g.catIn) return true;
+  return null;
+}
+/* 출금만 있는 거래처인가 — 이곳을 「매출」로 두면 출금이 매출을 줄인다 */
+function gOutOnly(g) {
+  return !!g && !g.mixed && !(g.inN > 0) && g.outN > 0;
+}
+/* 쪽 없이 받은 답을 넣는다 — 섞인 거래처는 한 번 묻고 양쪽에 같이 (63-4).
+   ★ 123차. 출금은 묻지 않고는 「매출」이 되지 않는다. 출금을 매출로 두는 것은 카드 취소 · 환불 같은
+     「매출 차감」일 수 있어 막지는 않지만, 대표님이 확인 창에서 정하셔야 한다 (2026-10-16 결정).
+     그래서 쪽 없이 받은 「매출」은 들어온 쪽에만 넣고, 나간 쪽은 두던 대로(정해 둔 것은 그대로, 아니면 아직 안 정함) 둔다.
+   ★ 123차. 한쪽을 손수 정해 두셨으면 그쪽은 두고 아직 안 정한 쪽에만 넣는다.
+     들어온 돈을 매출로 정한 곳이 다시 물어질 때(다시 열기 · 이어서 정하기 · 차례로 정하기 · 같은 곳 · 묶음)
+     다른 항목을 고르셔도 입금 쪽 매출을 덮지 않는다 */
+function gSetCatAnswer(g, cat) {
+  var 남은 = gOpenSideByHand(g);
+  if (남은 !== null) {
+    if (남은 || cat !== '매출') gSetCat(g, 남은, cat, false);
+    return;
+  }
+  if (cat !== '매출') gSetCat(g, false, cat, false);
+  gSetCat(g, true, cat, false);
 }
 /* ★ 63-4. sideSplits 는 없앴다 — 방향이 뜻을 가르는 항목이라고 되묻던 함수인데,
    이제 한 거래처에 항목 하나만 고르므로 되물을 일이 없다.
