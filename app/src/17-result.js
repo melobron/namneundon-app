@@ -2665,7 +2665,11 @@ function drawPayeeFix(panel, d, name) {
 /* 그 항목으로 찍은 거래처를 그 자리에서 다시 찍게 한다 */
 function drawCatFix(panel, d, cat) {
   panel.innerHTML = '';
-  var list = catPayees(d, cat);
+  var list = nhisSplitRows(
+    d,
+    cat,
+    catPayees(d, cat)
+  ); /* 공단 섞인 곳은 쪽마다 한 줄 (보완 2차 가) */
   if (!list.length) {
     panel.appendChild(el('div', 'cka', '이 항목으로 정하신 거래처가 없습니다.'));
     return;
@@ -2678,9 +2682,11 @@ function drawCatFix(panel, d, cat) {
     var row = el('div', 'drow');
     var nm = el('div', 'dnm');
     if (e.unknown) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
-    nm.appendChild(document.createTextNode(showName(e.name) + ' · ' + e.n + '건'));
+    nm.appendChild(document.createTextNode(sideRowText(e)));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(e.sum)));
+    row.appendChild(
+      el('div', 'dv num', won(typeof e.side === 'boolean' ? Math.abs(e.sum) : e.sum))
+    );
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';
@@ -2695,7 +2701,8 @@ function drawCatFix(panel, d, cat) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, UP.byName[e.name], undefined, catSideOf(d, e.name, cat));
+      var side = typeof e.side === 'boolean' ? e.side : catSideOf(d, e.name, cat);
+      drawChangeMenu(menu, UP.byName[e.name], undefined, side);
       menu.hidden = false;
     });
   });

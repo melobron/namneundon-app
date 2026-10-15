@@ -286,3 +286,143 @@ test('결과 화면 — 입금 행에서 고치면 입금 분류만 · 출금 �
   expect(await augNumbers(page)).toEqual(after);
   expect(errors).toEqual([]);
 });
+
+// 보완 2차 가 — 공단 거래처 「국민건강」(입금 보험 + 출금 보험)이 나간 쪽 「보험」 목록에서 한 줄로 합쳐 보이면,
+// 그 줄을 매출로 고칠 때 출금만 매출이 되어 그 달 매출이 마이너스가 됐다. 이제 쪽마다 한 줄이다
+test('결과 화면 — 나간 쪽 목록의 공단 섞인 거래처는 들어온 줄 · 나간 줄로 나뉘고 그 줄의 쪽만 고친다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  await startWith(page, '약국', await nhisXlsx(page));
+  await pickOthers(page);
+  await answerCards(page);
+  await toResult(page);
+  // (가) 사업에 쓴 돈 → 보험: 「국민건강」이 나간 줄 · 들어온 줄 둘로 보인다
+  await page
+    .locator('.bigrow', { hasText: '사업에 쓴 돈' })
+    .first()
+    .click({ position: { x: 8, y: 8 } });
+  await page.locator('.orow:not(.bigrow)', { hasText: '보험' }).first().click();
+  const lines = await page.locator('.dtl .drow .dnm').allInnerTexts();
+  const nh = lines.filter((t) => /국민건강 ·/.test(t));
+  expect(nh.length).toBe(2);
+  expect(nh[0]).toContain('국민건강 · 나간 돈 1건');
+  expect(nh[1]).toContain('국민건강 · 들어온 돈 1건');
+  expect(nh[1]).toContain('(그 밖의 입금)');
+  expect(await augNumbers(page)).toEqual([40348000, 24250000, 230000, '보험', '보험']);
+
+  // (나) 들어온 줄 → 매출: 입금만 매출 · 출금은 보험 그대로
+  const pickOn = async (label, to) => {
+    const row = page
+      .locator('.dtl .drow')
+      .filter({ has: page.locator('.dnm', { hasText: label }) })
+      .first();
+    await row.getByRole('button', { name: '항목 바꾸기' }).click();
+    await row
+      .locator('xpath=following-sibling::div[contains(@class,"menu")][1]')
+      .getByRole('button', { name: new RegExp('^' + to) })
+      .first()
+      .click();
+  };
+  await pickOn('국민건강 · 들어온 돈', '매출');
+  expect(await augNumbers(page)).toEqual([40498000, 24250000, 80000, '매출', '보험']);
+
+  // (다) 나간 줄 → 기타: 출금만 기타 · 입금(매출)은 그대로
+  // 고친 뒤에도 펼친 목록은 그대로 열려 있다
+  await expect(page.locator('.dtl .drow .dnm', { hasText: '국민건강 · 들어온 돈' })).toHaveCount(0);
+  await pickOn('국민건강 · 나간 돈', '기타');
+  expect(await augNumbers(page)).toEqual([40498000, 24250000, 80000, '매출', '기타']);
+
+  // (라) 어느 달도 매출이 마이너스가 아니고, 매출에서 빠지는 출금(매출 차감)도 없다
+  await toResult(page);
+  const months = await page.evaluate(() =>
+    monthList().map((m) => {
+      const d = monthNumbers(m);
+      return [m, d.sales, d.salesOut];
+    })
+  );
+  for (const [m, sales, out] of months) {
+    expect(sales, m).toBeGreaterThan(0);
+    expect(out, m).toBe(0);
+  }
+  expect(errors).toEqual([]);
+});
+
+// 보완 2차 다 — 「환급 등 다른 입금」 단추는 만들지 않는다(보류). 지금 있는 [다른 항목] 경로로 매출이 아닌 항목을 고르면
+test('공단 카드 [다른 항목] — 매출에 안 들어가고 출금 분류는 그대로 · 다시 열어도 다시 묻지 않는다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  await startWith(page, '약국', await nhisXlsx(page));
+  await pickOthers(page);
+  // 카드 단추는 그대로다 — 「환급 등 다른 입금」은 없다
+  await page.evaluate(() => {
+    UP.pos = UP.queue.indexOf(UP.byName['국민건강']);
+    drawOnboard();
+  });
+  const btns = await page.locator('.obcard button').allInnerTexts();
+  expect(btns.map((t) => t.replace(/\s+/g, ' ').trim())).toEqual(
+    expect.arrayContaining(['매출', '사업 외 용도', '기타', '다른 항목 ▾', '나중에'])
+  );
+  expect(btns.join('|')).not.toContain('환급');
+  // 「국민건강」 입금 → [다른 항목] → 보험 / 「의료급여초심」 → [다른 항목] → 세금 / 「의료급여건생비」 → 사업 외 용도
+  const answer = async (name, to, viaMenu) => {
+    await page.evaluate((n) => {
+      UP.pos = UP.queue.indexOf(UP.byName[n]);
+      drawOnboard();
+    }, name);
+    await expect(page.locator('.obquestion')).toHaveText(ASK);
+    const card = page.locator('.obcard');
+    if (viaMenu) {
+      await card.getByRole('button', { name: /다른 항목/ }).click();
+      await card
+        .locator('.menu')
+        .getByRole('button', { name: new RegExp('^' + to) })
+        .first()
+        .click();
+    } else await card.getByRole('button', { name: new RegExp('^' + to) }).click();
+  };
+  await answer('국민건강', '보험', true);
+  await answer('의료급여초심', '세금', true);
+  await answer('의료급여건생비', '사업 외 용도', false);
+  const read = () =>
+    page.evaluate(() => {
+      const d = monthNumbers('2026-08');
+      const st = (n) => {
+        const g = UP.byName[n];
+        return g.mixed ? [g.catIn, g.catOut] : [g.cat];
+      };
+      return {
+        매출: d.sales,
+        그밖입금: d.otherIn,
+        그밖입금거래처: d.otherInPayees,
+        내가넣은돈: d.keepInParts,
+        국민건강: st('국민건강'),
+        의료급여초심: st('의료급여초심'),
+        의료급여건생비: st('의료급여건생비')
+      };
+    });
+  const want = {
+    매출: 18200000, // 카드 매출만 — 공단 입금은 매출에 안 들어간다 (「국민건강가지급」·「국민건강초심」은 아직 안 정함)
+    그밖입금: 150000 + 80000 + 304000, // 「국민건강」 환급(보험) + 「국민연금」 환급(자동 보험) + 「의료급여초심」(세금)
+    그밖입금거래처: { 국민건강: 150000, 국민연금: 80000, 의료급여초심: 304000 },
+    내가넣은돈: { '내가 넣은 돈': 904000 }, // 「의료급여건생비」 — 사업 외 용도 입금은 계산 밖(내가 넣은 돈)
+    국민건강: ['보험', '보험'],
+    의료급여초심: ['세금'],
+    의료급여건생비: ['사업 외 용도']
+  };
+  expect(await read()).toEqual(want);
+  // 저장 → 다시 열기: 그대로 · 같은 질문을 다시 묻지 않는다
+  await page.reload();
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await page
+    .getByRole('button', { name: /테스트약국/ })
+    .first()
+    .click();
+  await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  expect(await read()).toEqual(want);
+  const s = await payeeState(page);
+  for (const n of ['국민건강', '의료급여초심', '의료급여건생비'])
+    expect(row(s, n)[9], n).toBe(false);
+  expect(errors).toEqual([]);
+});

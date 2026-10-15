@@ -103,3 +103,4 @@ declare var savePicks: any;
 declare var baseName: any;
 declare var CAT_CV: any;
 declare var drawResult: any;
+declare var drawOnboard: any;

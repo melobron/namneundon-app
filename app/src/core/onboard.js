@@ -295,8 +295,10 @@ function looksPersonal(name) {
 }
 /* 사람 이름 · 30만원 이상 입금이 한 건이라도 있으면.
    순액으로 보면 사장님이 넣었다 뺐다 한 경우를 통째로 놓친다 */
+/* ★ 공단 입금 보완 2차 나 (2026-10-15). 이름은 「국민건강초심」으로 살렸지만
+   사람 이름처럼 보이는지는 예전 이름(autoName — 「건강초심」)으로 본다. 다른 업종의 추천을 라이브와 같게 둔다 */
 function personalIn(g) {
-  return looksPersonal(g.name) && (g.inMax || 0) >= PERSONAL_MIN;
+  return looksPersonal(autoName(g.name)) && (g.inMax || 0) >= PERSONAL_MIN;
 }
 /* 사장님이 「매출」을 더 자주 고르셨으면 그 순서를 따른다 */
 function personalFirstIn(U) {

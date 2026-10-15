@@ -1898,8 +1898,13 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
     /* 대표자 성함과 완전히 같으면 이 규칙이 먼저다 — 출금까지 잡힌다.
        ★ 「매출」을 같이 밀지 않는다. 정반대 둘을 나란히 추천하던 것이 문제였다 */
     if (!front.length && isOwner) front.push(baseName('사업 외 용도'));
+    /* ★ 공단 입금 보완 (2026-10-15). 공단 입금을 묻는 카드에는 이름·적요 낱말 추천을 달지 않는다.
+       「건강」 낱말이 '보험✨'을 첫 버튼으로 올려, 진료·조제 대금을 묻는 자리에서 보험 쪽으로 민다.
+       사람 이름 규칙도 마찬가지다 — 「(국민)건강초심」이 사람 이름으로 보여 '사업 외 용도✨'가 붙는다.
+       대표님이 비슷한 이름에 정하신 것(learned)은 그대로 추천한다 — 같은 답을 다시 찾지 않게 */
+    var 공단 = isIn && nhisAskIn(UP, g);
     /* 사람 이름으로 들어온 큰 돈 — 매출이 아닐 수 있다 */
-    var isPersonalIn = !front.length && !isOwner && isIn && personalIn(g);
+    var isPersonalIn = !front.length && !isOwner && isIn && !공단 && personalIn(g);
     if (isPersonalIn) front.push(personalFirst());
     if (!front.length) {
       var learned = learnedFor(g);
@@ -1913,11 +1918,8 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
         front.push(h.cat);
         bits.push({ kind: 'made', word: h.word });
       });
-      /* ★ 공단 입금 보완 (2026-10-15). 공단 입금을 묻는 카드에는 이름·적요 낱말 추천을 달지 않는다.
-         「건강」 낱말이 '보험✨'을 첫 버튼으로 올려, 진료·조제 대금을 묻는 자리에서 보험 쪽으로 민다.
-         대표님이 비슷한 이름에 정하신 것(learned)은 그대로 추천한다 — 같은 답을 다시 찾지 않게 */
-      var 공단 = isIn && nhisAskIn(UP, g);
-      hintFor(g.name, isIn ? 1 : -1).forEach(function (h) {
+      /* ★ 보완 2차 나. 이름 낱말 추천도 예전 이름(autoName)으로 본다 — 다른 업종에서 라이브와 같은 추천 */
+      hintFor(autoName(g.name), isIn ? 1 : -1).forEach(function (h) {
         if (공단) return;
         if (front.length >= 3 || front.indexOf(h.cat) !== -1) return;
         /* 지운 항목을 가리키는 추천은 버린다 — 없는 항목을 권하면 안 된다 */

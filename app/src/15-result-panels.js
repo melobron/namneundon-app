@@ -1694,9 +1694,44 @@ function drawUnsetDetail(host, d, months) {
   host.appendChild(box);
 }
 
-/* 매출 목록의 줄은 들어온 돈, 나간 쪽 항목 목록의 줄은 나간 돈이다 — 고치면 그쪽에만 넣는다 (보완 2번) */
+/* ★ 공단 입금 보완 2차 가 (2026-10-15). 공단 거래처(nhisAskIn)가 섞인 곳이면 한 항목 목록 안에서도
+   들어온 줄과 나간 줄을 따로 보인다. 한 줄로 합치면 금액은 둘을 뺀 값인데 고치는 쪽은 한쪽뿐이라,
+   「보험」 목록에서 매출로 고치면 보험료 출금만 매출이 되어 그 달 매출이 마이너스가 됐다.
+   ★ 줄마다 side 를 달고 [항목 바꾸기]는 그 줄의 쪽만 고친다 — 보이는 쪽과 고치는 쪽이 늘 같다.
+   ★ 공단이 아닌 섞인 거래처는 이번에 건드리지 않는다 (보고만) */
+function nhisSplitRows(d, cat, list) {
+  var out = [];
+  list.forEach(function (e) {
+    var g = UP.byName[e.name];
+    if (!(g && g.mixed && nhisAskIn(UP, g))) {
+      out.push(e);
+      return;
+    }
+    var by = {};
+    d.rows.forEach(function (r) {
+      if (keyOf(r) !== e.name || catOf(r) !== cat) return;
+      var isIn = r.amount > 0;
+      var k = isIn ? 'in' : 'out';
+      var s =
+        by[k] || (by[k] = { name: e.name, n: 0, sum: 0, unknown: !gCatFor(g, isIn), side: isIn });
+      s.n++;
+      s.sum += cat === '매출' ? r.amount : -r.amount;
+    });
+    (cat === '매출' ? ['in', 'out'] : ['out', 'in']).forEach(function (k) {
+      if (by[k]) out.push(by[k]);
+    });
+  });
+  return out;
+}
+/* 쪽을 나눈 줄의 이름 — 어느 쪽 돈인지 말한다 */
+function sideRowText(e) {
+  if (typeof e.side !== 'boolean') return showName(e.name) + ' · ' + e.n + '건';
+  return showName(e.name) + ' · ' + (e.side ? '들어온 돈 ' : '나간 돈 ') + e.n + '건';
+}
+/* 매출 목록의 줄은 들어온 돈, 나간 쪽 항목 목록의 줄은 나간 돈이다 — 고치면 그쪽에만 넣는다 (보완 2번).
+   쪽을 나눈 공단 줄은 그 줄의 쪽이다 (보완 2차 가) */
 function drawDetail(host, d, cat) {
-  var list = catPayees(d, cat);
+  var list = nhisSplitRows(d, cat, catPayees(d, cat));
   var box = el('div', 'dtl');
   var shown = UP.open[cat] === true ? DTL_STEP : UP.open[cat];
   var n = Math.min(list.length, shown);
@@ -1707,15 +1742,19 @@ function drawDetail(host, d, cat) {
 
   list.slice(0, n).forEach(function (e) {
     var g = UP.byName[e.name];
-    var auto = !!(g && g.auto);
+    var split = typeof e.side === 'boolean';
+    var side = split ? e.side : cat === '매출';
+    var auto = split ? gAutoFor(g, side) : !!(g && g.auto);
     var row = el('div', 'drow');
     var nm = el('div', 'dnm');
     if (e.unknown) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
     else nm.appendChild(el('span', auto ? 'mark auto' : 'mark mine', auto ? '⚙' : '✓'));
-    nm.appendChild(document.createTextNode(showName(e.name) + ' · ' + e.n + '건'));
+    nm.appendChild(document.createTextNode(sideRowText(e)));
     if (auto) nm.appendChild(el('span', 'autotag', '(앱이 넣음)'));
+    /* 나간 쪽 목록의 들어온 줄은 이 항목 금액에 안 들어가고 그 밖의 입금으로 간다 */
+    if (split && side && cat !== '매출') nm.appendChild(el('span', 'autotag', '(그 밖의 입금)'));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(e.sum)));
+    row.appendChild(el('div', 'dv num', won(split ? Math.abs(e.sum) : e.sum)));
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';
@@ -1731,7 +1770,7 @@ function drawDetail(host, d, cat) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, g, undefined, cat === '매출');
+      drawChangeMenu(menu, g, undefined, side);
       menu.hidden = false;
     });
 
@@ -1742,13 +1781,15 @@ function drawDetail(host, d, cat) {
       var yes = el('button', 'chbtn', '확인');
       yes.type = 'button';
       yes.addEventListener('click', function () {
-        g.auto = false; /* 사장님이 확인한 것으로 바꾼다 */
+        /* 사장님이 확인한 것으로 바꾼다. 쪽을 나눈 줄은 그쪽만 */
+        if (split) gSetCat(g, side, gCatFor(g, side), false);
+        else g.auto = false;
         drawResult(monthList());
       });
       var no = el('button', 'chbtn', '다른 항목으로');
       no.type = 'button';
       no.addEventListener('click', function () {
-        drawChangeMenu(menu, g, undefined, cat === '매출');
+        drawChangeMenu(menu, g, undefined, side);
         menu.hidden = false;
       });
       ask.appendChild(yes);
