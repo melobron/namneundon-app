@@ -2428,22 +2428,18 @@ function autoTag(g) {
    패널을 닫을 때 한 번에 반영한다 (drawResult) */
 var FIND_PAGE = 12;
 
-/* 저장만 하고 화면은 안 건드린다 */
-function setCatQuiet(g, name) {
+/* 저장만 하고 화면은 안 건드린다. isIn 은 setCat 과 같다 (쪽을 모르면 양쪽) */
+function setCatQuiet(g, name, isIn) {
   if (UP.accounts.indexOf(name) === -1) UP.accounts.push(name);
-  if (g.mixed) {
-    gSetCat(g, true, name, false);
-    gSetCat(g, false, name, false);
-  } else {
-    g.cat = name;
-    g.auto = false;
-  }
+  setCatSide(g, name, isIn);
   var i = UP.queue.indexOf(g);
-  if (i >= UP.pos) UP.queue.splice(i, 1);
+  if (i >= UP.pos && gDone(g)) UP.queue.splice(i, 1);
   savePicks();
 }
-function unsetCatQuiet(g) {
-  if (g.mixed) {
+function unsetCatQuiet(g, isIn) {
+  if (g.mixed && typeof isIn === 'boolean') {
+    gSetCat(g, isIn, null, false);
+  } else if (g.mixed) {
     gSetCat(g, true, null, false);
     gSetCat(g, false, null, false);
   } else {
@@ -2699,7 +2695,7 @@ function drawCatFix(panel, d, cat) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, UP.byName[e.name]);
+      drawChangeMenu(menu, UP.byName[e.name], undefined, catSideOf(d, e.name, cat));
       menu.hidden = false;
     });
   });

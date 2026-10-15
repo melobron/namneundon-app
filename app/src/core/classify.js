@@ -181,6 +181,15 @@ function canonName(name) {
   var t = String(name).normalize('NFKC').trim();
   for (var n = 0; n < BANK_NOT_PREFIX.length; n++)
     if (t.indexOf(BANK_NOT_PREFIX[n]) === 0) return t;
+  return bankStrip(t);
+}
+/* ★ 공단 입금 보완 (2026-10-15 보완 1번). 자동 분류는 「국민」을 떼던 예전 이름으로 판정한다.
+   이름을 살린 것만으로 다른 업종의 미분류 입금(「건강초심」)이 자동 '보험'이 되면 안 된다 —
+   병원·치과·약국의 공단 입금은 어차피 nhisHoldIn 이 걷어 여쭌다 */
+function autoName(name) {
+  return bankStrip(String(name).normalize('NFKC').trim());
+}
+function bankStrip(t) {
   for (var i = 0; i < BANK_PREFIX.length; i++) {
     var p = BANK_PREFIX[i];
     if (t.indexOf(p) !== 0) continue;
@@ -410,14 +419,14 @@ function groupPayeesWith(rows, merge) {
 function gAutoInit(g) {
   if (g.mixed) {
     /* 방향마다 따로 짐작한다. net 부호로 한 번에 짐작하면 반대쪽이 뜻이 뒤집힌다 */
-    g.catIn = autoCategory(g.name, 1);
-    g.catOut = autoCategory(g.name, -1);
+    g.catIn = autoCategory(autoName(g.name), 1);
+    g.catOut = autoCategory(autoName(g.name), -1);
     g.autoIn = !!g.catIn;
     g.autoOut = !!g.catOut;
     g.cat = null;
     g.auto = false;
   } else {
-    g.cat = autoCategory(g.name, g.net);
+    g.cat = autoCategory(autoName(g.name), g.net);
     g.auto = !!g.cat;
   }
 }
@@ -511,7 +520,7 @@ function nhisHoldIn(U, g) {
      그 사이 대표님이 정하신 것이 있으면 그대로 둔다 */
   if (g && g.nhisHeld) {
     if (!gCatFor(g, true)) {
-      var c = autoCategory(g.name, 1);
+      var c = autoCategory(autoName(g.name), 1);
       gSetCat(g, true, c, !!c);
     }
     delete g.nhisHeld;

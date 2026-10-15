@@ -99,6 +99,11 @@ test.describe('공단 입금 — 병원·치과·약국', () => {
     expect(core.canonName('국민홍길동')).toBe('홍길동');
     expect(core.canonName('농협김철수')).toBe('김철수');
     expect(core.canonName('국민카드')).toBe('국민카드');
+    // 자동 분류에 쓰는 이름은 예전(라이브 120차) 그대로 — 보완 1번
+    expect(core.autoName('국민건강초심')).toBe('건강초심');
+    expect(core.autoName('국민건강가지급')).toBe('국민건강가지급');
+    expect(core.autoName('국민건강')).toBe('국민건강');
+    expect(core.autoName('국민홍길동')).toBe('홍길동');
   });
 
   test('년월이 앞에 붙은 보험료 출금은 지금처럼 한 거래처 · 자동 보험', () => {
@@ -147,11 +152,11 @@ test.describe('공단 입금 — 병원·치과·약국', () => {
 
   test('대표님이 정하신 것은 덮어쓰지 않는다 · 업종이 바뀌면 걷은 자동 항목을 되돌린다', () => {
     const gs = group([inn('국민건강가지급'), inn('국민건강초심')]);
-    const mine = byName(gs, '국민건강가지급');
+    const mine = byName(gs, '국민건강초심');
     core.applySaved(mine, '보험'); // 손수 보험으로 정해 둔 것
     gs.forEach((g) => core.nhisHoldIn(U('약국', gs), g));
     expect([mine.cat, mine.auto]).toEqual(['보험', false]);
-    const held = byName(gs, '국민건강초심');
+    const held = byName(gs, '국민건강가지급');
     expect(held.cat).toBeNull();
     gs.forEach((g) => core.nhisHoldIn(U('식당', gs), g));
     expect([held.cat, held.auto]).toEqual(['보험', true]);
@@ -159,9 +164,13 @@ test.describe('공단 입금 — 병원·치과·약국', () => {
 
   test('식당·카페·미용실은 그대로 · 출금만 있는 거래처는 후보가 아니다', () => {
     for (const trade of ['식당', '카페', '미용실']) {
-      const gs = group([inn('국민건강가지급')]);
+      const gs = group([inn('국민건강가지급'), inn('국민건강초심')]);
       gs.forEach((g) => core.nhisHoldIn(U(trade, gs), g));
       expect([gs[0].cat, gs[0].auto], trade).toEqual(['보험', true]);
+      // 보완 1번 — 이름은 살리되 분류는 라이브(「건강초심」)와 같다: 자동 분류 없이 아직 안 정함
+      const ch = byName(gs, '국민건강초심');
+      expect([ch.cat, ch.auto], trade).toEqual([null, false]);
+      expect(core.autoKnownIn(U(trade, gs), '국민건강초심'), trade).toBe(false);
     }
     for (const trade of ['병원', '치과', '약국']) {
       const gs = group([out('국민건강')]);

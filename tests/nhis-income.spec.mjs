@@ -183,6 +183,9 @@ test('식당 — 공단 이름이 있어도 묻지 않는다 (업종 밖은 기�
   await startWith(page, '식당', await nhisXlsx(page), '테스트식당');
   const s = await payeeState(page);
   expect(row(s, '국민건강가지급').slice(3, 5)).toEqual(['보험', true]);
+  // 보완 1번 — 이름은 「국민건강초심」으로 살리되 분류는 라이브 120차(「건강초심」)처럼 아직 안 정함
+  expect(row(s, '국민건강초심').slice(1, 5)).toEqual(['국민건강초심', false, null, false]);
+  expect(row(s, '국민건강초심')[9]).toBe(true);
   expect(row(s, '국민건강').slice(5, 9)).toEqual(['보험', true, '보험', true]);
   expect(row(s, '국민연금').slice(5, 9)).toEqual(['보험', true, '보험', true]);
   // 의료급여는 보험 낱말이 아니다 — 지금처럼 아직 안 정함으로 묻는다 (공단 안내는 없다)
@@ -215,4 +218,71 @@ test('저장 자료 — 대표님이 정해 둔 공단 거래처는 덮어쓰지
   // 정해 두지 않은 공단 입금은 묻는다
   expect(row(s, '의료급여건생비').slice(3, 5)).toEqual([null, false]);
   expect(row(s, '의료급여건생비')[9]).toBe(true);
+});
+
+// 결과 화면의 펼친 목록에서 그 거래처 줄의 [항목 바꾸기] → 메뉴에서 항목
+async function changeRow(page, parent, section, payee, to) {
+  await page
+    .locator('.bigrow', { hasText: parent })
+    .first()
+    .click({ position: { x: 8, y: 8 } });
+  await page.locator('.orow:not(.bigrow)', { hasText: section }).first().click();
+  const row = page
+    .locator('.dtl .drow')
+    .filter({ has: page.locator('.dnm', { hasText: new RegExp(`(^|[\\s✓⚙?])${payee}( ·|$)`) }) })
+    .first();
+  await row.getByRole('button', { name: '항목 바꾸기' }).click();
+  await row
+    .locator('xpath=following-sibling::div[contains(@class,"menu")][1]')
+    .getByRole('button', { name: new RegExp('^' + to) })
+    .first()
+    .click();
+}
+async function augNumbers(page) {
+  return page.evaluate(() => {
+    const d = monthNumbers('2026-08');
+    const g = UP.byName['국민건강'];
+    return [d.sales, d.cost, d.otherIn, g.catIn, g.catOut];
+  });
+}
+async function toResult(page) {
+  await page.reload();
+  await page.locator('#splash').waitFor({ state: 'detached' });
+  await page
+    .getByRole('button', { name: /테스트약국/ })
+    .first()
+    .click();
+  await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
+  await page.evaluate(() => {
+    UP.month = '2026-08';
+    drawResult(monthList());
+  });
+}
+
+// 보완 2번 — 섞인 「국민건강」(8월: 보험료 출금 700,000 · 환급 입금 150,000). 예전(63-4)에는 양쪽이 같이 바뀌었다
+test('결과 화면 — 입금 행에서 고치면 입금 분류만 · 출금 행에서 고치면 출금 분류만 바뀐다', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  await startWith(page, '약국', await nhisXlsx(page));
+  await pickOthers(page);
+  await answerCards(page);
+  await toResult(page);
+  // [번 돈, 쓴 돈, 그 밖의 입금, 입금 분류, 출금 분류]
+  expect(await augNumbers(page)).toEqual([40348000, 24250000, 230000, '보험', '보험']);
+
+  // (가) 그 밖의 입금 → 「국민건강」 → 매출: 환급 150,000 만 매출로. 보험료 출금은 보험 그대로
+  await changeRow(page, '사업으로 번 돈', '그 밖의 입금', '국민건강', '매출');
+  expect(await augNumbers(page)).toEqual([40498000, 24250000, 80000, '매출', '보험']);
+  await toResult(page);
+  expect(await augNumbers(page)).toEqual([40498000, 24250000, 80000, '매출', '보험']);
+
+  // (나) 사업에 쓴 돈 → 보험 → 「국민건강」 → 기타: 출금만 기타로. 입금(매출)은 그대로
+  await changeRow(page, '사업에 쓴 돈', '보험', '국민건강', '기타');
+  const after = await augNumbers(page);
+  expect(after).toEqual([40498000, 24250000, 80000, '매출', '기타']);
+  expect(await page.evaluate(() => monthNumbers('2026-08').cats['기타'])).toBe(700000);
+  await toResult(page);
+  expect(await augNumbers(page)).toEqual(after);
+  expect(errors).toEqual([]);
 });

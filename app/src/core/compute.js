@@ -1116,7 +1116,7 @@ function autoKnownIn(U, name) {
   /* ★ 공단 입금 보완 (2026-10-15). 병원·치과·약국의 「국민건강」·「의료급여」 입금은
      이름만으로 무엇인지 모른다 (nhisAskIn). 확인 카드에서 빼지 않는다 */
   if (nhisAskIn(U, g)) return false;
-  var c = autoCategory(name, -1); /* 출금 쪽으로 물어본다 — 카드사 판정을 피한다 */
+  var c = autoCategory(autoName(name), -1); /* 출금 쪽으로 물어본다 — 카드사 판정을 피한다 */
   return c === '세금' || c === '보험' || c === '전기·가스·수도';
 }
 /* 그 거래처가 달마다 얼마씩이었는지 */
