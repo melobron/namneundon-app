@@ -83,6 +83,8 @@ declare var bankKeysNow: any;
 declare var breaksOver: any;
 declare var manualLeft: any;
 declare var goMonth: any;
+declare var renameStore: any;
+declare var loadData: any;
 declare var keyOf: any;
 declare var unsetCatQuiet: any;
 declare var setCatQuiet: any;
