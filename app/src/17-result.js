@@ -2428,22 +2428,18 @@ function autoTag(g) {
    패널을 닫을 때 한 번에 반영한다 (drawResult) */
 var FIND_PAGE = 12;
 
-/* 저장만 하고 화면은 안 건드린다 */
-function setCatQuiet(g, name) {
+/* 저장만 하고 화면은 안 건드린다. isIn 은 setCat 과 같다 (쪽을 모르면 양쪽) */
+function setCatQuiet(g, name, isIn) {
   if (UP.accounts.indexOf(name) === -1) UP.accounts.push(name);
-  if (g.mixed) {
-    gSetCat(g, true, name, false);
-    gSetCat(g, false, name, false);
-  } else {
-    g.cat = name;
-    g.auto = false;
-  }
+  setCatSide(g, name, isIn);
   var i = UP.queue.indexOf(g);
-  if (i >= UP.pos) UP.queue.splice(i, 1);
+  if (i >= UP.pos && gDone(g)) UP.queue.splice(i, 1);
   savePicks();
 }
-function unsetCatQuiet(g) {
-  if (g.mixed) {
+function unsetCatQuiet(g, isIn) {
+  if (g.mixed && typeof isIn === 'boolean') {
+    gSetCat(g, isIn, null, false);
+  } else if (g.mixed) {
     gSetCat(g, true, null, false);
     gSetCat(g, false, null, false);
   } else {
@@ -2669,7 +2665,11 @@ function drawPayeeFix(panel, d, name) {
 /* 그 항목으로 찍은 거래처를 그 자리에서 다시 찍게 한다 */
 function drawCatFix(panel, d, cat) {
   panel.innerHTML = '';
-  var list = catPayees(d, cat);
+  var list = nhisSplitRows(
+    d,
+    cat,
+    catPayees(d, cat)
+  ); /* 공단 섞인 곳은 쪽마다 한 줄 (보완 2차 가) */
   if (!list.length) {
     panel.appendChild(el('div', 'cka', '이 항목으로 정하신 거래처가 없습니다.'));
     return;
@@ -2682,9 +2682,11 @@ function drawCatFix(panel, d, cat) {
     var row = el('div', 'drow');
     var nm = el('div', 'dnm');
     if (e.unknown) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
-    nm.appendChild(document.createTextNode(showName(e.name) + ' · ' + e.n + '건'));
+    nm.appendChild(document.createTextNode(sideRowText(e)));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(e.sum)));
+    row.appendChild(
+      el('div', 'dv num', won(typeof e.side === 'boolean' ? Math.abs(e.sum) : e.sum))
+    );
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';
@@ -2699,7 +2701,8 @@ function drawCatFix(panel, d, cat) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, UP.byName[e.name]);
+      var side = typeof e.side === 'boolean' ? e.side : catSideOf(d, e.name, cat);
+      drawChangeMenu(menu, UP.byName[e.name], undefined, side);
       menu.hidden = false;
     });
   });

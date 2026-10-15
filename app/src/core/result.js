@@ -200,7 +200,8 @@ function checkId(c) {
    40곳 중 26곳(65%)이 인건비였다. 지정하지는 않고 순서로만 쓴다 */
 function steadyScore(g) {
   var s = 0;
-  if (looksPersonal(g.name) && g.net < 0) s += 2;
+  if (looksPersonal(autoName(g.name)) && g.net < 0)
+    s += 2; /* 예전 이름으로 본다 (personalIn 과 같다) */
   if (g.monthN >= 6) s += 2;
   else if (g.monthN >= 3) s += 1;
   if (g.amts && g.amts.length >= 3) {
@@ -454,12 +455,13 @@ function daySplitIn(U, m, day) {
   U.rows.forEach(function (r) {
     if (monthOf(r.at) !== m) return;
     if (+r.at.slice(8, 10) !== day) return;
-    if (isUnknownIn(U, r)) {
-      rest.push({ r: r, why: '아직 안 정한 돈' });
-      return;
-    }
+    /* ★ 2026-10-15. 확인된 이체를 아직 안 정한 것보다 먼저 본다 — monthNumbers 와 같은 차례다 */
     if (xferOnIn(U, r)) {
       rest.push({ r: r, why: XFER_PART });
+      return;
+    }
+    if (isUnknownIn(U, r)) {
+      rest.push({ r: r, why: '아직 안 정한 돈' });
       return;
     }
     var c = catOfIn(U, r);

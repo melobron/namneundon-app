@@ -249,21 +249,13 @@ function monthNumbersIn(U, m, cutDay) {
       keep += -r.residual;
       keepParts['확인 필요'] = (keepParts['확인 필요'] || 0) + -r.residual;
     }
-    if (isUnknownIn(U, r)) {
-      unknown += Math.abs(r.amount);
-      unknownN++;
-      unkPayees[keyOfIn(U, r)] = (unkPayees[keyOfIn(U, r)] || 0) + Math.abs(r.amount);
-      if (r.amount < 0) uOut += -r.amount;
-      else uIn += r.amount;
-      /* ★ 35차 E. 아직 안 정한 돈은 매출에도 지출에도 넣지 않는다.
-         예전에는 나간 것은 지출로, 들어온 것은 그 밖의 입금으로 들어가
-         사장님이 아무것도 안 정하셨는데도 순이익이 이미 깎여 있었다 */
-      return;
-    }
     /* ★ 36차 4단계. 계좌 간 이체는 계좌에는 오갔지만 사업의 매출·지출이 아니다.
        한 계좌에서 나가 다른 계좌로 들어온 같은 돈이라, 안 빼면 양쪽 다 잡혀
        매출과 지출이 같이 부풀어 오른다 (실파일 8월 매출 599만원).
-       ★ 거래처 항목과 상관없이 줄 단위로 가른다 — 같은 거래처에 이체 아닌 줄도 있다 */
+       ★ 거래처 항목과 상관없이 줄 단위로 가른다 — 같은 거래처에 이체 아닌 줄도 있다
+       ★ 2026-10-15. 아직 안 정한 것보다 먼저 본다. 거래처를 안 정한 채 이체로 확인하시면
+         예전에는 「아직 안 정한 돈」에 그대로 남았다 — 대표님이 이미 답하신 줄이다.
+         후보가 아니라 「맞습니다」를 누르신 줄(xferOn)만 여기서 빠진다 */
     if (xferOnIn(U, r)) {
       keep += -r.amount;
       keepParts[XFER_PART] = (keepParts[XFER_PART] || 0) + -r.amount;
@@ -274,6 +266,17 @@ function monthNumbersIn(U, m, cutDay) {
         keepOut += -r.amount;
         keepOutParts[XFER_PART] = (keepOutParts[XFER_PART] || 0) + -r.amount;
       }
+      return;
+    }
+    if (isUnknownIn(U, r)) {
+      unknown += Math.abs(r.amount);
+      unknownN++;
+      unkPayees[keyOfIn(U, r)] = (unkPayees[keyOfIn(U, r)] || 0) + Math.abs(r.amount);
+      if (r.amount < 0) uOut += -r.amount;
+      else uIn += r.amount;
+      /* ★ 35차 E. 아직 안 정한 돈은 매출에도 지출에도 넣지 않는다.
+         예전에는 나간 것은 지출로, 들어온 것은 그 밖의 입금으로 들어가
+         사장님이 아무것도 안 정하셨는데도 순이익이 이미 깎여 있었다 */
       return;
     }
     /* 내가 넣은 돈·뺀 돈은 잔액에만 반영하고 손익에서는 뺀다 */
@@ -1113,7 +1116,10 @@ function cardSkippedIn(U, name) {
 function autoKnownIn(U, name) {
   var g = U.byName[name];
   if (g && gDone(g) && !(g.auto || g.autoIn || g.autoOut)) return false;
-  var c = autoCategory(name, -1); /* 출금 쪽으로 물어본다 — 카드사 판정을 피한다 */
+  /* ★ 공단 입금 보완 (2026-10-15). 병원·치과·약국의 「국민건강」·「의료급여」 입금은
+     이름만으로 무엇인지 모른다 (nhisAskIn). 확인 카드에서 빼지 않는다 */
+  if (nhisAskIn(U, g)) return false;
+  var c = autoCategory(autoName(name), -1); /* 출금 쪽으로 물어본다 — 카드사 판정을 피한다 */
   return c === '세금' || c === '보험' || c === '전기·가스·수도';
 }
 /* 그 거래처가 달마다 얼마씩이었는지 */
