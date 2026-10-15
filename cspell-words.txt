@@ -656,3 +656,5 @@ dueend
 dueresday
 duereslow
 cloudflareinsights
+nhis
+yymm

@@ -172,9 +172,24 @@ var BANK_KEEP = [
   '상호'
 ];
 var CORP_HEAD = ['주식회사', '㈜', '(주)', '유한회사', '(유)'];
+/* ★ 공단 입금 보완 (2026-10-15). 「국민」 뒤가 3~4자면 사람 이름으로 보고 뗐는데,
+   「국민건강초심」이 「건강초심」이 되어 같은 공단 돈(「국민건강가지급」)과 갈리고 보험 낱말에서도 빠졌다.
+   이 둘로 시작하는 이름은 은행 접두어가 아니라 공단 이름이다. 다른 은행 접두어·사람 이름 규칙은 그대로다 */
+var BANK_NOT_PREFIX = ['국민건강', '국민연금'];
 function canonName(name) {
   /* 전각 공백(U+3000)·전각 영숫자를 반각으로 통일 */
   var t = String(name).normalize('NFKC').trim();
+  for (var n = 0; n < BANK_NOT_PREFIX.length; n++)
+    if (t.indexOf(BANK_NOT_PREFIX[n]) === 0) return t;
+  return bankStrip(t);
+}
+/* ★ 공단 입금 보완 (2026-10-15 보완 1번). 자동 분류는 「국민」을 떼던 예전 이름으로 판정한다.
+   이름을 살린 것만으로 다른 업종의 미분류 입금(「건강초심」)이 자동 '보험'이 되면 안 된다 —
+   병원·치과·약국의 공단 입금은 어차피 nhisHoldIn 이 걷어 여쭌다 */
+function autoName(name) {
+  return bankStrip(String(name).normalize('NFKC').trim());
+}
+function bankStrip(t) {
   for (var i = 0; i < BANK_PREFIX.length; i++) {
     var p = BANK_PREFIX[i];
     if (t.indexOf(p) !== 0) continue;
@@ -404,14 +419,14 @@ function groupPayeesWith(rows, merge) {
 function gAutoInit(g) {
   if (g.mixed) {
     /* 방향마다 따로 짐작한다. net 부호로 한 번에 짐작하면 반대쪽이 뜻이 뒤집힌다 */
-    g.catIn = autoCategory(g.name, 1);
-    g.catOut = autoCategory(g.name, -1);
+    g.catIn = autoCategory(autoName(g.name), 1);
+    g.catOut = autoCategory(autoName(g.name), -1);
     g.autoIn = !!g.catIn;
     g.autoOut = !!g.catOut;
     g.cat = null;
     g.auto = false;
   } else {
-    g.cat = autoCategory(g.name, g.net);
+    g.cat = autoCategory(autoName(g.name), g.net);
     g.auto = !!g.cat;
   }
 }
@@ -476,6 +491,45 @@ function gShowCat(g) {
 function gOpenAbs(g) {
   if (!g.mixed) return g.cat ? 0 : g.abs;
   return (g.catIn ? 0 : g.inSum) + (g.catOut ? 0 : g.outSum);
+}
+/* ── 공단 입금 보완 (2026-10-15 · C안) ────────────────────────────
+   병원·치과·약국에서 이름이 「국민건강」·「의료급여」로 시작하는 입금은
+   진료·조제 대금(매출)일 수도, 보험료 환급일 수도 있다. 이름만으로는 갈리지 않는다.
+   그런데 「국민건강」은 보험 낱말이라 입금도 자동 '보험'이 되어, 조제료가 매출에서 조용히 빠졌다.
+   ★ 그래서 입금 쪽의 자동 '보험'만 걷어 「아직 안 정함」으로 두고 대표님께 여쭌다.
+     아직 안 정한 입금은 매출에도 그 밖의 입금에도 안 들어간다 (35차 E) — 이름만으로 매출로 확정하지 않는다.
+   ★ 출금(보험료)은 지금처럼 '보험'이다. 대표님이 손수 정하신 것(auto 가 아닌 것)은 건드리지 않는다.
+   ★ 업종은 매장 자료(U.trade)에서 읽는다. 저장된 업종이 이기므로 업종이 정해진 뒤에 부른다 (buildQueue) */
+var NHIS_TRADES = ['병원', '치과', '약국'];
+var NHIS_HEADS = ['국민건강', '의료급여'];
+function nhisAskIn(U, g) {
+  if (!U || !g || !(g.inN > 0) || NHIS_TRADES.indexOf(U.trade) === -1) return false;
+  var t = String(g.name);
+  for (var i = 0; i < NHIS_HEADS.length; i++) if (t.indexOf(NHIS_HEADS[i]) === 0) return true;
+  return false;
+}
+function nhisHoldIn(U, g) {
+  if (nhisAskIn(U, g)) {
+    if (gCatFor(g, true) && gAutoFor(g, true)) {
+      gSetCat(g, true, null, false);
+      g.nhisHeld = true;
+    }
+    return;
+  }
+  /* 다른 업종의 분류 파일을 불러와 후보가 아니게 되면 걷어 둔 자동 항목을 되돌린다.
+     그 사이 대표님이 정하신 것이 있으면 그대로 둔다 */
+  if (g && g.nhisHeld) {
+    if (!gCatFor(g, true)) {
+      var c = autoCategory(autoName(g.name), 1);
+      gSetCat(g, true, c, !!c);
+    }
+    delete g.nhisHeld;
+  }
+}
+/* 섞인 공단 거래처에서 입금 쪽만 남았는가 — 이때 받은 답은 입금 쪽에만 넣는다.
+   한 번에 양쪽에 넣으면(63-4) 출금 보험료가 매출로 바뀐다 */
+function nhisInOnlyIn(U, g) {
+  return !!g && !!g.mixed && nhisAskIn(U, g) && !!g.catOut && !g.catIn;
 }
 /* 저장해둔 것을 되살린다. 옛 저장값은 방향이 없는 글자 하나였고,
    35차부터 섞인 거래처는 {입금:…, 출금:…} 로 남긴다.

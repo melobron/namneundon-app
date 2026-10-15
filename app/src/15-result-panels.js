@@ -94,21 +94,57 @@ function unsetCount() {
 }
 
 /* 결과 화면에서 항목을 바꾸면 그 거래처 전체에 적용된다 */
-function setCat(g, name) {
+function setCat(g, name, isIn) {
   g.cardMixed = false;
   if (UP.accounts.indexOf(name) === -1) UP.accounts.push(name);
-  /* 결과 화면은 거래처 한 줄로 보여준다. 섞인 곳이면 양쪽 다 이걸로 정한다 */
-  if (g.mixed) {
+  setCatSide(g, name, isIn);
+  var i = UP.queue.indexOf(g);
+  /* 아직 안 물어본 것이면 목록에서 뺀다. 섞인 곳의 다른 쪽이 남았으면 그대로 둔다 */
+  if (i >= UP.pos && gDone(g)) UP.queue.splice(i, 1);
+  savePicks();
+  drawResult(monthList());
+}
+/* ★ 공단 입금 보완 (2026-10-15 보완 2번). 섞인 거래처는 고친 줄이 들어온 돈인지 나간 돈인지(isIn)로
+   그쪽에만 넣는다. 양쪽에 넣으면(63-4) 「국민건강」 환급을 매출로 고칠 때 보험료 출금도 매출이 된다.
+   ★ 쪽을 모르는 자리(거래처 한 곳 전체를 보여주는 곳)는 isIn 없이 불러 예전처럼 양쪽에 넣는다 */
+function setCatSide(g, name, isIn) {
+  if (g.mixed && typeof isIn === 'boolean') {
+    gSetCat(g, isIn, name, false);
+  } else if (g.mixed) {
     gSetCat(g, true, name, false);
     gSetCat(g, false, name, false);
   } else {
     g.cat = name;
     g.auto = false;
   }
-  var i = UP.queue.indexOf(g);
-  if (i >= UP.pos) UP.queue.splice(i, 1); /* 아직 안 물어본 것이면 목록에서 뺀다 */
-  savePicks();
-  drawResult(monthList());
+}
+/* 메뉴에 「지금 고른 것」으로 표시할 항목 — 쪽이 정해졌으면 그쪽 것만 */
+function catsOnSide(g, isIn) {
+  if (g && g.mixed && typeof isIn === 'boolean') {
+    var c = gCatFor(g, isIn);
+    return c ? [c] : [];
+  }
+  return gCats(g);
+}
+/* 아직 안 정함 목록의 쪽 — 섞인 곳에서 한쪽만 정해졌으면 남은 쪽이다. 정해 둔 쪽을 덮지 않는다 */
+function unsetSideOf(g) {
+  if (!g || !g.mixed) return undefined;
+  var a = !!gCatFor(g, true),
+    b = !!gCatFor(g, false);
+  if (a === b) return undefined;
+  return !a;
+}
+/* 항목별 거래처 목록에서 그 거래처 줄이 한쪽 돈만으로 되어 있으면 그쪽 */
+function catSideOf(d, name, cat) {
+  var sIn = false,
+    sOut = false;
+  d.rows.forEach(function (r) {
+    if (keyOf(r) !== name || catOf(r) !== cat) return;
+    if (r.amount > 0) sIn = true;
+    else sOut = true;
+  });
+  if (sIn === sOut) return undefined;
+  return sIn;
 }
 
 /* 계산은 core/result.js 의 isHiddenIn — 지금 매장(UP)을 넘긴다 */
@@ -116,16 +152,17 @@ function isHidden(name) {
   return isHiddenIn(UP, name);
 }
 
-function drawChangeMenu(box, g, after) {
+function drawChangeMenu(box, g, after, isIn) {
   box.innerHTML = '';
+  var now = catsOnSide(g, isIn);
   var names = UP.accounts.filter(function (n) {
-    return !isHidden(n) || gCats(g).indexOf(n) !== -1;
+    return !isHidden(n) || now.indexOf(n) !== -1;
   });
   if (names.indexOf('매출') === -1) names.unshift('매출');
   names.forEach(function (name) {
     var b = el('button', 'mi', name);
     b.type = 'button';
-    if (gCats(g).indexOf(name) !== -1) b.classList.add('on');
+    if (now.indexOf(name) !== -1) b.classList.add('on');
     var note2 = noteFor(name);
     if (note2) {
       if (isKeep(name)) b.classList.add('keep');
@@ -133,44 +170,44 @@ function drawChangeMenu(box, g, after) {
     }
     b.addEventListener('click', function () {
       if (after) {
-        setCatQuiet(g, name);
+        setCatQuiet(g, name, isIn);
         after(name);
         return;
       }
-      setCat(g, name);
+      setCat(g, name, isIn);
     });
     box.appendChild(b);
   });
   var add = el('button', 'mi add', '+ 항목 추가');
   add.type = 'button';
   add.addEventListener('click', function () {
-    drawCatAddHere(box, g);
+    drawCatAddHere(box, g, isIn);
   });
   box.appendChild(add);
   /* 잘못 찍었을 때 빠져나갈 길 — 다른 항목으로 바꾸는 것만으로는 모자라다 */
-  if (gCats(g).length) {
+  if (now.length) {
     var off = el('button', 'mi rollback', '아직 안 정함으로 되돌리기');
     off.type = 'button';
     off.addEventListener('click', function () {
       if (after) {
-        unsetCatQuiet(g);
+        unsetCatQuiet(g, isIn);
         after(null);
         return;
       }
-      unsetCatQuiet(g);
+      unsetCatQuiet(g, isIn);
       drawResult(monthList());
     });
     box.appendChild(off);
   }
 }
 
-function drawCatAddHere(box, g) {
+function drawCatAddHere(box, g, isIn) {
   drawNameBox(box, {
     onCancel: function () {
-      drawChangeMenu(box, g);
+      drawChangeMenu(box, g, undefined, isIn);
     },
     onDone: function (name) {
-      setCat(g, name);
+      setCat(g, name, isIn);
     }
   });
 }
@@ -1544,7 +1581,7 @@ function drawKeepDetail(host, d, cat, isIn, skipOnly, after) {
       }
       /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 */
       if (g && g.askSkip) unskipAsk(g);
-      drawChangeMenu(menu, g, after);
+      drawChangeMenu(menu, g, after, isIn);
       menu.hidden = false;
     });
   });
@@ -1634,9 +1671,14 @@ function drawUnsetDetail(host, d, months) {
       }
       /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 */
       if (g.askSkip) unskipAsk(g);
-      drawChangeMenu(menu, g, function () {
-        drawResult(months);
-      });
+      drawChangeMenu(
+        menu,
+        g,
+        function () {
+          drawResult(months);
+        },
+        unsetSideOf(g)
+      );
       menu.hidden = false;
     });
   });
@@ -1652,8 +1694,44 @@ function drawUnsetDetail(host, d, months) {
   host.appendChild(box);
 }
 
+/* ★ 공단 입금 보완 2차 가 (2026-10-15). 공단 거래처(nhisAskIn)가 섞인 곳이면 한 항목 목록 안에서도
+   들어온 줄과 나간 줄을 따로 보인다. 한 줄로 합치면 금액은 둘을 뺀 값인데 고치는 쪽은 한쪽뿐이라,
+   「보험」 목록에서 매출로 고치면 보험료 출금만 매출이 되어 그 달 매출이 마이너스가 됐다.
+   ★ 줄마다 side 를 달고 [항목 바꾸기]는 그 줄의 쪽만 고친다 — 보이는 쪽과 고치는 쪽이 늘 같다.
+   ★ 공단이 아닌 섞인 거래처는 이번에 건드리지 않는다 (보고만) */
+function nhisSplitRows(d, cat, list) {
+  var out = [];
+  list.forEach(function (e) {
+    var g = UP.byName[e.name];
+    if (!(g && g.mixed && nhisAskIn(UP, g))) {
+      out.push(e);
+      return;
+    }
+    var by = {};
+    d.rows.forEach(function (r) {
+      if (keyOf(r) !== e.name || catOf(r) !== cat) return;
+      var isIn = r.amount > 0;
+      var k = isIn ? 'in' : 'out';
+      var s =
+        by[k] || (by[k] = { name: e.name, n: 0, sum: 0, unknown: !gCatFor(g, isIn), side: isIn });
+      s.n++;
+      s.sum += cat === '매출' ? r.amount : -r.amount;
+    });
+    (cat === '매출' ? ['in', 'out'] : ['out', 'in']).forEach(function (k) {
+      if (by[k]) out.push(by[k]);
+    });
+  });
+  return out;
+}
+/* 쪽을 나눈 줄의 이름 — 어느 쪽 돈인지 말한다 */
+function sideRowText(e) {
+  if (typeof e.side !== 'boolean') return showName(e.name) + ' · ' + e.n + '건';
+  return showName(e.name) + ' · ' + (e.side ? '들어온 돈 ' : '나간 돈 ') + e.n + '건';
+}
+/* 매출 목록의 줄은 들어온 돈, 나간 쪽 항목 목록의 줄은 나간 돈이다 — 고치면 그쪽에만 넣는다 (보완 2번).
+   쪽을 나눈 공단 줄은 그 줄의 쪽이다 (보완 2차 가) */
 function drawDetail(host, d, cat) {
-  var list = catPayees(d, cat);
+  var list = nhisSplitRows(d, cat, catPayees(d, cat));
   var box = el('div', 'dtl');
   var shown = UP.open[cat] === true ? DTL_STEP : UP.open[cat];
   var n = Math.min(list.length, shown);
@@ -1664,15 +1742,19 @@ function drawDetail(host, d, cat) {
 
   list.slice(0, n).forEach(function (e) {
     var g = UP.byName[e.name];
-    var auto = !!(g && g.auto);
+    var split = typeof e.side === 'boolean';
+    var side = split ? e.side : cat === '매출';
+    var auto = split ? gAutoFor(g, side) : !!(g && g.auto);
     var row = el('div', 'drow');
     var nm = el('div', 'dnm');
     if (e.unknown) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
     else nm.appendChild(el('span', auto ? 'mark auto' : 'mark mine', auto ? '⚙' : '✓'));
-    nm.appendChild(document.createTextNode(showName(e.name) + ' · ' + e.n + '건'));
+    nm.appendChild(document.createTextNode(sideRowText(e)));
     if (auto) nm.appendChild(el('span', 'autotag', '(앱이 넣음)'));
+    /* 나간 쪽 목록의 들어온 줄은 이 항목 금액에 안 들어가고 그 밖의 입금으로 간다 */
+    if (split && side && cat !== '매출') nm.appendChild(el('span', 'autotag', '(그 밖의 입금)'));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(e.sum)));
+    row.appendChild(el('div', 'dv num', won(split ? Math.abs(e.sum) : e.sum)));
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';
@@ -1688,7 +1770,7 @@ function drawDetail(host, d, cat) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, g);
+      drawChangeMenu(menu, g, undefined, side);
       menu.hidden = false;
     });
 
@@ -1699,13 +1781,15 @@ function drawDetail(host, d, cat) {
       var yes = el('button', 'chbtn', '확인');
       yes.type = 'button';
       yes.addEventListener('click', function () {
-        g.auto = false; /* 사장님이 확인한 것으로 바꾼다 */
+        /* 사장님이 확인한 것으로 바꾼다. 쪽을 나눈 줄은 그쪽만 */
+        if (split) gSetCat(g, side, gCatFor(g, side), false);
+        else g.auto = false;
         drawResult(monthList());
       });
       var no = el('button', 'chbtn', '다른 항목으로');
       no.type = 'button';
       no.addEventListener('click', function () {
-        drawChangeMenu(menu, g);
+        drawChangeMenu(menu, g, undefined, side);
         menu.hidden = false;
       });
       ask.appendChild(yes);
@@ -2070,7 +2154,7 @@ function drawInDetail(host, d) {
         menu.hidden = true;
         return;
       }
-      drawChangeMenu(menu, g);
+      drawChangeMenu(menu, g, undefined, true);
       menu.hidden = false;
     });
   });

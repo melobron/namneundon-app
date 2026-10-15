@@ -462,9 +462,14 @@ function drawHoldDetail(host, hold, months) {
       }
       /* 앱이 넘긴 것을 손으로 바꾸시면 다시 넘기지 않는다 (43차 4단계와 같다) */
       if (g.askSkip) unskipAsk(g);
-      drawChangeMenu(menu, g, function () {
-        drawResult(months);
-      });
+      drawChangeMenu(
+        menu,
+        g,
+        function () {
+          drawResult(months);
+        },
+        unsetSideOf(g)
+      );
       menu.hidden = false;
     });
   });

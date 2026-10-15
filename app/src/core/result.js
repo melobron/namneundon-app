@@ -200,7 +200,8 @@ function checkId(c) {
    40곳 중 26곳(65%)이 인건비였다. 지정하지는 않고 순서로만 쓴다 */
 function steadyScore(g) {
   var s = 0;
-  if (looksPersonal(g.name) && g.net < 0) s += 2;
+  if (looksPersonal(autoName(g.name)) && g.net < 0)
+    s += 2; /* 예전 이름으로 본다 (personalIn 과 같다) */
   if (g.monthN >= 6) s += 2;
   else if (g.monthN >= 3) s += 1;
   if (g.amts && g.amts.length >= 3) {

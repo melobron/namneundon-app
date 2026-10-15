@@ -295,8 +295,10 @@ function looksPersonal(name) {
 }
 /* 사람 이름 · 30만원 이상 입금이 한 건이라도 있으면.
    순액으로 보면 사장님이 넣었다 뺐다 한 경우를 통째로 놓친다 */
+/* ★ 공단 입금 보완 2차 나 (2026-10-15). 이름은 「국민건강초심」으로 살렸지만
+   사람 이름처럼 보이는지는 예전 이름(autoName — 「건강초심」)으로 본다. 다른 업종의 추천을 라이브와 같게 둔다 */
 function personalIn(g) {
-  return looksPersonal(g.name) && (g.inMax || 0) >= PERSONAL_MIN;
+  return looksPersonal(autoName(g.name)) && (g.inMax || 0) >= PERSONAL_MIN;
 }
 /* 사장님이 「매출」을 더 자주 고르셨으면 그 순서를 따른다 */
 function personalFirstIn(U) {
@@ -396,8 +398,12 @@ function likeName(a, b) {
 function similarPayeesIn(U, g) {
   var a = coreName(g.name);
   if (a.length < 3) return [];
+  /* ★ 공단 입금 보완 (2026-10-15). 병원·치과·약국의 공단 입금은 「같은 곳인가요?」로 잇지 않는다.
+     「국민건강가지급」을 매출로 정한 뒤 보험료 거래처 「국민건강」을 같은 곳으로 권하면
+     환급이 한 번에 매출로 간다. 공단 거래처는 저마다 안내가 붙은 카드로 여쭌다 */
+  if (nhisAskIn(U, g)) return [];
   return U.payees.filter(function (x) {
-    return x !== g && !gDone(x) && likeName(a, coreName(x.name));
+    return x !== g && !gDone(x) && likeName(a, coreName(x.name)) && !nhisAskIn(U, x);
   });
 }
 /* 사장님이 이미 찍은 것 중 이름이 겹치는 곳 — 규칙보다 이게 정확하다.
@@ -567,12 +573,17 @@ function bundleForIn(U, g) {
     mems = pool.filter(isCardOut);
     if (mems.length >= 2) return makeBundle('카드 대금', mems, 'card');
   }
+  /* ★ 공단 입금 보완 (2026-10-15). 병원·치과·약국의 공단 입금은 묶지 않는다 —
+     거래처마다 「진료·조제 대금인가요?」 안내가 붙은 카드로 여쭌다 (nhisAskIn) */
+  if (nhisAskIn(U, g)) return null;
   /* G-1. 앞 네 글자 이상이 같은 것끼리. 방향이 같은 것만 */
   var mine = g.net > 0;
   var head = coreName(g.name).slice(0, GROUP_PREFIX);
   if (head.length < GROUP_PREFIX) return null;
   mems = pool.filter(function (x) {
-    return x.net > 0 === mine && coreName(x.name).slice(0, GROUP_PREFIX) === head;
+    return (
+      x.net > 0 === mine && coreName(x.name).slice(0, GROUP_PREFIX) === head && !nhisAskIn(U, x)
+    );
   });
   if (mems.length < 2) return null;
   return makeBundle(showName(mems[0].name).slice(0, GROUP_PREFIX), mems, 'prefix');
