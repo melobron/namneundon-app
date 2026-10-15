@@ -293,7 +293,7 @@ function drawProfitChart(host, months, cols, 진행달) {
   var marks = [
     ['kgood', '■ 사업으로 번 돈'],
     ['kwarn', '■ 사업에 쓴 돈'],
-    ['kprof', '— 계좌 순이익']
+    ['kprof', '— 차액']
   ];
   if (연한조각) marks.push(['kest', '■ 아직 덜 정함']);
   /* ★ 111차 ④㉰. 눈금 단위를 그림 제목에 밝힌다 */
@@ -305,7 +305,7 @@ function drawProfitChart(host, months, cols, 진행달) {
   var U순이익 = axisUnit(Math.max(Math.abs(lo), Math.abs(hi)));
   /* ★ 77차. 그래프 자체와 범례가 말하는 설명은 반복하지 않는다. */
   box.appendChild(
-    chHead('달마다 사업으로 번 돈 · 사업에 쓴 돈 · 계좌 순이익 (' + U순이익.name + ')', marks, null)
+    chHead('달마다 사업으로 번 돈 · 사업에 쓴 돈 · 차액 (' + U순이익.name + ')', marks, null)
   );
   var wrap = el('div', 'chone');
   box.appendChild(wrap);
@@ -522,7 +522,7 @@ function drawProfitBars(진행달, n, pts, lo, hi, stepA, U순이익, wrap, 진�
           /* 안 정한 거래가 있는 달은 한 금액을 확정값처럼 쓰지 않고 기존 범위를 적는다 */
           tt.textContent =
             +p.m.slice(5, 7) +
-            '월 계좌 순이익 ' +
+            '월 차액 ' +
             (p.unset
               ? '범위 ' + won(Math.round(p.lo)) + '원 ~ ' + won(Math.round(p.hi)) + '원'
               : won(p.profit) + '원');
@@ -1113,7 +1113,7 @@ function drawDayChart(host, m, d, months) {
       [
         ['kgood', '■ 사업으로 번 돈'],
         ['kwarn', '■ 사업에 쓴 돈'],
-        ['kprof', '— 계좌 순이익(이번 달 누적)']
+        ['kprof', '— 차액(이번 달 누적)']
       ],
       monNum(m) + ' 1일 ~ ' + monNum(m) + ' ' + f.last + '일'
     )
@@ -1819,7 +1819,7 @@ function drawYearSummaryCards(host, months, cols, 셀수있는) {
     };
     카드줄.appendChild(카드('', '사업으로 번 돈', 합번, 'yin'));
     카드줄.appendChild(카드('−', '사업에 쓴 돈', 합쓴, 'yout'));
-    카드줄.appendChild(카드('=', '계좌 순이익', 합순, 'yprof'));
+    카드줄.appendChild(카드('=', '차액', 합순, 'yprof'));
     host.appendChild(카드줄);
 
     /* ★ 66-8차 ③ · 66-16차 ③. 순이익 합계는 위 카드가 이미 말한다 —
@@ -1931,7 +1931,7 @@ function drawYearProfitRow(row) {
   /* ★ 66차 ③-2. 핵심 세 줄(번 돈 · 쓴 돈 · 순이익)을 붙여 놓는다.
      세로로 그대로 뺄셈이 되어야 위 카드 줄과 같은 그림이 된다 */
   row(
-    '계좌 순이익',
+    '차액',
     'prof yrprof',
     function (c) {
       if (c.blocked) return { txt: '—', cls: 'none' };

@@ -1507,7 +1507,7 @@ function drawOnboard() {
     /* 35차 A. 찍는 순간 결과를 한 줄로 말한다.
        「매출·지출에 넣지 않습니다」만으로는 내 순이익이 어떻게 되는지 안 보인다 */
     if (UP.said) {
-      host.appendChild(el('div', 'obsaid', '이렇게 정하면 순이익은 그대로입니다'));
+      host.appendChild(el('div', 'obsaid', '이렇게 정하면 차액은 그대로입니다'));
     }
   }
 
