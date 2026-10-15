@@ -106,7 +106,8 @@ function setCat(g, name, isIn) {
 }
 /* ★ 공단 입금 보완 (2026-10-15 보완 2번). 섞인 거래처는 고친 줄이 들어온 돈인지 나간 돈인지(isIn)로
    그쪽에만 넣는다. 양쪽에 넣으면(63-4) 「국민건강」 환급을 매출로 고칠 때 보험료 출금도 매출이 된다.
-   ★ 쪽을 모르는 자리(거래처 한 곳 전체를 보여주는 곳)는 isIn 없이 불러 예전처럼 양쪽에 넣는다 */
+   ★ 쪽을 모르는 자리(거래처 한 곳 전체를 보여주는 곳)는 isIn 없이 불러 예전처럼 양쪽에 넣는다.
+     다만 「매출」은 들어온 쪽에만 들어간다 (123차, gSetCat) */
 function setCatSide(g, name, isIn) {
   if (g.mixed && typeof isIn === 'boolean') {
     gSetCat(g, isIn, name, false);
@@ -159,6 +160,11 @@ function drawChangeMenu(box, g, after, isIn) {
     return !isHidden(n) || now.indexOf(n) !== -1;
   });
   if (names.indexOf('매출') === -1) names.unshift('매출');
+  /* ★ 123차. 섞인 거래처의 나간 쪽 줄에서는 「매출」을 고를 수 없다 — 출금이 매출이 되면 매출이 마이너스가 된다 */
+  if (g && g.mixed && isIn === false)
+    names = names.filter(function (n) {
+      return n !== '매출';
+    });
   names.forEach(function (name) {
     var b = el('button', 'mi', name);
     b.type = 'button';
@@ -1698,12 +1704,14 @@ function drawUnsetDetail(host, d, months) {
    들어온 줄과 나간 줄을 따로 보인다. 한 줄로 합치면 금액은 둘을 뺀 값인데 고치는 쪽은 한쪽뿐이라,
    「보험」 목록에서 매출로 고치면 보험료 출금만 매출이 되어 그 달 매출이 마이너스가 됐다.
    ★ 줄마다 side 를 달고 [항목 바꾸기]는 그 줄의 쪽만 고친다 — 보이는 쪽과 고치는 쪽이 늘 같다.
-   ★ 공단이 아닌 섞인 거래처는 이번에 건드리지 않는다 (보고만) */
-function nhisSplitRows(d, cat, list) {
+   ★ 123차. 업종 · 공단과 상관없이 섞인 거래처는 모두 나눈다. 공단이 아닌 곳에서도 「보험」 목록의
+     한 줄(입금 70만 · 출금 250만)을 매출로 고치면 출금만 매출이 되어 매출이 −250만이 됐다.
+     섞이지 않은 거래처는 예전처럼 한 줄이다 */
+function mixedSplitRows(d, cat, list) {
   var out = [];
   list.forEach(function (e) {
     var g = UP.byName[e.name];
-    if (!(g && g.mixed && nhisAskIn(UP, g))) {
+    if (!(g && g.mixed)) {
       out.push(e);
       return;
     }
@@ -1721,7 +1729,10 @@ function nhisSplitRows(d, cat, list) {
       if (by[k]) out.push(by[k]);
     });
   });
-  return out;
+  /* 나눈 줄도 금액 큰 순서에 맞춘다 (2026-09-29 확정). 같으면 원래 차례 그대로 (안정 정렬) */
+  return out.sort(function (a, b) {
+    return Math.abs(b.sum) - Math.abs(a.sum);
+  });
 }
 /* 쪽을 나눈 줄의 이름 — 어느 쪽 돈인지 말한다 */
 function sideRowText(e) {
@@ -1729,9 +1740,9 @@ function sideRowText(e) {
   return showName(e.name) + ' · ' + (e.side ? '들어온 돈 ' : '나간 돈 ') + e.n + '건';
 }
 /* 매출 목록의 줄은 들어온 돈, 나간 쪽 항목 목록의 줄은 나간 돈이다 — 고치면 그쪽에만 넣는다 (보완 2번).
-   쪽을 나눈 공단 줄은 그 줄의 쪽이다 (보완 2차 가) */
+   쪽을 나눈 섞인 거래처 줄은 그 줄의 쪽이다 (보완 2차 가 · 123차) */
 function drawDetail(host, d, cat) {
-  var list = nhisSplitRows(d, cat, catPayees(d, cat));
+  var list = mixedSplitRows(d, cat, catPayees(d, cat));
   var box = el('div', 'dtl');
   var shown = UP.open[cat] === true ? DTL_STEP : UP.open[cat];
   var n = Math.min(list.length, shown);

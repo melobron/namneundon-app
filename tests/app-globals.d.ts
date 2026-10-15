@@ -106,3 +106,4 @@ declare var drawResult: any;
 declare var drawOnboard: any;
 declare var drawStart: any;
 declare var openUpPanel: any;
+declare var showResult: any;

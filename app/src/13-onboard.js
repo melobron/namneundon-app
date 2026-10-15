@@ -1878,6 +1878,12 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
       var at2 = quick.indexOf(etcName());
       quick.splice(at2 === -1 ? quick.length : at2, 0, '매출');
     }
+    /* ★ 123차. 보류 원인 경로는 나간 쪽만 정한다 — 나간 쪽에는 매출을 넣지 않으므로 버튼도 안 낸다 */
+    var 원인 = !!(UP.holdAsk && UP.holdAsk.종류 === '원인') && g.mixed;
+    if (원인 && quick.indexOf('매출') !== -1) quick.splice(quick.indexOf('매출'), 1);
+    /* ★ 123차. 섞인 거래처에서 「매출」은 들어온 돈에만 들어간다 — 고르시기 전에 알린다 */
+    var 매출안내 =
+      !원인 && side === null && g.mixed && !gCatFor(g, false) && quick.indexOf('매출') !== -1;
     /* ★ 81차 ②. 이유를 완성된 문장이 아니라 조각으로 모은다.
        별표를 달았는지(spark) 정해진 뒤에야 어떤 문장으로 말할지 갈리기 때문이다 */
     var front = [],
@@ -2032,6 +2038,14 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
     more.appendChild(el('span', 'chev', ' ▾'));
     btns.appendChild(more);
     card.appendChild(btns);
+    if (매출안내)
+      card.appendChild(
+        el(
+          'div',
+          'obsub',
+          '들어온 돈만 매출로 정합니다. 아직 정하지 않은 나간 돈은 결과 화면에서 정할 수 있습니다.'
+        )
+      );
 
     var menu = el('div', 'menu');
     menu.hidden = true;
@@ -2080,10 +2094,13 @@ function appendReachedResult(reached, host) {
 /* side : 섞인 거래처에서 어느 쪽을 정하는 중인가 (35차 B). 한쪽만 있는 곳은 null */
 function drawCatMenu(menu, g, side, shown) {
   menu.innerHTML = '';
+  /* ★ 123차. 보류 원인 경로(나간 쪽만 정함)의 섞인 거래처에는 「매출」을 내지 않는다 */
+  var 매출빼기 = g.mixed && !!(UP.holdAsk && UP.holdAsk.종류 === '원인');
   /* 감춘 항목(약국의 「주류·음료」 등)은 목록에도 안 나온다.
      다만 그 항목으로 이미 정해둔 거래처라면 보여야 바꾸실 수 있다 */
   UP.accounts
     .filter(function (n) {
+      if (매출빼기 && n === '매출') return false;
       return (!isHidden(n) || gCats(g).indexOf(n) !== -1) && (!shown || shown.indexOf(n) === -1);
     })
     .forEach(function (name) {
@@ -2292,7 +2309,10 @@ function pickCat(g, cat, isIn) {
   UP.said = isKeep(cat) ? cat : null;
   /* 섞인 거래처는 양쪽을 다 정하셔야 다음으로 넘어간다
      ★ 119차. 보류 원인 경로는 출금 쪽이 정해지면 넘어간다 */
-  if (gDone(g) || (원인길 && gCatFor(g, false))) UP.pos++;
+  /* ★ 123차. 섞인 거래처에 한 번에 「매출」을 고르시면 들어온 쪽만 매출이 된다 (gSetCat).
+     나간 쪽이 아직 안 정함이어도 넘어간다 — 결과 화면 「아직 안 정한 돈」에서 정하신다 */
+  var 매출만 = !원인길 && g.mixed && isIn === null && cat === '매출';
+  if (gDone(g) || (원인길 && gCatFor(g, false)) || 매출만) UP.pos++;
   utPick();
   savePicks(); /* 찍을 때마다 바로 남긴다 */
   /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다

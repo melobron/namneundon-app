@@ -2666,11 +2666,7 @@ function drawPayeeFix(panel, d, name) {
 /* 그 항목으로 찍은 거래처를 그 자리에서 다시 찍게 한다 */
 function drawCatFix(panel, d, cat) {
   panel.innerHTML = '';
-  var list = nhisSplitRows(
-    d,
-    cat,
-    catPayees(d, cat)
-  ); /* 공단 섞인 곳은 쪽마다 한 줄 (보완 2차 가) */
+  var list = mixedSplitRows(d, cat, catPayees(d, cat)); /* 섞인 곳은 쪽마다 한 줄 (123차) */
   if (!list.length) {
     panel.appendChild(el('div', 'cka', '이 항목으로 정하신 거래처가 없습니다.'));
     return;

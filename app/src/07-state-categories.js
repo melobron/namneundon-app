@@ -167,9 +167,11 @@ function deleteCat(name, moveTo) {
       g.catIn = moveTo || null;
       if (!moveTo) g.autoIn = false;
     }
+    /* ★ 123차. 섞인 거래처의 나간 쪽은 매출로 옮기지 않고 아직 안 정함으로 둔다 (gSetCat 과 같은 까닭) */
     if (g.catOut === name) {
-      g.catOut = moveTo || null;
-      if (!moveTo) g.autoOut = false;
+      var to = moveTo === '매출' ? null : moveTo;
+      g.catOut = to || null;
+      if (!to) g.autoOut = false;
     }
     if (g.cat === name) {
       g.cat = moveTo || null;

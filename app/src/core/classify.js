@@ -443,8 +443,12 @@ function gAutoFor(g, isIn) {
   if (g.mixed) return isIn ? !!g.autoIn : !!g.autoOut;
   return !!g.auto;
 }
+/* ★ 123차. 섞인 거래처의 나간 쪽에는 「매출」을 넣지 않는다 — 출금이 매출이 되면 그 달 매출이 마이너스가 된다.
+   한 번에 양쪽을 정하는 길(질문 카드 · 같은 곳 · 묶음 · 거래처 목록)에서 매출을 고르시면 들어온 쪽만 매출이 되고,
+   나간 쪽은 두던 대로(대개 아직 안 정함) 남는다. 한쪽만 있는 거래처는 예전 그대로다 */
 function gSetCat(g, isIn, cat, auto) {
   if (g.mixed) {
+    if (!isIn && cat === '매출') return;
     if (isIn) {
       g.catIn = cat;
       g.autoIn = !!auto;
