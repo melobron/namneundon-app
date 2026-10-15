@@ -813,6 +813,12 @@ function skipTotals() {
 }
 /* 큐를 새로 만든다 — 넘길 것을 먼저 찍고 남은 것만 줄에 세운다 */
 function buildQueue(ordered) {
+  /* ★ 공단 입금 보완 (2026-10-15). 업종·지난 분류가 다 정해진 뒤 줄을 세우는 자리가 여기다 —
+     새 파일·다시 열기·매장 불러오기·분류 파일 불러오기가 모두 지난다.
+     병원·치과·약국의 공단 입금에 붙은 자동 '보험'을 걷어 묻는 줄에 세운다 (core/classify.js) */
+  (UP.payees || []).forEach(function (g) {
+    nhisHoldIn(UP, g);
+  });
   applyAskSkip();
   var rest = UP.payees.filter(function (g) {
     return !gDone(g) && !g.cardMixed;
@@ -1598,8 +1604,20 @@ function drawOnboard() {
 
   var g = UP.queue[UP.pos];
   var cardQuestion = isCardOut(g) && !g.cardBiz;
+  /* ★ 공단 입금 보완 (2026-10-15). 병원·치과·약국의 공단 입금은 입금 쪽만 여쭌다.
+     섞인 거래처는 출금 쪽(보험료)이 이미 정해졌을 때만 이 질문이다 — 받은 답을 입금 쪽에만 넣는다 (pickCat) */
+  var nhis =
+    !cardQuestion && nhisAskIn(UP, g) && !gCatFor(g, true) && (!g.mixed || !!gCatFor(g, false));
   host.appendChild(
-    el('div', 'obquestion', cardQuestion ? '이 카드는 어떻게 쓰셨나요?' : '이 거래는 무엇인가요?')
+    el(
+      'div',
+      'obquestion',
+      cardQuestion
+        ? '이 카드는 어떻게 쓰셨나요?'
+        : nhis
+          ? '공단에서 받은 이 돈은 진료·조제 대금인가요?'
+          : '이 거래는 무엇인가요?'
+    )
   );
   /* 36차 G. 같은 앞글자·같은 카드 대금이 여럿이면 한 줄로 묶어 한 번에 찍게 한다 */
   /* ★ 119차. 보류 원인 경로에서는 묶지 않는다 — 묶음에는 원인이 아닌 거래처가 섞인다 */
@@ -1695,7 +1713,20 @@ function drawOnboard() {
      ★ 나간 돈이 한 건도 없는 곳만 들어온 쪽으로 묻는다 —
        그렇게 안 하면 「결산이자」처럼 들어오기만 하는 곳에 나간 쪽 목록이 나오고,
        「이자」 낱말이 나간 쪽 추천(대출 상환)을 끌고 온다 (63-2 ★) */
-  var askIn = !g.outN;
+  var askIn = !g.outN || nhis;
+  /* ★ 공단 입금 보완 (2026-10-15). 고르기 전에는 매출에 안 들어간다는 것과 고를 곳을 함께 적는다.
+     이름만으로 매출을 추천(✨)하지 않는다 — 고르시는 것은 대표님이다 */
+  if (nhis) {
+    card.appendChild(
+      el(
+        'div',
+        'obsub',
+        '진료·조제 대금이면 「매출」을, 보험료 환급 등 다른 돈이면 맞는 항목을 골라 주세요. ' +
+          '확인 전에는 이 입금이 매출에 들어가지 않습니다.' +
+          (g.mixed ? ' 나간 돈(' + gCatFor(g, false) + ')은 그대로 둡니다.' : '')
+      )
+    );
+  }
 
   drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn);
   if (whyAll.length) card.appendChild(el('div', 'obwhy', '↑ ' + whyAll.join(' · ')));
@@ -1882,7 +1913,12 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
         front.push(h.cat);
         bits.push({ kind: 'made', word: h.word });
       });
+      /* ★ 공단 입금 보완 (2026-10-15). 공단 입금을 묻는 카드에는 이름·적요 낱말 추천을 달지 않는다.
+         「건강」 낱말이 '보험✨'을 첫 버튼으로 올려, 진료·조제 대금을 묻는 자리에서 보험 쪽으로 민다.
+         대표님이 비슷한 이름에 정하신 것(learned)은 그대로 추천한다 — 같은 답을 다시 찾지 않게 */
+      var 공단 = isIn && nhisAskIn(UP, g);
       hintFor(g.name, isIn ? 1 : -1).forEach(function (h) {
+        if (공단) return;
         if (front.length >= 3 || front.indexOf(h.cat) !== -1) return;
         /* 지운 항목을 가리키는 추천은 버린다 — 없는 항목을 권하면 안 된다 */
         if (UP.accounts.indexOf(baseName(h.cat)) === -1) return;
@@ -1893,6 +1929,7 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
       /* ★ 81차 ③. 이름에서 걸린 것과 적요에서 걸린 것을 둘 다 후보로 삼는다.
          적요에서 걸린 것은 설명을 따로 말한다 — 「적요에 …」 */
       memoHints(g, isIn).forEach(function (h) {
+        if (공단) return;
         if (front.length >= 3 || front.indexOf(h.cat) !== -1) return;
         if (UP.accounts.indexOf(baseName(h.cat)) === -1) return;
         front.push(h.cat);
@@ -2235,7 +2272,10 @@ function pickCat(g, cat, isIn) {
      입금 쪽은 정해져 있든 아니든 건드리지 않는다 */
   var 원인길 = !!(UP.holdAsk && UP.holdAsk.종류 === '원인');
   if (원인길 && g.mixed) gSetCat(g, false, cat, false);
-  else if (g.mixed && isIn === null) {
+  else if (nhisInOnlyIn(UP, g)) {
+    /* ★ 공단 입금 보완 (2026-10-15). 섞인 공단 거래처는 입금 쪽만 여쭸다 — 출금(보험료)은 그대로 둔다 */
+    gSetCat(g, true, cat, false);
+  } else if (g.mixed && isIn === null) {
     /* ★ 63-4. 한 번 묻고 양쪽에 같이 넣는다. 되묻지 않는다 —
        방향이 뜻을 가르는 항목(「대출」·「사업 외 용도」)은 sideOf 가 화면과
        계산에서 갈라 준다. 사장님께 두 번 여쭐 까닭이 없다 */

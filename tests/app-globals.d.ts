@@ -97,3 +97,8 @@ declare var xferAnswer: any;
 declare var xferPairKeyIn: any;
 declare var xferKey: any;
 declare var clearXferAnswer: any;
+declare var gSetCat: any;
+declare var buildQueue: any;
+declare var savePicks: any;
+declare var baseName: any;
+declare var CAT_CV: any;
