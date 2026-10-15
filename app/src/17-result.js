@@ -2708,7 +2708,12 @@ function drawCatFix(panel, d, cat) {
       nm.appendChild(el('div', 'dspan', SALES_OUT_NOTE));
     row.appendChild(nm);
     row.appendChild(
-      el('div', 'dv num', won(typeof e.side === 'boolean' ? Math.abs(e.sum) : e.sum))
+      /* 123차 ⑤. 매출 목록의 나간 줄은 마이너스로 (drawDetail 과 같다) */
+      el(
+        'div',
+        'dv num',
+        won(typeof e.side === 'boolean' && !(cat === '매출' && !e.side) ? Math.abs(e.sum) : e.sum)
+      )
     );
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');

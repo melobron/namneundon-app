@@ -367,3 +367,61 @@ test('출금을 이미 정해 둔 섞인 거래처에 카드에서 「매출」 
   ]);
   expect(errors).toEqual([]);
 });
+
+// 123차 ⑤ — 표시만. 매출 목록에서 매출 차감 출금 줄은 출금만 있는 거래처 줄처럼 마이너스로 보인다
+test('매출 목록 — 섞인 거래처의 나간 줄(매출 차감)은 마이너스, 들어온 줄은 플러스', async ({
+  page
+}) => {
+  const errors = await openApp(page);
+  // 63-4 때처럼 「매출」 하나로 저장된 섞인 거래처 — 되살리면 양쪽이 매출
+  await page.evaluate(
+    ([store, mix]) => {
+      localStorage.setItem(
+        'fc.picks.' + store,
+        JSON.stringify({
+          v: 1,
+          cv: CAT_CV,
+          업종: '식당',
+          store,
+          owner: '홍길동',
+          picks: { [mix]: '매출', 가람카드: '매출', 나래식자재: '식자재', 건물주A: '월세' }
+        })
+      );
+    },
+    [STORE, MIX]
+  );
+  await startWith(page, '식당', await nhisXlsx(page, rows()), STORE, false);
+  await answerCards(page, BASE);
+  await toResult(page, false);
+  // 계산은 그대로 (매출 13,200,000)
+  expect(await april(page)).toEqual([13200000, 6000000, 0, 0, '매출', '매출']);
+
+  // 항목별 목록 (drawDetail)
+  await openSection(page, '사업으로 번 돈', '매출');
+  const value = (label) =>
+    page
+      .locator('.dtl .drow', { has: page.locator('.dnm', { hasText: label }) })
+      .first()
+      .locator('.dv')
+      .innerText();
+  expect(await value(MIX + ' · 나간 돈')).toBe('−2,500,000');
+  expect(await value(MIX + ' · 들어온 돈')).toBe('700,000');
+  expect(await value('가람카드')).toBe('15,000,000');
+
+  // 정하신 거래처 목록 (drawCatFix) — 같은 규칙
+  const fix = await page.evaluate(() => {
+    const box = document.createElement('div');
+    drawCatFix(box, monthNumbers('2025-04'), '매출');
+    return [...box.querySelectorAll('.drow')].map((r) => [
+      r.querySelector('.dnm').textContent,
+      r.querySelector('.dv').textContent
+    ]);
+  });
+  expect(fix).toEqual(
+    expect.arrayContaining([
+      [expect.stringContaining(MIX + ' · 나간 돈'), '−2,500,000'],
+      [expect.stringContaining(MIX + ' · 들어온 돈'), '700,000']
+    ])
+  );
+  expect(errors).toEqual([]);
+});

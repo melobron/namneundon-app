@@ -1817,7 +1817,9 @@ function drawDetail(host, d, cat) {
     if (cat === '매출' && (split ? !side : gOutOnly(g)))
       nm.appendChild(el('div', 'dspan', SALES_OUT_NOTE));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(split ? Math.abs(e.sum) : e.sum)));
+    /* ★ 123차 ⑤. 매출 목록의 나간 줄(매출 차감)은 마이너스로 — 출금만 있는 거래처 줄과 같은 부호. 표시만 바꾼다 */
+    var signed = !split || (cat === '매출' && !side);
+    row.appendChild(el('div', 'dv num', won(signed ? e.sum : Math.abs(e.sum))));
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';
