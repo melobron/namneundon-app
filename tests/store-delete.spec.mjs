@@ -36,7 +36,8 @@ const store = (s, day) => ({
 const SEED = Object.assign({}, store('A', '2026-09-20'), store('B', '2026-09-10'), {
   'fc.last': 'A',
   fc_use: J({ v: 1, 연날: ['2026-09-20'] }),
-  'fc.breaks': J({ '2026-08-01|가나상회|2': 'ok' })
+  'fc.breaks': J({ '2026-08-01|가나상회|2': 'ok' }),
+  'fc.font': '2'
 });
 
 test('시작 화면 [지우기] — 매장 통 여섯과 fc.last 를 지우고, 다시 열어도 안 살아난다', async ({
@@ -53,10 +54,12 @@ test('시작 화면 [지우기] — 매장 통 여섯과 fc.last 를 지우고, 
   const line = page.locator('.gsline', { hasText: '〈A〉' });
   await line.getByRole('button', { name: '지우기' }).click();
   const ask = page.locator('.saveask:visible');
-  // 실제로 지우는 것만 적는다. 남는 기록이 있으니 「모두」라고 쓰지 않는다
+  // 실제로 지우는 것만 적는다. 남는 기록이 있으니 「모두」라고 쓰지 않고, 남는 것도 적는다 (123차)
   await expect(ask.locator('.addq')).toHaveText(
-    '「A」을 지울까요? 거래내역과 정하신 거래처 1곳, 예정 지출, 직접 적은 금액이 함께 지워집니다.'
+    '「A」을 지울까요? 거래내역과 정하신 거래처 1곳, 예정 지출, 직접 적은 금액이 함께 지워집니다. ' +
+      '잔액 확인 답과 사용 기록, 글자 크기 설정은 이 기기에 남습니다.'
   );
+  await expect(ask.locator('.addq')).not.toContainText('모두');
   await ask.getByRole('button', { name: '지우기' }).click();
   await expect(page.locator('.gsline', { hasText: '〈A〉' })).toHaveCount(0);
 
@@ -67,8 +70,10 @@ test('시작 화면 [지우기] — 매장 통 여섯과 fc.last 를 지우고, 
       expect(after[kind + 'B'], kind + 'B').toEqual(tryJson(SEED[kind + 'B']));
     }
     expect(after['fc.last']).toBeUndefined();
+    // 확인 문장이 「남는다」고 적은 것은 그대로 남는다 — fc.breaks 는 어느 매장 답인지 가릴 열쇠가 없다 (123차)
     expect(after.fc_use).toBeDefined();
-    expect(after['fc.breaks']).toBeDefined();
+    expect(after['fc.breaks']).toEqual(tryJson(SEED['fc.breaks']));
+    expect(after['fc.font']).toBeDefined();
   };
   await check();
 

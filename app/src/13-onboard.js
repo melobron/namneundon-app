@@ -1117,10 +1117,11 @@ function pickBundle(b, cat) {
     })
   });
   b.mems.forEach(function (g) {
+    /* ★ 123차. 한쪽을 손수 정해 두신 섞인 곳은 남은 쪽에만 (gSetCatAnswer) */
     if (g.mixed) {
-      gSetCat(g, true, cat, false);
-      gSetCat(g, false, cat, false);
-    } else {
+      gSetCatAnswer(g, cat);
+    } else if (!(cat === '매출' && gOutOnly(g))) {
+      /* 출금만 있는 곳은 묻지 않고 매출로 두지 않는다 (123차) */
       g.cat = cat;
       g.auto = false;
     }
@@ -1712,7 +1713,9 @@ function drawOnboard() {
      ★ 나간 돈이 한 건도 없는 곳만 들어온 쪽으로 묻는다 —
        그렇게 안 하면 「결산이자」처럼 들어오기만 하는 곳에 나간 쪽 목록이 나오고,
        「이자」 낱말이 나간 쪽 추천(대출 상환)을 끌고 온다 (63-2 ★) */
-  var askIn = !g.outN || nhis;
+  /* ★ 123차. 나간 쪽을 손수 정해 두셔서 들어온 쪽만 남은 섞인 곳도 들어온 쪽 목록으로 묻는다 */
+  var 남은쪽 = gOpenSideByHand(g);
+  var askIn = !g.outN || nhis || 남은쪽 === true;
   /* ★ 공단 입금 보완 (2026-10-15). 고르기 전에는 매출에 안 들어간다는 것과 고를 곳을 함께 적는다.
      이름만으로 매출을 추천(✨)하지 않는다 — 고르시는 것은 대표님이다 */
   if (nhis) {
@@ -1723,6 +1726,17 @@ function drawOnboard() {
         '진료·조제 대금이면 「매출」을, 보험료 환급 등 다른 돈이면 맞는 항목을 골라 주세요. ' +
           '확인 전에는 이 입금이 매출에 들어가지 않습니다.' +
           (g.mixed ? ' 나간 돈(' + gCatFor(g, false) + ')은 그대로 둡니다.' : '')
+      )
+    );
+  } else if (남은쪽 !== null) {
+    /* ★ 123차. 한쪽을 정해 두신 곳이 다시 물어지면 어느 쪽을 묻는지 · 정한 쪽은 그대로인지 적는다 */
+    card.appendChild(
+      el(
+        'div',
+        'obsub',
+        남은쪽
+          ? '나간 돈(' + g.catOut + ')은 정해 두신 그대로 둡니다. 들어온 돈의 항목을 골라 주세요.'
+          : '들어온 돈(' + g.catIn + ')은 정해 두신 그대로 둡니다. 나간 돈의 항목을 골라 주세요.'
       )
     );
   }
@@ -1878,6 +1892,14 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
       var at2 = quick.indexOf(etcName());
       quick.splice(at2 === -1 ? quick.length : at2, 0, '매출');
     }
+    /* ★ 123차. 보류 원인 경로는 나간 쪽만 정한다 — 나간 쪽에는 매출을 넣지 않으므로 버튼도 안 낸다 */
+    /* ★ 123차. 들어온 쪽을 손수 정해 두셔서 나간 쪽만 남은 곳도 같다 — 답이 나간 쪽에만 들어간다 (gSetCatAnswer) */
+    var 원인 =
+      (!!(UP.holdAsk && UP.holdAsk.종류 === '원인') && g.mixed) || gOpenSideByHand(g) === false;
+    if (원인 && quick.indexOf('매출') !== -1) quick.splice(quick.indexOf('매출'), 1);
+    /* ★ 123차. 섞인 거래처에서 「매출」은 들어온 돈에만 들어간다 — 고르시기 전에 알린다 */
+    var 매출안내 =
+      !원인 && side === null && g.mixed && !gCatFor(g, false) && quick.indexOf('매출') !== -1;
     /* ★ 81차 ②. 이유를 완성된 문장이 아니라 조각으로 모은다.
        별표를 달았는지(spark) 정해진 뒤에야 어떤 문장으로 말할지 갈리기 때문이다 */
     var front = [],
@@ -2032,6 +2054,14 @@ function drawSideChoices(g, card, isOwner, whyAll, sides, single, askIn) {
     more.appendChild(el('span', 'chev', ' ▾'));
     btns.appendChild(more);
     card.appendChild(btns);
+    if (매출안내)
+      card.appendChild(
+        el(
+          'div',
+          'obsub',
+          '들어온 돈만 매출로 정합니다. 아직 정하지 않은 나간 돈은 결과 화면에서 정할 수 있습니다.'
+        )
+      );
 
     var menu = el('div', 'menu');
     menu.hidden = true;
@@ -2080,10 +2110,14 @@ function appendReachedResult(reached, host) {
 /* side : 섞인 거래처에서 어느 쪽을 정하는 중인가 (35차 B). 한쪽만 있는 곳은 null */
 function drawCatMenu(menu, g, side, shown) {
   menu.innerHTML = '';
+  /* ★ 123차. 보류 원인 경로(나간 쪽만 정함) · 들어온 쪽을 손수 정해 두신 섞인 거래처에는 「매출」을 내지 않는다 */
+  var 매출빼기 =
+    (g.mixed && !!(UP.holdAsk && UP.holdAsk.종류 === '원인')) || gOpenSideByHand(g) === false;
   /* 감춘 항목(약국의 「주류·음료」 등)은 목록에도 안 나온다.
      다만 그 항목으로 이미 정해둔 거래처라면 보여야 바꾸실 수 있다 */
   UP.accounts
     .filter(function (n) {
+      if (매출빼기 && n === '매출') return false;
       return (!isHidden(n) || gCats(g).indexOf(n) !== -1) && (!shown || shown.indexOf(n) === -1);
     })
     .forEach(function (name) {
@@ -2279,9 +2313,9 @@ function pickCat(g, cat, isIn) {
   } else if (g.mixed && isIn === null) {
     /* ★ 63-4. 한 번 묻고 양쪽에 같이 넣는다. 되묻지 않는다 —
        방향이 뜻을 가르는 항목(「대출」·「사업 외 용도」)은 sideOf 가 화면과
-       계산에서 갈라 준다. 사장님께 두 번 여쭐 까닭이 없다 */
-    gSetCat(g, false, cat, false);
-    gSetCat(g, true, cat, false);
+       계산에서 갈라 준다. 사장님께 두 번 여쭐 까닭이 없다
+       ★ 123차. 한쪽을 손수 정해 두신 곳은 남은 쪽에만 넣는다 (gSetCatAnswer) */
+    gSetCatAnswer(g, cat);
   } else if (g.mixed) gSetCat(g, isIn, cat, false);
   else {
     g.cat = cat;
@@ -2292,7 +2326,10 @@ function pickCat(g, cat, isIn) {
   UP.said = isKeep(cat) ? cat : null;
   /* 섞인 거래처는 양쪽을 다 정하셔야 다음으로 넘어간다
      ★ 119차. 보류 원인 경로는 출금 쪽이 정해지면 넘어간다 */
-  if (gDone(g) || (원인길 && gCatFor(g, false))) UP.pos++;
+  /* ★ 123차. 섞인 거래처에 한 번에 「매출」을 고르시면 들어온 쪽만 매출이 된다 (gSetCat).
+     나간 쪽이 아직 안 정함이어도 넘어간다 — 결과 화면 「아직 안 정한 돈」에서 정하신다 */
+  var 매출만 = !원인길 && g.mixed && isIn === null && cat === '매출';
+  if (gDone(g) || (원인길 && gCatFor(g, false)) || 매출만) UP.pos++;
   utPick();
   savePicks(); /* 찍을 때마다 바로 남긴다 */
   /* 은행 표기만 다른 같은 거래처가 있으면 이어서 물어본다
@@ -2327,11 +2364,12 @@ function takeAsk(yes) {
       kind: 'same',
       qi: qi >= UP.pos ? qi : -1
     });
-    /* 섞인 곳이면 양쪽에 같은 것을 넣는다. 방향에 따라 뜻이 갈리는 이름은 화면이 돌려 준다 */
+    /* 섞인 곳이면 양쪽에 같은 것을 넣는다. 방향에 따라 뜻이 갈리는 이름은 화면이 돌려 준다
+       ★ 123차. 한쪽을 손수 정해 두신 곳은 남은 쪽에만 (gSetCatAnswer) */
     if (a.g.mixed) {
-      gSetCat(a.g, true, a.cat, false);
-      gSetCat(a.g, false, a.cat, false);
-    } else {
+      gSetCatAnswer(a.g, a.cat);
+    } else if (!(a.cat === '매출' && gOutOnly(a.g))) {
+      /* 출금만 있는 곳은 묻지 않고 매출로 두지 않는다 (123차) */
       a.g.cat = a.cat;
       a.g.auto = false;
     }

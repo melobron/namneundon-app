@@ -106,13 +106,13 @@ function setCat(g, name, isIn) {
 }
 /* ★ 공단 입금 보완 (2026-10-15 보완 2번). 섞인 거래처는 고친 줄이 들어온 돈인지 나간 돈인지(isIn)로
    그쪽에만 넣는다. 양쪽에 넣으면(63-4) 「국민건강」 환급을 매출로 고칠 때 보험료 출금도 매출이 된다.
-   ★ 쪽을 모르는 자리(거래처 한 곳 전체를 보여주는 곳)는 isIn 없이 불러 예전처럼 양쪽에 넣는다 */
+   ★ 쪽을 모르는 자리(거래처 한 곳 전체를 보여주는 곳)는 isIn 없이 불러 예전처럼 양쪽에 넣는다.
+     다만 「매출」은 들어온 쪽에만 들어간다 (123차, gSetCat) */
 function setCatSide(g, name, isIn) {
   if (g.mixed && typeof isIn === 'boolean') {
     gSetCat(g, isIn, name, false);
   } else if (g.mixed) {
-    gSetCat(g, true, name, false);
-    gSetCat(g, false, name, false);
+    gSetCatAnswer(g, name); /* 123차. 한쪽을 손수 정해 두신 곳은 남은 쪽에만 */
   } else {
     g.cat = name;
     g.auto = false;
@@ -169,12 +169,7 @@ function drawChangeMenu(box, g, after, isIn) {
       b.appendChild(el('span', 'msub', note2));
     }
     b.addEventListener('click', function () {
-      if (after) {
-        setCatQuiet(g, name, isIn);
-        after(name);
-        return;
-      }
-      setCat(g, name, isIn);
+      pickInMenu(box, g, after, isIn, name);
     });
     box.appendChild(b);
   });
@@ -201,13 +196,73 @@ function drawChangeMenu(box, g, after, isIn) {
   }
 }
 
+/* ★ 123차 (2026-10-16 결정). 출금을 「매출」로 두는 것은 막지 않는다 — 카드 취소 · 환불 같은 「매출 차감」일 수 있다.
+   다만 묻지 않고 들어가지 않게, 출금 쪽에 매출이 들어갈 때는 한 번 더 확인한다.
+   섞인 거래처의 나간 줄 · 출금만 있는 거래처 · 들어온 쪽을 정해 두셔서 나간 쪽만 남은 곳이 그렇다.
+   쪽을 모르는 자리에서 섞인 거래처에 매출을 고르시면 들어온 쪽에만 들어가므로(gSetCatAnswer) 묻지 않는다 */
+function salesOutAsks(g, isIn) {
+  if (!g) return false;
+  if (g.mixed) return isIn === false || (typeof isIn !== 'boolean' && gOpenSideByHand(g) === false);
+  return gOutOnly(g);
+}
+function pickInMenu(box, g, after, isIn, name) {
+  var go = function (side) {
+    if (after) {
+      setCatQuiet(g, name, side);
+      after(name);
+      return;
+    }
+    setCat(g, name, side);
+  };
+  if (name !== '매출' || !salesOutAsks(g, isIn)) {
+    go(isIn);
+    return;
+  }
+  salesOutAsk(
+    box,
+    function () {
+      /* 확인하셨으니 나간 쪽에 넣는다. 한쪽만 있는 거래처는 그 한 벌(cat)이다 */
+      go(g.mixed ? false : isIn);
+    },
+    function () {
+      drawChangeMenu(box, g, after, isIn);
+    }
+  );
+}
+/* 확인 창 — [매출 차감으로 정하기] · [취소] */
+function salesOutAsk(box, onYes, onNo) {
+  box.innerHTML = '';
+  box.hidden = false;
+  var w = el('div', 'addbox sales-out');
+  w.appendChild(
+    el(
+      'div',
+      'addq',
+      '나간 돈을 매출로 정하면 매출을 줄이는 출금(환불·취소)으로 반영됩니다. 이렇게 정할까요?'
+    )
+  );
+  var row = el('div', 'addrow');
+  var yes = el('button', 'b on', '매출 차감으로 정하기');
+  yes.type = 'button';
+  yes.addEventListener('click', onYes);
+  var no = el('button', 'b', '취소');
+  no.type = 'button';
+  no.addEventListener('click', onNo);
+  row.appendChild(yes);
+  row.appendChild(no);
+  w.appendChild(row);
+  box.appendChild(w);
+}
+/* 출금이 「매출」로 정해진 줄에 붙이는 작은 안내 (오류 표시가 아니다) */
+var SALES_OUT_NOTE = '매출을 줄이는 출금으로 반영됩니다';
+
 function drawCatAddHere(box, g, isIn) {
   drawNameBox(box, {
     onCancel: function () {
       drawChangeMenu(box, g, undefined, isIn);
     },
     onDone: function (name) {
-      setCat(g, name, isIn);
+      pickInMenu(box, g, undefined, isIn, name);
     }
   });
 }
@@ -1698,12 +1753,14 @@ function drawUnsetDetail(host, d, months) {
    들어온 줄과 나간 줄을 따로 보인다. 한 줄로 합치면 금액은 둘을 뺀 값인데 고치는 쪽은 한쪽뿐이라,
    「보험」 목록에서 매출로 고치면 보험료 출금만 매출이 되어 그 달 매출이 마이너스가 됐다.
    ★ 줄마다 side 를 달고 [항목 바꾸기]는 그 줄의 쪽만 고친다 — 보이는 쪽과 고치는 쪽이 늘 같다.
-   ★ 공단이 아닌 섞인 거래처는 이번에 건드리지 않는다 (보고만) */
-function nhisSplitRows(d, cat, list) {
+   ★ 123차. 업종 · 공단과 상관없이 섞인 거래처는 모두 나눈다. 공단이 아닌 곳에서도 「보험」 목록의
+     한 줄(입금 70만 · 출금 250만)을 매출로 고치면 출금만 매출이 되어 매출이 −250만이 됐다.
+     섞이지 않은 거래처는 예전처럼 한 줄이다 */
+function mixedSplitRows(d, cat, list) {
   var out = [];
   list.forEach(function (e) {
     var g = UP.byName[e.name];
-    if (!(g && g.mixed && nhisAskIn(UP, g))) {
+    if (!(g && g.mixed)) {
       out.push(e);
       return;
     }
@@ -1721,7 +1778,10 @@ function nhisSplitRows(d, cat, list) {
       if (by[k]) out.push(by[k]);
     });
   });
-  return out;
+  /* 나눈 줄도 금액 큰 순서에 맞춘다 (2026-09-29 확정). 같으면 원래 차례 그대로 (안정 정렬) */
+  return out.sort(function (a, b) {
+    return Math.abs(b.sum) - Math.abs(a.sum);
+  });
 }
 /* 쪽을 나눈 줄의 이름 — 어느 쪽 돈인지 말한다 */
 function sideRowText(e) {
@@ -1729,9 +1789,9 @@ function sideRowText(e) {
   return showName(e.name) + ' · ' + (e.side ? '들어온 돈 ' : '나간 돈 ') + e.n + '건';
 }
 /* 매출 목록의 줄은 들어온 돈, 나간 쪽 항목 목록의 줄은 나간 돈이다 — 고치면 그쪽에만 넣는다 (보완 2번).
-   쪽을 나눈 공단 줄은 그 줄의 쪽이다 (보완 2차 가) */
+   쪽을 나눈 섞인 거래처 줄은 그 줄의 쪽이다 (보완 2차 가 · 123차) */
 function drawDetail(host, d, cat) {
-  var list = nhisSplitRows(d, cat, catPayees(d, cat));
+  var list = mixedSplitRows(d, cat, catPayees(d, cat));
   var box = el('div', 'dtl');
   var shown = UP.open[cat] === true ? DTL_STEP : UP.open[cat];
   var n = Math.min(list.length, shown);
@@ -1753,8 +1813,13 @@ function drawDetail(host, d, cat) {
     if (auto) nm.appendChild(el('span', 'autotag', '(앱이 넣음)'));
     /* 나간 쪽 목록의 들어온 줄은 이 항목 금액에 안 들어가고 그 밖의 입금으로 간다 */
     if (split && side && cat !== '매출') nm.appendChild(el('span', 'autotag', '(그 밖의 입금)'));
+    /* ★ 123차. 출금이 매출로 정해진 줄 — 오류가 아니라 매출 차감이라고 알린다. 옛 저장 자료도 여기서 보인다 */
+    if (cat === '매출' && (split ? !side : gOutOnly(g)))
+      nm.appendChild(el('div', 'dspan', SALES_OUT_NOTE));
     row.appendChild(nm);
-    row.appendChild(el('div', 'dv num', won(split ? Math.abs(e.sum) : e.sum)));
+    /* ★ 123차 ⑤. 매출 목록의 나간 줄(매출 차감)은 마이너스로 — 출금만 있는 거래처 줄과 같은 부호. 표시만 바꾼다 */
+    var signed = !split || (cat === '매출' && !side);
+    row.appendChild(el('div', 'dv num', won(signed ? e.sum : Math.abs(e.sum))));
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
     btn.type = 'button';

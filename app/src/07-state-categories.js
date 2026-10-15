@@ -167,13 +167,17 @@ function deleteCat(name, moveTo) {
       g.catIn = moveTo || null;
       if (!moveTo) g.autoIn = false;
     }
+    /* ★ 123차. 출금은 묻지 않고 매출로 옮기지 않는다 — 섞인 거래처의 나간 쪽 · 출금만 있는 거래처는
+       아직 안 정함으로 두고, 매출 차감으로 둘지는 결과 화면 확인 창에서 정하신다 (gSetCatAnswer 와 같은 까닭) */
     if (g.catOut === name) {
-      g.catOut = moveTo || null;
-      if (!moveTo) g.autoOut = false;
+      var to = moveTo === '매출' ? null : moveTo;
+      g.catOut = to || null;
+      if (!to) g.autoOut = false;
     }
     if (g.cat === name) {
-      g.cat = moveTo || null;
-      if (!moveTo) g.auto = false;
+      var to2 = moveTo === '매출' && gOutOnly(g) ? null : moveTo;
+      g.cat = to2 || null;
+      if (!to2) g.auto = false;
     }
   });
   UP.accounts = UP.accounts.filter(function (x) {

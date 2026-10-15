@@ -224,14 +224,20 @@ function delStore(name, rawKey) {
   delData(name);
 }
 /* [지우기] 확인 문장에 넣을 것 — 실제로 있는 통만 적는다. 없는 것을 지운다고 쓰지 않는다.
-   ★ 남는 기록(fc_use 등)이 있어 「모두」라고 쓰지 않는다. 낱말이 다 받침으로 끝나 「과」 · 「이」로 잇는다 */
+   ★ 남는 기록(fc_use 등)이 있어 「모두」라고 쓰지 않는다. 낱말이 다 받침으로 끝나 「과」 · 「이」로 잇는다
+   ★ 123차. 남는 것도 적는다. fc.breaks 는 열쇠가 「날짜|원문 이름|엑셀 행번호」뿐이라 어느 매장 답인지
+     확실히 가릴 수 없다 (매장 이름을 묻기 전에 저장된다). 이름으로 짐작해 지우면 다른 매장 답까지 지울 수 있어
+     지우지 않고 남는다고 알린다. 매장별로 나눠 저장하는 일은 별도 과제다 (docs/product.md) */
 function delStoreWhat(name, n) {
   var L = [];
   if (lsGet(dataKey(storeIdOf(name)))) L.push('거래내역');
   L.push(n ? '정하신 거래처 ' + won(n) + '곳' : '정하신 항목');
   if (lsGet(planKey(storeIdOf(name)))) L.push('예정 지출');
   if (lsGet(manualKey(storeIdOf(name)))) L.push('직접 적은 금액');
-  return (L.length > 1 ? L[0] + '과 ' + L.slice(1).join(', ') : L[0]) + '이 함께 지워집니다.';
+  return (
+    (L.length > 1 ? L[0] + '과 ' + L.slice(1).join(', ') : L[0]) +
+    '이 함께 지워집니다. 잔액 확인 답과 사용 기록, 글자 크기 설정은 이 기기에 남습니다.'
+  );
 }
 
 function pickPayload() {

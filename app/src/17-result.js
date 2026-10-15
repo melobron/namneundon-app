@@ -398,6 +398,16 @@ function drawResultInner(months) {
       drawResult(months);
     });
     host.appendChild(row);
+    /* ★ 123차 (2026-10-16 결정). 매출 차감으로 정한 출금이 커서 그 달 매출이 마이너스면 까닭을 알린다.
+       오류가 아니다 — 빨간 경고로 쓰지 않고 회색 안내 한 줄이다 */
+    if (side === 'in' && d.sales < 0)
+      host.appendChild(
+        el(
+          'div',
+          'subnote sales-minus',
+          '나간 돈 일부가 매출을 줄이는 출금으로 정해져 이 달 매출이 마이너스입니다'
+        )
+      );
     if (whyOpen(side)) host.appendChild(whyBox(side));
     if (!open) return;
     /* ★ 38차 1번. 펼치면 먼저 항목별이 나온다. 그다음이 직접 넣기 칸이다 */
@@ -2564,9 +2574,19 @@ function drawFindFor(panel, d, cat) {
         var btn = el('button', 'chbtn on', cat + ro(cat));
         btn.type = 'button';
         btn.addEventListener('click', function () {
-          setCatQuiet(g, cat);
-          st.picked[g.name] = 1;
-          render();
+          var done = function () {
+            setCatQuiet(g, cat);
+            st.picked[g.name] = 1;
+            render();
+          };
+          /* ★ 123차. 출금만 있는 거래처를 매출로 둘 때는 한 번 더 확인한다 (pickInMenu 와 같다) */
+          if (cat === '매출' && gOutOnly(g)) {
+            salesOutAsk(menu, done, function () {
+              menu.hidden = true;
+            });
+            return;
+          }
+          done();
         });
         var other = el('button', 'chbtn', '다른 항목');
         other.type = 'button';
@@ -2639,6 +2659,9 @@ function drawPayeeFix(panel, d, name) {
     mN++;
   });
   nm.appendChild(el('div', 'dspan', payeeSpan(g) + ' 통틀어 ' + g.n + '건 · ' + wonSign(g.net)));
+  /* ★ 123차. 출금이 매출로 정해진 거래처 */
+  if (g.mixed ? g.catOut === '매출' : g.cat === '매출' && gOutOnly(g))
+    nm.appendChild(el('div', 'dspan', '나간 돈은 ' + SALES_OUT_NOTE));
   row.appendChild(nm);
   row.appendChild(
     el('div', 'dv num', mN ? spanWord(UP.month, null) + ' ' + wonSign(mSum) : wonSign(g.net))
@@ -2666,11 +2689,7 @@ function drawPayeeFix(panel, d, name) {
 /* 그 항목으로 찍은 거래처를 그 자리에서 다시 찍게 한다 */
 function drawCatFix(panel, d, cat) {
   panel.innerHTML = '';
-  var list = nhisSplitRows(
-    d,
-    cat,
-    catPayees(d, cat)
-  ); /* 공단 섞인 곳은 쪽마다 한 줄 (보완 2차 가) */
+  var list = mixedSplitRows(d, cat, catPayees(d, cat)); /* 섞인 곳은 쪽마다 한 줄 (123차) */
   if (!list.length) {
     panel.appendChild(el('div', 'cka', '이 항목으로 정하신 거래처가 없습니다.'));
     return;
@@ -2684,9 +2703,17 @@ function drawCatFix(panel, d, cat) {
     var nm = el('div', 'dnm');
     if (e.unknown) nm.appendChild(el('span', 'unk', '(아직 안 정함)'));
     nm.appendChild(document.createTextNode(sideRowText(e)));
+    /* ★ 123차. 출금이 매출로 정해진 줄 (drawDetail 과 같다) */
+    if (cat === '매출' && (typeof e.side === 'boolean' ? !e.side : gOutOnly(UP.byName[e.name])))
+      nm.appendChild(el('div', 'dspan', SALES_OUT_NOTE));
     row.appendChild(nm);
     row.appendChild(
-      el('div', 'dv num', won(typeof e.side === 'boolean' ? Math.abs(e.sum) : e.sum))
+      /* 123차 ⑤. 매출 목록의 나간 줄은 마이너스로 (drawDetail 과 같다) */
+      el(
+        'div',
+        'dv num',
+        won(typeof e.side === 'boolean' && !(cat === '매출' && !e.side) ? Math.abs(e.sum) : e.sum)
+      )
     );
     var ch = el('div', 'dch');
     var btn = el('button', 'chbtn', '항목 바꾸기');
