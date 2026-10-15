@@ -82,6 +82,15 @@
     은행에서 받은 거래내역은 이 기기 안에만 남습니다. 밖으로 나가지 않습니다.<br>
     {{주인}}이 분류하신 항목·적어두신 예정 지출과 마지막으로 분석한 날짜가 이 브라우저에 남습니다.
   </div>
+  <!-- ★ 122차. D-테스트베드 참여 표기. 「! 안내」를 펼쳤을 때만 안내 아래에 보인다.
+       .upnote 안에 넣지 않는다 — 시작 화면(drawStart)이 .upnote 를 그대로 복사해 가서 첫 화면에도 나온다.
+       ★ 사무국 조건: 기관명·「인증·보증·공인·선정」을 쓰지 않는다 · 로고 가로 120px 안쪽 ·
+         로고 옆에 문구 한 줄 · 둘레 여백은 로고 높이 절반 이상 · 남는돈 로고보다 작게 · 밝은 바탕.
+       ★ 로고는 앱 폴더 안 파일이다 (외부 주소를 부르지 않는다). 색을 바꾸지 않은 무손실 WebP -->
+  <div class="testbed" id="testbed" hidden>
+    <img class="testbed-logo" src="d-testbed-logo.webp" width="76" height="20" alt="D-테스트베드">
+    <span class="testbed-text">2026년 하반기 D-테스트베드 참여팀</span>
+  </div>
 
   <div id="up-pick">
     <div id="up-tradenote"></div>

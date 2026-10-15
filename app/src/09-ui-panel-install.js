@@ -187,6 +187,9 @@ document.getElementById('upclose').addEventListener('click', closeUpPanel);
     var open = b.getAttribute('aria-expanded') === 'true';
     b.setAttribute('aria-expanded', open ? 'false' : 'true');
     n.hidden = open;
+    /* ★ 122차. 참여 표기는 안내와 함께 여닫는다 */
+    var tb = document.getElementById('testbed');
+    if (tb) tb.hidden = open;
   });
 })();
 
