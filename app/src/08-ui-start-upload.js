@@ -353,15 +353,7 @@ function drawStart() {
       back.appendChild(line);
       /* ★ 실수로 146곳짜리를 날리면 되돌릴 길이 없다. 먼저 묻는다 */
       ask.appendChild(
-        el(
-          'div',
-          'addq',
-          '「' +
-            이름 +
-            '」을 지울까요? ' +
-            (k.n ? '정하신 거래처 ' + won(k.n) + '곳이' : '저장된 거래내역이') +
-            ' 함께 지워집니다.'
-        )
+        el('div', 'addq', '「' + 이름 + '」을 지울까요? ' + delStoreWhat(k.name, k.n))
       );
       var arow = el('div', 'addrow');
       var yes = el('button', 'b on', '지우기');
@@ -370,8 +362,12 @@ function drawStart() {
         /* 지우는 것은 이 매장뿐이다. 다른 매장은 안 건드린다.
            ★ 91차 ④. 거래내역(fc.data)도 같이 지운다 — 한 번 누르면 깨끗이 사라져야 한다.
              분류만 지우고 거래내역을 두면 다음에 열 때 그것이 도로 살아난다 */
-        lsDel(k.key);
-        delData(k.name);
+        delStore(k.name, k.key);
+        /* ★ 122차. 지운 매장이 메모리에 열려 있으면 놓는다. 안 놓으면 「보던 화면으로 돌아가기」로
+           되돌아가 거래처 하나만 고쳐도 savePicks 가 fc.picks · fc.data · fc.last 를 도로 쓴다 (실측) */
+        var 지운곳 = storeIdOf(k.name);
+        if (MY_UP && storeIdOf(MY_UP.store) === 지운곳) MY_UP = null;
+        if (UP && !UP.demo && storeIdOf(UP.store) === 지운곳) startDemo();
         drawStart();
       });
       var no = el('button', 'b', '취소');
