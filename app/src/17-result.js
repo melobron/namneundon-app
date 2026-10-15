@@ -464,12 +464,13 @@ function drawResultInner(months) {
   var res = el('div', 'res restop mcalc mprofit');
   res.appendChild(el('div', 'msign', '='));
   /* ★ 이름은 「계좌 순이익」 그대로 둔다 — 계좌에 오간 돈만으로 낸 값이라
-     세무사가 내는 순이익과 다르다. 그 뜻이 이름에 들어 있다 */
+     세무사가 내는 순이익과 다르다. 그 뜻이 이름에 들어 있다
+     ★ 122차. 「계좌 순이익」도 순이익으로 읽혀 「차액」으로 바꿨다. 계산은 그대로다 */
   /* ★ 57차. 이름이 pLab 이었다. 위쪽(10914행)에 이미 같은 이름의 전월 라벨이
      있는데 var 는 함수 스코프라 둘이 같은 변수가 되어, 여기서 만든 DOM 요소가
      전월 라벨을 덮어썼다. 그래서 아래 cmpLine 이 그것을 글자로 찍어
      화면에 [object HTMLDivElement] 가 나왔다 (55차부터 · 예시 여덟 달 중 다섯 달) */
-  var profLab = el('div', 'lab', '계좌 순이익');
+  var profLab = el('div', 'lab', '차액');
   profLab.appendChild(
     whyMark('profit', function () {
       drawResult(months);
@@ -496,7 +497,7 @@ function drawResultInner(months) {
        한 번 더 풀어 쓰던 줄은 지웠다 (같은 말을 두 자리에 두지 않는다) */
   var 분류탓 = d.blocked && (d.uOut > 0 || d.uIn > 0);
   if (분류탓) {
-    host.appendChild(el('div', 'resbase', '거래 분류에 따라 계좌 순이익이 달라집니다.'));
+    host.appendChild(el('div', 'resbase', '거래 분류에 따라 차액이 달라집니다.'));
     host.appendChild(
       el(
         'div',
@@ -506,7 +507,7 @@ function drawResultInner(months) {
     );
   }
   if (d.blocked && !runNow && !분류탓) {
-    host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 순이익을 셀 수 없습니다'));
+    host.appendChild(el('div', 'resbase', '아직 안 정한 돈이 많아 차액을 셀 수 없습니다'));
   }
   drawBlockedRunning(months, host, d, lastD, runNow, 분류탓);
   drawUnsetShiftLine(months, host, d, unsetAmt);
@@ -1256,7 +1257,7 @@ function drawBlockedProfitNote(months, host, d, pd, pLab) {
         el(
           'div',
           null,
-          '지금 자료에서는 아직 안 정한 거래를 어느 쪽으로 정해도 계좌 순이익이 0원 ' +
+          '지금 자료에서는 아직 안 정한 거래를 어느 쪽으로 정해도 차액이 0원 ' +
             (d.lo >= 0 ? '이상입니다.' : '이하입니다.')
         )
       );

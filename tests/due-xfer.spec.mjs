@@ -148,7 +148,7 @@ test('분류 0곳 — 결과로 갈 수 있고, 매출이 분류되지 않았으
   await page.getByRole('button', { name: '파일 없이 직접 정하기' }).click();
   await page.getByRole('button', { name: '분류는 나중에 하고 결과 보기' }).click();
   await expect(page.getByRole('button', { name: '1년' })).toBeVisible();
-  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.locator('#up-result .pnl').first()).toContainText('차액');
   await expect(page.getByText(/은 위 숫자에 넣지 않았습니다/)).toBeVisible();
 
   // 자동으로 매출이 된 거래처를 미분류로 되돌린다 — 매출 입금이 모두 분류되지 않은 매장을 만든다
@@ -170,7 +170,7 @@ test('분류 0곳 — 결과로 갈 수 있고, 매출이 분류되지 않았으
   ).toBeVisible();
   await expect(page.getByRole('button', { name: '들어온 돈 확인하기' })).toBeVisible();
   await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
-  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.locator('#up-result .pnl').first()).toContainText('차액');
   expect(errors).toEqual([]);
 });
 
@@ -207,7 +207,7 @@ test('보류 사유 여럿 · 자료 3개월 미만', async ({ page }) => {
   await expect(c2).toContainText('예상 잔액을 보려면 3개월 이상의 거래내역을 추가해 주세요.');
   await expect(c2).not.toContainText('만원');
   await expect(page.locator('#up-result .duegraph')).toHaveCount(0);
-  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.locator('#up-result .pnl').first()).toContainText('차액');
   await expect(page.locator('#up-result')).toContainText('8월 22일 계좌 잔액');
   expect(errors).toEqual([]);
 });
@@ -357,6 +357,6 @@ test('입금 없음 · 입금 전부 매출 외', async ({ page }) => {
   await expect(page.locator('#up-result .duecard')).toContainText(
     '직전 30일에 들어온 돈이 없어 예상 입금을 계산할 수 없습니다.'
   );
-  await expect(page.locator('#up-result .pnl').first()).toContainText('계좌 순이익');
+  await expect(page.locator('#up-result .pnl').first()).toContainText('차액');
   expect(errors).toEqual([]);
 });

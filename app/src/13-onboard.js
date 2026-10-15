@@ -101,7 +101,7 @@ function askName() {
           el(
             'div',
             'addq',
-            '「' + label + '」에 정해둔 ' + won(k.n) + '곳이 지워집니다. 되돌릴 수 없습니다.'
+            '「' + label + '」을 지울까요? ' + delStoreWhat(k.name, k.n) + ' 되돌릴 수 없습니다.'
           )
         );
         var arow = el('div', 'addrow');
@@ -110,8 +110,7 @@ function askName() {
         yes.addEventListener('click', function () {
           /* 지우는 것은 이 매장뿐이다. fc_use·다른 매장은 안 건드린다.
            ★ 91차 ④. 거래내역(fc.data)도 같이 지운다 (위 시작 화면의 지우기와 같은 말) */
-          lsDel(k.key);
-          delData(k.name);
+          delStore(k.name, k.key);
           askName();
         });
         var no = el('button', 'b', '취소');
@@ -1507,7 +1506,7 @@ function drawOnboard() {
     /* 35차 A. 찍는 순간 결과를 한 줄로 말한다.
        「매출·지출에 넣지 않습니다」만으로는 내 순이익이 어떻게 되는지 안 보인다 */
     if (UP.said) {
-      host.appendChild(el('div', 'obsaid', '이렇게 정하면 순이익은 그대로입니다'));
+      host.appendChild(el('div', 'obsaid', '이렇게 정하면 차액은 그대로입니다'));
     }
   }
 

@@ -211,6 +211,28 @@ function delData(name) {
   var s = String(name != null ? name : (UP && UP.store) || '').trim() || '(기본)';
   if (lsGet(LAST_KEY) === s) lsDel(LAST_KEY);
 }
+/* ★ 122차. 시작 화면·매장 고르기의 [지우기]. 예전에는 fc.picks · fc.data · fc.last 만 지워
+   직접 적은 금액(fc.manual) · 계좌 이름(fc.banks) · 예정 지출(fc.plan) · 분석 날짜(nd_lastrun)가 남았다.
+   이름을 고칠 때 옮기는 통 여섯(storeKeysOf)을 그대로 다 지운다.
+   ★ rawKey 는 목록이 읽은 fc.picks 열쇠 그대로다 — 이름 앞뒤 빈칸이 있던 옛 열쇠도 지운다.
+   ★ 남는 것: fc_use(사용 기록) · fc.breaks(잔액 끊김 답) · 글씨 크기 등은 매장과 무관해 안 지운다 */
+function delStore(name, rawKey) {
+  if (rawKey) lsDel(rawKey);
+  storeKeysOf(name).forEach(function (k) {
+    lsDel(k);
+  });
+  delData(name);
+}
+/* [지우기] 확인 문장에 넣을 것 — 실제로 있는 통만 적는다. 없는 것을 지운다고 쓰지 않는다.
+   ★ 남는 기록(fc_use 등)이 있어 「모두」라고 쓰지 않는다. 낱말이 다 받침으로 끝나 「과」 · 「이」로 잇는다 */
+function delStoreWhat(name, n) {
+  var L = [];
+  if (lsGet(dataKey(storeIdOf(name)))) L.push('거래내역');
+  L.push(n ? '정하신 거래처 ' + won(n) + '곳' : '정하신 항목');
+  if (lsGet(planKey(storeIdOf(name)))) L.push('예정 지출');
+  if (lsGet(manualKey(storeIdOf(name)))) L.push('직접 적은 금액');
+  return (L.length > 1 ? L[0] + '과 ' + L.slice(1).join(', ') : L[0]) + '이 함께 지워집니다.';
+}
 
 function pickPayload() {
   /* 거래내역에 찍힌 원본 표기를 키로 쓴다.
