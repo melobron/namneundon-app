@@ -1,5 +1,5 @@
 function drawResult(months) {
-  var y = pageScrollTop(); /* 124차: 띠가 있으면 결과 칸(body)이 움직인다 */
+  var y = window.pageYOffset;
   var xs = [],
     ws = document.querySelectorAll('#up-result .ywrap'),
     i;
@@ -10,7 +10,7 @@ function drawResult(months) {
   } catch (e) {}
   ws = document.querySelectorAll('#up-result .ywrap');
   for (i = 0; i < ws.length && i < xs.length; i++) ws[i].scrollLeft = xs[i];
-  if (pageScrollTop() !== y) pageScrollTo(y);
+  if (window.pageYOffset !== y) window.scrollTo(0, y);
   /* ★ 105차 ④. 결과가 실제로 그려진 뒤다. 여기가 「분석이 끝난 날」이다 */
   try {
     markLastRun();
@@ -701,7 +701,7 @@ function drawViewToggle(months, mode) {
          예전에는 스크롤이 잘리는 덕에 우연히 위로 갔다 —
          고쳐서 그런 것이 아니었다. 위를 고치면 그 우연이 사라지므로
          여기서 일부러 부른다. 같은 보기를 다시 누르면 안 움직인다 */
-      if (바뀜) pageScrollTo(0);
+      if (바뀜) window.scrollTo(0, 0);
     });
     mode.appendChild(b);
   });

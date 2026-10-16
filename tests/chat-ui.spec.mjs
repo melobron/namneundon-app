@@ -3,6 +3,17 @@ import { openApp, collectNumbers } from './helpers.mjs';
 const GO = 'AI에게 결과 묻기';
 // 시험용 가짜 키. 실제 TESTER_KEY 는 저장소에 두지 않는다.
 const KEY = 'fake1screen1test1key';
+const WELCOME = '보고 계신 결과에서 궁금한 점을 물어보세요.';
+const CHIPS = [
+  '이번 달 결과를 설명해 줘',
+  '차액과 통장 잔액은 왜 달라?',
+  '아직 안 정한 돈은 뭐야?'
+];
+const FINE = 'AI 답변은 틀릴 수 있습니다. 질문에 계좌번호·연락처 같은 개인정보는 적지 마세요.';
+const CONSENT =
+  '질문과 선택한 기간·비교 기간의 업종·금액 요약을 남는돈 서버(Cloudflare)와 Cloudflare Workers AI로 보내 답변을 만듭니다. 원본 파일·개별 거래내역·거래처 이름은 자동으로 보내지 않습니다.';
+const SENT_LINE = 'Cloudflare로 요약 전송 · 보낼 내용 보기';
+const KEEP = '결과 화면은 계속 사용할 수 있습니다.';
 async function openChatTest(page, url = '/?aikey=' + KEY) {
   await openApp(page);
   if (url) await page.goto(url);
@@ -16,40 +27,75 @@ async function openRows(page) {
   const sections = page.locator('#up-result .orow:not(.bigrow)');
   for (let i = 0; i < Math.min(await sections.count(), 4); i++) await sections.nth(i).click();
 }
-// 지금 보이는 금액 글자 · [항목 바꾸기] 단추 중 띠와 겹치는 것.
-// 결과 칸(body) 밖으로 잘린 부분은 보이지 않으므로 칸 안에 보이는 부분만 잰다.
-function bandCovers() {
-  const band = document.querySelector('.ai-band').getBoundingClientRect();
-  const view = document.body.getBoundingClientRect();
-  const hits = [];
-  const covered = (r) => {
-    const top = Math.max(r.top, view.top, 0);
-    const bottom = Math.min(r.bottom, view.bottom, innerHeight);
-    const left = Math.max(r.left, view.left);
-    const right = Math.min(r.right, view.right);
-    return (
-      bottom > top &&
-      right > left &&
-      left < band.right &&
-      right > band.left &&
-      top < band.bottom &&
-      bottom > band.top
-    );
-  };
+// 결과의 금액 글자 · [항목 바꾸기] 단추 하나하나를 화면 가운데로 스크롤했을 때
+// 아이콘에 가리지 않고 화면 안에 보이며, 그 자리를 누르면 그것이 눌리는지 잰다.
+// 어느 위치에서도 아이콘이 가리는 것(고정 단추가 계속 가리는 것)이 있으면 여기서 걸린다.
+function coverage() {
+  const fab = document.querySelector('.ai-fab').getBoundingClientRect();
+  const under = (r) =>
+    r.left < fab.right && r.right > fab.left && r.top < fab.bottom && r.bottom > fab.top;
   const host = document.getElementById('up-result');
+  const targets = [];
   host.querySelectorAll('.chbtn').forEach((b) => {
-    if (b.checkVisibility() && covered(b.getBoundingClientRect()))
-      hits.push('항목 바꾸기: ' + b.closest('.drow')?.textContent.slice(0, 30));
+    if (b.checkVisibility()) targets.push({ el: b, rects: () => [b.getBoundingClientRect()] });
   });
   const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    if (!/\d[\d,]*\s*(원|만)/.test(n.nodeValue) || !n.parentElement.checkVisibility()) continue;
+    // 금액: 쉼표 묶음 숫자(13,270,935) 또는 「원」·「만」이 붙은 숫자
+    if (!/\d{1,3}(,\d{3})+|\d\s*(원|만)/.test(n.nodeValue) || !n.parentElement.checkVisibility())
+      continue;
+    const node = n;
+    targets.push({
+      el: n.parentElement,
+      rects: () => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return [...range.getClientRects()].filter((r) => r.width && r.height);
+      }
+    });
+  }
+  const bad = [];
+  for (const t of targets) {
+    t.el.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const rects = t.rects();
+    if (!rects.length) continue;
+    const label = t.el.textContent.trim().slice(0, 30);
+    if (rects.some(under)) bad.push('가림: ' + label);
+    if (rects.some((r) => r.top < 0 || r.bottom > innerHeight)) bad.push('화면 밖: ' + label);
+    const r = rects[0];
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    // 그 자리를 누르면 아이콘이 아니라 결과가 눌려야 한다 (그래프 글자는 그래프 자체의 누름 판이 위에 있다)
+    if (hit?.closest('.ai-fab')) bad.push('아이콘이 받음: ' + label);
+  }
+  return { count: targets.length, bad };
+}
+// 맨 아래까지 내렸을 때 화면에 보이는 글자·단추·링크 중 아이콘에 가리는 것
+function coveredAtEnd() {
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  const fab = document.querySelector('.ai-fab').getBoundingClientRect();
+  const under = (r) =>
+    r.width &&
+    r.height &&
+    r.left < fab.right &&
+    r.right > fab.left &&
+    r.top < fab.bottom &&
+    r.bottom > fab.top;
+  const bad = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.trim() || n.parentElement.closest('.ai-fab, #splash')) continue;
+    if (!n.parentElement.checkVisibility()) continue;
     const range = document.createRange();
     range.selectNodeContents(n);
-    for (const r of range.getClientRects())
-      if (covered(r)) hits.push('금액: ' + n.nodeValue.trim());
+    if ([...range.getClientRects()].some(under)) bad.push(n.nodeValue.trim().slice(0, 30));
   }
-  return { hits, viewBottom: view.bottom, bandTop: band.top };
+  document.querySelectorAll('body button, body a, body img, body svg').forEach((e) => {
+    if (e.closest('.ai-fab') || !e.checkVisibility()) return;
+    if (under(e.getBoundingClientRect()))
+      bad.push(e.tagName + ' ' + e.textContent.trim().slice(0, 20));
+  });
+  const stamp = document.getElementById('buildstamp').getBoundingClientRect();
+  return { bad, stampBottom: stamp.bottom, fabTop: fab.top, scrollY: window.scrollY };
 }
 const won = (v) => v.toLocaleString('ko-KR').replace('-', '−') + '원';
 const pct = (v) => (v === null ? '확인 보류' : (v * 100).toFixed(1) + '%');
@@ -83,14 +129,61 @@ function readMonth(box) {
     ratio: rows(sums[1])
   };
 }
+// 표 전체가 보낸 요약 객체와 같은지 — 업종 · 선택한 달 · 이전 달(펼쳐서) · 반올림 안내
+async function expectTableIs(page, preview, sent) {
+  expect(
+    await preview
+      .locator(':scope > table.ai-sum')
+      .first()
+      .evaluate((t) =>
+        [.../** @type {HTMLTableElement} */ (t).rows].map((r) =>
+          [...r.cells].map((c) => c.textContent)
+        )
+      )
+  ).toEqual([['업종', sent.industry]]);
+  expect(await preview.locator(':scope > .ai-month').evaluate(readMonth)).toEqual(
+    expectedMonth(sent.current, '선택한 달')
+  );
+  const folds = preview.locator('details');
+  await expect(folds).toHaveCount(sent.previous.length);
+  for (let i = 0; i < sent.previous.length; i++) {
+    await expect(folds.nth(i).locator('summary')).toHaveText(monthName(sent.previous[i].month));
+    await folds.nth(i).locator('summary').click();
+    expect(await folds.nth(i).locator('.ai-month').evaluate(readMonth)).toEqual(
+      expectedMonth(sent.previous[i], '달')
+    );
+  }
+  await expect(preview.locator(':scope > .ai-note')).toHaveText('비율은 보기 쉽게 반올림했습니다.');
+}
+// 서버 대신 답한다. 요청 본문·헤더를 모은다.
+async function fakeServer(page, answer = '<script>실행하지 않음</script> 설명', status = 200) {
+  const requests = [];
+  await page.route('https://chat.namneundon.com/**', async (route) => {
+    requests.push({
+      method: route.request().method(),
+      body: route.request().postDataJSON(),
+      headers: route.request().headers()
+    });
+    await route.fulfill(
+      status === 200
+        ? { json: { answer, saved: false } }
+        : { status, json: { error: 'x', nextAvailable: '2026-09-24T00:00:00.000Z' } }
+    );
+  });
+  return requests;
+}
+const chat = (page) => page.locator('#ai-chat');
+const lastBot = (page) => page.locator('#ai-chat .ai-log > .ai-bot').last();
 
-test('키 없음·?ai=1 만으로는 띠 없음, ?aikey 로 켜지고 주소창에서 키가 사라짐, ?ai=0 은 키도 지움', async ({
+test('키 없음·?ai=1 만으로는 아이콘 없음, ?aikey 로 켜지고 주소창에서 키가 사라짐, ?ai=0 은 키도 지움', async ({
   page
 }) => {
   await openChatTest(page, null);
-  await expect(page.locator('.ai-band')).toHaveCount(0);
+  await expect(page.locator('.ai-fab')).toHaveCount(0);
+  // 시험 키 없는 일반 화면 — 아이콘 여백도 없다
+  expect(await page.evaluate(() => getComputedStyle(document.body).paddingBottom)).toBe('0px');
   await openChatTest(page, '/?ai=1');
-  await expect(page.locator('.ai-band')).toHaveCount(0);
+  await expect(page.locator('.ai-fab')).toHaveCount(0);
   await page.goto('/?aikey=' + KEY);
   expect(page.url()).not.toContain('aikey');
   expect(page.url()).not.toContain(KEY);
@@ -99,9 +192,8 @@ test('키 없음·?ai=1 만으로는 띠 없음, ?aikey 로 켜지고 주소창�
   await expect(page.getByRole('button', { name: GO })).toBeHidden();
   await page.getByRole('button', { name: '예시 먼저 보기' }).click();
   await expect(page.getByRole('button', { name: GO })).toBeVisible();
-  // 진입점은 띠 하나뿐, 결과 화면 안의 옛 단추 없음
   await expect(page.getByRole('button', { name: GO })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'AI에게 결과 물어보기' })).toHaveCount(0);
+  await expect(page.locator('.ai-band')).toHaveCount(0);
   // 다른 화면으로 가면 결과와 함께 감춰진다
   await page.locator('#upopen').click();
   await expect(page.locator('#up-result')).toBeHidden();
@@ -118,144 +210,116 @@ test('키 없음·?ai=1 만으로는 띠 없음, ?aikey 로 켜지고 주소창�
     ])
   ).toEqual([null, null]);
   await page.getByRole('button', { name: '예시 먼저 보기' }).click();
-  await expect(page.locator('.ai-band')).toHaveCount(0);
+  await expect(page.locator('.ai-fab')).toHaveCount(0);
 });
 
-for (const [width, height] of [
-  [360, 844],
-  [390, 844],
-  [390, 500]
-]) {
-  test(`띠는 결과의 금액·항목 바꾸기를 덮지 않고, 마지막 줄까지 띠 위로 보이고 누를 수 있음 ${width}×${height}`, async ({
+test('시험 키 형식이 영문 소문자·숫자가 아니면 저장·표시하지 않고 주소창에서도 지움', async ({
+  page
+}) => {
+  for (const bad of ['Upper0123', 'with-dash0123', 'under_score1']) {
+    await openApp(page);
+    await page.goto('/?aikey=' + encodeURIComponent(bad));
+    expect(page.url()).not.toContain('aikey');
+    expect(await page.evaluate(() => localStorage.getItem('fc.ai.tester'))).toBeNull();
+    await page.getByRole('button', { name: '예시 먼저 보기' }).click();
+    await expect(page.locator('.ai-fab')).toHaveCount(0);
+  }
+});
+
+for (const width of [360, 390]) {
+  test(`아이콘은 모든 금액·항목 바꾸기를 가리지 않는 위치로 스크롤해 보고 누를 수 있고, 맨 아래 마지막 줄을 가리지 않음 ${width}`, async ({
     page
   }) => {
-    await page.setViewportSize({ width, height });
+    await page.setViewportSize({ width, height: 844 });
     await openChatTest(page);
-    await openRows(page);
-    await expect(page.locator('#up-result .chbtn').first()).toBeVisible();
-    const band = await page.locator('.ai-band').boundingBox();
-    expect(band).toMatchObject({ x: 0, width });
-    expect(band.y + band.height).toBe(height);
-    // 가로 넘침 없음
+    const fab = page.getByRole('button', { name: GO });
+    const box = await fab.boundingBox();
+    // 휴대폰 48px, 화면 끝에서 16px (시험 브라우저는 안전 영역 0)
+    expect(box).toEqual({ x: width - 16 - 48, y: 844 - 16 - 48, width: 48, height: 48 });
     expect(
-      await page.evaluate(() => [
-        document.body.scrollWidth <= document.body.clientWidth,
-        document.documentElement.scrollWidth <= document.documentElement.clientWidth
-      ])
-    ).toEqual([true, true]);
-    const total = await page.evaluate(() => document.body.scrollHeight);
-    expect(total).toBeGreaterThan(height * 2);
-    const found = [];
-    for (let y = 0; y <= total; y += 97) {
-      await page.evaluate((top) => (document.body.scrollTop = top), y);
-      const r = await page.evaluate(bandCovers);
-      // 결과가 보이는 칸이 띠 위에서 끝난다
-      expect(r.viewBottom).toBeLessThanOrEqual(r.bandTop + 0.5);
-      for (const h of r.hits) found.push(`y=${y} ${h}`);
-    }
-    expect(found).toEqual([]);
-    // 맨 아래까지 — 마지막 줄이 띠 위로 완전히 보이고 누를 수 있다
-    await page.evaluate(() => (document.body.scrollTop = document.body.scrollHeight));
-    const end = await page.evaluate(() => {
-      const band = document.querySelector('.ai-band').getBoundingClientRect();
-      const host = document.getElementById('up-result');
-      const last = [...host.children].filter((e) => !e.classList.contains('ai-band')).pop();
-      const buttons = [...host.querySelectorAll('button')].filter(
-        (b) => !b.closest('.ai-band') && b.checkVisibility()
-      );
-      const lastButton = buttons[buttons.length - 1];
-      const br = lastButton.getBoundingClientRect();
-      const hit = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
-      return {
-        lastBottom: last.getBoundingClientRect().bottom,
-        stampBottom: document.getElementById('buildstamp').getBoundingClientRect().bottom,
-        buttonTop: br.top,
-        buttonBottom: br.bottom,
-        reachable: lastButton === hit || lastButton.contains(hit),
-        bandTop: band.top,
-        label: lastButton.textContent
-      };
-    });
-    expect(end.lastBottom).toBeLessThanOrEqual(end.bandTop);
-    expect(end.stampBottom).toBeLessThanOrEqual(end.bandTop);
-    expect(end.buttonTop).toBeGreaterThanOrEqual(0);
-    expect(end.buttonBottom).toBeLessThanOrEqual(end.bandTop);
-    expect(end.reachable, end.label).toBe(true);
-    await page.locator('#up-result button:not(.ai-band-go):visible').last().click({ trial: true });
-    if (height === 844) {
-      await page.evaluate(() => (document.body.scrollTop = 0));
-      await page.screenshot({ path: test.info().outputPath(`band-${width}.png`) });
+      await fab
+        .locator('img.ai-fab-mark')
+        .evaluate((i) => /** @type {HTMLImageElement} */ (i).src.startsWith('data:image'))
+    ).toBe(true);
+    await expect(fab.locator('.ai-fab-tag')).toHaveText('AI');
+    await openRows(page);
+    // 맨 위 · 중간 · 맨 아래 화면
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: test.info().outputPath(`icon-${width}-top.png`) });
+    await page.evaluate(() =>
+      window.scrollTo(0, (document.documentElement.scrollHeight - innerHeight) / 2)
+    );
+    await page.screenshot({ path: test.info().outputPath(`icon-${width}-mid.png`) });
+    const end = await page.evaluate(coveredAtEnd);
+    await page.screenshot({ path: test.info().outputPath(`icon-${width}-bottom.png`) });
+    expect(end.scrollY).toBeGreaterThan(0);
+    expect(end.bad).toEqual([]);
+    expect(end.stampBottom).toBeLessThanOrEqual(end.fabTop);
+    // 금액 · 항목 바꾸기 하나하나
+    const r = await page.evaluate(coverage);
+    expect(r.count).toBeGreaterThan(50);
+    expect(r.bad).toEqual([]);
+    // 실제 클릭: [항목 바꾸기]를 눌러 메뉴가 열리고, 다시 눌러 닫힌다
+    const buttons = page.locator('#up-result .chbtn:visible');
+    const n = await buttons.count();
+    expect(n).toBeGreaterThan(5);
+    const openMenus = () => page.locator('#up-result .menu:not([hidden])').count();
+    for (let i = 0; i < n; i++) {
+      const b = buttons.nth(i);
+      await b.evaluate((e) => e.scrollIntoView({ block: 'center' }));
+      const bb = await b.boundingBox();
+      const before = await openMenus();
+      await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+      expect(await openMenus(), `열림 ${i}`).toBe(before + 1);
+      await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+      expect(await openMenus(), `닫힘 ${i}`).toBe(before);
     }
   });
 }
 
-test('결과를 다시 그려도 띠가 있는 결과 칸의 스크롤 자리를 지킴', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await openChatTest(page);
-  await page.evaluate(() => (document.body.scrollTop = 600));
-  await page.evaluate(() => drawResult(monthList()));
-  expect(await page.evaluate(() => document.body.scrollTop)).toBe(600);
-});
-
-test('예시 질문은 칸만 채우고, 질문 창이 열리면 띠를 감추고, 돌아가기·뒤로 가기는 전송·삭제 없이 닫음', async ({
+test('채팅 첫 화면: 남는돈 AI · 시험 중 · 닫기, 첫 말풍선과 예시 칩(입력만), 보내기, 작은 안내 — 닫기·뒤로 가기는 전송·삭제 없음', async ({
   page
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const requests = [];
-  await page.route('https://chat.namneundon.com/**', async (route) => {
-    requests.push(route.request().method() + ' ' + route.request().url());
-    await route.fulfill({ json: { answer: '설명', saved: false } });
-  });
+  const requests = await fakeServer(page);
   await openChatTest(page);
   const before = await collectNumbers(page);
   await page.getByRole('button', { name: GO }).click();
-  const dialog = page.locator('#ai-chat');
+  const dialog = chat(page);
   await expect(dialog).toBeVisible();
-  await expect(page.locator('.ai-band')).toBeHidden();
-  await expect(dialog.getByRole('heading')).toHaveText(GO);
-  await expect(dialog).toContainText(
-    '질문과 선택한 기간의 업종·금액 요약을 남는돈 서버(Cloudflare)와 Cloudflare Workers AI로 보내 답변을 만듭니다.'
-  );
-  // 선택 동의 바로 아래 작은 글씨
-  await expect(page.locator('#ai-chat .ai-share + .ai-note')).toHaveText(
-    '동의하지 않아도 내용 없이 날짜별 사용 횟수만 집계됩니다.'
-  );
-  await expect(dialog).toContainText('이용하지 않아도 결과 화면은 그대로 사용할 수 있습니다.');
-  await expect(dialog).not.toContainText('기존 분석 화면');
-  // 동의 칸: 앱 체크 상자 모양(글자와 나란히, 행동색), 기본값 꺼짐
-  const consent = page.locator('#ai-chat .ai-share input[type=checkbox]');
-  await expect(consent).not.toBeChecked();
-  expect(
-    await consent.evaluate((c) => {
-      const s = getComputedStyle(c);
-      const l = getComputedStyle(c.parentElement);
-      return [l.display, s.accentColor, s.width, s.height];
-    })
-  ).toEqual(['flex', 'rgb(44, 128, 85)', '18px', '18px']);
-  // 앱 단추 모양: 주 행동은 「동의하고 질문 보내기」 하나
-  expect(await dialog.locator('button.b.on').allTextContents()).toEqual(['동의하고 질문 보내기']);
-  for (const name of ['결과로 돌아가기', '전송할 내용 보기'])
-    await expect(dialog.getByRole('button', { name })).toHaveClass(/(^|\s)b(\s|$)/);
-  const chips = [
-    '이번 달 결과를 설명해 줘',
-    '차액과 통장 잔액은 왜 달라?',
-    '아직 안 정한 돈은 뭐야?'
-  ];
-  await expect(page.locator('#ai-chat .ai-chip')).toHaveText(chips);
-  for (const chip of chips) {
-    await page.getByRole('button', { name: chip }).click();
-    await expect(page.getByRole('textbox', { name: '질문' })).toHaveValue(chip);
+  await expect(page.locator('.ai-fab')).toBeHidden();
+  await expect(dialog.getByRole('heading')).toHaveText('남는돈 AI');
+  await expect(dialog.locator('.ai-badge')).toHaveText('시험 중');
+  await expect(dialog.getByRole('button', { name: '닫기' })).toBeVisible();
+  // 첫 말풍선(봇)과 그 아래 칩
+  await expect(dialog.locator('.ai-log > .ai-bot').first()).toHaveText(WELCOME);
+  await expect(dialog.locator('.ai-log > .ai-chips .ai-chip')).toHaveText(CHIPS);
+  // 맨 아래: 입력 칸 + 보내기 + 작은 안내
+  await expect(dialog.getByRole('textbox', { name: '질문' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '보내기' })).toBeVisible();
+  await expect(dialog.locator('.ai-fine')).toHaveText(FINE);
+  await expect(dialog.locator('.ai-sent-line')).toBeHidden();
+  await page.screenshot({ path: test.info().outputPath('chat-first-390.png') });
+  // 대화 삭제는 맨 위 오른쪽 보조 메뉴 안
+  await expect(dialog.getByRole('button', { name: '대화 삭제' })).toBeHidden();
+  await dialog.getByRole('button', { name: '더보기' }).click();
+  await expect(dialog.getByRole('button', { name: '대화 삭제' })).toBeVisible();
+  await dialog.getByRole('button', { name: '더보기' }).click();
+  await expect(dialog.getByRole('button', { name: '대화 삭제' })).toBeHidden();
+  // 칩은 입력만
+  for (const c of CHIPS) {
+    await dialog.getByRole('button', { name: c }).click();
+    await expect(dialog.getByRole('textbox', { name: '질문' })).toHaveValue(c);
   }
-  await expect(page.locator('#ai-chat input[type=checkbox]')).not.toBeChecked();
   expect(requests).toEqual([]);
-  // 「결과로 돌아가기」
-  await page.getByRole('button', { name: '결과로 돌아가기' }).click();
+  // 닫기
+  await dialog.getByRole('button', { name: '닫기' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: GO })).toBeVisible();
   // 휴대폰 뒤로 가기
   await page.getByRole('button', { name: GO }).click();
   await expect(dialog).toBeVisible();
-  await page.getByRole('button', { name: '아직 안 정한 돈은 뭐야?' }).click();
+  await dialog.getByRole('button', { name: CHIPS[2] }).click();
   await page.goBack();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: GO })).toBeVisible();
@@ -264,98 +328,94 @@ test('예시 질문은 칸만 채우고, 질문 창이 열리면 띠를 감추�
   expect(await collectNumbers(page)).toEqual(before);
 });
 
-test('키보드가 열린 높이 390×500: 칩은 줄을 바꿔 감싸고, 질문 칸·전송·돌아가기가 화면 안, 가로 넘침 없음', async ({
-  page
-}) => {
-  await page.setViewportSize({ width: 390, height: 500 });
-  await openChatTest(page);
-  await page.getByRole('button', { name: GO }).click();
-  await page.getByRole('button', { name: '전송할 내용 보기' }).click();
-  const chipTops = await page
-    .locator('#ai-chat .ai-chip')
-    .evaluateAll((cs) => [...new Set(cs.map((c) => Math.round(c.getBoundingClientRect().top)))]);
-  expect(chipTops.length).toBeGreaterThanOrEqual(2);
-  expect(
-    await page
-      .locator('#ai-chat')
-      .evaluate((d) => [
-        d.scrollWidth <= d.clientWidth,
-        d.querySelector('.ai-chips').scrollWidth <= d.querySelector('.ai-chips').clientWidth,
-        d.querySelector('.ai-body').scrollWidth <= d.querySelector('.ai-body').clientWidth
-      ])
-  ).toEqual([true, true, true]);
-  const box = page.getByRole('textbox', { name: '질문' });
-  await box.click();
-  await page.keyboard.type('차액이 뭔가요?');
-  await expect(box).toHaveValue('차액이 뭔가요?');
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: '동의하고 질문 보내기' })).toBeFocused();
-  for (const target of [
-    box,
-    page.getByRole('button', { name: '동의하고 질문 보내기' }),
-    page.getByRole('button', { name: '결과로 돌아가기' })
-  ]) {
-    const b = await target.boundingBox();
-    expect(b.y).toBeGreaterThanOrEqual(0);
-    expect(b.y + b.height).toBeLessThanOrEqual(500);
-    expect(b.x).toBeGreaterThanOrEqual(0);
-    expect(b.x + b.width).toBeLessThanOrEqual(390);
-  }
-  await page.screenshot({ path: test.info().outputPath('chat-390x500.png') });
-});
-
-test('전송할 내용 표: 보낸 요약 객체 값을 그대로 한글 표로, 확인 보류·전체 기간 확보 미확인 표기', async ({
+test('첫 보내기는 안내 카드 — 동의 전 무전송, 보낼 내용 표 = 전송 객체, 취소, 동의하고 보내기, 그 뒤 전송 줄', async ({
   page
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const requests = [];
-  await page.route('https://chat.namneundon.com/**', async (route) => {
-    requests.push(route.request().postDataJSON());
-    await route.fulfill({ json: { answer: '설명', saved: false } });
-  });
+  const requests = await fakeServer(page);
   await openChatTest(page);
   await page.getByRole('button', { name: GO }).click();
-  await page.getByRole('button', { name: '전송할 내용 보기' }).click();
-  const preview = page.locator('#ai-chat .ai-preview');
-  await expect(preview).toBeVisible();
-  await page.getByRole('textbox', { name: '질문' }).fill('설명해 주세요');
-  await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
-  await expect(page.locator('.ai-answer')).toHaveText('설명');
-  const sent = requests[0].summary;
-  // ① 업종
+  const dialog = chat(page);
+  const expected = await page.evaluate(() => chatSummary());
+  const box = dialog.getByRole('textbox', { name: '질문' });
+  await box.fill('이번 달 결과를 설명해 줘');
+  await dialog.getByRole('button', { name: '보내기' }).click();
+  const card = dialog.locator('.ai-consent');
+  await expect(card).toBeVisible();
+  expect(requests).toEqual([]);
+  await expect(card.locator(':scope > p').first()).toHaveText(CONSENT);
+  // 운영자 확인 동의: 기본 꺼짐, 앱 체크 상자 모양
+  const share = card.locator('.ai-share input[type=checkbox]');
+  await expect(share).not.toBeChecked();
   expect(
-    await preview
-      .locator(':scope > table.ai-sum')
-      .first()
-      .evaluate((t) =>
-        [.../** @type {HTMLTableElement} */ (t).rows].map((r) =>
-          [...r.cells].map((c) => c.textContent)
-        )
-      )
-  ).toEqual([['업종', sent.industry]]);
-  // ②~⑤ 선택한 달
-  expect(await preview.locator(':scope > .ai-month').evaluate(readMonth)).toEqual(
-    expectedMonth(sent.current, '선택한 달')
+    await share.evaluate((c) => {
+      const s = getComputedStyle(c);
+      return [getComputedStyle(c.parentElement).display, s.accentColor, s.width, s.height];
+    })
+  ).toEqual(['flex', 'rgb(44, 128, 85)', '18px', '18px']);
+  await expect(card.locator('.ai-share + .ai-note')).toHaveText(
+    '동의하지 않아도 내용 없이 날짜별 사용 횟수만 집계됩니다.'
   );
-  // 예시의 8월은 22일까지라 완결로 단정하지 않는다
-  expect(sent.current.complete).toBe(false);
+  // 주 행동은 「동의하고 보내기」 하나
+  expect(await card.locator('button.b.on').allTextContents()).toEqual(['동의하고 보내기']);
+  await page.screenshot({ path: test.info().outputPath('consent-390.png') });
+  // 보낼 내용 보기 — 접혀 있다가 펼치면 지금의 한글 표
+  const preview = card.locator('.ai-preview');
+  await expect(preview).toBeHidden();
+  await card.getByRole('button', { name: '보낼 내용 보기' }).click();
+  await expect(preview).toBeVisible();
+  await expectTableIs(page, preview, expected);
   await expect(preview).toContainText('전체 기간 확보 미확인');
   await expect(preview).not.toContainText('진행 중');
   expect(await preview.innerText()).not.toMatch(/\d+일?\s*[~～]\s*\d+일/);
-  // ⑥ 이전 달 — 달 이름으로 접고, 펼치면 전송 항목 전부
-  const folds = preview.locator('details');
-  await expect(folds).toHaveCount(sent.previous.length);
-  expect(sent.previous.length).toBeGreaterThan(0);
-  for (let i = 0; i < sent.previous.length; i++) {
-    const m = sent.previous[i];
-    await expect(folds.nth(i).locator('summary')).toHaveText(monthName(m.month));
-    await folds.nth(i).locator('summary').click();
-    expect(await folds.nth(i).locator('.ai-month').evaluate(readMonth)).toEqual(
-      expectedMonth(m, '달')
-    );
-  }
-  await expect(preview.locator('.ai-note')).toHaveText('비율은 보기 쉽게 반올림했습니다.');
-  // 계산 못 한 비율은 0% 가 아니라 확인 보류
+  await preview.evaluate((p) => p.scrollIntoView({ block: 'start' }));
+  await page.screenshot({ path: test.info().outputPath('preview-390.png') });
+  // 취소 — 보내지 않고 질문은 남는다
+  await card.getByRole('button', { name: '취소' }).click();
+  await expect(card).toHaveCount(0);
+  await expect(box).toHaveValue('이번 달 결과를 설명해 줘');
+  expect(requests).toEqual([]);
+  // 다시 보내기 → 카드 → 동의하고 보내기
+  await dialog.getByRole('button', { name: '보내기' }).click();
+  await dialog.locator('.ai-consent').getByRole('button', { name: '동의하고 보내기' }).click();
+  await expect(dialog.locator('.ai-answer')).toHaveText('<script>실행하지 않음</script> 설명');
+  expect(requests).toHaveLength(1);
+  expect(requests[0].body.summary).toEqual(expected);
+  expect(requests[0].body.share).toBe(false);
+  // 대표님 질문은 오른쪽, AI 답은 왼쪽 말풍선. 답은 글자로만
+  const me = dialog.locator('.ai-me').last();
+  const ans = dialog.locator('.ai-answer');
+  await expect(me).toHaveText('이번 달 결과를 설명해 줘');
+  const [mb, ab, lb] = await Promise.all([
+    me.boundingBox(),
+    ans.boundingBox(),
+    dialog.locator('.ai-log').boundingBox()
+  ]);
+  expect(mb.x + mb.width).toBeGreaterThan(lb.x + lb.width - 20);
+  expect(ab.x).toBeLessThan(lb.x + 20);
+  expect(await dialog.locator('.ai-log script').count()).toBe(0);
+  // 동의 뒤에는 입력 칸 위 한 줄, 누르면 같은 표
+  const line = dialog.locator('.ai-sent-line');
+  await expect(line).toHaveText(SENT_LINE);
+  await line.click();
+  const again = dialog.locator('.ai-log > .ai-card .ai-preview');
+  await expect(again).toBeVisible();
+  await expectTableIs(page, again, requests[0].body.summary);
+  await line.click();
+  await expect(again).toHaveCount(0);
+  // 두 번째 질문은 카드 없이 바로
+  await box.fill('차액과 통장 잔액은 왜 달라?');
+  await dialog.getByRole('button', { name: '보내기' }).click();
+  await expect(dialog.locator('.ai-answer')).toHaveCount(2);
+  await expect(dialog.locator('.ai-consent')).toHaveCount(0);
+  expect(requests).toHaveLength(2);
+  expect(requests[1].body.summary).toEqual(expected);
+  await page.screenshot({ path: test.info().outputPath('talk-390.png') });
+});
+
+test('계산 못 한 비율은 0% 가 아니라 확인 보류', async ({ page }) => {
+  await openChatTest(page);
+  const sent = await page.evaluate(() => chatSummary());
   const nullBox = await page.evaluateHandle((s) => {
     const m = {
       ...s.current,
@@ -367,40 +427,69 @@ test('전송할 내용 표: 보낸 요약 객체 값을 그대로 한글 표로,
   const nullCase = await nullBox.evaluate(readMonth);
   expect(nullCase.cats).toEqual([['보험', '1,234,567원', '확인 보류']]);
   expect(nullCase.ratio[0][1]).toBe('확인 보류');
-  // 스크린샷: 표 맨 위, 펼친 이전 달
-  await preview.evaluate((p) => p.scrollIntoView({ block: 'start' }));
-  await page.screenshot({ path: test.info().outputPath('preview-390.png') });
-  await folds.first().evaluate((d) => d.scrollIntoView({ block: 'start' }));
-  await page.screenshot({ path: test.info().outputPath('preview-prev-390.png') });
+});
+
+test('키보드가 열린 높이 390×500: 입력 칸·보내기·닫기가 화면 안, 칩은 줄 바꿈, 가로 넘침 없음', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 390, height: 500 });
+  await openChatTest(page);
+  await page.getByRole('button', { name: GO }).click();
+  const dialog = chat(page);
+  const chipTops = await dialog
+    .locator('.ai-chip')
+    .evaluateAll((cs) => [...new Set(cs.map((c) => Math.round(c.getBoundingClientRect().top)))]);
+  expect(chipTops.length).toBeGreaterThanOrEqual(2);
+  expect(
+    await dialog.evaluate((d) =>
+      [
+        d,
+        d.querySelector('.ai-log'),
+        d.querySelector('.ai-chips'),
+        d.querySelector('.ai-foot')
+      ].map((e) => e.scrollWidth <= e.clientWidth)
+    )
+  ).toEqual([true, true, true, true]);
+  const box = dialog.getByRole('textbox', { name: '질문' });
+  await box.click();
+  await page.keyboard.type('차액이 뭔가요?');
+  await expect(box).toHaveValue('차액이 뭔가요?');
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: '보내기' })).toBeFocused();
+  for (const target of [
+    box,
+    dialog.getByRole('button', { name: '보내기' }),
+    dialog.getByRole('button', { name: '닫기' })
+  ]) {
+    const b = await target.boundingBox();
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    expect(b.y + b.height).toBeLessThanOrEqual(500);
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(390);
+  }
+  await page.screenshot({ path: test.info().outputPath('chat-390x500.png') });
 });
 
 for (const width of [360, 390, 1280]) {
-  test(`동의 전 통신 없음·허용 요약만 전송·시험자 키는 헤더로만·창 배치 ${width}`, async ({
-    page
-  }) => {
+  test(`창 배치·거래처 이름 미포함·시험자 키는 헤더로만 ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const logs = [];
     page.on('console', (m) => logs.push(m.text()));
-    const requests = [];
-    await page.route('https://chat.namneundon.com/**', async (route) => {
-      requests.push({ body: route.request().postDataJSON(), headers: route.request().headers() });
-      await route.fulfill({
-        json: { answer: '<script>실행하지 않음</script> 설명', saved: false }
-      });
-    });
+    const requests = await fakeServer(page);
     await openChatTest(page);
+    const fab = await page.getByRole('button', { name: GO }).boundingBox();
+    const size = width <= 520 ? 48 : 56;
+    expect(fab).toEqual({ x: width - 16 - size, y: 844 - 16 - size, width: size, height: size });
     await page.getByRole('button', { name: GO }).click();
-    await page.getByRole('button', { name: '전송할 내용 보기' }).click();
-    expect(requests).toEqual([]);
-    await expect(page.locator('#ai-chat input[type=checkbox]')).not.toBeChecked();
-    const box = await page.locator('#ai-chat').boundingBox();
-    // 휴대폰은 전체 화면, 넓은 화면은 가운데 창
+    // 올라오는 움직임이 끝난 뒤에 잰다
+    await chat(page).evaluate((d) => Promise.all(d.getAnimations().map((a) => a.finished)));
+    const box = await chat(page).boundingBox();
+    // 휴대폰은 전체 화면, PC 는 오른쪽 아래 380px 창
     if (width <= 520) expect(box).toEqual({ x: 0, y: 0, width, height: 844 });
     else {
-      expect(box.width).toBeLessThanOrEqual(560);
-      // 넓은 화면은 가운데 창
-      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThanOrEqual(1);
-      expect(Math.abs(box.y + box.height / 2 - 844 / 2)).toBeLessThanOrEqual(1);
+      expect(box.width).toBe(380);
+      expect(box.x + box.width).toBe(width - 16);
+      expect(box.y + box.height).toBe(844 - 16);
     }
     const expected = await page.evaluate(() => chatSummary());
     const names = await page.evaluate(() => UP.payees.map((p) => p.name));
@@ -412,62 +501,54 @@ for (const width of [360, 390, 1280]) {
     const checked = names.filter((n) => !labels.includes(n));
     const serialized = JSON.stringify(expected);
     expect(checked.filter((n) => n.length > 2 && serialized.includes(n))).toEqual([]);
-    await page.getByRole('textbox', { name: '질문' }).fill('이 뜻은 무엇인가요?');
-    await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
-    await expect(page.locator('.ai-answer')).toContainText('<script>');
+    await chat(page).getByRole('textbox', { name: '질문' }).fill('이 뜻은 무엇인가요?');
+    await chat(page).getByRole('button', { name: '보내기' }).click();
+    expect(requests).toEqual([]);
+    await chat(page).getByRole('button', { name: '동의하고 보내기' }).click();
+    await expect(chat(page).locator('.ai-answer')).toContainText('<script>');
     expect(requests[0].body.summary).toEqual(expected);
-    expect(requests[0].body.share).toBe(false);
     expect(requests[0].headers['x-namneundon-tester']).toBe(KEY);
     // 키는 전송 본문·화면·로그에 나오지 않는다
     expect(JSON.stringify(requests[0].body)).not.toContain(KEY);
     expect(await page.locator('body').innerText()).not.toContain(KEY);
     expect(logs.join('\n')).not.toContain(KEY);
-    expect(await page.locator('#ai-chat').evaluate((d) => d.scrollWidth <= d.clientWidth)).toBe(
-      true
-    );
+    expect(await chat(page).evaluate((d) => d.scrollWidth <= d.clientWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`chat-${width}.png`) });
   });
 }
 
-test('서버가 시험자 키를 거절하면 안내만, 기존 숫자 유지', async ({ page }) => {
-  await page.route('https://chat.namneundon.com/**', (route) =>
-    route.fulfill({ status: 403, json: { error: 'tester_only' } })
-  );
-  await openChatTest(page);
-  const before = await collectNumbers(page);
-  await page.getByRole('button', { name: GO }).click();
-  await page.getByRole('textbox', { name: '질문' }).fill('왜 그런가요?');
-  await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
-  await expect(page.locator('.ai-status')).toContainText('시험 키로는 질문할 수 없습니다');
-  await expect(page.locator('.ai-answer')).toHaveText('');
-  expect(await collectNumbers(page)).toEqual(before);
-});
+for (const [status, text] of /** @type {[number, string][]} */ ([
+  [403, '이 브라우저의 시험 키로는 질문할 수 없습니다. ' + KEEP],
+  [429, '현재 무료 질문 한도에 도달했습니다.']
+])) {
+  test(`서버 ${status} 안내는 봇 말풍선으로, 결과 숫자 유지`, async ({ page }) => {
+    await fakeServer(page, '', status);
+    await openChatTest(page);
+    const before = await collectNumbers(page);
+    await page.getByRole('button', { name: GO }).click();
+    await chat(page).getByRole('textbox', { name: '질문' }).fill('왜 그런가요?');
+    await chat(page).getByRole('button', { name: '보내기' }).click();
+    await chat(page).getByRole('button', { name: '동의하고 보내기' }).click();
+    await expect(lastBot(page)).toContainText(text);
+    await expect(lastBot(page)).toContainText(KEEP);
+    await expect(chat(page).locator('.ai-answer')).toHaveCount(0);
+    expect(await collectNumbers(page)).toEqual(before);
+  });
+}
 
 for (const width of [360, 390, 1280]) {
-  test(`서버 꺼짐에도 기존 숫자 유지, 전송 실패 안내 ${width}`, async ({ page }) => {
+  test(`서버 꺼짐에도 결과 숫자 유지, 오류 안내는 봇 말풍선 ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.route('https://chat.namneundon.com/**', (route) => route.abort());
     await openChatTest(page);
     const before = await collectNumbers(page);
     await page.getByRole('button', { name: GO }).click();
-    await page.getByRole('textbox', { name: '질문' }).fill('왜 그런가요?');
-    await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
-    await expect(page.locator('.ai-status')).toContainText('결과 화면은 계속 사용할 수 있습니다.');
-    await page.getByRole('button', { name: '결과로 돌아가기' }).click();
-    await expect(page.locator('#ai-chat')).toHaveCount(0);
+    await chat(page).getByRole('textbox', { name: '질문' }).fill('왜 그런가요?');
+    await chat(page).getByRole('button', { name: '보내기' }).click();
+    await chat(page).getByRole('button', { name: '동의하고 보내기' }).click();
+    await expect(lastBot(page)).toHaveText('질문을 보내거나 답변을 받지 못했습니다. ' + KEEP);
+    await chat(page).getByRole('button', { name: '닫기' }).click();
+    await expect(chat(page)).toHaveCount(0);
     expect(await collectNumbers(page)).toEqual(before);
   });
 }
-
-test('시험 키 형식이 영문 소문자·숫자가 아니면 저장·표시하지 않고 주소창에서도 지움', async ({
-  page
-}) => {
-  for (const bad of ['Upper0123', 'with-dash0123', 'under_score1']) {
-    await openApp(page);
-    await page.goto('/?aikey=' + encodeURIComponent(bad));
-    expect(page.url()).not.toContain('aikey');
-    expect(await page.evaluate(() => localStorage.getItem('fc.ai.tester'))).toBeNull();
-    await page.getByRole('button', { name: '예시 먼저 보기' }).click();
-    await expect(page.locator('.ai-band')).toHaveCount(0);
-  }
-});

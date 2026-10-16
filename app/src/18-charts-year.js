@@ -743,7 +743,7 @@ function goUnset(m) {
         return;
       }
     }
-    pageScrollTo(0);
+    window.scrollTo(0, 0);
   }, 0);
 }
 function goMonth(m) {
@@ -752,7 +752,7 @@ function goMonth(m) {
   UP.open = {};
   UP.ckPin = {};
   drawResult(monthList());
-  pageScrollTo(0);
+  window.scrollTo(0, 0);
 }
 
 /* 계산은 core/result.js 의 dailyFlowIn — 지금 매장(UP)을 넘긴다 */

@@ -6438,106 +6438,246 @@ table.o tr:last-child td {
   text-align: right;
 }
 
-/* 124차: AI 질문 시험 기능. 시험 키가 있을 때만 그려지므로 꺼진 화면의 레이아웃은 그대로다. */
+/* 124차: AI 질문 시험 기능. 시험 키가 있을 때만 그려지므로 꺼진 화면의 레이아웃은 그대로다.
+   여기 규칙은 모두 .ai-* 이거나 아이콘·질문 창이 있을 때만 걸린다. */
 
-/* 진입점은 결과 화면 맨 아래 전체 폭 띠다. 휴대폰 아래 안전 영역을 띠 안에 넣는다.
+/* 진입점은 결과 화면 오른쪽 아래 동그란 아이콘이다. 화면 끝에서 16px + 휴대폰 아래 안전 영역.
    z-index 는 거래처 창(#up, 50) 아래 — 다른 창 위로 올라오지 않는다. */
-.ai-band {
+.ai-fab {
   position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 40;
-  box-sizing: border-box;
-  height: calc(64px + env(safe-area-inset-bottom)); /* 띠 높이 — 아래 body 높이와 같은 값 */
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   display: flex;
-  justify-content: center;
   align-items: center;
-  border-top: 1px solid var(--line);
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 50%;
   background: var(--paper);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+  cursor: pointer;
 }
 
-.ai-band-go {
-  width: 100%;
-  max-width: 688px;
-  min-height: 44px;
+.ai-fab:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
-/* 띠가 결과를 덮지 않게 결과가 보이는 칸 자체를 띠 위에서 끝낸다.
-   창(viewport) 대신 body 가 띠 위까지만 스크롤한다 — 마지막 줄도 띠 위로 올라온다.
-   넓은 화면에서도 스크롤 막대가 창 끝에 오도록 폭은 창 전체로 두고 안쪽 여백으로 가운데 720px 을 지킨다.
-   결과 화면의 맨 위로 · 자리 지키기는 pageScrollTo (17-chat.js) 가 이 칸을 움직인다. */
-html:has(#up-result:not([hidden]) .ai-band) {
-  height: 100%;
-  overflow: hidden;
+.ai-fab-mark {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
 }
 
-html:has(#up-result:not([hidden]) .ai-band) body {
-  box-sizing: border-box;
-  max-width: none;
-  height: calc(100dvh - 64px - env(safe-area-inset-bottom)); /* 띠 높이만큼 뺀다 */
-  margin: 0;
-  padding-inline: max(0px, calc((100% - 720px) / 2));
-  overflow-y: auto;
+.ai-fab-tag {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 20px;
+  padding: 0 4px;
+  border-radius: var(--rad-pill);
+  background: var(--brand);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 15px;
 }
 
-/* 질문 창이 열리면 바깥 띠는 감춘다. */
-body:has(#ai-chat[open]) .ai-band {
+/* 아이콘이 결과의 마지막 줄을 가리지 않도록 결과 화면 맨 아래를 아이콘 높이 + 위아래 여백만큼 비운다. */
+body:has(#up-result:not([hidden]) .ai-fab) {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+
+/* 질문 창이 열리면 아이콘은 감춘다. 여백은 그대로 둬서 결과 화면이 움직이지 않는다. */
+body:has(#ai-chat[open]) .ai-fab {
   display: none;
 }
 
-/* 머리 · 본문 · 질문 칸. 높이가 모자라면 본문만 스크롤한다 (키보드가 열린 휴대폰). */
+/* 질문 창 = 채팅 화면. PC 는 오른쪽 아래에서 올라오는 창, 휴대폰은 전체 화면. */
 .ai-chat {
   box-sizing: border-box;
-  width: min(560px, calc(100% - 24px));
-  /* 앱 전체의 * { margin: 0 } 이 브라우저의 가운데 정렬(margin: auto)을 지운다. 되살린다 */
-  margin: auto;
-  max-height: calc(100dvh - 32px);
-  overflow: hidden;
-  border: 1px solid #aaa;
-  border-radius: 12px;
+  width: min(380px, calc(100% - 32px));
+  height: min(640px, calc(100dvh - 32px));
+  max-height: none;
+  margin: 0;
+  inset: auto calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) auto;
   padding: 0;
-  color: #222;
-  background: #fff;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--rad-lg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+  background: var(--paper);
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
 .ai-chat[open] {
   display: flex;
   flex-direction: column;
+  animation: ai-rise 0.18s ease-out;
+}
+
+@keyframes ai-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-chat[open] {
+    animation: none;
+  }
 }
 
 .ai-chat::backdrop {
-  background: rgb(0 0 0 / 35%);
+  background: rgb(0 0 0 / 18%);
 }
 
 .ai-head {
+  position: relative;
   flex: none;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid #ddd;
+  gap: 2px;
+  padding: 8px 6px 8px 16px;
+  border-bottom: 1px solid var(--line);
 }
 
-.ai-head h2 {
-  margin: 0;
-  font-size: 17px;
+.ai-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.ai-body {
+.ai-title h2 {
+  font-size: calc(16 * var(--fu));
+  font-weight: 800;
+}
+
+.ai-badge {
+  padding: 1px 8px;
+  border: 1px solid var(--goodline);
+  border-radius: var(--rad-pill);
+  background: var(--goodbg);
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ai-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ai-icon:hover {
+  background: var(--panel);
+}
+
+.ai-icon:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+/* 「대화 삭제」는 맨 위 오른쪽 더보기(⋯) 안의 작은 보조 메뉴다. */
+.ai-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: min(260px, calc(100% - 16px));
+  padding: 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--rad);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 15%);
+  background: var(--paper);
+  color: var(--gray);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-menu[hidden] {
+  display: none;
+}
+
+/* 말풍선 — 대표님 질문은 오른쪽, AI·안내는 왼쪽 */
+.ai-log {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
-  padding: 4px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  overflow-y: auto;
+  background: var(--panel);
 }
 
-.ai-foot {
-  flex: none;
-  padding: 10px 20px 14px;
-  border-top: 1px solid #ddd;
+.ai-msg {
+  max-width: 85%;
+  padding: 9px 12px;
+  border-radius: 16px;
+  font-size: calc(14 * var(--fu));
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.ai-bot {
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+  background: var(--paper);
+}
+
+.ai-me {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--brand);
+  color: var(--paper);
+}
+
+.ai-pending {
+  color: var(--gray);
+}
+
+.ai-meta {
+  align-self: flex-start;
+  margin-top: -6px;
+  padding: 0 4px;
+  color: var(--gray);
+  font-size: 11px;
+}
+
+.ai-card {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.ai-card > p {
+  margin-bottom: 8px;
+}
+
+.ai-card-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 /* 예시 질문은 줄을 바꿔 감싼다. 가로로 넘기는 칸은 만들지 않는다. */
@@ -6551,7 +6691,7 @@ body:has(#ai-chat[open]) .ai-band {
   max-width: 100%;
   padding: 5px 11px;
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--rad-pill);
   background: var(--paper);
   color: var(--ink);
   font: inherit;
@@ -6560,36 +6700,80 @@ body:has(#ai-chat[open]) .ai-band {
   cursor: pointer;
 }
 
-.ai-chat textarea {
-  box-sizing: border-box;
-  width: 100%;
-  margin-block: 8px;
-  font: inherit;
+/* 맨 아래 고정 입력 칸 */
+.ai-foot {
+  flex: none;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
 }
 
-.ai-status:empty {
+.ai-sent-line {
+  display: block;
+  margin: 0 0 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--gray);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ai-sent-line[hidden] {
   display: none;
 }
 
-/* 휴대폰은 전체 화면으로 연다. 위아래 안전 영역을 비운다. */
-@media (max-width: 520px) {
-  .ai-chat {
-    width: 100%;
-    max-width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+.ai-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
 
-  .ai-head,
-  .ai-body,
-  .ai-foot {
-    padding-inline: 16px;
-  }
+.ai-input textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 120px;
+  padding: 9px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--rad);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: none;
+}
+
+.ai-send {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.ai-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ai-send svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ai-fine {
+  margin-top: 6px;
+  color: var(--gray);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 /* 동의 칸은 앱의 다른 체크 상자(.savehide)처럼 — 글자와 나란히, 앱 글자 크기, 행동색 체크 */
@@ -6616,21 +6800,15 @@ body:has(#ai-chat[open]) .ai-band {
 .ai-note {
   margin: 4px 0 0;
   font-size: 12px;
-  color: #666;
+  color: var(--gray);
 }
 
-.ai-answer {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: inherit;
-}
-
-/* 「전송할 내용 보기」 표 — 보낼 값을 글자로만 바꿔 보여준다. */
+/* 「보낼 내용 보기」 표 — 보낼 값을 글자로만 바꿔 보여준다. */
 .ai-preview table {
   width: 100%;
   margin-block: 8px;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .ai-chat .ai-preview table tr th,
@@ -6648,7 +6826,7 @@ body:has(#ai-chat[open]) .ai-band {
 
 .ai-preview h3 {
   margin: 14px 0 4px;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .ai-preview summary {
@@ -6657,8 +6835,33 @@ body:has(#ai-chat[open]) .ai-band {
   cursor: pointer;
 }
 
-.ai-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* 휴대폰: 아이콘 48px, 질문 창은 전체 화면 (위아래 안전 영역을 비운다).
+   PC: 아이콘 56px, 오른쪽 아래 창 */
+@media (max-width: 520px) {
+  .ai-chat {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (min-width: 521px) {
+  .ai-fab {
+    width: 56px;
+    height: 56px;
+  }
+
+  .ai-fab-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  body:has(#up-result:not([hidden]) .ai-fab) {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
 }
