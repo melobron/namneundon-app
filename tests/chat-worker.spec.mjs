@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import * as acorn from 'acorn';
 import { loadCore } from './core/load-core.mjs';
-import worker, { accessAllowed, validSummary, nextReset } from '../chat/src/index.js';
+import worker, { accessAllowed, validSummary, nextReset, SYSTEM } from '../chat/src/index.js';
 
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
@@ -321,4 +321,31 @@ test('앱 실제 집계 요약을 서버가 수용하고 사용자 항목명은 
   for (const name of ['입금개인명', '출금개인명', '홍길동 지급'])
     expect(serialized).not.toContain(name);
   expect(summary.current.categories[0].label).toBe('사용자 지정 항목');
+});
+
+test('지시문에 차액·잔액 설명 원칙, 요약에 잔액 칸 없음', async () => {
+  const s = setup();
+  let sent;
+  /** @type {any} */ (s.env.AI).run = async (model, input) => {
+    sent = input;
+    return { response: '설명', usage: { prompt_tokens: 2000, completion_tokens: 500 } };
+  };
+  expect((await worker.fetch(request(body()), s.env)).status).toBe(200);
+  const system = sent.messages.find((m) => m.role === 'system').content;
+  expect(system).toBe(SYSTEM);
+  for (const rule of [
+    "차액은 선택한 기간의 '사업으로 번 돈'에서 '사업에 쓴 돈'을 뺀 값입니다.",
+    '그 기간 전에 남아 있던 돈, 대표님이 넣거나 가져간 돈, 대출 등도 반영되어',
+    '계좌 간 이체의 영향은 어떤 계좌들을 함께 보는지에 따라 다릅니다.',
+    '아직 정하지 않은 거래도 차액에 영향을 줍니다.',
+    '대표님 자료에서 확인할 수 없다고 말합니다.',
+    '미분류 금액을 입금·출금으로 나눠 계산하거나 날짜를 추정하지 않습니다.'
+  ])
+    expect(system).toContain(rule);
+  // 요약에는 잔액을 넣지 않는다 — 잔액 칸이 붙은 요약은 거절한다.
+  const withBalance = body();
+  withBalance.summary.current.balance = 1000000;
+  expect(validSummary(withBalance.summary)).toBe(false);
+  expect((await worker.fetch(request(withBalance), s.env)).status).toBe(400);
+  s.sql.close();
 });

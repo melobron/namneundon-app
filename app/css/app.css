@@ -6438,33 +6438,150 @@ table.o tr:last-child td {
   text-align: right;
 }
 
-/* 124차: 시험 질문 창은 기존 결과 화면 레이아웃에 영향을 주지 않는다. */
+/* 124차: AI 질문 시험 기능. ?ai=1 일 때만 그려지므로 꺼진 화면의 레이아웃은 그대로다. */
+
+/* 진입 단추는 결과 화면 우측 하단 하나다. 휴대폰 아래 안전 영역만큼 띄운다.
+   z-index 는 거래처 창(#up, 50) 아래 — 다른 창 위로 올라오지 않는다. */
+.ai-fab {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 40;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
+  cursor: pointer;
+}
+
+.ai-fab:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* 결과 화면 맨 아래 내용이 단추에 가려 끝까지 못 보는 일이 없게 단추 높이만큼 비운다.
+   단추가 있는 결과 화면일 때만이다. */
+body:has(#up-result:not([hidden]) .ai-fab) {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+/* 머리 · 본문 · 질문 칸. 높이가 모자라면 본문만 스크롤한다 (키보드가 열린 휴대폰). */
 .ai-chat {
   box-sizing: border-box;
   width: min(560px, calc(100% - 24px));
   max-height: calc(100dvh - 32px);
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid #aaa;
   border-radius: 12px;
-  padding: 20px;
+  padding: 0;
   color: #222;
   background: #fff;
   overflow-wrap: anywhere;
+}
+
+.ai-chat[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .ai-chat::backdrop {
   background: rgb(0 0 0 / 35%);
 }
 
+.ai-head {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.ai-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.ai-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 20px 12px;
+}
+
+.ai-foot {
+  flex: none;
+  padding: 10px 20px 14px;
+  border-top: 1px solid #ddd;
+}
+
+/* 예시 질문은 한 줄로 둔다. 좁은 화면에서 세 줄로 쌓이면 질문 칸이 밀려난다. */
+.ai-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.ai-chip {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid #bbb;
+  border-radius: 999px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .ai-chat textarea {
   box-sizing: border-box;
   width: 100%;
-  margin-block: 12px;
+  margin-block: 8px;
   font: inherit;
+}
+
+.ai-status:empty {
+  display: none;
+}
+
+/* 휴대폰은 전체 화면으로 연다. 위아래 안전 영역을 비운다. */
+@media (max-width: 520px) {
+  .ai-chat {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .ai-head,
+  .ai-body,
+  .ai-foot {
+    padding-inline: 16px;
+  }
 }
 
 .ai-share {
   display: block;
+}
+
+.ai-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #666;
 }
 
 .ai-preview,

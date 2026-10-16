@@ -131,10 +131,19 @@ function chatLimitText(next) {
     ' (한국시간)입니다. 기존 분석 화면은 계속 사용할 수 있습니다.'
   );
 }
+/* 예시 질문은 질문 칸을 채우기만 한다. 전송은 늘 동의 단추 한 곳이다. */
+var CHAT_CHIPS = [
+  '이번 달 결과를 설명해 줘',
+  '차액과 통장 잔액은 왜 달라?',
+  '아직 안 정한 돈은 뭐야?'
+];
+/* 진입점은 결과 화면 우측 하단 하나다. 결과 화면(up-result) 안에 두어
+   다른 화면으로 갈 때 결과와 함께 감춰지게 한다 — 따로 여닫는 곳을 늘리지 않는다. */
 function drawChatButton(host) {
   if (!chatEnabled()) return;
-  var button = el('button', 'btn', 'AI에게 결과 물어보기');
+  var button = el('button', 'ai-fab', 'AI에게 결과 묻기');
   button.type = 'button';
+  button.setAttribute('aria-haspopup', 'dialog');
   button.onclick = openChat;
   host.appendChild(button);
 }
@@ -146,24 +155,36 @@ function openChat() {
   dialog.id = 'ai-chat';
   dialog.className = 'ai-chat';
   dialog.setAttribute('aria-labelledby', 'ai-chat-title');
+  /* 머리 · 본문 · 질문 칸 세 칸으로 나눈다. 키보드가 올라와 높이가 줄어도
+     돌아가기와 질문 칸 · 전송은 화면 안에 남고 본문만 줄어든다. */
+  var head = el('div', 'ai-head');
+  var back = el('button', 'btn ai-back', '결과로 돌아가기');
+  back.type = 'button';
+  back.onclick = function () {
+    dialog.close();
+  };
+  head.appendChild(back);
   var title = el('h2', null, 'AI에게 결과 물어보기');
   title.id = 'ai-chat-title';
-  dialog.appendChild(title);
-  dialog.appendChild(
+  head.appendChild(title);
+  dialog.appendChild(head);
+  var body = el('div', 'ai-body');
+  var foot = el('div', 'ai-foot');
+  body.appendChild(
     el(
       'p',
       null,
-      '질문과 선택한 기간의 업종·금액 요약을 남는돈 서버와 Cloudflare Workers AI로 보내 답변을 만듭니다. 원본 파일·개별 거래내역·거래처 이름은 자동으로 보내지 않습니다.'
+      '질문과 선택한 기간의 업종·금액 요약을 남는돈 서버(Cloudflare)와 Cloudflare Workers AI로 보내 답변을 만듭니다. 원본 파일·개별 거래내역·거래처 이름은 자동으로 보내지 않습니다.'
     )
   );
-  dialog.appendChild(
+  body.appendChild(
     el(
       'p',
       null,
       '질문에는 계좌번호, 연락처, 직원·고객·환자의 개인정보를 적지 마세요. 이용하지 않아도 기존 분석 화면은 그대로 사용할 수 있습니다.'
     )
   );
-  dialog.appendChild(
+  body.appendChild(
     el(
       'p',
       null,
@@ -179,14 +200,25 @@ function openChat() {
   see.onclick = function () {
     preview.hidden = !preview.hidden;
   };
-  dialog.appendChild(see);
-  dialog.appendChild(preview);
+  body.appendChild(see);
+  body.appendChild(preview);
   var question = document.createElement('textarea');
   question.maxLength = 300;
   question.rows = 3;
   question.setAttribute('aria-label', '질문');
   question.placeholder = '예: 지난달과 비교해 달라진 항목은 무엇인가요?';
-  dialog.appendChild(question);
+  var chips = el('div', 'ai-chips');
+  CHAT_CHIPS.forEach(function (text) {
+    var chip = el('button', 'ai-chip', text);
+    chip.type = 'button';
+    chip.onclick = function () {
+      question.value = text;
+      question.focus();
+    };
+    chips.appendChild(chip);
+  });
+  foot.appendChild(chips);
+  foot.appendChild(question);
   var label = el('label', 'ai-share');
   var share = document.createElement('input');
   share.type = 'checkbox';
@@ -196,28 +228,23 @@ function openChat() {
       '서비스 개선을 위해 남는돈 운영자 강요한이 질문과 답변을 확인하는 데 동의합니다. 동의한 대화와 업종·작성일은 30일간 보관 후 삭제합니다. 대화에 포함된 금액과 이름도 함께 저장될 수 있습니다.'
     )
   );
-  dialog.appendChild(label);
-  var status = el('p', 'ai-status');
-  status.setAttribute('role', 'status');
-  dialog.appendChild(status);
+  body.appendChild(label);
+  body.appendChild(el('p', 'ai-note', '동의하지 않아도 내용 없이 날짜별 사용 횟수만 집계됩니다.'));
   var answer = el('div', 'ai-answer');
   answer.setAttribute('aria-live', 'polite');
-  dialog.appendChild(answer);
+  body.appendChild(answer);
+  var remove = el('button', 'btn', '대화 삭제');
+  remove.type = 'button';
+  body.appendChild(remove);
+  var status = el('p', 'ai-status');
+  status.setAttribute('role', 'status');
+  foot.appendChild(status);
   var actions = el('div', 'ai-actions');
   var send = el('button', 'btn', '동의하고 질문 보내기');
   send.type = 'button';
-  var cancel = el('button', 'btn', '취소');
-  cancel.type = 'button';
-  cancel.onclick = function () {
-    dialog.close();
-  };
-  var remove = el('button', 'btn', '대화 삭제');
-  remove.type = 'button';
   actions.appendChild(send);
-  actions.appendChild(cancel);
-  actions.appendChild(remove);
-  dialog.appendChild(actions);
-  dialog.appendChild(
+  foot.appendChild(actions);
+  body.appendChild(
     el(
       'p',
       null,
@@ -228,7 +255,9 @@ function openChat() {
   contact.href = KAKAO_CHAT;
   contact.target = '_blank';
   contact.rel = 'noopener noreferrer';
-  dialog.appendChild(contact);
+  body.appendChild(contact);
+  dialog.appendChild(body);
+  dialog.appendChild(foot);
   send.onclick = async function () {
     if (store !== UP || summary.current.month !== UP.month) {
       status.textContent = '보고 있는 자료가 바뀌었습니다. 창을 닫고 다시 열어주세요.';
@@ -274,6 +303,7 @@ function openChat() {
           '지금은 답변을 받지 못했습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
       else {
         answer.textContent = data.answer;
+        answer.scrollIntoView({ block: 'nearest' });
         status.textContent = data.saved
           ? '질문과 답변이 공유 기록으로 저장되었습니다.'
           : '운영자 열람용 대화 기록을 저장하지 않았습니다.';
@@ -315,8 +345,22 @@ function openChat() {
       send.disabled = false;
     }
   };
+  /* 휴대폰 뒤로 가기는 질문 창만 닫는다. 창을 열 때 이력 한 칸을 쌓고,
+     단추·Esc 로 닫았으면 그 칸을 되돌려 이력에 빈칸이 남지 않게 한다.
+     닫기는 전송도 대화 삭제도 하지 않는다. */
+  var viaHistory = false;
+  function onPop() {
+    viaHistory = true;
+    if (dialog.open) dialog.close();
+  }
+  history.pushState({ aiChat: true }, '');
+  window.addEventListener('popstate', onPop);
   dialog.addEventListener('close', function () {
+    window.removeEventListener('popstate', onPop);
+    if (!viaHistory && history.state && history.state.aiChat) history.back();
     dialog.remove();
+    var fab = /** @type {HTMLButtonElement} */ (document.querySelector('.ai-fab'));
+    if (fab) fab.focus();
   });
   document.body.appendChild(dialog);
   dialog.showModal();
