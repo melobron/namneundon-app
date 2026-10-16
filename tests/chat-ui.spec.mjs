@@ -32,8 +32,14 @@ for (const width of [360, 390, 1280]) {
     await expect(page.locator('#ai-chat input[type=checkbox]')).not.toBeChecked();
     const expected = await page.evaluate(() => chatSummary());
     const names = await page.evaluate(() => UP.payees.map((p) => p.name));
+    // 예시 거래처 「식자재」처럼 고정 항목 이름과 똑같은 거래처 이름은 요약의 항목명과 구분할 수 없어 뺀다.
+    // 목록은 앱이 요약에 쓰는 CHAT_LABELS 그대로다. 나머지 거래처 이름은 계속 검사한다.
+    const labels = await page.evaluate(() => CHAT_LABELS);
+    const skipped = names.filter((n) => labels.includes(n));
+    console.log(`[chat-ui ${width}] 고정 항목과 같아 뺀 거래처 이름: ${JSON.stringify(skipped)}`);
+    const checked = names.filter((n) => !labels.includes(n));
     const serialized = JSON.stringify(expected);
-    expect(names.filter((n) => n.length > 2 && serialized.includes(n))).toEqual([]);
+    expect(checked.filter((n) => n.length > 2 && serialized.includes(n))).toEqual([]);
     await page.getByRole('textbox', { name: '질문' }).fill('이 뜻은 무엇인가요?');
     await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
     await expect(page.locator('.ai-answer')).toContainText('<script>');
