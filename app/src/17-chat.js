@@ -476,19 +476,18 @@ function openChat() {
   }
   addChips(chatPickChips(summary, null, 3));
 
-  /* 맨 아래: 「자세히」 상자 · 안내 두 줄 · 입력 칸 · 주의 한 줄 */
+  /* 맨 아래: ⓘ 펼침 상자 · 안내 한 줄(+ⓘ) · 입력 칸 · 주의 한 줄.
+     입력 칸 위 글은 작은 글씨 두 줄 안으로 줄이고, 나머지 안내는 ⓘ 를 눌러야 펼친다. */
   var foot = el('div', 'ai-foot');
   var detail = el('div', 'ai-detail');
   detail.id = 'ai-detail';
   detail.hidden = true;
+  detail.appendChild(
+    el('p', null, '운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다.')
+  );
+  detail.appendChild(el('p', null, '앞선 대화는 답변에 반영되지 않습니다.'));
   detail.appendChild(el('h3', null, '남는돈이 자동으로 붙이는 것'));
   detail.appendChild(chatPreview(summary));
-  detail.appendChild(el('h3', null, '대표님이 직접 적는 것'));
-  detail.appendChild(
-    el('p', null, '질문 칸에 적은 글은 그대로 전송됩니다. 계좌번호·이름·연락처는 적지 마세요.')
-  );
-  detail.appendChild(el('h3', null, '받는 곳과 목적'));
-  detail.appendChild(el('p', null, '받는 곳: Cloudflare(서버·Workers AI) · 목적: 답변 생성'));
   if (CHAT_PRIVACY_URL) {
     var privacy = el('a', null, '개인정보 처리방침');
     privacy.href = CHAT_PRIVACY_URL;
@@ -497,25 +496,25 @@ function openChat() {
     detail.appendChild(privacy);
   } else detail.appendChild(el('p', 'ai-note', '개인정보 처리방침: 준비 중'));
   foot.appendChild(detail);
-  var notice = el(
-    'p',
-    'ai-notice',
-    '질문과 선택·비교 기간의 금액 요약(업종, 금액, 비율)이 미국과 영국에 있는 Cloudflare로 전송되어 답변을 만드는 데 쓰입니다. 답변을 만든 뒤에는 남지 않습니다. 운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다. · '
+  var noticeRow = el('div', 'ai-notice-row');
+  noticeRow.appendChild(
+    el(
+      'p',
+      'ai-notice',
+      '질문과 금액 요약은 미국·영국 Cloudflare로 보내져 답변에만 쓰이고 남지 않습니다. 질문에 적은 가게 이름·성함도 그대로 전송됩니다.'
+    )
   );
-  var more2 = el('button', 'ai-link', '자세히');
-  more2.type = 'button';
-  more2.setAttribute('aria-expanded', 'false');
-  more2.setAttribute('aria-controls', 'ai-detail');
-  more2.onclick = function () {
+  var info = el('button', 'ai-info', 'ⓘ');
+  info.type = 'button';
+  info.setAttribute('aria-label', '안내 자세히');
+  info.setAttribute('aria-expanded', 'false');
+  info.setAttribute('aria-controls', 'ai-detail');
+  info.onclick = function () {
     detail.hidden = !detail.hidden;
-    more2.setAttribute('aria-expanded', String(!detail.hidden));
+    info.setAttribute('aria-expanded', String(!detail.hidden));
   };
-  notice.appendChild(more2);
-  foot.appendChild(notice);
-  foot.appendChild(
-    el('p', 'ai-notice ai-small', '질문 칸에 가게 이름이나 성함을 적으시면 그대로 전송됩니다.')
-  );
-  foot.appendChild(el('p', 'ai-notice', '앞선 대화는 답변에 반영되지 않습니다.'));
+  noticeRow.appendChild(info);
+  foot.appendChild(noticeRow);
   var row = el('div', 'ai-input');
   question.maxLength = 300;
   question.rows = 1;

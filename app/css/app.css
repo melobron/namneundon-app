@@ -6724,25 +6724,46 @@ body:has(#ai-chat[open]) .ai-fab {
 }
 
 /* 입력 칸 바로 위에 늘 보이는 안내 두 줄과 「자세히」 펼침 상자 */
-.ai-notice {
+/* 입력 칸 위 안내 한 줄(작은 글씨, 두 줄 안) + 오른쪽 ⓘ 단추(누르기 쉬운 32px) */
+.ai-notice-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
   margin-bottom: 4px;
+  margin-right: -6px; /* ⓘ 단추는 오른쪽 여백 안으로 6px 들어간다 — 누르는 넓이 32px 는 그대로 */
+}
+
+.ai-notice {
+  flex: 1;
+  min-width: 0;
   color: var(--gray);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
-.ai-small {
   font-size: 10.5px;
+  line-height: 1.4;
+  letter-spacing: -0.03em;
 }
 
-.ai-link {
+.ai-info {
+  flex: none;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
-  background: none;
+  border-radius: 50%;
+  background: transparent;
   color: var(--ink);
   font: inherit;
-  text-decoration: underline;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
+}
+
+.ai-info[aria-expanded='true'] {
+  background: var(--panel);
+}
+
+.ai-info:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 
 .ai-detail {
