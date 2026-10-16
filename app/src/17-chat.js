@@ -7,7 +7,8 @@ var CHAT_KEYS = {
   receipt: 'fc.ai.receipt',
   tester: 'fc.ai.tester'
 };
-var CHAT_KEY_FORM = /^[\x21-\x7e]{1,256}$/;
+// 시험 키는 영문 소문자·숫자만 (서버 TESTER_FORM 과 같다). 그 밖의 값은 저장·표시하지 않는다.
+var CHAT_KEY_FORM = /^[a-z0-9]{1,256}$/;
 var CHAT_LABELS = [
   '식자재',
   '주류·음료',
@@ -171,7 +172,7 @@ function chatLimitText(next) {
   return (
     '현재 무료 질문 한도에 도달했습니다. 다음 이용 가능 시간은 ' +
     new Date(next).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) +
-    ' (한국시간)입니다. 기존 분석 화면은 계속 사용할 수 있습니다.'
+    ' (한국시간)입니다. 결과 화면은 계속 사용할 수 있습니다.'
   );
 }
 /* 예시 질문은 질문 칸을 채우기만 한다. 전송은 늘 동의 단추 한 곳이다. */
@@ -302,7 +303,7 @@ function openChat() {
     el(
       'p',
       null,
-      '질문에는 계좌번호, 연락처, 직원·고객·환자의 개인정보를 적지 마세요. 이용하지 않아도 기존 분석 화면은 그대로 사용할 수 있습니다.'
+      '질문에는 계좌번호, 연락처, 직원·고객·환자의 개인정보를 적지 마세요. 이용하지 않아도 결과 화면은 그대로 사용할 수 있습니다.'
     )
   );
   body.appendChild(
@@ -425,10 +426,9 @@ function openChat() {
       if (res.status === 429) status.textContent = chatLimitText(data.nextAvailable);
       else if (res.status === 403)
         status.textContent =
-          '이 브라우저의 시험 키로는 질문할 수 없습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
+          '이 브라우저의 시험 키로는 질문할 수 없습니다. 결과 화면은 계속 사용할 수 있습니다.';
       else if (!res.ok || typeof data.answer !== 'string')
-        status.textContent =
-          '지금은 답변을 받지 못했습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
+        status.textContent = '지금은 답변을 받지 못했습니다. 결과 화면은 계속 사용할 수 있습니다.';
       else {
         answer.textContent = data.answer;
         answer.scrollIntoView({ block: 'nearest' });
@@ -438,7 +438,7 @@ function openChat() {
       }
     } catch (e) {
       status.textContent =
-        '질문을 보내거나 답변을 받지 못했습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
+        '질문을 보내거나 답변을 받지 못했습니다. 결과 화면은 계속 사용할 수 있습니다.';
     } finally {
       send.disabled = false;
       remove.disabled = false;

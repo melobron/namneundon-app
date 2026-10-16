@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { openApp, collectNumbers } from './helpers.mjs';
 const GO = 'AI에게 결과 묻기';
 // 시험용 가짜 키. 실제 TESTER_KEY 는 저장소에 두지 않는다.
-const KEY = 'ui-test-key-0123456789';
+const KEY = 'fake1screen1test1key';
 async function openChatTest(page, url = '/?aikey=' + KEY) {
   await openApp(page);
   if (url) await page.goto(url);
@@ -220,6 +220,18 @@ test('예시 질문은 칸만 채우고, 질문 창이 열리면 띠를 감추�
   await expect(page.locator('#ai-chat .ai-share + .ai-note')).toHaveText(
     '동의하지 않아도 내용 없이 날짜별 사용 횟수만 집계됩니다.'
   );
+  await expect(dialog).toContainText('이용하지 않아도 결과 화면은 그대로 사용할 수 있습니다.');
+  await expect(dialog).not.toContainText('기존 분석 화면');
+  // 동의 칸: 앱 체크 상자 모양(글자와 나란히, 행동색), 기본값 꺼짐
+  const consent = page.locator('#ai-chat .ai-share input[type=checkbox]');
+  await expect(consent).not.toBeChecked();
+  expect(
+    await consent.evaluate((c) => {
+      const s = getComputedStyle(c);
+      const l = getComputedStyle(c.parentElement);
+      return [l.display, s.accentColor, s.width, s.height];
+    })
+  ).toEqual(['flex', 'rgb(44, 128, 85)', '18px', '18px']);
   // 앱 단추 모양: 주 행동은 「동의하고 질문 보내기」 하나
   expect(await dialog.locator('button.b.on').allTextContents()).toEqual(['동의하고 질문 보내기']);
   for (const name of ['결과로 돌아가기', '전송할 내용 보기'])
@@ -440,9 +452,22 @@ for (const width of [360, 390, 1280]) {
     await page.getByRole('button', { name: GO }).click();
     await page.getByRole('textbox', { name: '질문' }).fill('왜 그런가요?');
     await page.getByRole('button', { name: '동의하고 질문 보내기' }).click();
-    await expect(page.locator('.ai-status')).toContainText('기존 분석 화면은 계속');
+    await expect(page.locator('.ai-status')).toContainText('결과 화면은 계속 사용할 수 있습니다.');
     await page.getByRole('button', { name: '결과로 돌아가기' }).click();
     await expect(page.locator('#ai-chat')).toHaveCount(0);
     expect(await collectNumbers(page)).toEqual(before);
   });
 }
+
+test('시험 키 형식이 영문 소문자·숫자가 아니면 저장·표시하지 않고 주소창에서도 지움', async ({
+  page
+}) => {
+  for (const bad of ['Upper0123', 'with-dash0123', 'under_score1']) {
+    await openApp(page);
+    await page.goto('/?aikey=' + encodeURIComponent(bad));
+    expect(page.url()).not.toContain('aikey');
+    expect(await page.evaluate(() => localStorage.getItem('fc.ai.tester'))).toBeNull();
+    await page.getByRole('button', { name: '예시 먼저 보기' }).click();
+    await expect(page.locator('.ai-band')).toHaveCount(0);
+  }
+});

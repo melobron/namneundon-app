@@ -6592,8 +6592,25 @@ body:has(#ai-chat[open]) .ai-band {
   }
 }
 
+/* 동의 칸은 앱의 다른 체크 상자(.savehide)처럼 — 글자와 나란히, 앱 글자 크기, 행동색 체크 */
 .ai-share {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: calc(13 * var(--fu));
+  line-height: 1.5;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.ai-share input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--brand);
+  cursor: pointer;
 }
 
 .ai-note {

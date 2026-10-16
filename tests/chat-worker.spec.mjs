@@ -9,7 +9,7 @@ import worker, { accessAllowed, validSummary, nextReset, SYSTEM } from '../chat/
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
 // 시험용 가짜 비밀값. 실제 TESTER_KEY 는 wrangler secret 으로만 넣는다.
-const TESTER = 'tester-secret-for-local-tests';
+const TESTER = 'fake2server2test2secret';
 const convId = '00000000-0000-4000-8000-000000000001';
 function month() {
   return {
@@ -436,5 +436,24 @@ test('예약 작업은 1시간마다, 30일 지난 대화만 지움', async () =
       .all()
       .map((r) => r.id)
   ).toEqual(['d29', 'd30m']);
+  s.sql.close();
+});
+test('시험 키는 영문 소문자·숫자만 — 형식이 다른 비밀값·헤더는 같아도 403', async () => {
+  for (const secret of ['Upper0123456789', 'with-dash-0123', 'with space 012', '한글키0123']) {
+    const s = setup();
+    s.env.TESTER_KEY = secret;
+    expect(
+      (await worker.fetch(request(body(), token, secret.replace(/[^\x21-\x7e]/g, 'x')), s.env))
+        .status
+    ).toBe(403);
+    nothingHappened(s);
+    s.sql.close();
+  }
+  const s = setup();
+  // 맞는 비밀값의 대문자판도 거절한다
+  expect((await worker.fetch(request(body(), token, TESTER.toUpperCase()), s.env)).status).toBe(
+    403
+  );
+  nothingHappened(s);
   s.sql.close();
 });

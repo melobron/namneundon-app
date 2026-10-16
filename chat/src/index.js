@@ -183,10 +183,13 @@ export async function accessAllowed(request, env) {
 }
 /* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 질문·삭제를 쓴다.
    비밀값(TESTER_KEY, wrangler secret)이 없으면 모두 막는다.
-   두 값을 같은 길이의 해시로 바꿔 끝까지 비교한다 — 길이·앞부분 일치로 시간이 달라지지 않게. */
+   두 값을 같은 길이의 해시로 바꿔 끝까지 비교한다 — 길이·앞부분 일치로 시간이 달라지지 않게.
+   키는 영문 소문자·숫자만 쓴다(앱 CHAT_KEY_FORM 과 같다). 형식이 다른 비밀값·헤더는 받지 않는다. */
+const TESTER_FORM = /^[a-z0-9]{1,256}$/;
 async function testerAllowed(request, env) {
   const secret = typeof env.TESTER_KEY === 'string' ? env.TESTER_KEY : '';
   const given = request.headers.get('X-Namneundon-Tester') || '';
+  if (!TESTER_FORM.test(secret) || !TESTER_FORM.test(given)) return false;
   const enc = new TextEncoder();
   const [a, b] = await Promise.all([
     crypto.subtle.digest('SHA-256', enc.encode(given)),
