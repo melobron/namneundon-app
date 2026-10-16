@@ -7,7 +7,11 @@
   "routes": [{ "pattern": "chat.namneundon.com", "custom_domain": true }],
   "ai": { "binding": "AI" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "namneundon-chat", "database_id": "TODO_D1_ID" }
+    {
+      "binding": "DB",
+      "database_name": "namneundon-chat",
+      "database_id": "700658f4-3ae7-41bd-ac3c-5b1c75b6b012"
+    }
   ],
   "observability": { "enabled": false },
   "triggers": { "crons": ["15 * * * *"] },
