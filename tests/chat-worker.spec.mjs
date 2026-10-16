@@ -13,7 +13,8 @@ import worker, {
   kstDay,
   ADMIN,
   weekStart,
-  weeklyTopics
+  weeklyTopics,
+  MODELS
 } from '../chat/src/index.js';
 
 const ORIGIN = 'https://app.namneundon.com';
@@ -743,7 +744,11 @@ test('지시문에 주제별 답변 지침', () => {
     '차액은 이번 달 들어오고 나간 돈의 차이이고, 통장 잔액은 그 전부터 쌓인 돈까지 담긴 금액',
     "'남는돈에는 같은 업종 비교 자료가 아직 없어 비교해 드릴 수 없습니다'",
     '지출해도 되는지는 정해 드릴 수 없다고 말하고, 보고 계신 달의 숫자만 알려 줍니다.',
-    '전체 기간 확보 여부를 먼저 말합니다.'
+    '전체 기간 확보 여부를 먼저 말합니다.',
+    '두 달을 비교할 때는 차이를 직접 계산하지 말고, 요약에 있는 두 달의 숫자를 나란히 말합니다',
+    '「이번 달은 ○일까지의 자료라 지난달 한 달 전체와 바로 비교하기 어렵습니다」를 먼저 말합니다',
+    '비율은 소수가 아니라 %로, 소수 첫째 자리까지 말합니다',
+    '금액은 쉼표와 「원」을 붙여 말합니다'
   ])
     expect(SYSTEM).toContain(rule);
 });
@@ -763,4 +768,14 @@ test('주 시작(한국 월요일)과 3 미만 묶음 규칙', () => {
     { week_start: '2026-10-12', topic: '기타', source: 'chip', count: '3 미만' },
     { week_start: '2026-10-12', topic: '기타', source: 'typed', count: '3 미만' }
   ]);
+});
+
+test('배포 설정: 모델은 mistral-small-3.1-24b, 호환 날짜는 wrangler 4.139 지원 범위', () => {
+  const config = JSON.parse(
+    readFileSync(new URL('../chat/wrangler.jsonc', import.meta.url), 'utf8')
+  );
+  expect(config.vars.CHAT_MODEL).toBe('@cf/mistralai/mistral-small-3.1-24b-instruct');
+  expect(Object.keys(MODELS)).toContain(config.vars.CHAT_MODEL);
+  expect(config.compatibility_date).toBe('2026-09-30');
+  expect(config.d1_databases[0].database_id).toMatch(/^[0-9a-f-]{36}$/);
 });
