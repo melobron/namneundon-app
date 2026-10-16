@@ -189,6 +189,38 @@ function chatPickChips(summary, skip, max) {
     })
     .slice(0, max);
 }
+/* 첫 화면 추천 질문(최대 5개). 자료 상태로 고르고, 문장마다 주제 코드를 붙인다.
+   - 아직 안 정한 돈이 0원이면 미분류 대신 「어느 항목에 가장 많이 썼어?」
+   - 비교할 이전 달(전체 기간 확보)이 없으면 기간비교 대신 「차액은 무슨 뜻이야?」
+   - 인건비·월세 항목이 0원이면 그 칩은 빼고 남은 것만 둔다(업종별 이름 — 급여·임차료 — 도 같은 항목으로 본다). */
+function chatCatAmount(month, labels) {
+  return month.categories
+    .filter(function (c) {
+      return labels.indexOf(c.label) >= 0;
+    })
+    .reduce(function (s, c) {
+      return s + c.amount;
+    }, 0);
+}
+function chatFirstChips(summary) {
+  var cur = summary.current;
+  var list = [{ topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적어?' }];
+  if (chatCatAmount(cur, ['인건비', '급여']) > 0)
+    list.push({ topic: '지출비율', text: '인건비는 매출의 몇 %야?' });
+  if (chatCatAmount(cur, ['월세', '임차료']) > 0)
+    list.push({ topic: '지출구성', text: '월세·공과금은 얼마 나갔어?' });
+  list.push(
+    summary.previous.length
+      ? { topic: '기간비교', text: CHAT_TOPIC_CHIPS.기간비교 }
+      : { topic: '용어', text: CHAT_TOPIC_CHIPS.용어 }
+  );
+  list.push(
+    cur.unknown > 0
+      ? { topic: '미분류', text: CHAT_TOPIC_CHIPS.미분류 }
+      : { topic: '지출구성', text: CHAT_TOPIC_CHIPS.지출구성 }
+  );
+  return list.slice(0, 5);
+}
 /* 직접 쓴(또는 칩을 고친) 질문의 주제. 앞의 것부터 맞춰 보고 맞는 낱말이 없으면 기타.
    질문 글은 이 브라우저 안에서만 보고, 서버에는 주제 코드만 보낸다. */
 var CHAT_TOPIC_WORDS = [
@@ -200,9 +232,12 @@ var CHAT_TOPIC_WORDS = [
   ],
   ['잔액차이', ['잔액', '통장']],
   ['미분류', ['안 정한', '미분류', '정하지 않은', '모르는 돈']],
-  ['운영판단', ['나아졌', '좋아졌', '나빠졌', '잘하고', '괜찮']],
+  ['운영판단', ['나아졌', '좋아졌', '나빠졌', '잘하고', '괜찮', '남는 게', '왜 남']],
   ['지출비율', ['비율', '퍼센트', '%']],
-  ['지출구성', ['가장 많이', '많이 썼', '어디에 썼', '어느 항목', '지출 구성']],
+  [
+    '지출구성',
+    ['가장 많이', '많이 썼', '어디에 썼', '어느 항목', '지출 구성', '얼마 나갔', '공과금', '월세']
+  ],
   ['기간비교', ['지난달', '전달', '저번 달', '달라졌', '비교']],
   ['용어', ['뜻', '의미', '무슨 말', '뭐야', '뭔가요', '무엇인가요']]
 ];
@@ -457,16 +492,16 @@ function openChat() {
   dialog.appendChild(log);
   chatBubble(log, 'bot', '보고 계신 결과에서 궁금한 점을 물어보세요.');
   var question = document.createElement('textarea');
-  function addChips(topics, cls) {
-    if (!topics.length) return;
+  // items: [{topic, text}] — 첫 화면은 chatFirstChips, 답변 뒤는 chatPickChips 의 주제를 문장으로 바꿔 넣는다.
+  function addChips(items, cls) {
+    if (!items.length) return;
     var chips = el('div', 'ai-chips' + (cls ? ' ' + cls : ''));
-    topics.forEach(function (topic) {
-      var text = CHAT_TOPIC_CHIPS[topic];
-      var b = el('button', 'ai-chip', text);
+    items.forEach(function (item) {
+      var b = el('button', 'ai-chip', item.text);
       b.type = 'button';
       b.onclick = function () {
-        question.value = text;
-        chip = { topic: topic, text: text };
+        question.value = item.text;
+        chip = { topic: item.topic, text: item.text };
         question.focus();
       };
       chips.appendChild(b);
@@ -474,7 +509,7 @@ function openChat() {
     log.appendChild(chips);
     chips.scrollIntoView({ block: 'nearest' });
   }
-  addChips(chatPickChips(summary, null, 3));
+  addChips(chatFirstChips(summary));
 
   /* 맨 아래: ⓘ 펼침 상자 · 안내 한 줄(+ⓘ) · 입력 칸 · 주의 한 줄.
      입력 칸 위 글은 작은 글씨 두 줄 안으로 줄이고, 나머지 안내는 ⓘ 를 눌러야 펼친다. */
@@ -501,7 +536,7 @@ function openChat() {
     el(
       'p',
       'ai-notice',
-      '질문과 금액 요약은 미국·영국 Cloudflare로 보내져 답변에만 쓰이고 남지 않습니다. 질문에 적은 가게 이름·성함도 그대로 전송됩니다.'
+      '질문과 금액 요약은 미국·영국 Cloudflare로 보내져 답변에만 쓰이고 남지 않습니다. 질문에 적은 이름도 그대로 전송됩니다.'
     )
   );
   var info = el('button', 'ai-info', 'ⓘ');
@@ -602,7 +637,12 @@ function openChat() {
         reply.classList.add('ai-answer');
         if (data.saved) chatBubble(log, 'meta', '운영자 확인용으로 저장했습니다.');
         chatCountTopic(topic);
-        addChips(chatPickChips(summary, topic.topic, 2), 'ai-next');
+        addChips(
+          chatPickChips(summary, topic.topic, 2).map(function (t) {
+            return { topic: t, text: CHAT_TOPIC_CHIPS[t] };
+          }),
+          'ai-next'
+        );
       }
     } catch (e) {
       reply.textContent =
