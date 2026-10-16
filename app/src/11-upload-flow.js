@@ -1,5 +1,10 @@
 function handleFiles(fileList) {
   var files = [].slice.call(fileList);
+  /* ★ NAM-20. 사용자가 고르거나 끌어다 놓은 파일만 여기로 온다 (예시 · 되살리기는 안 온다).
+     개수만 넘긴다 — 파일 이름 · 내용은 창구에 들어가지도 않는다 */
+  try {
+    USAGE.filesPicked(files.length);
+  } catch (e) {}
   var 보탬 = addFromRead(); /* ★ 119차 업로드 안내. 읽은 계좌 위에 보탠다 */
   document.getElementById('upbad').innerHTML = '';
   /* ★ 45차 ①. 파일을 받는 순간 창부터 연다.
@@ -544,6 +549,11 @@ function startFromBanks(banks, dup, overlap) {
     overlapFiles: overlap
   };
   UP.겹친건수 = 겹친건수;
+  /* ★ NAM-20. 새로 올린 파일로 만든 자료라고 표시해 둔다 — 되살린 판은 아니다 */
+  if (올림)
+    try {
+      USAGE.markNew(UP);
+    } catch (e) {}
   /* ★ 71차 ②. 파일을 보태서 온 길이면 매장을 다시 묻지 않는다.
      매장 이름은 저장 열쇠(fc.picks.<매장>)를 만드는 값이라, 여기서 잃으면
      정해두신 분류를 못 찾는다 — 그러면 「보태기」가 「새로 시작」이 되어 버린다.

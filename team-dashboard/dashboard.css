@@ -1,0 +1,237 @@
+/* 팀 대시보드 (NAM-20, 2026-09-29). 고객 앱과 따로 배포된다. 색은 앱의 기본 톤을 빌려 쓴다 */
+:root {
+  --ink: #23201e;
+  --paper: #fff;
+  --panel: #f6f2ee;
+  --line: #e7dfd7;
+  --gray: #6f675f;
+  --warn: #c4443e;
+  --good: #2c8055;
+  --now: #2f5fbf;
+  --rad: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Apple SD Gothic Neo',
+    'Malgun Gothic',
+    sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+h2 {
+  margin: 28px 0 8px;
+  font-size: 16px;
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.out {
+  color: var(--gray);
+  font-size: 14px;
+}
+
+.mock {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 2px dashed var(--warn);
+  border-radius: var(--rad);
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.mock[hidden] {
+  display: none;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.controls button,
+.controls select,
+.controls input {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.controls button[aria-pressed='true'] {
+  border-color: var(--now);
+  color: var(--now);
+  font-weight: 700;
+}
+
+.presets,
+.custom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.status {
+  margin: 12px 0 4px;
+  color: var(--gray);
+  font-size: 14px;
+}
+
+.status.bad {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.warns {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: var(--gray);
+  font-size: 14px;
+}
+
+.funnel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.step {
+  flex: 1 1 140px;
+  padding: 12px 14px;
+  border-radius: var(--rad);
+  background: var(--panel);
+}
+
+.lab {
+  display: block;
+  color: var(--gray);
+  font-size: 13px;
+}
+
+.step b {
+  font-size: 24px;
+}
+
+.arrow {
+  color: var(--gray);
+}
+
+.rates,
+.basis {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.basis {
+  color: var(--gray);
+}
+
+.over {
+  color: var(--warn);
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 160px;
+}
+
+.chart .a {
+  fill: var(--now);
+}
+
+.chart .r {
+  fill: var(--good);
+}
+
+.chart .x {
+  fill: var(--line);
+}
+
+.legend {
+  margin: 6px 0 10px;
+  color: var(--gray);
+  font-size: 13px;
+}
+
+.la {
+  color: var(--now);
+}
+
+.lr {
+  color: var(--good);
+}
+
+.tablewrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+caption {
+  padding-bottom: 6px;
+  color: var(--gray);
+  text-align: left;
+}
+
+th,
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+td.none {
+  color: var(--gray);
+  text-align: center;
+}
+
+.about {
+  color: var(--gray);
+  font-size: 14px;
+}

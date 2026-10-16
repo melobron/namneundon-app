@@ -648,6 +648,16 @@ GNDR
 CHRG
 RSLT
 INBL
+# 유입·사용 집계 · 팀 대시보드 (2026-09-29)
+appurl
+auds
+cloudflareaccess
+hrefs
+nosniff
+tablewrap
+usedetail
+usemore
+usenote
 xfacts
 xfrow
 xfstate

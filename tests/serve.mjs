@@ -20,9 +20,16 @@ function inside(root, file) {
   return path !== '..' && !path.startsWith(`..${sep}`) && !isAbsolute(path);
 }
 
-/** 지정한 공개 폴더만 제공한다. 거래내역이나 저장소 설정은 제공하지 않는다. */
-export function siteServer(root, links = {}) {
+/**
+ * 지정한 공개 폴더만 제공한다. 거래내역이나 저장소 설정은 제공하지 않는다.
+ * @param {string} root
+ * @param {Record<string, string>} [links] HTML 안의 주소 바꾸기
+ * @param {Record<string, { type: string, body: string }>} [overrides] 이 경로만 파일 대신 이 내용으로 (로컬 시험 설정용)
+ * @param {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => boolean} [extra] 먼저 처리할 요청 (처리했으면 true)
+ */
+export function siteServer(root, links = {}, overrides = {}, extra = null) {
   return createServer(async (req, res) => {
+    if (extra && extra(req, res)) return;
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { Allow: 'GET, HEAD' }).end();
       return;
@@ -32,6 +39,11 @@ export function siteServer(root, links = {}) {
       path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     } catch {
       res.writeHead(400).end();
+      return;
+    }
+    if (Object.hasOwn(overrides, path)) {
+      res.writeHead(200, { 'Content-Type': overrides[path].type, 'Cache-Control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : overrides[path].body);
       return;
     }
     const file = resolve(root, '.' + (path.endsWith('/') ? path + 'index.html' : path));
