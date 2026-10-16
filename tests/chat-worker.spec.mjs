@@ -777,5 +777,9 @@ test('배포 설정: 모델은 mistral-small-3.1-24b, 호환 날짜는 wrangler 
   expect(config.vars.CHAT_MODEL).toBe('@cf/mistralai/mistral-small-3.1-24b-instruct');
   expect(Object.keys(MODELS)).toContain(config.vars.CHAT_MODEL);
   expect(config.compatibility_date).toBe('2026-09-30');
+  // Access: 팀은 하위 도메인만(코드가 https://<팀>.cloudflareaccess.com 으로 만든다), AUD 는 64자리 16진수
+  expect(config.vars.ACCESS_TEAM).toMatch(/^[a-z0-9-]+$/);
+  expect(config.vars.ACCESS_TEAM).not.toContain('.'); // 전체 주소가 아니라 하위 도메인만
+  expect(config.vars.ACCESS_AUD).toMatch(/^[0-9a-f]{64}$/);
   expect(config.d1_databases[0].database_id).toMatch(/^[0-9a-f-]{36}$/);
 });

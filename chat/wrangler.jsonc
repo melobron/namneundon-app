@@ -18,7 +18,7 @@
   "vars": {
     "CHAT_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
     "DAILY_NEURONS": "8000",
-    "ACCESS_TEAM": "TODO_TEAM",
-    "ACCESS_AUD": "TODO_AUD"
+    "ACCESS_TEAM": "bitter-rice-6e3b",
+    "ACCESS_AUD": "1ec7024ad05f0f02abd988486ce27994faaa81ac9aec2842922f79efb124068f"
   }
 }

@@ -175,7 +175,7 @@ mistral 질문당 약 52~59 뉴런 → 하루 10,000 기준 약 170~190개, 서�
 3. (2026-10-16 완료) 모델 실측 후 `CHAT_MODEL` 을 mistral-small-3.1-24b 로 넣었다. 지시 무시 요청 시험은 아직이다.
 4. `chat.namneundon.com`을 별도 Worker custom domain으로 연결한다. workers.dev·미리보기 주소는 계속 비활성화한다.
 5. Cloudflare Access 앱을 `/admin` 및 `/api/admin/*`에 적용하고 운영자 이메일 하나만 허용한다.
-   `ACCESS_TEAM`에는 팀 하위 도메인, `ACCESS_AUD`에는 해당 Access 앱 AUD를 넣는다.
+   `ACCESS_TEAM`에는 팀 하위 도메인만(예: `bitter-rice-6e3b` — 코드가 `https://<팀>.cloudflareaccess.com`을 만든다), `ACCESS_AUD`에는 해당 Access 앱 AUD를 넣는다. (2026-10-16 값 넣고 다시 배포)
    서버는 헤더 존재뿐 아니라 RSA 서명·발급자·대상·유효기간을 검증한다. 다른 주소로 우회되지 않는지도 시험한다.
 6. 무료 플랜과 계정 전체의 다른 AI 사용량을 확인한다. 자동 유료 전환·AI Gateway 크레딧은 연결하지 않는다.
 7. 입력·출력·오류 로그에 본문이 남지 않는지, 실제 모델 사용량과 D1 정산이 일치하는지 확인한다.
