@@ -162,12 +162,71 @@ function chatLimitText(next) {
     ' (한국시간)입니다. 결과 화면은 계속 사용할 수 있습니다.'
   );
 }
-/* 예시 질문은 질문 칸을 채우기만 한다. 자동으로 보내지 않는다. */
-var CHAT_CHIPS = [
-  '이번 달 결과를 설명해 줘',
-  '차액과 통장 잔액은 왜 달라?',
-  '아직 안 정한 돈은 뭐야?'
+/* 주제 코드(고정, 서버 TOPICS 와 같다)와 예상 질문. 칩은 질문 칸을 채우기만 하고 자동으로 보내지 않는다.
+   AI 가 추천 질문을 만들지 않는다 — 브라우저가 자료 상태로 고른다. */
+var CHAT_TOPIC_CHIPS = {
+  운영판단: '이번 달 결과, 지난달보다 나아졌어?',
+  용어: '차액은 무슨 뜻이야?',
+  잔액차이: '차액과 통장 잔액은 왜 달라?',
+  기간비교: '지난달보다 뭐가 달라졌어?',
+  지출구성: '어느 항목에 가장 많이 썼어?',
+  지출비율: '재료 비율은 어떻게 계산해?',
+  미분류: '아직 안 정한 돈은 뭐야?',
+  자료범위: '이 자료로 한 달 전체를 비교해도 돼?',
+  업종비교: '같은 업종과 비교하면 어느 수준이야?',
+  앞으로지출: '다음 달 큰 지출을 해도 될까?'
+};
+/* 추천 순서: 아직 안 정한 돈이 있으면 미분류가 먼저, 비교할 이전 달(전체 기간 확보)이 있을 때만 기간비교,
+   나머지는 용어 · 지출구성 · 잔액차이. 업종비교·앞으로지출은 추천하지 않는다. skip 은 방금 물은 주제. */
+function chatPickChips(summary, skip, max) {
+  var order = [];
+  if (summary.current.unknown > 0) order.push('미분류');
+  if (summary.previous.length) order.push('기간비교');
+  order.push('용어', '지출구성', '잔액차이');
+  return order
+    .filter(function (t) {
+      return t !== skip;
+    })
+    .slice(0, max);
+}
+/* 직접 쓴(또는 칩을 고친) 질문의 주제. 앞의 것부터 맞춰 보고 맞는 낱말이 없으면 기타.
+   질문 글은 이 브라우저 안에서만 보고, 서버에는 주제 코드만 보낸다. */
+var CHAT_TOPIC_WORDS = [
+  ['업종비교', ['업종', '다른 가게', '동종', '평균']],
+  ['자료범위', ['한 달 전체', '전체 기간', '자료 범위', '빠진', '누락']],
+  [
+    '앞으로지출',
+    ['해도 될까', '써도 될까', '써도 돼', '사도 될까', '투자', '대출 받', '다음 달', '앞으로']
+  ],
+  ['잔액차이', ['잔액', '통장']],
+  ['미분류', ['안 정한', '미분류', '정하지 않은', '모르는 돈']],
+  ['운영판단', ['나아졌', '좋아졌', '나빠졌', '잘하고', '괜찮']],
+  ['지출비율', ['비율', '퍼센트', '%']],
+  ['지출구성', ['가장 많이', '많이 썼', '어디에 썼', '어느 항목', '지출 구성']],
+  ['기간비교', ['지난달', '전달', '저번 달', '달라졌', '비교']],
+  ['용어', ['뜻', '의미', '무슨 말', '뭐야', '뭔가요', '무엇인가요']]
 ];
+function chatTopicOf(text, chip) {
+  if (chip && text === chip.text) return { topic: chip.topic, source: 'chip' };
+  for (var i = 0; i < CHAT_TOPIC_WORDS.length; i++) {
+    var words = CHAT_TOPIC_WORDS[i][1];
+    for (var j = 0; j < words.length; j++)
+      if (text.indexOf(words[j]) >= 0) return { topic: CHAT_TOPIC_WORDS[i][0], source: 'typed' };
+  }
+  return { topic: '기타', source: 'typed' };
+}
+/* 주제 집계 — 질문을 실제로 보내 답을 받은 뒤 {topic, source} 만 따로 보낸다.
+   지우기 키·대화 번호·질문 글·요약·브라우저 식별값은 넣지 않는다. 실패해도 대화에는 영향이 없다. */
+function chatCountTopic(t) {
+  fetch(CHAT_URL + '/api/topic', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() },
+    body: JSON.stringify({ topic: t.topic, source: t.source }),
+    signal: AbortSignal.timeout(15000)
+  }).catch(function () {});
+}
+// TODO: 사이트 개인정보 처리방침에 AI 질문 항목과 바로 가는 주소가 생기면 넣는다(지금 사이트 처리방침은 AI 전송을 다루지 않고 주소 앵커도 없다).
+var CHAT_PRIVACY_URL = '';
 /* 진입점은 결과 화면 오른쪽 아래 동그란 아이콘 하나다 — 남는돈 마크(BRAND_MARK) + 작은 「AI」.
    결과 화면(up-result) 안에 두어 다른 화면으로 갈 때 결과와 함께 감춰지게 한다.
    아이콘이 마지막 줄을 가리지 않게 결과 화면 맨 아래에 아이콘 높이만큼 여백을 둔다 (app.css 124차).
@@ -275,16 +334,17 @@ function chatBubble(log, who, text) {
 /* 보내기 단추의 그림. 고정된 글자이고 사용자 입력이 섞이지 않는다. */
 var CHAT_SEND_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12l16-8-6 16-2.5-6.5z" fill="currentColor"/></svg>';
-/* 질문 창 = 채팅 화면. 머리(제목·시험 중·더보기·닫기) / 말풍선 / 맨 아래 입력 칸.
-   화면 열기·달 바꾸기·닫기는 통신하지 않는다. 전송은 첫 보내기 때 대화창 안 안내 카드에서
-   동의한 뒤에만 한다. 동의는 이 창이 열려 있는 동안만 유지하고 저장하지 않는다. */
+/* 질문 창 = 채팅 화면. 머리(제목·시험 중·더보기·닫기) / 말풍선 / 맨 아래 안내 두 줄 + 입력 칸.
+   화면 열기·달 바꾸기·닫기는 통신하지 않는다. 보내기를 누르면 바로 보낸다 —
+   보내는 내용은 입력 칸 위 안내와 「자세히」에 늘 보인다.
+   운영자 확인용 저장은 ⋯ 메뉴에서 켤 때만, 이 창이 열려 있는 동안만 켜진다(저장하지 않음). */
 function openChat() {
   if (document.getElementById('ai-chat')) return;
   var summary = chatSummary(); // 표와 실제 전송값을 같은 객체로 고정한다.
   var store = UP;
-  var consented = false;
-  var shareOn = false;
+  var optIn = false;
   var busy = false;
+  var chip = null; // 마지막으로 누른 칩 {topic, text}
   var dialog = document.createElement('dialog');
   dialog.id = 'ai-chat';
   dialog.className = 'ai-chat';
@@ -311,9 +371,34 @@ function openChat() {
     dialog.close();
   };
   head.appendChild(close);
+
+  /* ⋯ 메뉴: 운영자 확인용 저장(선택, 기본 꺼짐) · 대화 삭제 · 안내 */
   var menu = el('div', 'ai-menu');
   menu.id = 'ai-menu';
   menu.hidden = true;
+  var optRow = el('button', 'ai-opt-in', '운영자 확인용 저장: 꺼짐');
+  optRow.type = 'button';
+  optRow.setAttribute('aria-expanded', 'false');
+  menu.appendChild(optRow);
+  var optPanel = el('div', 'ai-opt-in-panel');
+  optPanel.hidden = true;
+  [
+    '[선택] 서비스 개선을 위해 앞으로 보내는 질문·답변과 업종을 남는돈 운영자가 확인하도록 저장합니다.',
+    '저장 항목: 질문, 답변, 업종, 작성 시각, 대화 번호, 삭제 키 확인값. 질문에 직접 적은 금액·이름도 함께 저장될 수 있습니다.',
+    '대표님이 지우시거나 14일이 지나면 지웁니다. 데이터베이스의 되돌리기 기능 때문에 지운 뒤 7일 동안은 되살릴 수 있는 상태로 남고, 그 뒤에 사라집니다.',
+    '켜지 않아도 질문 기능은 그대로 쓰실 수 있고, 언제든 끌 수 있습니다. 켜기 전 대화는 저장하지 않습니다.'
+  ].forEach(function (t) {
+    optPanel.appendChild(el('p', null, t));
+  });
+  var optActs = el('div', 'ai-opt-in-acts');
+  var optOn = el('button', 'b on', '켜기');
+  optOn.type = 'button';
+  var optCancel = el('button', 'b', '취소');
+  optCancel.type = 'button';
+  optActs.appendChild(optOn);
+  optActs.appendChild(optCancel);
+  optPanel.appendChild(optActs);
+  menu.appendChild(optPanel);
   var remove = el('button', 'b ai-remove', '대화 삭제');
   remove.type = 'button';
   menu.appendChild(remove);
@@ -321,7 +406,7 @@ function openChat() {
     el(
       'p',
       null,
-      '매장 「지우기」는 서버 대화를 지우지 않습니다. 「대화 삭제」는 이 브라우저의 삭제용 정보에 연결된 공유 대화를 지웁니다. 브라우저 저장소를 지우면 삭제용 정보도 사라집니다.'
+      '「대화 삭제」는 이 브라우저에서 운영자 확인용으로 저장된 대화를 지웁니다. 매장 「지우기」는 서버 대화를 지우지 않습니다. 브라우저 저장소를 지우면 삭제용 정보도 사라집니다.'
     )
   );
   var contact = el('a', null, '문의 안내');
@@ -330,9 +415,44 @@ function openChat() {
   contact.rel = 'noopener noreferrer';
   menu.appendChild(contact);
   head.appendChild(menu);
+  function closeMenu() {
+    menu.hidden = true;
+    optPanel.hidden = true;
+    optRow.setAttribute('aria-expanded', 'false');
+    more.setAttribute('aria-expanded', 'false');
+  }
   more.onclick = function () {
-    menu.hidden = !menu.hidden;
-    more.setAttribute('aria-expanded', String(!menu.hidden));
+    if (!menu.hidden) return closeMenu();
+    menu.hidden = false;
+    more.setAttribute('aria-expanded', 'true');
+  };
+  function setOptIn(on) {
+    optIn = on;
+    optRow.textContent = on ? '운영자 확인용 저장: 켜짐 · 끄기' : '운영자 확인용 저장: 꺼짐';
+  }
+  optRow.onclick = function () {
+    if (optIn) {
+      // 끄면 바로 다음 질문부터 저장하지 않는다.
+      setOptIn(false);
+      closeMenu();
+      chatBubble(log, 'meta', '운영자 확인용 저장을 껐습니다. 다음 질문부터 저장하지 않습니다.');
+      return;
+    }
+    optPanel.hidden = !optPanel.hidden;
+    optRow.setAttribute('aria-expanded', String(!optPanel.hidden));
+  };
+  optOn.onclick = function () {
+    setOptIn(true);
+    closeMenu();
+    chatBubble(
+      log,
+      'meta',
+      '운영자 확인용 저장을 켰습니다. 지금부터 보내는 질문과 답변을 저장합니다.'
+    );
+  };
+  optCancel.onclick = function () {
+    optPanel.hidden = true;
+    optRow.setAttribute('aria-expanded', 'false');
   };
   dialog.appendChild(head);
 
@@ -343,38 +463,65 @@ function openChat() {
   dialog.appendChild(log);
   chatBubble(log, 'bot', '보고 계신 결과에서 궁금한 점을 물어보세요.');
   var question = document.createElement('textarea');
-  var chips = el('div', 'ai-chips');
-  CHAT_CHIPS.forEach(function (text) {
-    var chip = el('button', 'ai-chip', text);
-    chip.type = 'button';
-    chip.onclick = function () {
-      question.value = text;
-      question.focus();
-    };
-    chips.appendChild(chip);
-  });
-  log.appendChild(chips);
+  function addChips(topics, cls) {
+    if (!topics.length) return;
+    var chips = el('div', 'ai-chips' + (cls ? ' ' + cls : ''));
+    topics.forEach(function (topic) {
+      var text = CHAT_TOPIC_CHIPS[topic];
+      var b = el('button', 'ai-chip', text);
+      b.type = 'button';
+      b.onclick = function () {
+        question.value = text;
+        chip = { topic: topic, text: text };
+        question.focus();
+      };
+      chips.appendChild(b);
+    });
+    log.appendChild(chips);
+    chips.scrollIntoView({ block: 'nearest' });
+  }
+  addChips(chatPickChips(summary, null, 3));
 
-  /* 맨 아래 입력 칸 */
+  /* 맨 아래: 「자세히」 상자 · 안내 두 줄 · 입력 칸 · 주의 한 줄 */
   var foot = el('div', 'ai-foot');
-  var sentLine = el('button', 'ai-sent-line', 'Cloudflare로 요약 전송 · 보낼 내용 보기');
-  sentLine.type = 'button';
-  sentLine.hidden = true;
-  sentLine.setAttribute('aria-expanded', 'false');
-  var sentCard = null;
-  sentLine.onclick = function () {
-    if (sentCard) {
-      sentCard.remove();
-      sentCard = null;
-    } else {
-      sentCard = el('div', 'ai-msg ai-bot ai-card');
-      sentCard.appendChild(chatPreview(summary));
-      log.appendChild(sentCard);
-      sentCard.scrollIntoView({ block: 'nearest' });
-    }
-    sentLine.setAttribute('aria-expanded', String(!!sentCard));
+  var detail = el('div', 'ai-detail');
+  detail.id = 'ai-detail';
+  detail.hidden = true;
+  detail.appendChild(el('h3', null, '남는돈이 자동으로 붙이는 것'));
+  detail.appendChild(chatPreview(summary));
+  detail.appendChild(el('h3', null, '대표님이 직접 적는 것'));
+  detail.appendChild(
+    el('p', null, '질문 칸에 적은 글은 그대로 전송됩니다. 계좌번호·이름·연락처는 적지 마세요.')
+  );
+  detail.appendChild(el('h3', null, '받는 곳과 목적'));
+  detail.appendChild(el('p', null, '받는 곳: Cloudflare(서버·Workers AI) · 목적: 답변 생성'));
+  if (CHAT_PRIVACY_URL) {
+    var privacy = el('a', null, '개인정보 처리방침');
+    privacy.href = CHAT_PRIVACY_URL;
+    privacy.target = '_blank';
+    privacy.rel = 'noopener noreferrer';
+    detail.appendChild(privacy);
+  } else detail.appendChild(el('p', 'ai-note', '개인정보 처리방침: 준비 중'));
+  foot.appendChild(detail);
+  var notice = el(
+    'p',
+    'ai-notice',
+    '질문과 선택·비교 기간의 금액 요약(업종, 금액, 비율)이 미국과 영국에 있는 Cloudflare로 전송되어 답변을 만드는 데 쓰입니다. 답변을 만든 뒤에는 남지 않습니다. 운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다. · '
+  );
+  var more2 = el('button', 'ai-link', '자세히');
+  more2.type = 'button';
+  more2.setAttribute('aria-expanded', 'false');
+  more2.setAttribute('aria-controls', 'ai-detail');
+  more2.onclick = function () {
+    detail.hidden = !detail.hidden;
+    more2.setAttribute('aria-expanded', String(!detail.hidden));
   };
-  foot.appendChild(sentLine);
+  notice.appendChild(more2);
+  foot.appendChild(notice);
+  foot.appendChild(
+    el('p', 'ai-notice ai-small', '질문 칸에 가게 이름이나 성함을 적으시면 그대로 전송됩니다.')
+  );
+  foot.appendChild(el('p', 'ai-notice', '앞선 대화는 답변에 반영되지 않습니다.'));
   var row = el('div', 'ai-input');
   question.maxLength = 300;
   question.rows = 1;
@@ -400,93 +547,18 @@ function openChat() {
   );
   dialog.appendChild(foot);
 
-  /* 첫 보내기 직전, 대화창 안의 안내 카드. 동의하기 전에는 아무것도 보내지 않는다. */
-  var consentCard = null;
-  function askConsent() {
-    if (consentCard) {
-      consentCard.scrollIntoView({ block: 'nearest' });
-      return;
-    }
-    var card = el('div', 'ai-msg ai-bot ai-card ai-consent');
-    card.appendChild(
-      el(
-        'p',
-        null,
-        '질문과 선택한 기간·비교 기간의 업종·금액 요약을 남는돈 서버(Cloudflare)와 Cloudflare Workers AI로 보내 답변을 만듭니다. 원본 파일·개별 거래내역·거래처 이름은 자동으로 보내지 않습니다.'
-      )
-    );
-    var preview = chatPreview(summary);
-    preview.hidden = true;
-    var see = el('button', 'b', '보낼 내용 보기');
-    see.type = 'button';
-    see.setAttribute('aria-expanded', 'false');
-    see.onclick = function () {
-      preview.hidden = !preview.hidden;
-      see.setAttribute('aria-expanded', String(!preview.hidden));
-    };
-    card.appendChild(see);
-    card.appendChild(preview);
-    var label = el('label', 'ai-share');
-    var share = document.createElement('input');
-    share.type = 'checkbox';
-    label.appendChild(share);
-    label.appendChild(
-      document.createTextNode(
-        '서비스 개선을 위해 남는돈 운영자 강요한이 질문과 답변을 확인하는 데 동의합니다. 동의한 대화와 업종·작성일은 30일간 보관 후 삭제합니다. 대화에 포함된 금액과 이름도 함께 저장될 수 있습니다.'
-      )
-    );
-    card.appendChild(label);
-    card.appendChild(
-      el('p', 'ai-note', '동의하지 않아도 내용 없이 날짜별 사용 횟수만 집계됩니다.')
-    );
-    var acts = el('div', 'ai-card-acts');
-    var agree = el('button', 'b on', '동의하고 보내기');
-    agree.type = 'button';
-    var cancel = el('button', 'b', '취소');
-    cancel.type = 'button';
-    acts.appendChild(agree);
-    acts.appendChild(cancel);
-    card.appendChild(acts);
-    agree.onclick = function () {
-      consented = true;
-      shareOn = share.checked;
-      card.remove();
-      consentCard = null;
-      sentLine.hidden = false;
-      deliver();
-    };
-    cancel.onclick = function () {
-      card.remove();
-      consentCard = null;
-      question.focus();
-    };
-    consentCard = card;
-    log.appendChild(card);
-    card.scrollIntoView({ block: 'nearest' });
-  }
-
-  /* 보내기 전에 확인할 것 — 통신하지 않고 안내만 말풍선으로 한다 */
-  function ready() {
+  /* 보내기 — 누르면 바로 보낸다. 확인할 것은 통신 없이 말풍선으로 안내한다. */
+  send.onclick = async function () {
+    if (busy) return;
     if (store !== UP || summary.current.month !== UP.month) {
       chatBubble(log, 'bot', '보고 있는 자료가 바뀌었습니다. 창을 닫고 다시 열어주세요.');
-      return false;
+      return;
     }
     var text = question.value.trim();
     if (!text || Array.from(text).length > 300) {
       chatBubble(log, 'bot', '질문을 300자 이내로 적어주세요.');
-      return false;
+      return;
     }
-    return true;
-  }
-  send.onclick = function () {
-    if (busy || !ready()) return;
-    if (!consented) askConsent();
-    else deliver();
-  };
-
-  async function deliver() {
-    if (busy || !ready()) return;
-    var text = question.value.trim();
     var day = new Date().toISOString().slice(0, 10);
     var use = chatRead(CHAT_KEYS.usage, { day: day, count: 0 });
     if (use.day !== day) use = { day: day, count: 0 };
@@ -498,6 +570,9 @@ function openChat() {
       );
       return;
     }
+    var topic = chatTopicOf(text, chip);
+    chip = null;
+    var share = optIn;
     busy = true;
     send.disabled = true;
     remove.disabled = true;
@@ -507,21 +582,19 @@ function openChat() {
     var reply = chatBubble(log, 'bot', '답변을 만들고 있습니다.');
     reply.classList.add('ai-pending');
     try {
-      var receipt = chatReceipt();
+      /* 지우기 키(Authorization)와 대화 번호(convId)는 운영자 확인용 저장을 켠 질문에만 붙인다. */
+      var headers = { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() };
+      var payload = { question: text, summary: summary, share: share };
+      if (share) {
+        var receipt = chatReceipt();
+        headers.Authorization = 'Bearer ' + receipt.token;
+        payload.convId = receipt.convId;
+      }
       lsSet(CHAT_KEYS.usage, JSON.stringify({ day: day, count: use.count + 1 }));
       var res = await fetch(CHAT_URL + '/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + receipt.token,
-          'X-Namneundon-Tester': chatTesterKey()
-        },
-        body: JSON.stringify({
-          question: text,
-          summary: summary,
-          share: shareOn,
-          convId: receipt.convId
-        }),
+        headers: headers,
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(45000)
       });
       var data = await res.json();
@@ -534,29 +607,23 @@ function openChat() {
       else {
         reply.textContent = data.answer;
         reply.classList.add('ai-answer');
-        chatBubble(
-          log,
-          'meta',
-          data.saved
-            ? '질문과 답변이 공유 기록으로 저장되었습니다.'
-            : '운영자 열람용 대화 기록을 저장하지 않았습니다.'
-        );
+        if (data.saved) chatBubble(log, 'meta', '운영자 확인용으로 저장했습니다.');
+        chatCountTopic(topic);
+        addChips(chatPickChips(summary, topic.topic, 2), 'ai-next');
       }
     } catch (e) {
       reply.textContent =
         '질문을 보내거나 답변을 받지 못했습니다. 결과 화면은 계속 사용할 수 있습니다.';
     } finally {
       reply.classList.remove('ai-pending');
-      reply.scrollIntoView({ block: 'nearest' });
       busy = false;
       send.disabled = false;
       remove.disabled = false;
     }
-  }
+  };
 
   remove.onclick = async function () {
-    menu.hidden = true;
-    more.setAttribute('aria-expanded', 'false');
+    closeMenu();
     var receipt = chatRead(CHAT_KEYS.receipt, null);
     if (!receipt) {
       chatBubble(log, 'bot', '이 브라우저에 삭제용 대화 정보가 없습니다.');

@@ -4,7 +4,17 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import * as acorn from 'acorn';
 import { loadCore } from './core/load-core.mjs';
-import worker, { accessAllowed, validSummary, nextReset, SYSTEM } from '../chat/src/index.js';
+import worker, {
+  accessAllowed,
+  validSummary,
+  nextReset,
+  SYSTEM,
+  TOPICS,
+  kstDay,
+  ADMIN,
+  weekStart,
+  weeklyTopics
+} from '../chat/src/index.js';
 
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
@@ -27,17 +37,19 @@ function month() {
     ratioLabel: '매입 비율'
   };
 }
+// 운영자 확인용 저장을 켠 질문만 convId 를 보낸다. 꺼진 질문은 {question, summary, share:false} 뿐이다.
 function body(share = false) {
   return {
     question: '이 뜻은 무엇인가요?',
     summary: { industry: '약국', current: month(), previous: [] },
     share,
-    convId
+    ...(share ? { convId } : {})
   };
 }
 function setup() {
   const sql = new DatabaseSync(':memory:');
-  sql.exec(readFileSync(new URL('../chat/migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const m of ['0001_init.sql', '0002_topics_notes.sql'])
+    sql.exec(readFileSync(new URL('../chat/migrations/' + m, import.meta.url), 'utf8'));
   const DB = {
     prepare(query) {
       let args = [];
@@ -192,7 +204,7 @@ test('Access 누락·가짜 서명·자리표시 설정은 관리자 접근 차�
   ).toBe(false);
   s.sql.close();
 });
-test('30일 만료 대화와 지난 날짜 사용량 정리', async () => {
+test('만료 대화와 지난 날짜 사용량 정리', async () => {
   const s = setup();
   const insert = s.sql.prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)');
   insert.run('old', convId, token, '질문', '답', '약국', Date.now() - 31 * 86400000);
@@ -415,7 +427,7 @@ test('맞는 시험자 키는 처리, 사전 요청은 시험자 헤더를 허�
   expect(pre.headers.get('Access-Control-Allow-Headers')).toContain('X-Namneundon-Tester');
   s.sql.close();
 });
-test('예약 작업은 1시간마다, 30일 지난 대화만 지움', async () => {
+test('예약 작업은 1시간마다, 운영자 확인용 원문은 14일 지난 것만 지움', async () => {
   const config = JSON.parse(
     readFileSync(new URL('../chat/wrangler.jsonc', import.meta.url), 'utf8')
   );
@@ -425,17 +437,17 @@ test('예약 작업은 1시간마다, 30일 지난 대화만 지움', async () =
   const s = setup();
   const insert = s.sql.prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)');
   const day = 86400000;
-  insert.run('d31', convId, token, '질문', '답', '약국', Date.now() - 31 * day);
-  insert.run('d30h1', convId, token, '질문', '답', '약국', Date.now() - 30 * day - 3600000);
-  insert.run('d29', convId, token, '질문', '답', '약국', Date.now() - 29 * day);
-  insert.run('d30m', convId, token, '질문', '답', '약국', Date.now() - 30 * day + 60000);
+  insert.run('d15', convId, token, '질문', '답', '약국', Date.now() - 15 * day);
+  insert.run('d14h1', convId, token, '질문', '답', '약국', Date.now() - 14 * day - 3600000);
+  insert.run('d13', convId, token, '질문', '답', '약국', Date.now() - 13 * day);
+  insert.run('d14m', convId, token, '질문', '답', '약국', Date.now() - 14 * day + 60000);
   await worker.scheduled({}, s.env);
   expect(
     s.sql
       .prepare('SELECT id FROM conversations ORDER BY id')
       .all()
       .map((r) => r.id)
-  ).toEqual(['d29', 'd30m']);
+  ).toEqual(['d13', 'd14m']);
   s.sql.close();
 });
 test('시험 키는 영문 소문자·숫자만 — 형식이 다른 비밀값·헤더는 같아도 403', async () => {
@@ -456,4 +468,299 @@ test('시험 키는 영문 소문자·숫자만 — 형식이 다른 비밀값·
   );
   nothingHappened(s);
   s.sql.close();
+});
+
+// ── 124 정리: 운영자 확인 선택 켜기 · 주제 집계 · 관리 화면 내보내기 ──
+test('운영자 확인 꺼진 질문은 지우기 키·convId 없이 처리, 켠 질문만 둘 다 필요', async () => {
+  const s = setup();
+  // 꺼짐: Authorization 없이, 본문에 convId 없이
+  const off = new Request('https://chat.namneundon.com/api/chat', {
+    method: 'POST',
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Namneundon-Tester': TESTER },
+    body: JSON.stringify(body(false))
+  });
+  const r = await worker.fetch(off, s.env);
+  expect(r.status).toBe(200);
+  expect((await r.json()).saved).toBe(false);
+  expect(s.sql.prepare('SELECT * FROM conversations').all()).toEqual([]);
+  // 꺼졌는데 convId 를 붙이면 받지 않는다
+  expect((await worker.fetch(request({ ...body(false), convId }), s.env)).status).toBe(400);
+  // 켰는데 convId·지우기 키가 없으면 받지 않는다
+  const noConv = body(true);
+  delete noConv.convId;
+  expect((await worker.fetch(request(noConv), s.env)).status).toBe(400);
+  const noKey = new Request('https://chat.namneundon.com/api/chat', {
+    method: 'POST',
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Namneundon-Tester': TESTER },
+    body: JSON.stringify(body(true))
+  });
+  expect((await worker.fetch(noKey, s.env)).status).toBe(400);
+  expect(s.sql.prepare('SELECT * FROM conversations').all()).toEqual([]);
+  // 켜고 둘 다 있으면 저장
+  expect((await worker.fetch(request(body(true)), s.env)).status).toBe(200);
+  expect(s.sql.prepare('SELECT conv_id FROM conversations').all()).toEqual([{ conv_id: convId }]);
+  s.sql.close();
+});
+
+const topicRequest = (data, tester = TESTER) =>
+  new Request('https://chat.namneundon.com/api/topic', {
+    method: 'POST',
+    headers: {
+      Origin: ORIGIN,
+      'Content-Type': 'application/json',
+      'CF-Connecting-IP': '203.0.113.7',
+      ...(tester === null ? {} : { 'X-Namneundon-Tester': tester })
+    },
+    body: JSON.stringify(data)
+  });
+test('주제 집계: {topic, source} 만 받아 한국 날짜·주제·출처별로 +1, 목록 밖·다른 칸·시험 키 없음은 거절', async () => {
+  const s = setup();
+  expect(TOPICS).toEqual([
+    '운영판단',
+    '용어',
+    '잔액차이',
+    '기간비교',
+    '지출구성',
+    '지출비율',
+    '미분류',
+    '자료범위',
+    '업종비교',
+    '앞으로지출',
+    '기타'
+  ]);
+  expect(
+    (await worker.fetch(topicRequest({ topic: '미분류', source: 'chip' }), s.env)).status
+  ).toBe(200);
+  await worker.fetch(topicRequest({ topic: '미분류', source: 'chip' }), s.env);
+  await worker.fetch(topicRequest({ topic: '용어', source: 'typed' }), s.env);
+  for (const bad of [
+    { topic: '폐업', source: 'chip' },
+    { topic: '체납', source: 'typed' },
+    { topic: '미분류', source: 'auto' },
+    { topic: '미분류', source: 'chip', question: '아직 안 정한 돈은 뭐야?' },
+    { topic: '미분류', source: 'chip', convId },
+    { topic: '미분류' }
+  ])
+    expect((await worker.fetch(topicRequest(bad), s.env)).status, JSON.stringify(bad)).toBe(400);
+  expect(
+    (await worker.fetch(topicRequest({ topic: '용어', source: 'chip' }, null), s.env)).status
+  ).toBe(403);
+  // 표에는 날짜·주제·출처·횟수만 — IP·헤더·질문 칸이 없다
+  expect(
+    s.sql
+      .prepare('PRAGMA table_info(topic_counts)')
+      .all()
+      .map((c) => c.name)
+  ).toEqual(['day', 'topic', 'source', 'count']);
+  expect(s.sql.prepare('SELECT * FROM topic_counts ORDER BY topic DESC').all()).toEqual([
+    { day: kstDay(), topic: '용어', source: 'typed', count: 1 },
+    { day: kstDay(), topic: '미분류', source: 'chip', count: 2 }
+  ]);
+  expect(JSON.stringify(s.sql.prepare('SELECT * FROM topic_counts').all())).not.toContain(
+    '203.0.113.7'
+  );
+  expect(s.calls()).toBe(0);
+  s.sql.close();
+});
+test('주제 집계 날짜는 한국 날짜, 예약 작업이 90일 지난 집계만 지움', async () => {
+  // 2026-10-16 15:30 UTC = 2026-10-17 00:30 KST
+  expect(kstDay(Date.parse('2026-10-16T15:30:00Z'))).toBe('2026-10-17');
+  const s = setup();
+  const insert = s.sql.prepare('INSERT INTO topic_counts VALUES (?, ?, ?, ?)');
+  insert.run(kstDay(Date.now(), 91), '용어', 'chip', 3);
+  insert.run(kstDay(Date.now(), 90), '용어', 'chip', 2);
+  insert.run(kstDay(), '용어', 'chip', 1);
+  await worker.scheduled({}, s.env);
+  expect(
+    s.sql
+      .prepare('SELECT count FROM topic_counts ORDER BY day')
+      .all()
+      .map((r) => r.count)
+  ).toEqual([2, 1]);
+  s.sql.close();
+});
+
+// 관리 화면 요청 — Access 서명을 시험용 키로 만들어 붙인다(인증서 주소는 가짜 응답).
+async function adminSession() {
+  const pair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256'
+    },
+    true,
+    ['sign', 'verify']
+  );
+  const jwk = { ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid: 'test-key' };
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ keys: [jwk] });
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
+  const head = encode({ alg: 'RS256', kid: 'test-key' });
+  const payload = encode({
+    iss: 'https://test-team.cloudflareaccess.com',
+    aud: ['test-audience'],
+    exp: now + 300,
+    iat: now
+  });
+  const sig = Buffer.from(
+    await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      pair.privateKey,
+      new TextEncoder().encode(head + '.' + payload)
+    )
+  ).toString('base64url');
+  const jwt = head + '.' + payload + '.' + sig;
+  return {
+    restore: () => (globalThis.fetch = original),
+    req: (path, init = {}) =>
+      new Request('https://chat.namneundon.com' + path, {
+        ...init,
+        headers: { 'Cf-Access-Jwt-Assertion': jwt, ...(init.headers || {}) }
+      })
+  };
+}
+const adminEnv = (s) => ({ ...s.env, ACCESS_TEAM: 'test-team', ACCESS_AUD: 'test-audience' });
+test('관리 화면: 주제 집계 CSV(UTF-8 BOM, 한국 주 단위 월요일 시작, 3 미만 표시)', async () => {
+  const s = setup();
+  const a = await adminSession();
+  try {
+    const insert = s.sql.prepare('INSERT INTO topic_counts VALUES (?, ?, ?, ?)');
+    // 2026-10-12(월)~10-18(일) 은 한 주, 10-19(월)부터 다음 주
+    insert.run('2026-10-12', '용어', 'chip', 2);
+    insert.run('2026-10-18', '용어', 'chip', 1);
+    insert.run('2026-10-16', '미분류', 'typed', 1);
+    insert.run('2026-10-19', '용어', 'chip', 2);
+    insert.run('2026-10-20', '용어', 'typed', 5);
+    const res = await worker.fetch(a.req('/api/admin/topics.csv'), adminEnv(s));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('text/csv; charset=utf-8');
+    expect(res.headers.get('Content-Disposition')).toContain('topic_counts_weekly.csv');
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(bytes.slice(3))).toBe(
+      'week_start,topic,source,count\r\n' +
+        '2026-10-12,미분류,typed,3 미만\r\n' +
+        '2026-10-12,용어,chip,3\r\n' +
+        '2026-10-19,용어,chip,3 미만\r\n' +
+        '2026-10-19,용어,typed,5\r\n'
+    );
+    // Access 없이는 막힌다
+    expect(
+      (
+        await worker.fetch(
+          new Request('https://chat.namneundon.com/api/admin/topics.csv'),
+          adminEnv(s)
+        )
+      ).status
+    ).toBe(403);
+  } finally {
+    a.restore();
+    s.sql.close();
+  }
+});
+test('관리 화면: 개선 기록 입력(고정 목록)·CSV, 대화와 연결하지 않음, 수식 칸 막음, 저장 질문은 14일만 보임', async () => {
+  const s = setup();
+  const a = await adminSession();
+  try {
+    const env = adminEnv(s);
+    const post = (data, headers = {}) =>
+      worker.fetch(
+        a.req('/api/admin/notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: 'https://chat.namneundon.com',
+            'X-Admin-Action': 'note',
+            ...headers
+          },
+          body: JSON.stringify(data)
+        }),
+        env
+      );
+    expect(
+      (await post({ topic: '잔액차이', kind: '숫자 틀림', note: '잔액 설명이 길다' })).status
+    ).toBe(200);
+    expect((await post({ topic: '용어', kind: '말투', note: '=HYPERLINK("x")' })).status).toBe(200);
+    for (const bad of [
+      { topic: '폐업', kind: '말투', note: '' },
+      { topic: '용어', kind: '모름', note: '' },
+      { topic: '용어', kind: '말투', note: '가'.repeat(301) },
+      { topic: '용어', kind: '말투', note: '', convId }
+    ])
+      expect((await post(bad)).status, JSON.stringify(bad)).toBe(400);
+    // 같은 사이트 확인 헤더 없이는 받지 않는다
+    expect(
+      (await post({ topic: '용어', kind: '말투', note: '' }, { 'X-Admin-Action': '' })).status
+    ).toBe(404);
+    expect(
+      s.sql
+        .prepare('PRAGMA table_info(improvement_notes)')
+        .all()
+        .map((c) => c.name)
+    ).toEqual(['id', 'day', 'topic', 'kind', 'note']);
+    // 시각은 남기지 않는다 — 날짜(한국)만
+    expect(
+      s.sql
+        .prepare('SELECT day FROM improvement_notes')
+        .all()
+        .map((r) => r.day)
+    ).toEqual([kstDay(), kstDay()]);
+    const csv = new TextDecoder('utf-8', { ignoreBOM: true }).decode(
+      await (await worker.fetch(a.req('/api/admin/notes.csv'), env)).arrayBuffer()
+    );
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const lines = csv.slice(1).trim().split('\r\n');
+    expect(lines[0]).toBe('day,topic,kind,note');
+    expect(lines[1]).toBe(kstDay() + ',잔액차이,숫자 틀림,잔액 설명이 길다');
+    expect(lines[2]).toMatch(/,용어,말투,"'=HYPERLINK\(""x""\)"$/);
+    // 예약 작업은 개선 기록을 지우지 않는다
+    s.sql.prepare('UPDATE improvement_notes SET day = ?').run('2000-01-03');
+    await worker.scheduled({}, s.env);
+    expect(s.sql.prepare('SELECT count(*) AS n FROM improvement_notes').get().n).toBe(2);
+    // 관리 화면 목록은 14일 안의 저장 질문만
+    const insert = s.sql.prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)');
+    insert.run('old', convId, token, '질문', '답', '약국', Date.now() - 15 * 86400000);
+    insert.run('new', convId, token, '질문', '답', '약국', Date.now());
+    const list = await (await worker.fetch(a.req('/api/admin/list'), env)).json();
+    expect(list.rows.map((r) => r.id)).toEqual(['new']);
+    // 관리 화면 글: 내보내기 두 가지와 개선 기록 안내. 질문 원문 내보내기는 없다
+    const page = await (await worker.fetch(a.req('/admin'), env)).text();
+    expect(page).toContain('주제 집계 내보내기(CSV)');
+    expect(page).toContain('개선 기록 내보내기(CSV)');
+    expect(page).toContain('금액·가게 이름·성함·질문 원문 문장을 적지 마세요');
+    expect(page).not.toMatch(/conversations\.csv|원문 내보내기/);
+    expect(ADMIN).toBe(page);
+  } finally {
+    a.restore();
+    s.sql.close();
+  }
+});
+test('지시문에 주제별 답변 지침', () => {
+  for (const rule of [
+    '잘했다·못했다고 평가하지 않고, 확인 가능한 변화(사업으로 번 돈·사업에 쓴 돈·차액·비율의 지난달 대비)만 말합니다.',
+    '차액은 이번 달 들어오고 나간 돈의 차이이고, 통장 잔액은 그 전부터 쌓인 돈까지 담긴 금액',
+    "'남는돈에는 같은 업종 비교 자료가 아직 없어 비교해 드릴 수 없습니다'",
+    '지출해도 되는지는 정해 드릴 수 없다고 말하고, 보고 계신 달의 숫자만 알려 줍니다.',
+    '전체 기간 확보 여부를 먼저 말합니다.'
+  ])
+    expect(SYSTEM).toContain(rule);
+});
+
+test('주 시작(한국 월요일)과 3 미만 묶음 규칙', () => {
+  expect(weekStart('2026-10-12')).toBe('2026-10-12'); // 월
+  expect(weekStart('2026-10-18')).toBe('2026-10-12'); // 일
+  expect(weekStart('2026-10-19')).toBe('2026-10-19'); // 다음 월
+  expect(weekStart('2026-01-01')).toBe('2025-12-29'); // 해를 넘는 주
+  expect(
+    weeklyTopics([
+      { day: '2026-10-13', topic: '기타', source: 'typed', count: 1 },
+      { day: '2026-10-14', topic: '기타', source: 'typed', count: 1 },
+      { day: '2026-10-15', topic: '기타', source: 'chip', count: 2 }
+    ])
+  ).toEqual([
+    { week_start: '2026-10-12', topic: '기타', source: 'chip', count: '3 미만' },
+    { week_start: '2026-10-12', topic: '기타', source: 'typed', count: '3 미만' }
+  ]);
 });
