@@ -269,6 +269,13 @@ for (const width of [360, 390]) {
     const box = await fab.boundingBox();
     // 휴대폰 48px, 화면 끝에서 16px (시험 브라우저는 안전 영역 0). 스크롤해도 그대로다.
     expect(box).toEqual({ x: width - 16 - 48, y: 844 - 16 - 48, width: 48, height: 48 });
+    // 실제 렌더된 버튼 크기(getBoundingClientRect)와 기기 픽셀 비율을 함께 적는다
+    const rendered = await fab.evaluate((b) => {
+      const r = b.getBoundingClientRect();
+      return { width: r.width, height: r.height, dpr: devicePixelRatio };
+    });
+    console.log(`[icon ${width}] getBoundingClientRect ${JSON.stringify(rendered)}`);
+    expect([rendered.width, rendered.height]).toEqual([48, 48]);
     expect(
       await fab
         .locator('img.ai-fab-mark')
@@ -460,6 +467,10 @@ test('운영자 확인용 저장: ⋯ 메뉴에서 기본 꺼짐 → 설명과 �
   await dialog.getByRole('button', { name: '더보기' }).click();
   const row = dialog.locator('.ai-opt-in');
   await expect(row).toHaveText('운영자 확인용 저장: 꺼짐');
+  // 대화 삭제 아래 설명은 한 문장 — 매장 지우기·브라우저 저장소 이야기는 문서로 옮겼다
+  await expect(dialog.locator('.ai-menu > p')).toHaveText(
+    '운영자 확인용으로 서버에 저장된 이 브라우저의 대화를 지웁니다.'
+  );
   await expect(dialog.getByRole('button', { name: '대화 삭제' })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('menu-390.png') });
   await row.click();

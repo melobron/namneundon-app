@@ -74,7 +74,10 @@ push·PR·병합·배포·wrangler 실행·D1 생성은 이 작업에 포함하�
   기존 매장 저장 형식은 바꾸지 않는다. 대화 본문·요약·운영자 확인 켬 상태는 브라우저 저장소에 저장하지 않는다.
 - 대화 번호만 알아서는 삭제할 수 없다. 브라우저의 256비트 삭제 키를 Authorization으로 보내고 서버에서는 해시로 대조한다.
   삭제는 해당 브라우저의 키에 연결된, 운영자 확인용으로 저장된 대화 전체다. 다른 기기 대화는 지우지 않는다.
-  저장소를 지우면 키도 사라진다. 매장 「지우기」와 서버 대화 삭제의 차이는 챗봇 안에 안내한다.
+  저장소를 지우면 키도 사라진다.
+  - ⋯ 메뉴의 「대화 삭제」 아래 설명은 한 문장이다: 「운영자 확인용으로 서버에 저장된 이 브라우저의 대화를 지웁니다.」
+  - 화면에서 뺀 설명(여기에 남긴다): 매장 「지우기」는 이 브라우저의 매장 자료만 지우고 서버 대화는 지우지 않는다.
+    브라우저 저장소(사이트 데이터)를 지우면 지우기 키(`fc.ai.receipt`)도 사라져 그 뒤로는 이 브라우저에서 서버 대화를 지울 수 없다 — 14일 예약 삭제를 기다리거나 운영자가 관리 화면에서 지운다.
 - 로그에 본문을 출력하지 않고 observability·AI Gateway를 사용하지 않는다. Cloudflare 자체 처리·보관 정책은 별도 확인 대상이다.
 
 ## 보관 기간
@@ -136,6 +139,21 @@ push·PR·병합·배포·wrangler 실행·D1 생성은 이 작업에 포함하�
 
 출처: <https://developers.cloudflare.com/workers-ai/platform/pricing/>
 뉴런 한도·토큰 단가는 모델 설정과 함께 다시 확인한다. 모델 이름만으로 다국어 품질을 보장하지 않는다.
+
+## 공개 전 할 일
+
+지금은 합성 자료 시험자만 쓰도록 시험 키(`X-Namneundon-Tester` ↔ `TESTER_KEY`)로 막아 두었다. 실제 공개 때는 아래 자리를 함께 바꾼다.
+
+1. 앱 `app/src/17-chat.js`
+   - `chatCountTopic`: 주제 집계 `POST /api/topic` 헤더의 `'X-Namneundon-Tester': chatTesterKey()` — 공개 때 빼거나 다른 남용 방어로 바꾼다.
+   - `openChat` 의 질문 전송(`headers['X-Namneundon-Tester']`)과 `remove.onclick` 의 대화 삭제 헤더 — 같은 방식으로 바꾼다.
+   - `chatEnabled`·`chatReadUrl`: 지금은 `?aikey=` 로 시험 키가 있어야 아이콘이 보인다. 공개 때 표시 조건을 따로 정한다.
+2. 서버 `chat/src/index.js`
+   - `fetch` 의 `(asking || counting || deleting) && !(await testerAllowed(...))` 검사 — 질문·집계·삭제 모두 시험 키로 막는다. 공개 때 이 출입 확인을 바꾸면
+     CORS(앱 origin 하나)만 남으므로 질문·집계 남용 방어(요청 수 제한 등)를 먼저 정한다.
+   - `Access-Control-Allow-Headers` 의 `X-Namneundon-Tester` 를 함께 정리한다.
+3. `wrangler secret put TESTER_KEY` 로 넣은 비밀값은 공개 뒤 필요 없으면 지운다(시험 기간에만 쓰는 값).
+4. 처리방침 링크(`CHAT_PRIVACY_URL`)와 사이트 처리방침의 AI 항목, 앱 안내 문구의 처리 위치·보관 기간을 같은 날 맞춘다.
 
 ## Cloudflare에서 사람이 할 일 — 여기서는 실행하지 않음
 

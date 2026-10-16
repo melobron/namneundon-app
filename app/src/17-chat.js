@@ -402,13 +402,7 @@ function openChat() {
   var remove = el('button', 'b ai-remove', '대화 삭제');
   remove.type = 'button';
   menu.appendChild(remove);
-  menu.appendChild(
-    el(
-      'p',
-      null,
-      '「대화 삭제」는 이 브라우저에서 운영자 확인용으로 저장된 대화를 지웁니다. 매장 「지우기」는 서버 대화를 지우지 않습니다. 브라우저 저장소를 지우면 삭제용 정보도 사라집니다.'
-    )
-  );
+  menu.appendChild(el('p', null, '운영자 확인용으로 서버에 저장된 이 브라우저의 대화를 지웁니다.'));
   var contact = el('a', null, '문의 안내');
   contact.href = KAKAO_CHAT;
   contact.target = '_blank';
