@@ -16,6 +16,7 @@ import worker, {
   weeklyTopics,
   MODELS
 } from '../chat/src/index.js';
+import { TOPIC_WORDS, topicOf, checkAnswer, fallbackAnswer } from '../chat/src/answers.js';
 
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
@@ -371,53 +372,34 @@ test('지시문에 차액·잔액 설명 원칙, 요약에 잔액 칸 없음', a
   s.sql.close();
 });
 
-// 시험자 키가 없거나 틀리면 본문을 읽기 전에 막는다 — AI 호출·사용량·저장 모두 0
-function nothingHappened(s) {
-  expect(s.calls()).toBe(0);
-  expect(s.sql.prepare('SELECT * FROM usage').all()).toEqual([]);
-  expect(s.sql.prepare('SELECT * FROM conversations').all()).toEqual([]);
-}
-const deleteRequest = (tester) =>
-  new Request('https://chat.namneundon.com/api/chat/' + convId, {
-    method: 'DELETE',
-    headers: {
-      Origin: ORIGIN,
-      Authorization: 'Bearer ' + token,
-      ...(tester === null ? {} : { 'X-Namneundon-Tester': tester })
-    }
+// 124-5 공개: 시험 키 검사를 걷어냈다 — 질문·삭제는 시험 키 없이 처리한다
+test('공개: 질문·삭제는 시험 키 없이 처리, 사전 요청 허용 헤더에 시험자 헤더 없음', async () => {
+  const s = setup();
+  const plain = new Request('https://chat.namneundon.com/api/chat', {
+    method: 'POST',
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body(false))
   });
-test('시험자 키 없음·틀린 키는 질문·삭제 403, AI 호출·사용량·저장 없음', async () => {
-  const s = setup();
-  for (const tester of [null, '', 'wrong-key', TESTER + 'x', TESTER.slice(0, -1)]) {
-    const res = await worker.fetch(request(body(true), token, tester), s.env);
-    expect(res.status, String(tester)).toBe(403);
-    expect((await res.json()).error).toBe('tester_only');
-  }
-  nothingHappened(s);
-  // 삭제도 같다 — 저장된 대화가 지워지지 않는다
-  s.sql
-    .prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run('keep', convId, 'h', '질문', '답', '약국', Date.now());
-  for (const tester of [null, 'wrong-key'])
-    expect((await worker.fetch(deleteRequest(tester), s.env)).status).toBe(403);
-  expect(s.sql.prepare('SELECT id FROM conversations').all()).toHaveLength(1);
-  s.sql.close();
-});
-test('비밀값(TESTER_KEY)이 없으면 모든 질문 403', async () => {
-  for (const secret of [undefined, '']) {
-    const s = setup();
-    s.env.TESTER_KEY = secret;
-    for (const tester of [null, '', TESTER])
-      expect((await worker.fetch(request(body(), token, tester), s.env)).status).toBe(403);
-    expect((await worker.fetch(deleteRequest(TESTER), s.env)).status).toBe(403);
-    nothingHappened(s);
-    s.sql.close();
-  }
-});
-test('맞는 시험자 키는 처리, 사전 요청은 시험자 헤더를 허용', async () => {
-  const s = setup();
-  expect((await worker.fetch(request(body()), s.env)).status).toBe(200);
+  expect((await worker.fetch(plain, s.env)).status).toBe(200);
   expect(s.calls()).toBe(1);
+  // 비밀값이 없어도 된다
+  const noSecret = { ...s.env, TESTER_KEY: undefined };
+  expect((await worker.fetch(request(body(false), token, null), noSecret)).status).toBe(200);
+  // 삭제도 지우기 키만으로
+  expect((await worker.fetch(request(body(true), token, null), s.env)).status).toBe(200);
+  const del = new Request('https://chat.namneundon.com/api/chat/' + convId, {
+    method: 'DELETE',
+    headers: { Origin: ORIGIN, Authorization: 'Bearer ' + token }
+  });
+  expect((await worker.fetch(del, s.env)).status).toBe(200);
+  expect(s.sql.prepare('SELECT * FROM conversations').all()).toEqual([]);
+  // 다른 출처는 그대로 막는다(CORS 는 앱 주소 하나)
+  const other = new Request('https://chat.namneundon.com/api/chat', {
+    method: 'POST',
+    headers: { Origin: 'https://evil.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body(false))
+  });
+  expect((await worker.fetch(other, s.env)).status).toBe(403);
   const pre = await worker.fetch(
     new Request('https://chat.namneundon.com/api/chat', {
       method: 'OPTIONS',
@@ -425,7 +407,8 @@ test('맞는 시험자 키는 처리, 사전 요청은 시험자 헤더를 허�
     }),
     s.env
   );
-  expect(pre.headers.get('Access-Control-Allow-Headers')).toContain('X-Namneundon-Tester');
+  expect(pre.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN);
+  expect(pre.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type, Authorization');
   s.sql.close();
 });
 test('예약 작업은 1시간마다, 운영자 확인용 원문은 14일 지난 것만 지움', async () => {
@@ -451,26 +434,6 @@ test('예약 작업은 1시간마다, 운영자 확인용 원문은 14일 지난
   ).toEqual(['d13', 'd14m']);
   s.sql.close();
 });
-test('시험 키는 영문 소문자·숫자만 — 형식이 다른 비밀값·헤더는 같아도 403', async () => {
-  for (const secret of ['Upper0123456789', 'with-dash-0123', 'with space 012', '한글키0123']) {
-    const s = setup();
-    s.env.TESTER_KEY = secret;
-    expect(
-      (await worker.fetch(request(body(), token, secret.replace(/[^\x21-\x7e]/g, 'x')), s.env))
-        .status
-    ).toBe(403);
-    nothingHappened(s);
-    s.sql.close();
-  }
-  const s = setup();
-  // 맞는 비밀값의 대문자판도 거절한다
-  expect((await worker.fetch(request(body(), token, TESTER.toUpperCase()), s.env)).status).toBe(
-    403
-  );
-  nothingHappened(s);
-  s.sql.close();
-});
-
 // ── 124 정리: 운영자 확인 선택 켜기 · 주제 집계 · 관리 화면 내보내기 ──
 test('운영자 확인 꺼진 질문은 지우기 키·convId 없이 처리, 켠 질문만 둘 다 필요', async () => {
   const s = setup();
@@ -514,8 +477,9 @@ const topicRequest = (data, tester = TESTER) =>
     },
     body: JSON.stringify(data)
   });
-test('주제 집계: {topic, source} 만 받아 한국 날짜·주제·출처별로 +1, 목록 밖·다른 칸·시험 키 없음은 거절', async () => {
+test('주제 집계(켰을 때): {topic, source} 만 받아 한국 날짜·주제·출처별로 +1, 목록 밖·다른 칸은 거절', async () => {
   const s = setup();
+  s.env.TOPIC_COUNTS = 'on';
   expect(TOPICS).toEqual([
     '운영판단',
     '용어',
@@ -543,9 +507,6 @@ test('주제 집계: {topic, source} 만 받아 한국 날짜·주제·출처별
     { topic: '미분류' }
   ])
     expect((await worker.fetch(topicRequest(bad), s.env)).status, JSON.stringify(bad)).toBe(400);
-  expect(
-    (await worker.fetch(topicRequest({ topic: '용어', source: 'chip' }, null), s.env)).status
-  ).toBe(403);
   // 표에는 날짜·주제·출처·횟수만 — IP·헤더·질문 칸이 없다
   expect(
     s.sql
@@ -783,4 +744,142 @@ test('배포 설정: 모델은 mistral-small-3.1-24b, 호환 날짜는 wrangler 
   expect(config.vars.ACCESS_TEAM).not.toContain('.'); // 전체 주소가 아니라 하위 도메인만
   expect(config.vars.ACCESS_AUD).toMatch(/^[0-9a-f]{64}$/);
   expect(config.d1_databases[0].database_id).toMatch(/^[0-9a-f-]{36}$/);
+});
+
+test('주제 집계는 기본 꺼짐 — 저장 없이 204, 본문도 보지 않는다', async () => {
+  const s = setup();
+  for (const data of [
+    { topic: '용어', source: 'chip' },
+    { topic: '폐업', source: 'x', question: '질문 원문' }
+  ]) {
+    const res = await worker.fetch(topicRequest(data), s.env);
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+  }
+  expect(s.sql.prepare('SELECT * FROM topic_counts').all()).toEqual([]);
+  s.sql.close();
+});
+
+// ── 124-5: 숫자는 코드가 지킨다 ──
+const ask = (s, question, share = false) =>
+  worker.fetch(request({ ...body(share), question }), s.env).then((r) => r.json());
+const usageRows = (s) => s.sql.prepare('SELECT * FROM usage').all();
+test('정해진 답(인건비·월세·공과금·가장 많이 쓴 항목·아직 안 정한 돈)은 AI 를 부르지 않고 요약에서 바로', async () => {
+  const s = setup();
+  const sum = body().summary;
+  sum.current.unknown = 300000;
+  sum.current.sales = 1000000;
+  sum.current.otherIncome = 0;
+  sum.current.earned = 1000000;
+  sum.current.spent = 2800000;
+  sum.current.difference = -1800000;
+  sum.current.categories = [
+    { label: '인건비', amount: 1200000, ratio: 1.2 },
+    { label: '월세', amount: 500000, ratio: 0.5 },
+    { label: '전기·가스·수도', amount: 100000, ratio: 0.1 },
+    { label: '보험', amount: 1000000, ratio: null }
+  ];
+  const q = (question) =>
+    worker.fetch(request({ question, summary: sum, share: false }), s.env).then((r) => r.json());
+  expect(await q('인건비는 매출의 몇 %야?')).toEqual({
+    answer: '4월 인건비는 1,200,000원, 매출의 120.0%입니다.',
+    saved: false,
+    source: 'fixed'
+  });
+  expect((await q('월세·공과금은 얼마 나갔어?')).answer).toBe(
+    '4월 월세·공과금으로 정한 금액입니다.\n- 월세 500,000원(매출의 50.0%)\n- 전기·가스·수도 100,000원(매출의 10.0%)\n아직 안 정한 돈 300,000원은 넣지 않았습니다.'
+  );
+  expect((await q('어느 항목에 가장 많이 썼어?')).answer).toBe(
+    '4월 금액이 큰 항목입니다.\n1. 인건비 1,200,000원(매출의 120.0%)\n2. 보험 1,000,000원(매출 대비 비율 확인 보류)\n3. 월세 500,000원(매출의 50.0%)\n아직 안 정한 돈 300,000원은 이 순서에 넣지 않았습니다.'
+  );
+  expect((await q('아직 안 정한 돈은 뭐야?')).answer).toBe(
+    '4월 아직 안 정한 돈은 300,000원입니다. 거래처를 정하시면 항목별 금액과 비율이 더 정확해집니다.'
+  );
+  // 없는 항목이면 그렇다고 말하고 아직 안 정한 돈을 알려 준다
+  sum.current.categories = [{ label: '보험', amount: 2800000, ratio: null }];
+  expect((await q('인건비는 매출의 몇 %야?')).answer).toBe(
+    '이번 요약에는 인건비로 정한 거래가 없습니다. 아직 안 정한 돈 300,000원 안에 들어 있을 수 있습니다.'
+  );
+  expect((await q('월세·공과금은 얼마 나갔어?')).answer).toBe(
+    '이번 요약에는 월세·공과금으로 정한 거래가 없습니다. 아직 안 정한 돈 300,000원 안에 들어 있을 수 있습니다.'
+  );
+  // AI 호출 0, 사용량 예약도 0 — 모델 설정이 없어도 된다
+  expect(s.calls()).toBe(0);
+  expect(usageRows(s)).toEqual([]);
+  s.env.CHAT_MODEL = 'TODO_MODEL';
+  expect((await q('아직 안 정한 돈은 뭐야?')).source).toBe('fixed');
+  s.sql.close();
+});
+test('AI 답 숫자 검사: 요약에 없는 금액·비율·날짜나 「가장 큰 항목은 미분류」면 버리고 대체 답(원문은 저장하지 않음)', async () => {
+  const s = setup();
+  let reply = '';
+  /** @type {any} */ (s.env.AI).run = async () => ({
+    response: reply,
+    usage: { prompt_tokens: 1000, completion_tokens: 100 }
+  });
+  const FALLBACK =
+    '2025년 4월: 사업으로 번 돈 700,000원, 사업에 쓴 돈 2,500,000원, 차액 −1,800,000원\n자세한 설명을 만들지 못해 확인된 숫자만 보여 드립니다.';
+  for (const bad of [
+    '4월 사업으로 번 돈은 7,000,000원입니다.',
+    '4월 보험은 매출의 35.7%입니다.',
+    '사업에 쓴 돈은 350만 원입니다.',
+    '4월 31일까지의 자료입니다.',
+    '5월 사업으로 번 돈은 700,000원입니다.',
+    '가장 큰 항목은 미분류 금액입니다.'
+  ]) {
+    reply = bad;
+    expect(await ask(s, '이번 달은 어때?'), bad).toEqual({
+      answer: FALLBACK,
+      saved: false,
+      source: 'fallback'
+    });
+  }
+  reply = '4월 사업으로 번 돈은 700,000원, 사업에 쓴 돈은 2,500,000원, 차액은 −1,800,000원입니다.';
+  expect(await ask(s, '이번 달은 어때?')).toEqual({ answer: reply, saved: false, source: 'ai' });
+  // 운영자 확인을 켜도 버린 답 원문은 저장하지 않고 대체 답만 저장한다
+  reply = '4월 사업으로 번 돈은 9,999,999원입니다.';
+  expect((await ask(s, '이번 달은 어때?', true)).source).toBe('fallback');
+  const saved = s.sql.prepare('SELECT answer FROM conversations').all();
+  expect(saved).toEqual([{ answer: FALLBACK }]);
+  expect(JSON.stringify(saved)).not.toContain('9,999,999');
+  s.sql.close();
+});
+test('대체 답: 중간 달이면 바로 앞 달과 나란히 + 기준일 안내', () => {
+  const sum = body().summary;
+  const cur = { ...sum.current, month: '2025-05', dataEnd: '2025-05-22', complete: false };
+  const prev = { ...sum.current, dataEnd: '2025-05-22' };
+  expect(fallbackAnswer({ ...sum, current: cur, previous: [prev] })).toBe(
+    '2025년 5월: 사업으로 번 돈 700,000원, 사업에 쓴 돈 2,500,000원, 차액 −1,800,000원\n' +
+      '2025년 4월: 사업으로 번 돈 700,000원, 사업에 쓴 돈 2,500,000원, 차액 −1,800,000원\n' +
+      '이번 달은 22일까지의 자료라 지난달 한 달 전체와 바로 비교하기 어렵습니다.\n' +
+      '자세한 설명을 만들지 못해 확인된 숫자만 보여 드립니다.'
+  );
+  // 「5월 22일」·「22일까지」는 마지막 거래일이라 통과, 요약의 4월·5월 숫자도 통과
+  expect(
+    checkAnswer('이번 달은 5월 22일까지의 자료입니다. 4월 700,000원, 5월 2,500,000원', {
+      ...sum,
+      current: cur,
+      previous: [prev]
+    }).ok
+  ).toBe(true);
+});
+test('주제 낱말 규칙은 앱(17-chat.js)과 서버(answers.js)가 같다', () => {
+  const ctx = vm.createContext({
+    URLSearchParams,
+    location: { search: '' },
+    lsGet: () => null,
+    lsSet: () => true,
+    lsDel: () => {},
+    history: {}
+  });
+  vm.runInContext(readFileSync(new URL('../app/src/17-chat.js', import.meta.url), 'utf8'), ctx);
+  expect(JSON.parse(JSON.stringify(ctx.CHAT_TOPIC_WORDS))).toEqual(TOPIC_WORDS);
+  for (const [q, t] of [
+    ['인건비는 매출의 몇 %야?', '지출비율'],
+    ['월세·공과금은 얼마 나갔어?', '지출구성'],
+    ['어느 항목에 가장 많이 썼어?', '지출구성'],
+    ['아직 안 정한 돈은 뭐야?', '미분류'],
+    ['번 돈은 느는데 왜 남는 게 적어?', '운영판단']
+  ])
+    expect(topicOf(q)).toBe(t);
 });

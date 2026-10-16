@@ -114,4 +114,5 @@ declare var CHAT_LABELS: string[];
 declare var chatPreview: any;
 declare var chatPickChips: any;
 declare var chatTopicOf: any;
+declare var CHAT_TOPIC_ON: boolean;
 declare var chatFirstChips: any;

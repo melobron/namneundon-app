@@ -1,14 +1,13 @@
-/* 124차 시험 기능. 화면 열기·달 바꾸기는 통신하지 않는다. 질문 전송은 동의 단추 한 곳뿐이다. */
+/* 124차 AI 질문(베타). 화면 열기·달 바꾸기는 통신하지 않는다. 서버로 가는 것은 보내기의 질문 글 + 월 요약과,
+   운영자 확인용 저장을 켰을 때의 저장·삭제뿐이다(주제 집계는 기본 꺼짐). */
 var CHAT_URL = 'https://chat.namneundon.com';
 var CHAT_BROWSER_LIMIT = 10;
 var CHAT_KEYS = {
   enabled: 'fc.ai.enabled',
   usage: 'fc.ai.usage',
   receipt: 'fc.ai.receipt',
-  tester: 'fc.ai.tester'
+  tester: 'fc.ai.tester' // 124 시험 기간에 쓰던 이름. 이제 쓰지 않고 남아 있으면 지운다
 };
-// 시험 키는 영문 소문자·숫자만 (서버 TESTER_FORM 과 같다). 그 밖의 값은 저장·표시하지 않는다.
-var CHAT_KEY_FORM = /^[a-z0-9]{1,256}$/;
 var CHAT_LABELS = [
   '식자재',
   '주류·음료',
@@ -36,21 +35,14 @@ var CHAT_LABELS = [
   '장비 리스',
   '사용자 지정 항목'
 ];
-/* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 쓴다.
-   ?aikey=<키> 로 들어오면 키를 저장하고 표시를 켠 뒤, 주소창에서 키를 바로 지운다
-   (방문 기록·화면 공유에 남지 않게). ?ai=0 은 표시와 키를 함께 지운다.
-   ?ai=1 만으로는 켜지지 않는다 — 키가 있어야 진입 아이콘이 보인다. */
+/* 124-5 공개: 결과 화면이면 누구에게나 AI 아이콘을 보인다(시험 키 없음).
+   ?ai=0 은 이 브라우저에서 끄기, ?ai=1 은 다시 켜기. 예전 시험 주소의 ?aikey 는 무시하고 주소창에서만 지운다. */
 function chatReadUrl() {
   var params = new URLSearchParams(location.search);
-  var key = params.get('aikey');
-  if (params.get('ai') === '0') {
-    lsDel(CHAT_KEYS.enabled);
-    lsDel(CHAT_KEYS.tester);
-  } else if (key !== null && CHAT_KEY_FORM.test(key)) {
-    lsSet(CHAT_KEYS.tester, key);
-    lsSet(CHAT_KEYS.enabled, '1');
-  }
-  if (key === null) return;
+  if (params.get('ai') === '0') lsSet(CHAT_KEYS.enabled, '0');
+  else if (params.get('ai') === '1') lsDel(CHAT_KEYS.enabled);
+  if (lsGet(CHAT_KEYS.tester) !== null) lsDel(CHAT_KEYS.tester);
+  if (params.get('aikey') === null) return;
   params.delete('aikey');
   var rest = params.toString();
   history.replaceState(
@@ -60,12 +52,8 @@ function chatReadUrl() {
   );
 }
 chatReadUrl();
-function chatTesterKey() {
-  var key = lsGet(CHAT_KEYS.tester);
-  return key && CHAT_KEY_FORM.test(key) ? key : '';
-}
 function chatEnabled() {
-  return lsGet(CHAT_KEYS.enabled) === '1' && !!chatTesterKey();
+  return lsGet(CHAT_KEYS.enabled) !== '0';
 }
 function chatMonthSummary(m) {
   var d = monthNumbers(m);
@@ -155,13 +143,8 @@ function chatReceipt() {
     throw new Error('삭제용 정보를 이 브라우저에 저장할 수 없어 질문을 보내지 않았습니다.');
   return receipt;
 }
-function chatLimitText(next) {
-  return (
-    '현재 무료 질문 한도에 도달했습니다. 다음 이용 가능 시간은 ' +
-    new Date(next).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) +
-    ' (한국시간)입니다. 결과 화면은 계속 사용할 수 있습니다.'
-  );
-}
+// 하루 한도(서버 전체·브라우저당 10회)를 넘었을 때. 요금 낱말을 쓰지 않는다. 서버 날짜는 UTC 자정 = 한국시간 오전 9시에 바뀐다.
+var CHAT_CLOSED = '오늘 AI 질문이 모두 마감됐습니다. 내일 오전 9시 이후 다시 물어봐 주세요.';
 /* 주제 코드(고정, 서버 TOPICS 와 같다)와 예상 질문. 칩은 질문 칸을 채우기만 하고 자동으로 보내지 않는다.
    AI 가 추천 질문을 만들지 않는다 — 브라우저가 자료 상태로 고른다. */
 var CHAT_TOPIC_CHIPS = {
@@ -252,20 +235,23 @@ function chatTopicOf(text, chip) {
 }
 /* 주제 집계 — 질문을 실제로 보내 답을 받은 뒤 {topic, source} 만 따로 보낸다.
    지우기 키·대화 번호·질문 글·요약·브라우저 식별값은 넣지 않는다. 실패해도 대화에는 영향이 없다. */
+// 사이트 처리방침과 맞춰 기본 꺼짐(124-5). 코드는 남겨 두고, 켜려면 처리방침을 먼저 고친다.
+var CHAT_TOPIC_ON = false;
 function chatCountTopic(t) {
+  if (!CHAT_TOPIC_ON) return;
   fetch(CHAT_URL + '/api/topic', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic: t.topic, source: t.source }),
     signal: AbortSignal.timeout(15000)
   }).catch(function () {});
 }
-// TODO: 사이트 개인정보 처리방침에 AI 질문 항목과 바로 가는 주소가 생기면 넣는다(지금 사이트 처리방침은 AI 전송을 다루지 않고 주소 앵커도 없다).
-var CHAT_PRIVACY_URL = '';
+// 사이트 개인정보 처리방침(AI 질문 항목 포함). ⓘ 안에서 새 탭으로 연다.
+var CHAT_PRIVACY_URL = 'https://namneundon.com/privacy/#policy';
 /* 진입점은 결과 화면 오른쪽 아래 동그란 아이콘 하나다 — 남는돈 마크(BRAND_MARK) + 작은 「AI」.
    결과 화면(up-result) 안에 두어 다른 화면으로 갈 때 결과와 함께 감춰지게 한다.
    아이콘이 마지막 줄을 가리지 않게 결과 화면 맨 아래에 아이콘 높이만큼 여백을 둔다 (app.css 124차).
-   시험 키가 없으면 아무것도 그리지 않는다 — 일반 화면은 그대로다. */
+   ?ai=0 으로 끈 브라우저에서는 아무것도 그리지 않는다. */
 function drawChatButton(host) {
   if (!chatEnabled()) return;
   var button = el('button', 'ai-fab');
@@ -391,7 +377,7 @@ function openChat() {
   var title = el('h2', null, '남는돈 AI');
   title.id = 'ai-chat-title';
   titleBox.appendChild(title);
-  titleBox.appendChild(el('span', 'ai-badge', '시험 중'));
+  titleBox.appendChild(el('span', 'ai-badge', '베타'));
   head.appendChild(titleBox);
   var more = el('button', 'ai-icon ai-more', '⋯');
   more.type = 'button';
@@ -536,7 +522,7 @@ function openChat() {
     el(
       'p',
       'ai-notice',
-      '질문과 금액 요약은 미국·영국 Cloudflare로 보내져 답변에만 쓰이고 남지 않습니다. 질문에 적은 이름도 그대로 전송됩니다.'
+      '질문과 금액 요약은 미국과 영국의 Cloudflare로 보내져 답변을 만드는 데에만 쓰이고 남지 않습니다. 질문에 적으신 이름도 그대로 전송됩니다.'
     )
   );
   var info = el('button', 'ai-info', 'ⓘ');
@@ -591,11 +577,7 @@ function openChat() {
     var use = chatRead(CHAT_KEYS.usage, { day: day, count: 0 });
     if (use.day !== day) use = { day: day, count: 0 };
     if (use.count >= CHAT_BROWSER_LIMIT) {
-      chatBubble(
-        log,
-        'bot',
-        chatLimitText(new Date(Math.floor(Date.now() / 86400000) * 86400000 + 86400000))
-      );
+      chatBubble(log, 'bot', CHAT_CLOSED);
       return;
     }
     var topic = chatTopicOf(text, chip);
@@ -611,7 +593,7 @@ function openChat() {
     reply.classList.add('ai-pending');
     try {
       /* 지우기 키(Authorization)와 대화 번호(convId)는 운영자 확인용 저장을 켠 질문에만 붙인다. */
-      var headers = { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() };
+      var headers = { 'Content-Type': 'application/json' };
       var payload = { question: text, summary: summary, share: share };
       if (share) {
         var receipt = chatReceipt();
@@ -626,10 +608,7 @@ function openChat() {
         signal: AbortSignal.timeout(45000)
       });
       var data = await res.json();
-      if (res.status === 429) reply.textContent = chatLimitText(data.nextAvailable);
-      else if (res.status === 403)
-        reply.textContent =
-          '이 브라우저의 시험 키로는 질문할 수 없습니다. 결과 화면은 계속 사용할 수 있습니다.';
+      if (res.status === 429) reply.textContent = CHAT_CLOSED;
       else if (!res.ok || typeof data.answer !== 'string')
         reply.textContent = '지금은 답변을 받지 못했습니다. 결과 화면은 계속 사용할 수 있습니다.';
       else {
@@ -668,8 +647,7 @@ function openChat() {
       var res = await fetch(CHAT_URL + '/api/chat/' + receipt.convId, {
         method: 'DELETE',
         headers: {
-          Authorization: 'Bearer ' + receipt.token,
-          'X-Namneundon-Tester': chatTesterKey()
+          Authorization: 'Bearer ' + receipt.token
         },
         signal: AbortSignal.timeout(15000)
       });

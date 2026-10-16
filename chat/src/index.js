@@ -1,3 +1,4 @@
+import { fixedAnswer, checkAnswer, fallbackAnswer } from './answers.js';
 // 모델은 검증방 실측 후 환경 변수로 선택한다. 값이 없으면 실제 호출을 막는다.
 export const MODELS = {
   '@cf/mistralai/mistral-small-3.1-24b-instruct': { input: 31876, output: 50488 },
@@ -221,26 +222,6 @@ export async function accessAllowed(request, env) {
     return false;
   }
 }
-/* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 질문·삭제를 쓴다.
-   비밀값(TESTER_KEY, wrangler secret)이 없으면 모두 막는다.
-   두 값을 같은 길이의 해시로 바꿔 끝까지 비교한다 — 길이·앞부분 일치로 시간이 달라지지 않게.
-   키는 영문 소문자·숫자만 쓴다(앱 CHAT_KEY_FORM 과 같다). 형식이 다른 비밀값·헤더는 받지 않는다. */
-const TESTER_FORM = /^[a-z0-9]{1,256}$/;
-async function testerAllowed(request, env) {
-  const secret = typeof env.TESTER_KEY === 'string' ? env.TESTER_KEY : '';
-  const given = request.headers.get('X-Namneundon-Tester') || '';
-  if (!TESTER_FORM.test(secret) || !TESTER_FORM.test(given)) return false;
-  const enc = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(given)),
-    crypto.subtle.digest('SHA-256', enc.encode(secret))
-  ]);
-  const x = new Uint8Array(a);
-  const y = new Uint8Array(b);
-  let diff = 0;
-  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
-  return diff === 0 && secret !== '' && given !== '';
-}
 async function hashToken(request) {
   const token = request.headers.get('Authorization') || '';
   if (!/^Bearer [a-f0-9]{64}$/.test(token)) return null;
@@ -297,6 +278,12 @@ async function chat(request, env) {
     return reply({ error: 'invalid_body' }, 400);
   const owner = share ? await hashToken(request) : null;
   if (share && !owner) return reply({ error: 'delete_key_required' }, 400);
+  // 정해진 답(인건비 비율 · 월세·공과금 · 가장 많이 쓴 항목 · 아직 안 정한 돈)은 AI 없이 요약에서 바로 만든다
+  const fixed = fixedAnswer(body.question, body.summary);
+  if (fixed) {
+    if (share) await saveConversation(env, body, owner, fixed.answer);
+    return reply({ answer: fixed.answer, saved: share, source: 'fixed' });
+  }
   const rate = MODELS[env.CHAT_MODEL];
   if (!rate) return reply({ error: 'model_not_configured' }, 503);
   const messages = [
@@ -338,22 +325,27 @@ async function chat(request, env) {
   }
   if (typeof result?.response !== 'string' || !result.response.trim())
     return reply({ error: 'invalid_ai_response' }, 502);
-  const answer = result.response.slice(0, 4000);
-  if (share)
-    await env.DB.prepare(
-      'INSERT INTO conversations(id, conv_id, delete_hash, question, answer, industry, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  // 요약에 없는 금액·비율·날짜가 있거나 아직 안 정한 돈을 「가장 큰 항목」으로 말하면 버리고 대체 답.
+  // 버린 답 원문은 어디에도 남기지 않는다(운영자 확인을 켠 경우에도 대체 답만 저장).
+  const check = checkAnswer(result.response, body.summary);
+  const answer = check.ok ? result.response.slice(0, 4000) : fallbackAnswer(body.summary);
+  if (share) await saveConversation(env, body, owner, answer);
+  return reply({ answer, saved: share, source: check.ok ? 'ai' : 'fallback' });
+}
+async function saveConversation(env, body, owner, answer) {
+  await env.DB.prepare(
+    'INSERT INTO conversations(id, conv_id, delete_hash, question, answer, industry, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  )
+    .bind(
+      crypto.randomUUID(),
+      body.convId,
+      owner,
+      body.question,
+      answer,
+      body.summary.industry,
+      Date.now()
     )
-      .bind(
-        crypto.randomUUID(),
-        body.convId,
-        owner,
-        body.question,
-        answer,
-        body.summary.industry,
-        Date.now()
-      )
-      .run();
-  return reply({ answer, saved: share });
+    .run();
 }
 /* 관리 화면. 운영자 확인용으로 저장된 질문(14일)과 주제 집계·개선 기록 내보내기, 개선 기록 입력.
    질문 원문 내보내기는 만들지 않는다. 개선 기록은 대화 번호와 연결하지 않는다. */
@@ -434,6 +426,12 @@ function csvReply(name, body) {
 /* 주제 집계: {topic, source} 만 받아 한국 날짜·주제·출처별 횟수에 1 을 더한다.
    IP·헤더 값·질문 글·브라우저 식별값을 읽거나 저장하지 않는다. */
 async function countTopic(request, env) {
+  // 사이트 처리방침과 맞춰 기본 꺼짐(124-5). 코드는 남겨 두고 TOPIC_COUNTS=on 일 때만 센다.
+  if (env.TOPIC_COUNTS !== 'on')
+    return new Response(null, {
+      status: 204,
+      headers: { 'Access-Control-Allow-Origin': ORIGIN, Vary: 'Origin' }
+    });
   let body;
   try {
     body = await readBody(request);
@@ -548,16 +546,13 @@ export default {
           headers: {
             'Access-Control-Allow-Origin': ORIGIN,
             'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Namneundon-Tester',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             Vary: 'Origin'
           }
         });
       const asking = request.method === 'POST' && url.pathname === '/api/chat';
       const counting = request.method === 'POST' && url.pathname === '/api/topic';
       const deleting = request.method === 'DELETE' && url.pathname.startsWith('/api/chat/');
-      // 본문을 읽기 전에 막는다 — AI 호출·사용량 기록·저장·집계 모두 하지 않는다.
-      if ((asking || counting || deleting) && !(await testerAllowed(request, env)))
-        return reply({ error: 'tester_only' }, 403);
       if (asking) return await chat(request, env);
       if (counting) return await countTopic(request, env);
       const id = url.pathname.slice('/api/chat/'.length);
