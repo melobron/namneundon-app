@@ -88,6 +88,11 @@ export default [
     languageOptions: { globals: { ...globals.serviceworker } }
   },
 
+  {
+    files: ['chat/src/**/*.js'],
+    languageOptions: { globals: { ...globals.worker } }
+  },
+
   // 개발 도구 — Node 에서 도는 모듈
   {
     files: ['tests/**/*.mjs', 'tools/**/*.mjs', '*.mjs'],

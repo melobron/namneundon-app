@@ -1,0 +1,8 @@
+# gitleaks 오탐 예외. 한 줄에 fingerprint 하나, 바로 위에 까닭을 적는다.
+# 실제 비밀값(토큰·TESTER_KEY 등)은 여기 올리지 않는다 — 그런 것은 지우고 키를 바꾼다.
+
+# Cloudflare Access 앱의 AUD 태그. 비밀값이 아니라 JWT 의 aud 를 대조하는 공개 식별자다(chat/wrangler.jsonc ACCESS_AUD, 124차).
+eded7129d7e2e1d2ef871eb9921456161b65e4c6:chat/wrangler.jsonc:generic-api-key:22
+
+# 시험용 가짜 키 'ui-test-key-0123456789'. 화면 시험에서만 쓰는 지어낸 값이고 운영 TESTER_KEY 가 아니다(운영 키는 wrangler secret 에만 있다, 124차).
+583f09595394a9700e9417f352410c9cb38682a9:tests/chat-ui.spec.mjs:generic-api-key:5

@@ -228,3 +228,8 @@ CI가 lint·test를 통과해야 배포된다. 앱은 배포 후 `verify:prod`�
 
 기존 설치 명령과 당시 확인 결과는 [이전 환경 안내](https://github.com/melobron/namneundon-app/blob/50342ba88af7eacdbadf03aa553366d13c92d031/docs/development/setup.md#omc)에 보존돼 있다.
 이 문서의 역할 분담은 2026-09-25 사용자 결정에서 이어진다.
+
+## 124차 챗봇 배포 준비 (미실행)
+
+별도 Worker·D1·Access 설정은 [사람이 할 일](chat-124.md#cloudflare에서-사람이-할-일--여기서는-실행하지-않음)에 있다.
+`deploy-chat`은 수동 이벤트·명시적 변수 허용·자리표시 제거가 모두 필요하다. 이번 작업은 배포하지 않는다.

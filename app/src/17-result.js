@@ -161,6 +161,7 @@ function drawResultInner(months) {
   drawViewToggle(months, mode);
   row1.appendChild(mode);
   host.appendChild(sel);
+  drawChatButton(host);
 
   if (UP.view === 'year') {
     drawYear(host, months);

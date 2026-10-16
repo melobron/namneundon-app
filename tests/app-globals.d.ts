@@ -108,3 +108,9 @@ declare var drawStart: any;
 declare var openUpPanel: any;
 declare var showResult: any;
 declare var drawCatFix: any;
+
+declare var chatSummary: any;
+declare var CHAT_LABELS: string[];
+declare var chatPreview: any;
+declare var chatPickChips: any;
+declare var chatTopicOf: any;
