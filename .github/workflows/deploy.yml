@@ -68,3 +68,33 @@ jobs:
           name: prod-test-results
           path: test-results/
           retention-days: 7
+
+  # 124차 준비 초안. 사람이 별도 허용한 뒤 수동 실행만 가능하다.
+  # D1 자리표시가 남아 있으면 배포 단계를 건너뛴다. 앱 배포와 독립이다.
+  deploy-chat:
+    if: github.event_name == 'workflow_dispatch' && vars.CHAT_DEPLOY_ENABLED == 'true'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 자리표시 확인
+        id: ready
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          const config = JSON.parse(readFileSync('chat/wrangler.jsonc', 'utf8'));
+          const ready = config.d1_databases[0].database_id !== 'TODO_D1_ID'
+            && !Object.values(config.vars).some(value => String(value).startsWith('TODO'));
+          appendFileSync(process.env.GITHUB_OUTPUT, `ready=${ready}\n`);
+          NODE
+      - if: steps.ready.outputs.ready == 'true'
+        run: npm ci
+      - if: steps.ready.outputs.ready == 'true'
+        run: npx wrangler deploy --config chat/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

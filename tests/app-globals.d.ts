@@ -108,3 +108,5 @@ declare var drawStart: any;
 declare var openUpPanel: any;
 declare var showResult: any;
 declare var drawCatFix: any;
+
+declare var chatSummary: any;

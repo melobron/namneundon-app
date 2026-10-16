@@ -6437,3 +6437,45 @@ table.o tr:last-child td {
   color: var(--gray);
   text-align: right;
 }
+
+/* 124차: 시험 질문 창은 기존 결과 화면 레이아웃에 영향을 주지 않는다. */
+.ai-chat {
+  box-sizing: border-box;
+  width: min(560px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid #aaa;
+  border-radius: 12px;
+  padding: 20px;
+  color: #222;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.ai-chat::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.ai-chat textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin-block: 12px;
+  font: inherit;
+}
+
+.ai-share {
+  display: block;
+}
+
+.ai-preview,
+.ai-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
+.ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
