@@ -8,6 +8,8 @@ import worker, { accessAllowed, validSummary, nextReset, SYSTEM } from '../chat/
 
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
+// 시험용 가짜 비밀값. 실제 TESTER_KEY 는 wrangler secret 으로만 넣는다.
+const TESTER = 'tester-secret-for-local-tests';
 const convId = '00000000-0000-4000-8000-000000000001';
 function month() {
   return {
@@ -67,6 +69,7 @@ function setup() {
     DAILY_NEURONS: '8000',
     ACCESS_TEAM: 'TODO_TEAM',
     ACCESS_AUD: 'TODO_AUD',
+    TESTER_KEY: TESTER,
     AI: {
       async run() {
         calls++;
@@ -79,10 +82,15 @@ function setup() {
   };
   return { sql, env, calls: () => calls };
 }
-function request(data, key = token) {
+function request(data, key = token, tester = TESTER) {
   return new Request('https://chat.namneundon.com/api/chat', {
     method: 'POST',
-    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    headers: {
+      Origin: ORIGIN,
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + key,
+      ...(tester === null ? {} : { 'X-Namneundon-Tester': tester })
+    },
     body: JSON.stringify(data)
   });
 }
@@ -102,7 +110,7 @@ test('공유 대화 저장과 삭제: 번호만 알거나 다른 키로는 지�
     worker.fetch(
       new Request('https://chat.namneundon.com/api/chat/' + convId, {
         method: 'DELETE',
-        headers: { Origin: ORIGIN, Authorization: key }
+        headers: { Origin: ORIGIN, Authorization: key, 'X-Namneundon-Tester': TESTER }
       }),
       s.env
     );
@@ -347,5 +355,86 @@ test('지시문에 차액·잔액 설명 원칙, 요약에 잔액 칸 없음', a
   withBalance.summary.current.balance = 1000000;
   expect(validSummary(withBalance.summary)).toBe(false);
   expect((await worker.fetch(request(withBalance), s.env)).status).toBe(400);
+  s.sql.close();
+});
+
+// 시험자 키가 없거나 틀리면 본문을 읽기 전에 막는다 — AI 호출·사용량·저장 모두 0
+function nothingHappened(s) {
+  expect(s.calls()).toBe(0);
+  expect(s.sql.prepare('SELECT * FROM usage').all()).toEqual([]);
+  expect(s.sql.prepare('SELECT * FROM conversations').all()).toEqual([]);
+}
+const deleteRequest = (tester) =>
+  new Request('https://chat.namneundon.com/api/chat/' + convId, {
+    method: 'DELETE',
+    headers: {
+      Origin: ORIGIN,
+      Authorization: 'Bearer ' + token,
+      ...(tester === null ? {} : { 'X-Namneundon-Tester': tester })
+    }
+  });
+test('시험자 키 없음·틀린 키는 질문·삭제 403, AI 호출·사용량·저장 없음', async () => {
+  const s = setup();
+  for (const tester of [null, '', 'wrong-key', TESTER + 'x', TESTER.slice(0, -1)]) {
+    const res = await worker.fetch(request(body(true), token, tester), s.env);
+    expect(res.status, String(tester)).toBe(403);
+    expect((await res.json()).error).toBe('tester_only');
+  }
+  nothingHappened(s);
+  // 삭제도 같다 — 저장된 대화가 지워지지 않는다
+  s.sql
+    .prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('keep', convId, 'h', '질문', '답', '약국', Date.now());
+  for (const tester of [null, 'wrong-key'])
+    expect((await worker.fetch(deleteRequest(tester), s.env)).status).toBe(403);
+  expect(s.sql.prepare('SELECT id FROM conversations').all()).toHaveLength(1);
+  s.sql.close();
+});
+test('비밀값(TESTER_KEY)이 없으면 모든 질문 403', async () => {
+  for (const secret of [undefined, '']) {
+    const s = setup();
+    s.env.TESTER_KEY = secret;
+    for (const tester of [null, '', TESTER])
+      expect((await worker.fetch(request(body(), token, tester), s.env)).status).toBe(403);
+    expect((await worker.fetch(deleteRequest(TESTER), s.env)).status).toBe(403);
+    nothingHappened(s);
+    s.sql.close();
+  }
+});
+test('맞는 시험자 키는 처리, 사전 요청은 시험자 헤더를 허용', async () => {
+  const s = setup();
+  expect((await worker.fetch(request(body()), s.env)).status).toBe(200);
+  expect(s.calls()).toBe(1);
+  const pre = await worker.fetch(
+    new Request('https://chat.namneundon.com/api/chat', {
+      method: 'OPTIONS',
+      headers: { Origin: ORIGIN }
+    }),
+    s.env
+  );
+  expect(pre.headers.get('Access-Control-Allow-Headers')).toContain('X-Namneundon-Tester');
+  s.sql.close();
+});
+test('예약 작업은 1시간마다, 30일 지난 대화만 지움', async () => {
+  const config = JSON.parse(
+    readFileSync(new URL('../chat/wrangler.jsonc', import.meta.url), 'utf8')
+  );
+  expect(config.triggers.crons).toEqual(['15 * * * *']);
+  // 설정 파일에 비밀값을 적지 않는다
+  expect(JSON.stringify(config)).not.toContain('TESTER_KEY');
+  const s = setup();
+  const insert = s.sql.prepare('INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const day = 86400000;
+  insert.run('d31', convId, token, '질문', '답', '약국', Date.now() - 31 * day);
+  insert.run('d30h1', convId, token, '질문', '답', '약국', Date.now() - 30 * day - 3600000);
+  insert.run('d29', convId, token, '질문', '답', '약국', Date.now() - 29 * day);
+  insert.run('d30m', convId, token, '질문', '답', '약국', Date.now() - 30 * day + 60000);
+  await worker.scheduled({}, s.env);
+  expect(
+    s.sql
+      .prepare('SELECT id FROM conversations ORDER BY id')
+      .all()
+      .map((r) => r.id)
+  ).toEqual(['d29', 'd30m']);
   s.sql.close();
 });

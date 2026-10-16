@@ -1,7 +1,13 @@
 /* 124차 시험 기능. 화면 열기·달 바꾸기는 통신하지 않는다. 질문 전송은 동의 단추 한 곳뿐이다. */
 var CHAT_URL = 'https://chat.namneundon.com';
 var CHAT_BROWSER_LIMIT = 10;
-var CHAT_KEYS = { enabled: 'fc.ai.enabled', usage: 'fc.ai.usage', receipt: 'fc.ai.receipt' };
+var CHAT_KEYS = {
+  enabled: 'fc.ai.enabled',
+  usage: 'fc.ai.usage',
+  receipt: 'fc.ai.receipt',
+  tester: 'fc.ai.tester'
+};
+var CHAT_KEY_FORM = /^[\x21-\x7e]{1,256}$/;
 var CHAT_LABELS = [
   '식자재',
   '주류·음료',
@@ -29,13 +35,50 @@ var CHAT_LABELS = [
   '장비 리스',
   '사용자 지정 항목'
 ];
-function chatEnabled() {
-  var flag = new URLSearchParams(location.search).get('ai');
-  if (flag === '0' || flag === '1') lsSet(CHAT_KEYS.enabled, flag);
-  return flag === '1' || (flag !== '0' && lsGet(CHAT_KEYS.enabled) === '1');
+/* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 쓴다.
+   ?aikey=<키> 로 들어오면 키를 저장하고 표시를 켠 뒤, 주소창에서 키를 바로 지운다
+   (방문 기록·화면 공유에 남지 않게). ?ai=0 은 표시와 키를 함께 지운다.
+   ?ai=1 만으로는 켜지지 않는다 — 키가 있어야 띠가 보인다. */
+function chatReadUrl() {
+  var params = new URLSearchParams(location.search);
+  var key = params.get('aikey');
+  if (params.get('ai') === '0') {
+    lsDel(CHAT_KEYS.enabled);
+    lsDel(CHAT_KEYS.tester);
+  } else if (key !== null && CHAT_KEY_FORM.test(key)) {
+    lsSet(CHAT_KEYS.tester, key);
+    lsSet(CHAT_KEYS.enabled, '1');
+  }
+  if (key === null) return;
+  params.delete('aikey');
+  var rest = params.toString();
+  history.replaceState(
+    history.state,
+    '',
+    location.pathname + (rest ? '?' + rest : '') + location.hash
+  );
 }
-// 첫 화면에서 들어온 시험 주소도 즉시 저장한다.
-chatEnabled();
+chatReadUrl();
+function chatTesterKey() {
+  var key = lsGet(CHAT_KEYS.tester);
+  return key && CHAT_KEY_FORM.test(key) ? key : '';
+}
+function chatEnabled() {
+  return lsGet(CHAT_KEYS.enabled) === '1' && !!chatTesterKey();
+}
+/* 띠가 보이는 동안은 결과가 띠 위의 스크롤 칸(body) 안에서만 움직인다 (app.css 124차).
+   결과 화면의 「맨 위로」·「자리 지키기」가 그 칸을 움직이게 한 곳으로 모은다. */
+function pageScroller() {
+  return document.querySelector('#up-result:not([hidden]) .ai-band')
+    ? document.body
+    : document.scrollingElement || document.documentElement;
+}
+function pageScrollTop() {
+  return pageScroller().scrollTop;
+}
+function pageScrollTo(y) {
+  pageScroller().scrollTop = y;
+}
 function chatMonthSummary(m) {
   var d = monthNumbers(m);
   var end = m + '-' + String(monthDays(m)).padStart(2, '0');
@@ -137,15 +180,93 @@ var CHAT_CHIPS = [
   '차액과 통장 잔액은 왜 달라?',
   '아직 안 정한 돈은 뭐야?'
 ];
-/* 진입점은 결과 화면 우측 하단 하나다. 결과 화면(up-result) 안에 두어
-   다른 화면으로 갈 때 결과와 함께 감춰지게 한다 — 따로 여닫는 곳을 늘리지 않는다. */
+/* 진입점은 결과 화면 맨 아래 전체 폭 띠 하나다. 결과 화면(up-result) 안에 두어
+   다른 화면으로 갈 때 결과와 함께 감춰지게 한다 — 따로 여닫는 곳을 늘리지 않는다.
+   띠가 있으면 결과가 보이는 칸이 띠 위에서 끝난다 (app.css 124차) — 띠가 결과를 덮지 않는다. */
 function drawChatButton(host) {
   if (!chatEnabled()) return;
-  var button = el('button', 'ai-fab', 'AI에게 결과 묻기');
+  var band = el('div', 'ai-band');
+  var button = el('button', 'b on ai-band-go', 'AI에게 결과 묻기');
   button.type = 'button';
   button.setAttribute('aria-haspopup', 'dialog');
   button.onclick = openChat;
-  host.appendChild(button);
+  band.appendChild(button);
+  host.appendChild(band);
+}
+/* 「전송할 내용 보기」 표. 실제로 보낼 요약 객체의 값을 글자로 바꾸기만 한다 — 다시 계산하지 않는다.
+   요약에는 시작일이 없고 dataEnd 는 전체 자료의 마지막 거래일이다. 「8월 1~22일」로 만들지 않는다. */
+function chatMonthName(m) {
+  return m.slice(0, 4) + '년 ' + Number(m.slice(5, 7)) + '월';
+}
+function chatDayName(d) {
+  return chatMonthName(d) + ' ' + Number(d.slice(8, 10)) + '일';
+}
+function chatMoney(v) {
+  return won(v) + '원';
+}
+function chatRatio(v) {
+  return v === null ? '확인 보류' : (v * 100).toFixed(1) + '%';
+}
+function chatRows(table, rows) {
+  rows.forEach(function (r) {
+    var tr = document.createElement('tr');
+    tr.appendChild(el('th', null, r[0])).setAttribute('scope', 'row');
+    tr.appendChild(el('td', null, r[1]));
+    table.appendChild(tr);
+  });
+  return table;
+}
+function chatMonthTable(m, monthLabel) {
+  var box = el('div', 'ai-month');
+  box.appendChild(
+    chatRows(el('table', 'ai-sum'), [
+      [monthLabel, chatMonthName(m.month)],
+      ['전체 자료의 마지막 거래일', chatDayName(m.dataEnd)],
+      ['전체 기간 확보 여부', m.complete ? '확인됨' : '전체 기간 확보 미확인'],
+      ['사업으로 번 돈', chatMoney(m.earned)],
+      ['사업에 쓴 돈', chatMoney(m.spent)],
+      ['차액', chatMoney(m.difference)],
+      ['매출', chatMoney(m.sales)],
+      ['그 밖의 입금', chatMoney(m.otherIncome)],
+      ['아직 안 정한 돈', chatMoney(m.unknown)]
+    ])
+  );
+  var cats = el('table', 'ai-cats');
+  var head = document.createElement('tr');
+  ['항목', '금액', '매출 대비 비율'].forEach(function (t) {
+    head.appendChild(el('th', null, t)).setAttribute('scope', 'col');
+  });
+  cats.appendChild(head);
+  m.categories.forEach(function (c) {
+    var tr = document.createElement('tr');
+    tr.appendChild(el('th', null, c.label)).setAttribute('scope', 'row');
+    tr.appendChild(el('td', null, chatMoney(c.amount)));
+    tr.appendChild(el('td', null, chatRatio(c.ratio)));
+    cats.appendChild(tr);
+  });
+  if (!m.categories.length) {
+    var none = document.createElement('tr');
+    none.appendChild(el('td', null, '보내는 항목 없음')).colSpan = 3;
+    cats.appendChild(none);
+  }
+  box.appendChild(cats);
+  box.appendChild(chatRows(el('table', 'ai-sum'), [[m.ratioLabel, chatRatio(m.materialRatio)]]));
+  return box;
+}
+function chatPreview(summary) {
+  var box = el('div', 'ai-preview');
+  box.appendChild(chatRows(el('table', 'ai-sum'), [['업종', summary.industry]]));
+  box.appendChild(chatMonthTable(summary.current, '선택한 달'));
+  box.appendChild(el('h3', null, '함께 보내는 이전 달 요약'));
+  if (!summary.previous.length) box.appendChild(el('p', null, '함께 보내는 이전 달이 없습니다.'));
+  summary.previous.forEach(function (m) {
+    var fold = document.createElement('details');
+    fold.appendChild(el('summary', null, chatMonthName(m.month)));
+    fold.appendChild(chatMonthTable(m, '달'));
+    box.appendChild(fold);
+  });
+  box.appendChild(el('p', 'ai-note', '비율은 보기 쉽게 반올림했습니다.'));
+  return box;
 }
 function openChat() {
   if (document.getElementById('ai-chat')) return;
@@ -158,13 +279,13 @@ function openChat() {
   /* 머리 · 본문 · 질문 칸 세 칸으로 나눈다. 키보드가 올라와 높이가 줄어도
      돌아가기와 질문 칸 · 전송은 화면 안에 남고 본문만 줄어든다. */
   var head = el('div', 'ai-head');
-  var back = el('button', 'btn ai-back', '결과로 돌아가기');
+  var back = el('button', 'b ai-back', '결과로 돌아가기');
   back.type = 'button';
   back.onclick = function () {
     dialog.close();
   };
   head.appendChild(back);
-  var title = el('h2', null, 'AI에게 결과 물어보기');
+  var title = el('h2', null, 'AI에게 결과 묻기');
   title.id = 'ai-chat-title';
   head.appendChild(title);
   dialog.appendChild(head);
@@ -188,14 +309,14 @@ function openChat() {
     el(
       'p',
       null,
-      '선택한 기간: ' +
-        summary.current.month +
+      '선택한 달: ' +
+        chatMonthName(summary.current.month) +
         '. AI 답변은 틀릴 수 있습니다. 한 번의 질문에는 현재 요약만 보내며 이전 대화는 보내지 않습니다.'
     )
   );
-  var preview = el('pre', 'ai-preview', JSON.stringify(summary, null, 2));
+  var preview = chatPreview(summary);
   preview.hidden = true;
-  var see = el('button', 'btn', '전송할 내용 보기');
+  var see = el('button', 'b', '전송할 내용 보기');
   see.type = 'button';
   see.onclick = function () {
     preview.hidden = !preview.hidden;
@@ -233,14 +354,14 @@ function openChat() {
   var answer = el('div', 'ai-answer');
   answer.setAttribute('aria-live', 'polite');
   body.appendChild(answer);
-  var remove = el('button', 'btn', '대화 삭제');
+  var remove = el('button', 'b', '대화 삭제');
   remove.type = 'button';
   body.appendChild(remove);
   var status = el('p', 'ai-status');
   status.setAttribute('role', 'status');
   foot.appendChild(status);
   var actions = el('div', 'ai-actions');
-  var send = el('button', 'btn', '동의하고 질문 보내기');
+  var send = el('button', 'b on', '동의하고 질문 보내기');
   send.type = 'button';
   actions.appendChild(send);
   foot.appendChild(actions);
@@ -287,7 +408,11 @@ function openChat() {
       lsSet(CHAT_KEYS.usage, JSON.stringify({ day: day, count: use.count + 1 }));
       var res = await fetch(CHAT_URL + '/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + receipt.token },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + receipt.token,
+          'X-Namneundon-Tester': chatTesterKey()
+        },
         body: JSON.stringify({
           question: text,
           summary: summary,
@@ -298,6 +423,9 @@ function openChat() {
       });
       var data = await res.json();
       if (res.status === 429) status.textContent = chatLimitText(data.nextAvailable);
+      else if (res.status === 403)
+        status.textContent =
+          '이 브라우저의 시험 키로는 질문할 수 없습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
       else if (!res.ok || typeof data.answer !== 'string')
         status.textContent =
           '지금은 답변을 받지 못했습니다. 기존 분석 화면은 계속 사용할 수 있습니다.';
@@ -330,7 +458,10 @@ function openChat() {
     try {
       var res = await fetch(CHAT_URL + '/api/chat/' + receipt.convId, {
         method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + receipt.token },
+        headers: {
+          Authorization: 'Bearer ' + receipt.token,
+          'X-Namneundon-Tester': chatTesterKey()
+        },
         signal: AbortSignal.timeout(15000)
       });
       if (!res.ok) throw new Error('delete_failed');

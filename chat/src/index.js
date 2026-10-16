@@ -181,6 +181,23 @@ export async function accessAllowed(request, env) {
     return false;
   }
 }
+/* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 질문·삭제를 쓴다.
+   비밀값(TESTER_KEY, wrangler secret)이 없으면 모두 막는다.
+   두 값을 같은 길이의 해시로 바꿔 끝까지 비교한다 — 길이·앞부분 일치로 시간이 달라지지 않게. */
+async function testerAllowed(request, env) {
+  const secret = typeof env.TESTER_KEY === 'string' ? env.TESTER_KEY : '';
+  const given = request.headers.get('X-Namneundon-Tester') || '';
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(given)),
+    crypto.subtle.digest('SHA-256', enc.encode(secret))
+  ]);
+  const x = new Uint8Array(a);
+  const y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0 && secret !== '' && given !== '';
+}
 async function hashToken(request) {
   const token = request.headers.get('Authorization') || '';
   if (!/^Bearer [a-f0-9]{64}$/.test(token)) return null;
@@ -347,14 +364,18 @@ export default {
           headers: {
             'Access-Control-Allow-Origin': ORIGIN,
             'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Namneundon-Tester',
             Vary: 'Origin'
           }
         });
-      if (request.method === 'POST' && url.pathname === '/api/chat')
-        return await chat(request, env);
+      const asking = request.method === 'POST' && url.pathname === '/api/chat';
+      const deleting = request.method === 'DELETE' && url.pathname.startsWith('/api/chat/');
+      // 본문을 읽기 전에 막는다 — AI 호출·사용량 기록·저장 모두 하지 않는다.
+      if ((asking || deleting) && !(await testerAllowed(request, env)))
+        return reply({ error: 'tester_only' }, 403);
+      if (asking) return await chat(request, env);
       const id = url.pathname.slice('/api/chat/'.length);
-      if (request.method === 'DELETE' && url.pathname.startsWith('/api/chat/') && UUID.test(id)) {
+      if (deleting && UUID.test(id)) {
         const owner = await hashToken(request);
         if (!owner) return reply({ error: 'forbidden' }, 403);
         await env.DB.prepare('DELETE FROM conversations WHERE conv_id = ? AND delete_hash = ?')

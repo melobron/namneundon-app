@@ -10,7 +10,7 @@
     { "binding": "DB", "database_name": "namneundon-chat", "database_id": "TODO_D1_ID" }
   ],
   "observability": { "enabled": false },
-  "triggers": { "crons": ["15 0 * * *"] },
+  "triggers": { "crons": ["15 * * * *"] },
   "vars": {
     "CHAT_MODEL": "TODO_MODEL",
     "DAILY_NEURONS": "8000",

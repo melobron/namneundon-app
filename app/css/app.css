@@ -6438,43 +6438,61 @@ table.o tr:last-child td {
   text-align: right;
 }
 
-/* 124차: AI 질문 시험 기능. ?ai=1 일 때만 그려지므로 꺼진 화면의 레이아웃은 그대로다. */
+/* 124차: AI 질문 시험 기능. 시험 키가 있을 때만 그려지므로 꺼진 화면의 레이아웃은 그대로다. */
 
-/* 진입 단추는 결과 화면 우측 하단 하나다. 휴대폰 아래 안전 영역만큼 띄운다.
+/* 진입점은 결과 화면 맨 아래 전체 폭 띠다. 휴대폰 아래 안전 영역을 띠 안에 넣는다.
    z-index 는 거래처 창(#up, 50) 아래 — 다른 창 위로 올라오지 않는다. */
-.ai-fab {
+.ai-band {
   position: fixed;
-  right: calc(16px + env(safe-area-inset-right));
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 40;
+  box-sizing: border-box;
+  height: calc(64px + env(safe-area-inset-bottom)); /* 띠 높이 — 아래 body 높이와 같은 값 */
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.ai-band-go {
+  width: 100%;
+  max-width: 688px;
   min-height: 44px;
-  padding: 10px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--ink);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
-  cursor: pointer;
 }
 
-.ai-fab:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
+/* 띠가 결과를 덮지 않게 결과가 보이는 칸 자체를 띠 위에서 끝낸다.
+   창(viewport) 대신 body 가 띠 위까지만 스크롤한다 — 마지막 줄도 띠 위로 올라온다.
+   넓은 화면에서도 스크롤 막대가 창 끝에 오도록 폭은 창 전체로 두고 안쪽 여백으로 가운데 720px 을 지킨다.
+   결과 화면의 맨 위로 · 자리 지키기는 pageScrollTo (17-chat.js) 가 이 칸을 움직인다. */
+html:has(#up-result:not([hidden]) .ai-band) {
+  height: 100%;
+  overflow: hidden;
 }
 
-/* 결과 화면 맨 아래 내용이 단추에 가려 끝까지 못 보는 일이 없게 단추 높이만큼 비운다.
-   단추가 있는 결과 화면일 때만이다. */
-body:has(#up-result:not([hidden]) .ai-fab) {
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+html:has(#up-result:not([hidden]) .ai-band) body {
+  box-sizing: border-box;
+  max-width: none;
+  height: calc(100dvh - 64px - env(safe-area-inset-bottom)); /* 띠 높이만큼 뺀다 */
+  margin: 0;
+  padding-inline: max(0px, calc((100% - 720px) / 2));
+  overflow-y: auto;
+}
+
+/* 질문 창이 열리면 바깥 띠는 감춘다. */
+body:has(#ai-chat[open]) .ai-band {
+  display: none;
 }
 
 /* 머리 · 본문 · 질문 칸. 높이가 모자라면 본문만 스크롤한다 (키보드가 열린 휴대폰). */
 .ai-chat {
   box-sizing: border-box;
   width: min(560px, calc(100% - 24px));
+  /* 앱 전체의 * { margin: 0 } 이 브라우저의 가운데 정렬(margin: auto)을 지운다. 되살린다 */
+  margin: auto;
   max-height: calc(100dvh - 32px);
   overflow: hidden;
   border: 1px solid #aaa;
@@ -6522,23 +6540,23 @@ body:has(#up-result:not([hidden]) .ai-fab) {
   border-top: 1px solid #ddd;
 }
 
-/* 예시 질문은 한 줄로 둔다. 좁은 화면에서 세 줄로 쌓이면 질문 칸이 밀려난다. */
+/* 예시 질문은 줄을 바꿔 감싼다. 가로로 넘기는 칸은 만들지 않는다. */
 .ai-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
 }
 
 .ai-chip {
-  flex: none;
-  padding: 6px 12px;
-  border: 1px solid #bbb;
+  max-width: 100%;
+  padding: 5px 11px;
+  border: 1px solid var(--edge);
   border-radius: 999px;
-  background: #fff;
-  color: #222;
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
-  white-space: nowrap;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -6584,11 +6602,42 @@ body:has(#up-result:not([hidden]) .ai-fab) {
   color: #666;
 }
 
-.ai-preview,
 .ai-answer {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
+}
+
+/* 「전송할 내용 보기」 표 — 보낼 값을 글자로만 바꿔 보여준다. */
+.ai-preview table {
+  width: 100%;
+  margin-block: 8px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.ai-chat .ai-preview table tr th,
+.ai-chat .ai-preview table tr td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ai-chat .ai-preview table tr td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-preview h3 {
+  margin: 14px 0 4px;
+  font-size: 15px;
+}
+
+.ai-preview summary {
+  padding: 6px 0;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .ai-actions {

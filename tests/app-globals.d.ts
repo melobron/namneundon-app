@@ -111,3 +111,4 @@ declare var drawCatFix: any;
 
 declare var chatSummary: any;
 declare var CHAT_LABELS: string[];
+declare var chatPreview: any;
