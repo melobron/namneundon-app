@@ -222,6 +222,13 @@ export function checkAnswer(answer, summary) {
   for (const m of answer.matchAll(MONEY)) {
     const next = answer.slice(m.index + m[0].length).trimStart()[0];
     if (next && '%월일년'.includes(next)) continue; // 비율·날짜는 아래에서 본다
+    // 쉼표 자리가 틀린 금액(「5,245,8309원」)은 값이 맞아도 대표님에게 다른 금액으로 읽힌다(백테스트 3차)
+    if (
+      (m[0].match(/\d[\d,]*/g) || []).some(
+        (n) => n.includes(',') && !/^\d{1,3}(?:,\d{3})+$/.test(n)
+      )
+    )
+      problems.push('쉼표 ' + m[0].trim());
     const v = moneyValue(m[0]);
     if (!money.has(v)) problems.push('금액 ' + m[0].trim());
   }
