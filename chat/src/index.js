@@ -312,7 +312,15 @@ async function chat(request, env) {
   let result;
   try {
     result = await env.AI.run(env.CHAT_MODEL, { messages, max_tokens: MAX_OUTPUT });
-  } catch {
+  } catch (e) {
+    // Workers AI 하루 무료 한도 소진(4006)이면 마감과 같다 — 앱은 마감 안내(CHAT_CLOSED)를 보이고,
+    // 오늘 사용량을 한도까지 채워 그날 남은 시간에는 AI 를 다시 부르지 않는다(백테스트 3차 재실행에서 겪음).
+    if (/\b4006\b/.test(String(e?.message ?? e))) {
+      await env.DB.prepare('UPDATE usage SET neurons = MAX(neurons, ?) WHERE day = ?')
+        .bind(limit, day)
+        .run();
+      return reply({ error: 'daily_limit', nextAvailable: nextReset() }, 429);
+    }
     return reply({ error: 'ai_unavailable' }, 503);
   } // 사용량을 모르는 호출은 예약량을 남긴다
   const usage = result?.usage;

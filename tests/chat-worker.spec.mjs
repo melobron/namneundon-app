@@ -1128,3 +1128,35 @@ test('달-숫자 짝 검사: 「지난달」「○월」과 함께 쓴 번 돈·
   // 바로 앞 달이 요약에 없으면 「지난달」 금액은 틀린 것으로 본다
   expect(checkAnswer('지난달 사업으로 번 돈은 600,000원입니다.', sum6(APR, [FEB])).ok).toBe(false);
 });
+test('Workers AI 하루 무료 한도 소진(4006)은 마감(429) — 그날 남은 시간은 AI 를 다시 부르지 않고, 정해진 답은 그대로', async () => {
+  const s = setup();
+  let calls = 0;
+  const error = new Error(
+    "4006: you have used up your daily free allocation of 10,000 neurons, please upgrade to Cloudflare's Workers Paid plan if you would like to continue usage."
+  );
+  /** @type {any} */ (s.env.AI).run = async () => {
+    calls++;
+    throw error;
+  };
+  const send = (question) =>
+    worker
+      .fetch(request({ ...body(), question }), s.env)
+      .then(async (r) => [r.status, await r.json()]);
+  const [status, data] = await send('이번 달은 어때?');
+  expect(status).toBe(429);
+  expect(data).toEqual({ error: 'daily_limit', nextAvailable: nextReset() });
+  expect(usageRows(s)[0].neurons).toBe(8000);
+  expect((await send('이번 달은 어때?'))[0]).toBe(429);
+  expect(calls).toBe(1);
+  expect((await send('아직 안 정한 돈은 무엇인가요?'))[1].source).toBe('fixed');
+  // 다른 오류는 지금처럼 503 이고 마감으로 보지 않는다
+  const t = setup();
+  /** @type {any} */ (t.env.AI).run = async () => {
+    throw new Error('5000: internal');
+  };
+  const res = await worker.fetch(request(body()), t.env);
+  expect(res.status).toBe(503);
+  expect(t.sql.prepare('SELECT neurons FROM usage').get().neurons).toBeLessThan(8000);
+  s.sql.close();
+  t.sql.close();
+});
