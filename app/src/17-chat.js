@@ -1,14 +1,13 @@
-/* 124차 시험 기능. 화면 열기·달 바꾸기는 통신하지 않는다. 질문 전송은 동의 단추 한 곳뿐이다. */
+/* 124차 AI 질문(베타). 화면 열기·달 바꾸기는 통신하지 않는다. 서버로 가는 것은 보내기의 질문 글 + 월 요약과,
+   운영자 확인용 저장을 켰을 때의 저장·삭제뿐이다(주제 집계는 기본 꺼짐). */
 var CHAT_URL = 'https://chat.namneundon.com';
 var CHAT_BROWSER_LIMIT = 10;
 var CHAT_KEYS = {
   enabled: 'fc.ai.enabled',
   usage: 'fc.ai.usage',
   receipt: 'fc.ai.receipt',
-  tester: 'fc.ai.tester'
+  tester: 'fc.ai.tester' // 124 시험 기간에 쓰던 이름. 이제 쓰지 않고 남아 있으면 지운다
 };
-// 시험 키는 영문 소문자·숫자만 (서버 TESTER_FORM 과 같다). 그 밖의 값은 저장·표시하지 않는다.
-var CHAT_KEY_FORM = /^[a-z0-9]{1,256}$/;
 var CHAT_LABELS = [
   '식자재',
   '주류·음료',
@@ -36,21 +35,14 @@ var CHAT_LABELS = [
   '장비 리스',
   '사용자 지정 항목'
 ];
-/* 국외 이전 조건을 확인하기 전에는 합성 자료 시험자만 쓴다.
-   ?aikey=<키> 로 들어오면 키를 저장하고 표시를 켠 뒤, 주소창에서 키를 바로 지운다
-   (방문 기록·화면 공유에 남지 않게). ?ai=0 은 표시와 키를 함께 지운다.
-   ?ai=1 만으로는 켜지지 않는다 — 키가 있어야 진입 아이콘이 보인다. */
+/* 124-5 공개: 결과 화면이면 누구에게나 AI 아이콘을 보인다(시험 키 없음).
+   ?ai=0 은 이 브라우저에서 끄기, ?ai=1 은 다시 켜기. 예전 시험 주소의 ?aikey 는 무시하고 주소창에서만 지운다. */
 function chatReadUrl() {
   var params = new URLSearchParams(location.search);
-  var key = params.get('aikey');
-  if (params.get('ai') === '0') {
-    lsDel(CHAT_KEYS.enabled);
-    lsDel(CHAT_KEYS.tester);
-  } else if (key !== null && CHAT_KEY_FORM.test(key)) {
-    lsSet(CHAT_KEYS.tester, key);
-    lsSet(CHAT_KEYS.enabled, '1');
-  }
-  if (key === null) return;
+  if (params.get('ai') === '0') lsSet(CHAT_KEYS.enabled, '0');
+  else if (params.get('ai') === '1') lsDel(CHAT_KEYS.enabled);
+  if (lsGet(CHAT_KEYS.tester) !== null) lsDel(CHAT_KEYS.tester);
+  if (params.get('aikey') === null) return;
   params.delete('aikey');
   var rest = params.toString();
   history.replaceState(
@@ -60,12 +52,8 @@ function chatReadUrl() {
   );
 }
 chatReadUrl();
-function chatTesterKey() {
-  var key = lsGet(CHAT_KEYS.tester);
-  return key && CHAT_KEY_FORM.test(key) ? key : '';
-}
 function chatEnabled() {
-  return lsGet(CHAT_KEYS.enabled) === '1' && !!chatTesterKey();
+  return lsGet(CHAT_KEYS.enabled) !== '0';
 }
 function chatMonthSummary(m) {
   var d = monthNumbers(m);
@@ -155,26 +143,21 @@ function chatReceipt() {
     throw new Error('삭제용 정보를 이 브라우저에 저장할 수 없어 질문을 보내지 않았습니다.');
   return receipt;
 }
-function chatLimitText(next) {
-  return (
-    '현재 무료 질문 한도에 도달했습니다. 다음 이용 가능 시간은 ' +
-    new Date(next).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) +
-    ' (한국시간)입니다. 결과 화면은 계속 사용할 수 있습니다.'
-  );
-}
+// 하루 한도(서버 전체·브라우저당 10회)를 넘었을 때. 요금 낱말을 쓰지 않는다. 서버 날짜는 UTC 자정 = 한국시간 오전 9시에 바뀐다.
+var CHAT_CLOSED = '오늘 AI 질문이 모두 마감됐습니다. 내일 오전 9시 이후 다시 물어봐 주세요.';
 /* 주제 코드(고정, 서버 TOPICS 와 같다)와 예상 질문. 칩은 질문 칸을 채우기만 하고 자동으로 보내지 않는다.
    AI 가 추천 질문을 만들지 않는다 — 브라우저가 자료 상태로 고른다. */
 var CHAT_TOPIC_CHIPS = {
-  운영판단: '이번 달 결과, 지난달보다 나아졌어?',
-  용어: '차액은 무슨 뜻이야?',
-  잔액차이: '차액과 통장 잔액은 왜 달라?',
-  기간비교: '지난달보다 뭐가 달라졌어?',
-  지출구성: '어느 항목에 가장 많이 썼어?',
-  지출비율: '재료 비율은 어떻게 계산해?',
-  미분류: '아직 안 정한 돈은 뭐야?',
-  자료범위: '이 자료로 한 달 전체를 비교해도 돼?',
-  업종비교: '같은 업종과 비교하면 어느 수준이야?',
-  앞으로지출: '다음 달 큰 지출을 해도 될까?'
+  운영판단: '이번 달 결과, 지난달보다 나아졌나요?',
+  용어: '차액은 무슨 뜻인가요?',
+  잔액차이: '차액과 계좌 잔액은 왜 다른가요?',
+  기간비교: '지난달보다 뭐가 달라졌나요?',
+  지출구성: '어느 항목에 가장 많이 썼나요?',
+  지출비율: '재료 비율은 어떻게 계산하나요?',
+  미분류: '아직 안 정한 돈은 무엇인가요?',
+  자료범위: '이 자료로 한 달 전체를 비교해도 되나요?',
+  업종비교: '같은 업종과 비교하면 어느 수준인가요?',
+  앞으로지출: '다음 달 큰 지출을 해도 될까요?'
 };
 /* 추천 순서: 아직 안 정한 돈이 있으면 미분류가 먼저, 비교할 이전 달(전체 기간 확보)이 있을 때만 기간비교,
    나머지는 용어 · 지출구성 · 잔액차이. 업종비교·앞으로지출은 추천하지 않는다. skip 은 방금 물은 주제. */
@@ -189,6 +172,38 @@ function chatPickChips(summary, skip, max) {
     })
     .slice(0, max);
 }
+/* 첫 화면 추천 질문(최대 5개). 자료 상태로 고르고, 문장마다 주제 코드를 붙인다.
+   - 아직 안 정한 돈이 0원이면 미분류 대신 「어느 항목에 가장 많이 썼나요?」
+   - 비교할 이전 달(전체 기간 확보)이 없으면 기간비교 대신 「차액은 무슨 뜻인가요?」
+   - 인건비·월세 항목이 0원이면 그 칩은 빼고 남은 것만 둔다(업종별 이름 — 급여·임차료 — 도 같은 항목으로 본다). */
+function chatCatAmount(month, labels) {
+  return month.categories
+    .filter(function (c) {
+      return labels.indexOf(c.label) >= 0;
+    })
+    .reduce(function (s, c) {
+      return s + c.amount;
+    }, 0);
+}
+function chatFirstChips(summary) {
+  var cur = summary.current;
+  var list = [{ topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적나요?' }];
+  if (chatCatAmount(cur, ['인건비', '급여']) > 0)
+    list.push({ topic: '지출비율', text: '인건비는 매출의 몇 %인가요?' });
+  if (chatCatAmount(cur, ['월세', '임차료']) > 0)
+    list.push({ topic: '지출구성', text: '월세·공과금은 얼마 나갔나요?' });
+  list.push(
+    summary.previous.length
+      ? { topic: '기간비교', text: CHAT_TOPIC_CHIPS.기간비교 }
+      : { topic: '용어', text: CHAT_TOPIC_CHIPS.용어 }
+  );
+  list.push(
+    cur.unknown > 0
+      ? { topic: '미분류', text: CHAT_TOPIC_CHIPS.미분류 }
+      : { topic: '지출구성', text: CHAT_TOPIC_CHIPS.지출구성 }
+  );
+  return list.slice(0, 5);
+}
 /* 직접 쓴(또는 칩을 고친) 질문의 주제. 앞의 것부터 맞춰 보고 맞는 낱말이 없으면 기타.
    질문 글은 이 브라우저 안에서만 보고, 서버에는 주제 코드만 보낸다. */
 var CHAT_TOPIC_WORDS = [
@@ -200,9 +215,12 @@ var CHAT_TOPIC_WORDS = [
   ],
   ['잔액차이', ['잔액', '통장']],
   ['미분류', ['안 정한', '미분류', '정하지 않은', '모르는 돈']],
-  ['운영판단', ['나아졌', '좋아졌', '나빠졌', '잘하고', '괜찮']],
+  ['운영판단', ['나아졌', '좋아졌', '나빠졌', '잘하고', '괜찮', '남는 게', '왜 남']],
   ['지출비율', ['비율', '퍼센트', '%']],
-  ['지출구성', ['가장 많이', '많이 썼', '어디에 썼', '어느 항목', '지출 구성']],
+  [
+    '지출구성',
+    ['가장 많이', '많이 썼', '어디에 썼', '어느 항목', '지출 구성', '얼마 나갔', '공과금', '월세']
+  ],
   ['기간비교', ['지난달', '전달', '저번 달', '달라졌', '비교']],
   ['용어', ['뜻', '의미', '무슨 말', '뭐야', '뭔가요', '무엇인가요']]
 ];
@@ -217,27 +235,30 @@ function chatTopicOf(text, chip) {
 }
 /* 주제 집계 — 질문을 실제로 보내 답을 받은 뒤 {topic, source} 만 따로 보낸다.
    지우기 키·대화 번호·질문 글·요약·브라우저 식별값은 넣지 않는다. 실패해도 대화에는 영향이 없다. */
+// 사이트 처리방침과 맞춰 기본 꺼짐(124-5). 코드는 남겨 두고, 켜려면 처리방침을 먼저 고친다.
+var CHAT_TOPIC_ON = false;
 function chatCountTopic(t) {
+  if (!CHAT_TOPIC_ON) return;
   fetch(CHAT_URL + '/api/topic', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic: t.topic, source: t.source }),
     signal: AbortSignal.timeout(15000)
   }).catch(function () {});
 }
-// TODO: 사이트 개인정보 처리방침에 AI 질문 항목과 바로 가는 주소가 생기면 넣는다(지금 사이트 처리방침은 AI 전송을 다루지 않고 주소 앵커도 없다).
-var CHAT_PRIVACY_URL = '';
+// 사이트 개인정보 처리방침(AI 질문 항목 포함). ⓘ 안에서 새 탭으로 연다.
+var CHAT_PRIVACY_URL = 'https://namneundon.com/privacy/#policy';
 /* 진입점은 결과 화면 오른쪽 아래 동그란 아이콘 하나다 — 남는돈 마크(BRAND_MARK) + 작은 「AI」.
    결과 화면(up-result) 안에 두어 다른 화면으로 갈 때 결과와 함께 감춰지게 한다.
    아이콘이 마지막 줄을 가리지 않게 결과 화면 맨 아래에 아이콘 높이만큼 여백을 둔다 (app.css 124차).
-   시험 키가 없으면 아무것도 그리지 않는다 — 일반 화면은 그대로다. */
+   ?ai=0 으로 끈 브라우저에서는 아무것도 그리지 않는다. */
 function drawChatButton(host) {
   if (!chatEnabled()) return;
   var button = el('button', 'ai-fab');
   button.type = 'button';
-  button.setAttribute('aria-label', 'AI에게 결과 묻기');
+  button.setAttribute('aria-label', '남는돈 AI 비서에게 묻기');
   button.setAttribute('aria-haspopup', 'dialog');
-  button.title = 'AI에게 결과 묻기';
+  button.title = '남는돈 AI 비서에게 묻기';
   var mark = document.createElement('img');
   mark.className = 'ai-fab-mark';
   mark.src = BRAND_MARK;
@@ -353,10 +374,10 @@ function openChat() {
   /* 머리 */
   var head = el('div', 'ai-head');
   var titleBox = el('div', 'ai-title');
-  var title = el('h2', null, '남는돈 AI');
+  var title = el('h2', null, '남는돈 AI 비서');
   title.id = 'ai-chat-title';
   titleBox.appendChild(title);
-  titleBox.appendChild(el('span', 'ai-badge', '시험 중'));
+  titleBox.appendChild(el('span', 'ai-badge', '베타'));
   head.appendChild(titleBox);
   var more = el('button', 'ai-icon ai-more', '⋯');
   more.type = 'button';
@@ -457,16 +478,16 @@ function openChat() {
   dialog.appendChild(log);
   chatBubble(log, 'bot', '보고 계신 결과에서 궁금한 점을 물어보세요.');
   var question = document.createElement('textarea');
-  function addChips(topics, cls) {
-    if (!topics.length) return;
+  // items: [{topic, text}] — 첫 화면은 chatFirstChips, 답변 뒤는 chatPickChips 의 주제를 문장으로 바꿔 넣는다.
+  function addChips(items, cls) {
+    if (!items.length) return;
     var chips = el('div', 'ai-chips' + (cls ? ' ' + cls : ''));
-    topics.forEach(function (topic) {
-      var text = CHAT_TOPIC_CHIPS[topic];
-      var b = el('button', 'ai-chip', text);
+    items.forEach(function (item) {
+      var b = el('button', 'ai-chip', item.text);
       b.type = 'button';
       b.onclick = function () {
-        question.value = text;
-        chip = { topic: topic, text: text };
+        question.value = item.text;
+        chip = { topic: item.topic, text: item.text };
         question.focus();
       };
       chips.appendChild(b);
@@ -474,21 +495,20 @@ function openChat() {
     log.appendChild(chips);
     chips.scrollIntoView({ block: 'nearest' });
   }
-  addChips(chatPickChips(summary, null, 3));
+  addChips(chatFirstChips(summary));
 
-  /* 맨 아래: 「자세히」 상자 · 안내 두 줄 · 입력 칸 · 주의 한 줄 */
+  /* 맨 아래: ⓘ 펼침 상자 · 안내 한 줄(+ⓘ) · 입력 칸 · 주의 한 줄.
+     입력 칸 위 글은 작은 글씨 두 줄 안으로 줄이고, 나머지 안내는 ⓘ 를 눌러야 펼친다. */
   var foot = el('div', 'ai-foot');
   var detail = el('div', 'ai-detail');
   detail.id = 'ai-detail';
   detail.hidden = true;
+  detail.appendChild(
+    el('p', null, '운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다.')
+  );
+  detail.appendChild(el('p', null, '앞선 대화는 답변에 반영되지 않습니다.'));
   detail.appendChild(el('h3', null, '남는돈이 자동으로 붙이는 것'));
   detail.appendChild(chatPreview(summary));
-  detail.appendChild(el('h3', null, '대표님이 직접 적는 것'));
-  detail.appendChild(
-    el('p', null, '질문 칸에 적은 글은 그대로 전송됩니다. 계좌번호·이름·연락처는 적지 마세요.')
-  );
-  detail.appendChild(el('h3', null, '받는 곳과 목적'));
-  detail.appendChild(el('p', null, '받는 곳: Cloudflare(서버·Workers AI) · 목적: 답변 생성'));
   if (CHAT_PRIVACY_URL) {
     var privacy = el('a', null, '개인정보 처리방침');
     privacy.href = CHAT_PRIVACY_URL;
@@ -497,25 +517,25 @@ function openChat() {
     detail.appendChild(privacy);
   } else detail.appendChild(el('p', 'ai-note', '개인정보 처리방침: 준비 중'));
   foot.appendChild(detail);
-  var notice = el(
-    'p',
-    'ai-notice',
-    '질문과 선택·비교 기간의 금액 요약(업종, 금액, 비율)이 미국과 영국에 있는 Cloudflare로 전송되어 답변을 만드는 데 쓰입니다. 답변을 만든 뒤에는 남지 않습니다. 운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다. · '
+  var noticeRow = el('div', 'ai-notice-row');
+  noticeRow.appendChild(
+    el(
+      'p',
+      'ai-notice',
+      '질문과 금액 요약은 미국과 영국의 Cloudflare로 보내져 답변을 만드는 데에만 쓰이고 남지 않습니다. 질문에 적으신 이름도 그대로 전송됩니다.'
+    )
   );
-  var more2 = el('button', 'ai-link', '자세히');
-  more2.type = 'button';
-  more2.setAttribute('aria-expanded', 'false');
-  more2.setAttribute('aria-controls', 'ai-detail');
-  more2.onclick = function () {
+  var info = el('button', 'ai-info', 'ⓘ');
+  info.type = 'button';
+  info.setAttribute('aria-label', '안내 자세히');
+  info.setAttribute('aria-expanded', 'false');
+  info.setAttribute('aria-controls', 'ai-detail');
+  info.onclick = function () {
     detail.hidden = !detail.hidden;
-    more2.setAttribute('aria-expanded', String(!detail.hidden));
+    info.setAttribute('aria-expanded', String(!detail.hidden));
   };
-  notice.appendChild(more2);
-  foot.appendChild(notice);
-  foot.appendChild(
-    el('p', 'ai-notice ai-small', '질문 칸에 가게 이름이나 성함을 적으시면 그대로 전송됩니다.')
-  );
-  foot.appendChild(el('p', 'ai-notice', '앞선 대화는 답변에 반영되지 않습니다.'));
+  noticeRow.appendChild(info);
+  foot.appendChild(noticeRow);
   var row = el('div', 'ai-input');
   question.maxLength = 300;
   question.rows = 1;
@@ -557,11 +577,7 @@ function openChat() {
     var use = chatRead(CHAT_KEYS.usage, { day: day, count: 0 });
     if (use.day !== day) use = { day: day, count: 0 };
     if (use.count >= CHAT_BROWSER_LIMIT) {
-      chatBubble(
-        log,
-        'bot',
-        chatLimitText(new Date(Math.floor(Date.now() / 86400000) * 86400000 + 86400000))
-      );
+      chatBubble(log, 'bot', CHAT_CLOSED);
       return;
     }
     var topic = chatTopicOf(text, chip);
@@ -577,7 +593,7 @@ function openChat() {
     reply.classList.add('ai-pending');
     try {
       /* 지우기 키(Authorization)와 대화 번호(convId)는 운영자 확인용 저장을 켠 질문에만 붙인다. */
-      var headers = { 'Content-Type': 'application/json', 'X-Namneundon-Tester': chatTesterKey() };
+      var headers = { 'Content-Type': 'application/json' };
       var payload = { question: text, summary: summary, share: share };
       if (share) {
         var receipt = chatReceipt();
@@ -592,10 +608,7 @@ function openChat() {
         signal: AbortSignal.timeout(45000)
       });
       var data = await res.json();
-      if (res.status === 429) reply.textContent = chatLimitText(data.nextAvailable);
-      else if (res.status === 403)
-        reply.textContent =
-          '이 브라우저의 시험 키로는 질문할 수 없습니다. 결과 화면은 계속 사용할 수 있습니다.';
+      if (res.status === 429) reply.textContent = CHAT_CLOSED;
       else if (!res.ok || typeof data.answer !== 'string')
         reply.textContent = '지금은 답변을 받지 못했습니다. 결과 화면은 계속 사용할 수 있습니다.';
       else {
@@ -603,7 +616,12 @@ function openChat() {
         reply.classList.add('ai-answer');
         if (data.saved) chatBubble(log, 'meta', '운영자 확인용으로 저장했습니다.');
         chatCountTopic(topic);
-        addChips(chatPickChips(summary, topic.topic, 2), 'ai-next');
+        addChips(
+          chatPickChips(summary, topic.topic, 2).map(function (t) {
+            return { topic: t, text: CHAT_TOPIC_CHIPS[t] };
+          }),
+          'ai-next'
+        );
       }
     } catch (e) {
       reply.textContent =
@@ -629,8 +647,7 @@ function openChat() {
       var res = await fetch(CHAT_URL + '/api/chat/' + receipt.convId, {
         method: 'DELETE',
         headers: {
-          Authorization: 'Bearer ' + receipt.token,
-          'X-Namneundon-Tester': chatTesterKey()
+          Authorization: 'Bearer ' + receipt.token
         },
         signal: AbortSignal.timeout(15000)
       });

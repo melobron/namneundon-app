@@ -1,27 +1,44 @@
 import { test, expect } from '@playwright/test';
 import { openApp, collectNumbers } from './helpers.mjs';
 import { ADMIN, TOPICS } from '../chat/src/index.js';
-const GO = 'AI에게 결과 묻기';
-// 시험용 가짜 키. 실제 TESTER_KEY 는 저장소에 두지 않는다.
+const GO = '남는돈 AI 비서에게 묻기';
+// 124 시험 기간 주소(?aikey=)에 쓰던 모양의 가짜 키. 124-5 공개 뒤에는 무시하고 주소창에서 지운다.
 const KEY = 'fake1screen1test1key';
+const CLOSED = '오늘 AI 질문이 모두 마감됐습니다. 내일 오전 9시 이후 다시 물어봐 주세요.';
+const PRIVACY = 'https://namneundon.com/privacy/#policy';
 const WELCOME = '보고 계신 결과에서 궁금한 점을 물어보세요.';
 const CHIP = {
-  운영판단: '이번 달 결과, 지난달보다 나아졌어?',
-  용어: '차액은 무슨 뜻이야?',
-  잔액차이: '차액과 통장 잔액은 왜 달라?',
-  기간비교: '지난달보다 뭐가 달라졌어?',
-  지출구성: '어느 항목에 가장 많이 썼어?',
-  지출비율: '재료 비율은 어떻게 계산해?',
-  미분류: '아직 안 정한 돈은 뭐야?',
-  자료범위: '이 자료로 한 달 전체를 비교해도 돼?',
-  업종비교: '같은 업종과 비교하면 어느 수준이야?',
-  앞으로지출: '다음 달 큰 지출을 해도 될까?'
+  운영판단: '이번 달 결과, 지난달보다 나아졌나요?',
+  용어: '차액은 무슨 뜻인가요?',
+  잔액차이: '차액과 계좌 잔액은 왜 다른가요?',
+  기간비교: '지난달보다 뭐가 달라졌나요?',
+  지출구성: '어느 항목에 가장 많이 썼나요?',
+  지출비율: '재료 비율은 어떻게 계산하나요?',
+  미분류: '아직 안 정한 돈은 무엇인가요?',
+  자료범위: '이 자료로 한 달 전체를 비교해도 되나요?',
+  업종비교: '같은 업종과 비교하면 어느 수준인가요?',
+  앞으로지출: '다음 달 큰 지출을 해도 될까요?'
 };
 const FINE = 'AI 답변은 틀릴 수 있습니다. 질문에 계좌번호·연락처 같은 개인정보는 적지 마세요.';
-const NOTICE1 =
-  '질문과 선택·비교 기간의 금액 요약(업종, 금액, 비율)이 미국과 영국에 있는 Cloudflare로 전송되어 답변을 만드는 데 쓰입니다. 답변을 만든 뒤에는 남지 않습니다. 운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다. · 자세히';
-const NOTICE_SMALL = '질문 칸에 가게 이름이나 성함을 적으시면 그대로 전송됩니다.';
-const NOTICE2 = '앞선 대화는 답변에 반영되지 않습니다.';
+const NOTICE =
+  '질문과 금액 요약은 미국과 영국의 Cloudflare로 보내져 답변을 만드는 데에만 쓰이고 남지 않습니다. 질문에 적으신 이름도 그대로 전송됩니다.';
+const INFO_LINES = [
+  '운영자 확인을 켜지 않으시면 질문은 남는돈 서버에도 남지 않습니다.',
+  '앞선 대화는 답변에 반영되지 않습니다.'
+];
+// 입력 칸 위 안내는 줄 수 대신 높이로 잰다 — 작은 글씨 두 줄 높이 이하.
+// 리눅스(GitHub 시험 기계)는 한글 글꼴이 달라 넓게 그려져 세 줄까지 허용한다(PR #67 시험 실패, 2026-10-16).
+// 124-5 공개 문구(요한 지정)는 360px 에서 세 줄이 된다 — 글씨를 더 줄이지 않고 360 만 세 줄까지 허용한다.
+const NOTICE_MAX_LINES = process.platform === 'linux' ? 3 : 2;
+async function expectNoticeFits(dialog, width = 390) {
+  const m = await dialog.locator('.ai-notice').evaluate((p) => ({
+    height: p.getBoundingClientRect().height,
+    lineHeight: parseFloat(getComputedStyle(p).lineHeight)
+  }));
+  expect(m.height, JSON.stringify(m)).toBeLessThanOrEqual(
+    m.lineHeight * (NOTICE_MAX_LINES + (width < 390 ? 1 : 0)) + 0.5
+  );
+}
 const OPT_IN = [
   '[선택] 서비스 개선을 위해 앞으로 보내는 질문·답변과 업종을 남는돈 운영자가 확인하도록 저장합니다.',
   '저장 항목: 질문, 답변, 업종, 작성 시각, 대화 번호, 삭제 키 확인값. 질문에 직접 적은 금액·이름도 함께 저장될 수 있습니다.',
@@ -29,7 +46,7 @@ const OPT_IN = [
   '켜지 않아도 질문 기능은 그대로 쓰실 수 있고, 언제든 끌 수 있습니다. 켜기 전 대화는 저장하지 않습니다.'
 ];
 const KEEP = '결과 화면은 계속 사용할 수 있습니다.';
-async function openChatTest(page, url = '/?aikey=' + KEY) {
+async function openChatTest(page, url = null) {
   await openApp(page);
   if (url) await page.goto(url);
   await page.getByRole('button', { name: '예시 먼저 보기' }).click();
@@ -203,24 +220,14 @@ async function ask(page, text) {
   await chat(page).getByRole('button', { name: '보내기' }).click();
 }
 
-test('키 없음·?ai=1 만으로는 아이콘 없음, ?aikey 로 켜지고 주소창에서 키가 사라짐, ?ai=0 은 키도 지움', async ({
+test('공개: 키 없이 결과 화면에 아이콘, ?ai=0 은 이 브라우저에서 끄기, ?ai=1 은 다시 켜기, 옛 ?aikey 는 무시하고 주소창에서 지움', async ({
   page
 }) => {
   const sent = [];
   page.on('request', (r) => {
     if (r.url().startsWith('https://chat.namneundon.com')) sent.push(r.url());
   });
-  await openChatTest(page, null);
-  await expect(page.locator('.ai-fab')).toHaveCount(0);
-  // 시험 키 없는 일반 화면 — 아이콘 여백도 없고 서버로 가는 요청도 없다
-  expect(await page.evaluate(() => getComputedStyle(document.body).paddingBottom)).toBe('0px');
-  await openChatTest(page, '/?ai=1');
-  await expect(page.locator('.ai-fab')).toHaveCount(0);
-  expect(sent).toEqual([]);
-  await page.goto('/?aikey=' + KEY);
-  expect(page.url()).not.toContain('aikey');
-  expect(page.url()).not.toContain(KEY);
-  expect(await page.evaluate(() => location.search)).toBe('');
+  await openApp(page);
   // 시작 화면 — 결과 화면 밖
   await expect(page.getByRole('button', { name: GO })).toBeHidden();
   await page.getByRole('button', { name: '예시 먼저 보기' }).click();
@@ -230,33 +237,95 @@ test('키 없음·?ai=1 만으로는 아이콘 없음, ?aikey 로 켜지고 주�
   await page.locator('#upopen').click();
   await expect(page.locator('#up-result')).toBeHidden();
   await expect(page.getByRole('button', { name: GO })).toBeHidden();
-  // 다시 열어도 저장된 키로 켜진다
-  await page.goto('/');
-  await page.getByRole('button', { name: '예시 먼저 보기' }).click();
-  await expect(page.getByRole('button', { name: GO })).toBeVisible();
+  // ?ai=0 — 이 브라우저에서 끄고, 다시 열어도 꺼져 있다
   await page.goto('/?ai=0');
-  expect(
-    await page.evaluate(() => [
-      localStorage.getItem('fc.ai.tester'),
-      localStorage.getItem('fc.ai.enabled')
-    ])
-  ).toEqual([null, null]);
   await page.getByRole('button', { name: '예시 먼저 보기' }).click();
   await expect(page.locator('.ai-fab')).toHaveCount(0);
+  expect(await page.evaluate(() => getComputedStyle(document.body).paddingBottom)).toBe('0px');
+  await page.goto('/');
+  await page.getByRole('button', { name: '예시 먼저 보기' }).click();
+  await expect(page.locator('.ai-fab')).toHaveCount(0);
+  // ?ai=1 — 다시 켜기
+  await page.goto('/?ai=1');
+  await page.getByRole('button', { name: '예시 먼저 보기' }).click();
+  await expect(page.getByRole('button', { name: GO })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('fc.ai.enabled'))).toBeNull();
+  // 옛 시험 주소: 키는 저장·전송하지 않고 주소창에서 지운다. 남아 있던 옛 시험 키 저장도 지운다
+  await page.evaluate(() => localStorage.setItem('fc.ai.tester', 'old1key'));
+  await page.goto('/?aikey=' + KEY);
+  expect(page.url()).not.toContain('aikey');
+  expect(page.url()).not.toContain(KEY);
+  expect(await page.evaluate(() => location.search)).toBe('');
+  expect(await page.evaluate(() => localStorage.getItem('fc.ai.tester'))).toBeNull();
+  await page.getByRole('button', { name: '예시 먼저 보기' }).click();
+  await expect(page.getByRole('button', { name: GO })).toBeVisible();
+  expect(await page.locator('body').innerText()).not.toContain(KEY);
+  // 여기까지 서버로 간 요청 없음 — 아이콘을 보이는 것만으로는 통신하지 않는다
   expect(sent).toEqual([]);
 });
 
-test('시험 키 형식이 영문 소문자·숫자가 아니면 저장·표시하지 않고 주소창에서도 지움', async ({
+test('통신 범위: 기본 상태에서는 보내기의 POST /api/chat 하나뿐, 본문은 질문·share·허용된 요약 칸만 — 저장을 켰을 때만 지우기 키·convId·삭제 요청', async ({
   page
 }) => {
-  for (const bad of ['Upper0123', 'with-dash0123', 'under_score1']) {
-    await openApp(page);
-    await page.goto('/?aikey=' + encodeURIComponent(bad));
-    expect(page.url()).not.toContain('aikey');
-    expect(await page.evaluate(() => localStorage.getItem('fc.ai.tester'))).toBeNull();
-    await page.getByRole('button', { name: '예시 먼저 보기' }).click();
-    await expect(page.locator('.ai-fab')).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const all = [];
+  page.on('request', (r) => {
+    if (
+      !r.url().startsWith('http://localhost') &&
+      !r.url().startsWith('http://127.0.0.1') &&
+      !r.url().startsWith('data:')
+    )
+      all.push(r.method() + ' ' + r.url());
+  });
+  const net = await fakeServer(page);
+  await openChatTest(page);
+  await page.getByRole('button', { name: GO }).click();
+  const dialog = chat(page);
+  await dialog.getByRole('button', { name: '안내 자세히' }).click();
+  await ask(page, '이번 달 결과, 지난달보다 나아졌어?');
+  await expect(dialog.locator('.ai-answer')).toHaveCount(1);
+  expect(all).toEqual(['POST https://chat.namneundon.com/api/chat']);
+  expect(net.topics).toEqual([]);
+  const req = net.chats[0];
+  expect(Object.keys(req.body).sort()).toEqual(['question', 'share', 'summary']);
+  expect(Object.keys(req.body.summary).sort()).toEqual(['current', 'industry', 'previous']);
+  const MONTH = [
+    'categories',
+    'complete',
+    'dataEnd',
+    'difference',
+    'earned',
+    'materialRatio',
+    'month',
+    'otherIncome',
+    'ratioLabel',
+    'sales',
+    'spent',
+    'unknown'
+  ];
+  for (const m of [req.body.summary.current, ...req.body.summary.previous]) {
+    expect(Object.keys(m).sort()).toEqual(MONTH);
+    for (const c of m.categories)
+      expect(Object.keys(c).sort()).toEqual(['amount', 'label', 'ratio']);
   }
+  expect(req.headers.authorization).toBeUndefined();
+  expect(req.headers['x-namneundon-tester']).toBeUndefined();
+  // 저장을 켜면 그때부터 share·convId·지우기 키, 대화 삭제는 DELETE 하나
+  await dialog.getByRole('button', { name: '더보기' }).click();
+  await dialog.locator('.ai-opt-in').click();
+  await dialog.locator('.ai-opt-in-panel').getByRole('button', { name: '켜기' }).click();
+  await ask(page, '차액은 무슨 뜻이야?');
+  await expect(dialog.locator('.ai-answer')).toHaveCount(2);
+  expect(Object.keys(net.chats[1].body).sort()).toEqual(['convId', 'question', 'share', 'summary']);
+  await dialog.getByRole('button', { name: '더보기' }).click();
+  await dialog.getByRole('button', { name: '대화 삭제' }).click();
+  await expect.poll(() => net.chats.length).toBe(3);
+  expect(all).toEqual([
+    'POST https://chat.namneundon.com/api/chat',
+    'POST https://chat.namneundon.com/api/chat',
+    'DELETE https://chat.namneundon.com/api/chat/' + net.chats[1].body.convId
+  ]);
+  expect(net.topics).toEqual([]);
 });
 
 for (const width of [360, 390]) {
@@ -318,7 +387,7 @@ for (const width of [360, 390]) {
   });
 }
 
-test('채팅 첫 화면: 남는돈 AI · 시험 중 · 닫기, 첫 말풍선과 추천 칩, 입력 칸 위 안내 두 줄, 자세히 — 닫기·뒤로 가기는 전송·삭제 없음', async ({
+test('채팅 첫 화면: 남는돈 AI 비서 · 베타 · 닫기, 첫 말풍선과 추천 칩, 입력 칸 위 안내 한 줄과 ⓘ — 닫기·뒤로 가기는 전송·삭제 없음', async ({
   page
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -329,52 +398,60 @@ test('채팅 첫 화면: 남는돈 AI · 시험 중 · 닫기, 첫 말풍선과 
   const dialog = chat(page);
   await expect(dialog).toBeVisible();
   await expect(page.locator('.ai-fab')).toBeHidden();
-  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('남는돈 AI');
-  await expect(dialog.locator('.ai-badge')).toHaveText('시험 중');
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('남는돈 AI 비서');
+  await expect(dialog.locator('.ai-badge')).toHaveText('베타');
   await expect(dialog.getByRole('button', { name: '닫기' })).toBeVisible();
   await expect(dialog.locator('.ai-log > .ai-bot').first()).toHaveText(WELCOME);
-  // 추천 칩: 브라우저가 자료 상태로 고른 것과 같다(최대 3개)
+  // 추천 칩: 브라우저가 자료 상태로 고른 것과 같다(최대 5개)
   const summary = await page.evaluate(() => chatSummary());
-  const picked = await page.evaluate((s) => chatPickChips(s, null, 3), summary);
-  expect(picked.length).toBeLessThanOrEqual(3);
+  const picked = await page.evaluate((s) => chatFirstChips(s), summary);
+  expect(picked.length).toBeLessThanOrEqual(5);
   await expect(dialog.locator('.ai-log > .ai-chips .ai-chip')).toHaveText(
-    picked.map((t) => CHIP[t])
+    picked.map((c) => c.text)
   );
-  // 입력 칸 위 안내 두 줄(늘 보임) · 주의 한 줄 · 동의 카드 없음
-  await expect(dialog.locator('.ai-notice')).toHaveText([NOTICE1, NOTICE_SMALL, NOTICE2]);
-  await expect(dialog.locator('.ai-notice.ai-small')).toHaveText(NOTICE_SMALL);
+  // 입력 칸 위 안내 한 줄(작은 글씨, 두 줄 안) + ⓘ · 주의 한 줄 · 동의 카드 없음 · 옛 「· 자세히」 없음
+  await expect(dialog.locator('.ai-notice')).toHaveText(NOTICE);
+  await expectNoticeFits(dialog);
+  await expect(dialog.getByRole('button', { name: '자세히', exact: true })).toHaveCount(0);
+  const info = dialog.getByRole('button', { name: '안내 자세히' });
+  await expect(info).toHaveText('ⓘ');
+  const ib = await info.boundingBox();
+  expect(ib.width).toBeGreaterThanOrEqual(32);
+  expect(ib.height).toBeGreaterThanOrEqual(32);
+  // 펼침 상자로 옮긴 글은 처음에는 보이지 않는다
+  for (const line of INFO_LINES) await expect(dialog.getByText(line)).toBeHidden();
   await expect(dialog.locator('.ai-fine')).toHaveText(FINE);
   await expect(dialog.getByRole('button', { name: '보내기' })).toBeVisible();
   await expect(dialog.locator('.ai-consent, .ai-sent-line, input[type=checkbox]')).toHaveCount(0);
   await expect(dialog).not.toContainText('강요한');
   await page.screenshot({ path: test.info().outputPath('chat-first-390.png') });
-  // 자세히: 자동으로 붙이는 것(보낼 내용 표) · 직접 적는 것 · 받는 곳과 목적 · 처리방침
+  // ⓘ: 옮긴 안내 두 줄 · 보낼 내용 표 · 개인정보 처리방침(새 탭)
   const detail = dialog.locator('.ai-detail');
   await expect(detail).toBeHidden();
-  await dialog.getByRole('button', { name: '자세히' }).click();
+  await info.click();
   await expect(detail).toBeVisible();
-  await expect(detail.locator(':scope > h3')).toHaveText([
-    '남는돈이 자동으로 붙이는 것',
-    '대표님이 직접 적는 것',
-    '받는 곳과 목적'
-  ]);
-  await expect(detail).toContainText(
-    '질문 칸에 적은 글은 그대로 전송됩니다. 계좌번호·이름·연락처는 적지 마세요.'
-  );
-  await expect(detail).toContainText('받는 곳: Cloudflare(서버·Workers AI) · 목적: 답변 생성');
-  await expect(detail).toContainText('개인정보 처리방침');
+  await expect(info).toHaveAttribute('aria-expanded', 'true');
+  await expect(detail.locator(':scope > p').first()).toHaveText(INFO_LINES[0]);
+  await expect(detail.locator(':scope > p').nth(1)).toHaveText(INFO_LINES[1]);
+  await expect(detail.locator(':scope > h3')).toHaveText(['남는돈이 자동으로 붙이는 것']);
+  const policy = detail.getByRole('link', { name: '개인정보 처리방침' });
+  await expect(policy).toHaveAttribute('href', PRIVACY);
+  await expect(policy).toHaveAttribute('target', '_blank');
+  await expect(policy).toHaveAttribute('rel', 'noopener noreferrer');
   await expectTableIs(page, detail.locator('.ai-preview'), summary);
   await expect(detail).toContainText('전체 기간 확보 미확인');
   await expect(detail).not.toContainText('진행 중');
   expect(await detail.innerText()).not.toMatch(/\d+일?\s*[~～]\s*\d+일/);
   await detail.evaluate((d) => (d.scrollTop = 0));
-  await page.screenshot({ path: test.info().outputPath('detail-390.png') });
-  await dialog.getByRole('button', { name: '자세히' }).click();
+  await page.screenshot({ path: test.info().outputPath('info-open-390.png') });
+  // 다시 누르면 닫힘
+  await info.click();
   await expect(detail).toBeHidden();
+  await expect(info).toHaveAttribute('aria-expanded', 'false');
   // 칩은 입력만
-  for (const t of picked) {
-    await dialog.getByRole('button', { name: CHIP[t] }).click();
-    await expect(dialog.getByRole('textbox', { name: '질문' })).toHaveValue(CHIP[t]);
+  for (const c of picked) {
+    await dialog.getByRole('button', { name: c.text }).click();
+    await expect(dialog.getByRole('textbox', { name: '질문' })).toHaveValue(c.text);
   }
   expect(net.chats).toEqual([]);
   // 닫기
@@ -392,18 +469,20 @@ test('채팅 첫 화면: 남는돈 AI · 시험 중 · 닫기, 첫 말풍선과 
   expect(await collectNumbers(page)).toEqual(before);
 });
 
-test('보내기는 바로 전송 — 꺼진 상태 요청에는 지우기 키·convId 가 없음(네트워크), 답변 뒤 다음 질문 칩, 주제 집계는 topic·source 만', async ({
+test('보내기는 바로 전송 — 꺼진 상태 요청에는 지우기 키·convId 가 없음(네트워크), 답변 뒤 다음 질문 칩, 주제 집계(켰을 때)는 topic·source 만', async ({
   page
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const net = await fakeServer(page);
   await openChatTest(page);
+  // 주제 집계는 기본 꺼짐(124-5). 켰을 때 보내는 모양을 보려고 이 시험에서만 켠다
+  await page.evaluate(() => (CHAT_TOPIC_ON = true));
   await page.getByRole('button', { name: GO }).click();
   const dialog = chat(page);
   const expected = await page.evaluate(() => chatSummary());
-  const first = await page.evaluate((s) => chatPickChips(s, null, 3), expected);
+  const first = await page.evaluate((s) => chatFirstChips(s), expected);
   // 칩을 그대로 보내면 칩의 주제
-  await dialog.getByRole('button', { name: CHIP[first[0]] }).click();
+  await dialog.getByRole('button', { name: first[0].text }).click();
   await dialog.getByRole('button', { name: '보내기' }).click();
   await expect(dialog.locator('.ai-answer')).toHaveText('<script>실행하지 않음</script> 설명');
   expect(net.chats).toHaveLength(1);
@@ -413,7 +492,7 @@ test('보내기는 바로 전송 — 꺼진 상태 요청에는 지우기 키·c
   expect(req.body.summary).toEqual(expected);
   expect(req.headers.authorization).toBeUndefined();
   expect(req.raw).not.toContain('convId');
-  expect(req.headers['x-namneundon-tester']).toBe(KEY);
+  expect(req.headers['x-namneundon-tester']).toBeUndefined();
   // 지우기 키를 만들지도 않는다
   expect(await page.evaluate(() => localStorage.getItem('fc.ai.receipt'))).toBeNull();
   // 저장하지 않았다는 말풍선은 붙지 않는다
@@ -421,7 +500,7 @@ test('보내기는 바로 전송 — 꺼진 상태 요청에는 지우기 키·c
   // 질문은 오른쪽, 답은 왼쪽 말풍선. 답은 글자로만
   const me = dialog.locator('.ai-me').last();
   const ans = dialog.locator('.ai-answer');
-  await expect(me).toHaveText(CHIP[first[0]]);
+  await expect(me).toHaveText(first[0].text);
   const [mb, ab, lb] = await Promise.all([
     me.boundingBox(),
     ans.boundingBox(),
@@ -432,16 +511,17 @@ test('보내기는 바로 전송 — 꺼진 상태 요청에는 지우기 키·c
   expect(await dialog.locator('.ai-log script').count()).toBe(0);
   // 주제 집계: 본문은 topic·source 둘뿐, 지우기 키·convId·질문 글·요약 없음
   await expect.poll(() => net.topics.length).toBe(1);
-  expect(net.topics[0].body).toEqual({ topic: first[0], source: 'chip' });
+  expect(net.topics[0].body).toEqual({ topic: first[0].topic, source: 'chip' });
   expect(net.topics[0].headers.authorization).toBeUndefined();
-  for (const s of ['convId', CHIP[first[0]], '"summary"', 'question'])
+  for (const s of ['convId', first[0].text, '"summary"', 'question'])
     expect(net.topics[0].raw).not.toContain(s);
   // 답변 아래 다음 질문 칩 최대 2개 — 방금 주제는 빼고, 업종비교·앞으로지출은 없다
-  const next = await page
-    .evaluate((s) => chatPickChips(s, null, 3), expected)
-    .then(() => page.evaluate(([s, skip]) => chatPickChips(s, skip, 2), [expected, first[0]]));
+  const next = await page.evaluate(
+    ([s, skip]) => chatPickChips(s, skip, 2),
+    [expected, first[0].topic]
+  );
   await expect(dialog.locator('.ai-next .ai-chip')).toHaveText(next.map((t) => CHIP[t]));
-  expect(next).not.toContain(first[0]);
+  expect(next).not.toContain(first[0].topic);
   await page.screenshot({ path: test.info().outputPath('talk-390.png') });
   // 칩 문장을 고치면 직접 쓴 질문 — 낱말로 분류
   await dialog.locator('.ai-next .ai-chip').first().click();
@@ -462,6 +542,7 @@ test('운영자 확인용 저장: ⋯ 메뉴에서 기본 꺼짐 → 설명과 �
   await page.setViewportSize({ width: 390, height: 844 });
   const net = await fakeServer(page);
   await openChatTest(page);
+  await page.evaluate(() => (CHAT_TOPIC_ON = true));
   await page.getByRole('button', { name: GO }).click();
   const dialog = chat(page);
   await dialog.getByRole('button', { name: '더보기' }).click();
@@ -612,7 +693,7 @@ test('키보드가 열린 높이 390×500: 입력 칸·보내기·닫기·안내
     box,
     dialog.getByRole('button', { name: '보내기' }),
     dialog.getByRole('button', { name: '닫기' }),
-    dialog.getByRole('button', { name: '자세히' })
+    dialog.getByRole('button', { name: '안내 자세히' })
   ]) {
     const b = await target.boundingBox();
     expect(b.y).toBeGreaterThanOrEqual(0);
@@ -624,7 +705,7 @@ test('키보드가 열린 높이 390×500: 입력 칸·보내기·닫기·안내
 });
 
 for (const width of [360, 390, 1280]) {
-  test(`창 배치·거래처 이름 미포함·시험자 키는 헤더로만 ${width}`, async ({ page }) => {
+  test(`창 배치·거래처 이름 미포함·시험자 헤더 없음 ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const logs = [];
     page.on('console', (m) => logs.push(m.text()));
@@ -657,20 +738,17 @@ for (const width of [360, 390, 1280]) {
     await ask(page, '이 뜻은 무엇인가요?');
     await expect(chat(page).locator('.ai-answer')).toContainText('<script>');
     expect(net.chats[0].body.summary).toEqual(expected);
-    expect(net.chats[0].headers['x-namneundon-tester']).toBe(KEY);
-    // 키는 전송 본문·화면·로그에 나오지 않는다
-    expect(net.chats[0].raw).not.toContain(KEY);
-    expect(net.topics.every((t) => !t.raw.includes(KEY))).toBe(true);
-    expect(await page.locator('body').innerText()).not.toContain(KEY);
-    expect(logs.join('\n')).not.toContain(KEY);
+    expect(net.chats[0].headers['x-namneundon-tester']).toBeUndefined();
+    expect(net.topics).toEqual([]);
+    expect(logs.join('\n')).not.toContain('chat.namneundon.com');
     expect(await chat(page).evaluate((d) => d.scrollWidth <= d.clientWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`chat-${width}.png`) });
   });
 }
 
 for (const [status, text] of /** @type {[number, string][]} */ ([
-  [403, '이 브라우저의 시험 키로는 질문할 수 없습니다. ' + KEEP],
-  [429, '현재 무료 질문 한도에 도달했습니다.']
+  [403, '지금은 답변을 받지 못했습니다. ' + KEEP],
+  [429, CLOSED]
 ])) {
   test(`서버 ${status} 안내는 봇 말풍선으로, 결과 숫자 유지, 주제 집계 없음`, async ({ page }) => {
     const net = await fakeServer(page, '', status);
@@ -678,8 +756,7 @@ for (const [status, text] of /** @type {[number, string][]} */ ([
     const before = await collectNumbers(page);
     await page.getByRole('button', { name: GO }).click();
     await ask(page, '왜 그런가요?');
-    await expect(lastBot(page)).toContainText(text);
-    await expect(lastBot(page)).toContainText(KEEP);
+    await expect(lastBot(page)).toHaveText(text);
     await expect(chat(page).locator('.ai-answer')).toHaveCount(0);
     expect(net.topics).toEqual([]);
     expect(await collectNumbers(page)).toEqual(before);
@@ -760,4 +837,97 @@ test('관리 화면 1280: 내보내기 두 가지, 개선 기록 입력(고정 �
   await expect(page.locator('#noted')).toHaveText('저장했습니다');
   expect(notes).toEqual([{ topic: '잔액차이', kind: '숫자 틀림', note: '잔액 설명이 길다' }]);
   await page.screenshot({ path: test.info().outputPath('admin-1280.png'), fullPage: true });
+});
+
+for (const width of [360, 390]) {
+  test(`입력 칸 위 안내는 작은 글씨 두 줄 안(360 은 세 줄), ⓘ 는 32px 이상 ${width}`, async ({
+    page
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await openChatTest(page);
+    await page.getByRole('button', { name: GO }).click();
+    const dialog = chat(page);
+    await expect(dialog.locator('.ai-notice')).toHaveText(NOTICE);
+    await expectNoticeFits(dialog, width);
+    const ib = await dialog.getByRole('button', { name: '안내 자세히' }).boundingBox();
+    expect(Math.min(ib.width, ib.height)).toBeGreaterThanOrEqual(32);
+    expect(await dialog.evaluate((d) => d.scrollWidth <= d.clientWidth)).toBe(true);
+  });
+}
+
+test('첫 화면 추천 질문 5개 규칙: 미분류 0원·비교 달 없음·인건비·월세 0원일 때 바꾸거나 뺀다', async ({
+  page
+}) => {
+  await openChatTest(page);
+  const s = await page.evaluate(() => chatSummary());
+  const first = (sum) => page.evaluate((x) => chatFirstChips(x), sum);
+  const cats = (list) => ({ ...s, current: { ...s.current, categories: list } });
+  const base = {
+    ...cats([
+      { label: '식자재', amount: 1000, ratio: 0.1 },
+      { label: '인건비', amount: 2000, ratio: 0.2 },
+      { label: '월세', amount: 500, ratio: 0.05 }
+    ]),
+    previous: s.previous.length ? s.previous : [{ ...s.current, month: '2023-07', complete: true }]
+  };
+  base.current.unknown = 1000;
+  const FULL = [
+    { topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적나요?' },
+    { topic: '지출비율', text: '인건비는 매출의 몇 %인가요?' },
+    { topic: '지출구성', text: '월세·공과금은 얼마 나갔나요?' },
+    { topic: '기간비교', text: '지난달보다 뭐가 달라졌나요?' },
+    { topic: '미분류', text: '아직 안 정한 돈은 무엇인가요?' }
+  ];
+  expect(await first(base)).toEqual(FULL);
+  // 아직 안 정한 돈 0원 → 미분류 대신 「어느 항목에 가장 많이 썼나요?」
+  expect(await first({ ...base, current: { ...base.current, unknown: 0 } })).toEqual([
+    ...FULL.slice(0, 4),
+    { topic: '지출구성', text: '어느 항목에 가장 많이 썼나요?' }
+  ]);
+  // 비교할 이전 달 없음 → 기간비교 대신 「차액은 무슨 뜻인가요?」
+  expect(await first({ ...base, previous: [] })).toEqual([
+    ...FULL.slice(0, 3),
+    { topic: '용어', text: '차액은 무슨 뜻인가요?' },
+    FULL[4]
+  ]);
+  // 인건비·월세가 0원(또는 없음)이면 그 칩은 빼고 남은 것만
+  const noLabor = {
+    ...base,
+    current: {
+      ...base.current,
+      categories: base.current.categories.filter((c) => c.label !== '인건비')
+    }
+  };
+  expect(await first(noLabor)).toEqual([FULL[0], FULL[2], FULL[3], FULL[4]]);
+  const zeroRent = {
+    ...base,
+    current: {
+      ...base.current,
+      categories: base.current.categories.map((c) => (c.label === '월세' ? { ...c, amount: 0 } : c))
+    }
+  };
+  expect(await first(zeroRent)).toEqual([FULL[0], FULL[1], FULL[3], FULL[4]]);
+  // 업종별 이름(급여·임차료)도 같은 항목으로 본다
+  const renamed = {
+    ...base,
+    current: {
+      ...base.current,
+      categories: [
+        { label: '급여', amount: 2000, ratio: 0.2 },
+        { label: '임차료', amount: 500, ratio: 0.05 }
+      ]
+    }
+  };
+  expect(await first(renamed)).toEqual(FULL);
+  // 새 칩 문장도 그대로 보내면 칩 주제, 직접 쓰면 낱말로 같은 주제
+  for (const c of FULL.concat([{ topic: '지출구성', text: '어느 항목에 가장 많이 썼나요?' }])) {
+    expect(await page.evaluate((x) => chatTopicOf(x.text, x), c)).toEqual({
+      topic: c.topic,
+      source: 'chip'
+    });
+    expect(await page.evaluate((x) => chatTopicOf(x, null), c.text)).toEqual({
+      topic: c.topic,
+      source: 'typed'
+    });
+  }
 });
