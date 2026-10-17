@@ -16,7 +16,13 @@ import worker, {
   weeklyTopics,
   MODELS
 } from '../chat/src/index.js';
-import { TOPIC_WORDS, topicOf, checkAnswer, fallbackAnswer } from '../chat/src/answers.js';
+import {
+  TOPIC_WORDS,
+  topicOf,
+  checkAnswer,
+  fallbackAnswer,
+  fixedAnswer
+} from '../chat/src/answers.js';
 
 const ORIGIN = 'https://app.namneundon.com';
 const token = 'a'.repeat(64);
@@ -882,4 +888,223 @@ test('주제 낱말 규칙은 앱(17-chat.js)과 서버(answers.js)가 같다', 
     ['번 돈은 느는데 왜 남는 게 적어?', '운영판단']
   ])
     expect(topicOf(q)).toBe(t);
+});
+
+// ── 124-6: 칸 문구 존댓말 · 「왜 남는 게 적나요」 정해진 답 · 달-숫자 짝 검사 · AI 에는 바로 앞 달 하나 ──
+const mon = (m, o = {}) => {
+  const x = { ...month(), month: m, dataEnd: m + '-28', ...o };
+  x.sales = x.earned;
+  x.difference = x.earned - x.spent;
+  return x;
+};
+const FEB = mon('2025-02', {
+  earned: 600000,
+  spent: 400000,
+  categories: [{ label: '인건비', amount: 400000, ratio: null }]
+});
+const MAR = mon('2025-03', {
+  earned: 800000,
+  spent: 500000,
+  categories: [
+    { label: '인건비', amount: 300000, ratio: null },
+    { label: '월세', amount: 200000, ratio: null }
+  ]
+});
+const APR = mon('2025-04', {
+  dataEnd: '2025-04-30',
+  earned: 1000000,
+  spent: 950000,
+  unknown: 200000,
+  categories: [
+    { label: '인건비', amount: 500000, ratio: null },
+    { label: '월세', amount: 300000, ratio: null },
+    { label: '보험', amount: 150000, ratio: null }
+  ]
+});
+const sum6 = (current = APR, previous = [FEB, MAR]) => ({ industry: '약국', current, previous });
+test('질문 칸(존댓말)과 옛 반말 문구, 직접 친 질문 모두 같은 주제·같은 정해진 답', () => {
+  const ctx = vm.createContext({
+    URLSearchParams,
+    location: { search: '' },
+    lsGet: () => null,
+    lsSet: () => true,
+    lsDel: () => {},
+    history: {}
+  });
+  vm.runInContext(readFileSync(new URL('../app/src/17-chat.js', import.meta.url), 'utf8'), ctx);
+  const summary = sum6();
+  expect(JSON.parse(JSON.stringify(ctx.chatFirstChips(summary)))).toEqual([
+    { topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적나요?' },
+    { topic: '지출비율', text: '인건비는 매출의 몇 %인가요?' },
+    { topic: '지출구성', text: '월세·공과금은 얼마 나갔나요?' },
+    { topic: '기간비교', text: '지난달보다 뭐가 달라졌나요?' },
+    { topic: '미분류', text: '아직 안 정한 돈은 무엇인가요?' }
+  ]);
+  expect(ctx.CHAT_TOPIC_CHIPS.지출구성).toBe('어느 항목에 가장 많이 썼나요?');
+  expect(ctx.CHAT_TOPIC_CHIPS.용어).toBe('차액은 무슨 뜻인가요?');
+  for (const [topic, fixed, ...texts] of [
+    [
+      '운영판단',
+      '왜 남는 게 적은지',
+      '번 돈은 느는데 왜 남는 게 적나요?',
+      '번 돈은 느는데 왜 남는 게 적어?',
+      '왜 이렇게 남는 게 적지'
+    ],
+    [
+      '지출비율',
+      '인건비',
+      '인건비는 매출의 몇 %인가요?',
+      '인건비는 매출의 몇 %야?',
+      '인건비 비율 알려줘'
+    ],
+    [
+      '지출구성',
+      '월세·공과금',
+      '월세·공과금은 얼마 나갔나요?',
+      '월세·공과금은 얼마 나갔어?',
+      '월세 얼마 나갔지'
+    ],
+    [
+      '지출구성',
+      '가장 많이 쓴 항목',
+      '어느 항목에 가장 많이 썼나요?',
+      '어느 항목에 가장 많이 썼어?',
+      '어디에 썼는지 알려줘'
+    ],
+    [
+      '미분류',
+      '아직 안 정한 돈',
+      '아직 안 정한 돈은 무엇인가요?',
+      '아직 안 정한 돈은 뭐야?',
+      '미분류가 뭐예요'
+    ],
+    [
+      '기간비교',
+      null,
+      '지난달보다 뭐가 달라졌나요?',
+      '지난달보다 뭐가 달라졌어?',
+      '전달이랑 비교해 줘'
+    ],
+    ['용어', null, '차액은 무슨 뜻인가요?', '차액은 무슨 뜻이야?']
+  ])
+    for (const q of texts) {
+      expect(topicOf(q), q).toBe(topic);
+      expect(ctx.chatTopicOf(q).topic, q).toBe(topic); // 앱도 같은 주제
+      expect(fixedAnswer(q, summary)?.kind ?? null, q).toBe(fixed);
+    }
+  // 운영판단이라도 「나아졌나요」는 AI 로 간다
+  expect(fixedAnswer('이번 달 결과, 지난달보다 나아졌나요?', summary)).toBe(null);
+});
+test('「번 돈은 느는데 왜 남는 게 적나요?」는 정해진 답 — 전제 확인, 두 달 나란히, 많이 늘어난 지출 둘, AI 0', async () => {
+  const s = setup();
+  const q = (summary, question = '번 돈은 느는데 왜 남는 게 적나요?') =>
+    worker.fetch(request({ question, summary, share: false }), s.env).then((r) => r.json());
+  // 전제가 맞음(번 돈 늘고 차액 줄음). 앞 달은 가장 늦은 3월. 아직 안 정한 돈이 쓴 돈의 10% 이상이면 적는다
+  const ok = await q(sum6());
+  expect(ok).toEqual({
+    answer:
+      '4월 사업으로 번 돈은 3월보다 늘었고, 차액은 줄었습니다.\n' +
+      '- 4월: 사업으로 번 돈 1,000,000원, 사업에 쓴 돈 950,000원, 차액 50,000원\n' +
+      '- 3월: 사업으로 번 돈 800,000원, 사업에 쓴 돈 500,000원, 차액 300,000원\n' +
+      '3월보다 많이 늘어난 지출 항목입니다.\n' +
+      '- 인건비: 4월 500,000원, 3월 300,000원\n' +
+      '- 보험: 4월 150,000원, 3월 0원\n' +
+      '4월 아직 안 정한 돈 200,000원이 있어, 거래처를 정하시면 항목별 금액이 달라질 수 있습니다.',
+    saved: false,
+    source: 'fixed'
+  });
+  expect(ok.answer).not.toContain('때문');
+  expect(ok.answer).not.toMatch(/가장\s*큰[^\n]*아직 안 정한/);
+  expect(checkAnswer(ok.answer, sum6()).ok).toBe(true);
+  // 반말 옛 문구도 같은 답
+  expect((await q(sum6(), '번 돈은 느는데 왜 남는 게 적어?')).answer).toBe(ok.answer);
+  // 전제가 다르면 실제 움직임을 그대로. 아직 안 정한 돈이 작으면 적지 않는다
+  const down = mon('2025-04', { earned: 700000, spent: 950000, categories: APR.categories });
+  const other = (await q(sum6(down))).answer;
+  expect(other.split('\n')[0]).toBe(
+    '질문과 달리 4월 사업으로 번 돈은 3월보다 줄었고, 차액은 줄었습니다.'
+  );
+  expect(other).not.toContain('아직 안 정한 돈');
+  // 중간 달이면 기준일 안내를 먼저, 이번 달 줄에 기준일
+  const mid = { ...APR, dataEnd: '2025-04-22', complete: false };
+  const midAnswer = (await q(sum6(mid))).answer.split('\n');
+  expect(midAnswer[0]).toBe(
+    '이번 달은 22일까지의 자료라 지난달 한 달 전체와 바로 비교하기 어렵습니다.'
+  );
+  expect(midAnswer[2]).toBe(
+    '- 4월(22일까지): 사업으로 번 돈 1,000,000원, 사업에 쓴 돈 950,000원, 차액 50,000원'
+  );
+  expect(checkAnswer(midAnswer.join('\n'), sum6(mid)).ok).toBe(true);
+  // 비교할 앞 달이 없으면 이번 달 숫자만
+  expect((await q(sum6(APR, []))).answer.split('\n').slice(0, 2)).toEqual([
+    '비교할 앞 달(한 달 전체 자료)이 요약에 없어 4월 숫자만 보여 드립니다.',
+    '- 4월: 사업으로 번 돈 1,000,000원, 사업에 쓴 돈 950,000원, 차액 50,000원'
+  ]);
+  expect(s.calls()).toBe(0);
+  expect(usageRows(s)).toEqual([]);
+  s.sql.close();
+});
+test('AI 에는 선택한 달과 바로 앞 달 하나만 보내고, 검사·대체 답도 그 요약으로', async () => {
+  const s = setup();
+  let sent;
+  let reply = '';
+  /** @type {any} */ (s.env.AI).run = async (model, input) => {
+    sent = input;
+    return { response: reply, usage: { prompt_tokens: 1000, completion_tokens: 100 } };
+  };
+  const send = (question) =>
+    worker.fetch(request({ question, summary: sum6(), share: false }), s.env).then((r) => r.json());
+  reply = '지난달과 비교했을 때, 사업으로 번 돈은 800,000원에서 1,000,000원으로 늘었습니다.';
+  expect(await send('지난달보다 뭐가 달라졌나요?')).toEqual({
+    answer: reply,
+    saved: false,
+    source: 'ai'
+  });
+  const user = JSON.parse(sent.messages.find((m) => m.role === 'user').content);
+  expect(user.summary.previous.map((m) => m.month)).toEqual(['2025-03']);
+  expect(user.summary.current).toEqual(APR);
+  // AI 가 보지 못한 2월 숫자를 쓰면 버린다
+  reply = '2월 사업으로 번 돈은 600,000원입니다.';
+  const fb = await send('지난달보다 뭐가 달라졌나요?');
+  expect(fb.source).toBe('fallback');
+  expect(fb.answer.split('\n').slice(0, 2)).toEqual([
+    '2025년 4월: 사업으로 번 돈 1,000,000원, 사업에 쓴 돈 950,000원, 차액 50,000원',
+    '2025년 3월: 사업으로 번 돈 800,000원, 사업에 쓴 돈 500,000원, 차액 300,000원'
+  ]);
+  s.sql.close();
+});
+test('달-숫자 짝 검사: 「지난달」「○월」과 함께 쓴 번 돈·쓴 돈·차액이 그 달 값이 아니면 버린다', () => {
+  const summary = sum6();
+  // 백테스트 2차 #3·#5 꼴 — 「지난달」(3월)이라며 2월 숫자
+  for (const bad of [
+    '지난달과 비교했을 때, 사업으로 번 돈은 600,000원에서 1,000,000원으로 늘었습니다.',
+    '지난달 사업으로 번 돈은 600,000원, 사업에 쓴 돈은 400,000원이었습니다.',
+    '3월 사업에 쓴 돈은 950,000원입니다.',
+    '이번 달 차액은 300,000원입니다.',
+    '사업으로 번 돈은 3월 600,000원에서 4월 1,000,000원으로 늘었습니다.'
+  ]) {
+    const r = checkAnswer(bad, summary);
+    expect(r.ok, bad).toBe(false);
+    expect(
+      r.problems.some((p) => p.startsWith('달-숫자')),
+      bad
+    ).toBe(true);
+  }
+  for (const good of [
+    '지난달과 비교했을 때, 사업으로 번 돈은 800,000원에서 1,000,000원으로 늘었습니다. 사업에 쓴 돈은 500,000원에서 950,000원으로 늘었습니다.',
+    '사업으로 번 돈은 3월 800,000원에서 4월 1,000,000원으로 늘었습니다.',
+    '4월 1,000,000원 사업으로 번 돈, 950,000원 사업에 쓴 돈, 50,000원 차액입니다.',
+    '3월:\n- 사업으로 번 돈: 800,000원\n- 차액: 300,000원\n\n4월:\n- 사업으로 번 돈: 1,000,000원\n- 차액: 50,000원',
+    '4월 사업으로 번 돈 1,000,000원, 보험 150,000원, 인건비 500,000원입니다.',
+    '2월 사업으로 번 돈은 600,000원, 3월은 800,000원입니다.'
+  ])
+    expect(checkAnswer(good, summary), good).toEqual({ ok: true, problems: [] });
+  // 1월의 지난달은 앞 해 12월
+  const jan = sum6(mon('2025-01', { earned: 1000000, spent: 950000 }), [
+    mon('2024-12', { earned: 800000, spent: 500000 })
+  ]);
+  expect(checkAnswer('지난달 사업으로 번 돈은 800,000원입니다.', jan).ok).toBe(true);
+  expect(checkAnswer('지난달 사업으로 번 돈은 1,000,000원입니다.', jan).ok).toBe(false);
+  // 바로 앞 달이 요약에 없으면 「지난달」 금액은 틀린 것으로 본다
+  expect(checkAnswer('지난달 사업으로 번 돈은 600,000원입니다.', sum6(APR, [FEB])).ok).toBe(false);
 });

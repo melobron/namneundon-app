@@ -1,23 +1,23 @@
 import { test, expect } from '@playwright/test';
 import { openApp, collectNumbers } from './helpers.mjs';
 import { ADMIN, TOPICS } from '../chat/src/index.js';
-const GO = 'AI에게 결과 묻기';
+const GO = '남는돈 AI 비서에게 묻기';
 // 124 시험 기간 주소(?aikey=)에 쓰던 모양의 가짜 키. 124-5 공개 뒤에는 무시하고 주소창에서 지운다.
 const KEY = 'fake1screen1test1key';
 const CLOSED = '오늘 AI 질문이 모두 마감됐습니다. 내일 오전 9시 이후 다시 물어봐 주세요.';
 const PRIVACY = 'https://namneundon.com/privacy/#policy';
 const WELCOME = '보고 계신 결과에서 궁금한 점을 물어보세요.';
 const CHIP = {
-  운영판단: '이번 달 결과, 지난달보다 나아졌어?',
-  용어: '차액은 무슨 뜻이야?',
-  잔액차이: '차액과 통장 잔액은 왜 달라?',
-  기간비교: '지난달보다 뭐가 달라졌어?',
-  지출구성: '어느 항목에 가장 많이 썼어?',
-  지출비율: '재료 비율은 어떻게 계산해?',
-  미분류: '아직 안 정한 돈은 뭐야?',
-  자료범위: '이 자료로 한 달 전체를 비교해도 돼?',
-  업종비교: '같은 업종과 비교하면 어느 수준이야?',
-  앞으로지출: '다음 달 큰 지출을 해도 될까?'
+  운영판단: '이번 달 결과, 지난달보다 나아졌나요?',
+  용어: '차액은 무슨 뜻인가요?',
+  잔액차이: '차액과 통장 잔액은 왜 다른가요?',
+  기간비교: '지난달보다 뭐가 달라졌나요?',
+  지출구성: '어느 항목에 가장 많이 썼나요?',
+  지출비율: '재료 비율은 어떻게 계산하나요?',
+  미분류: '아직 안 정한 돈은 무엇인가요?',
+  자료범위: '이 자료로 한 달 전체를 비교해도 되나요?',
+  업종비교: '같은 업종과 비교하면 어느 수준인가요?',
+  앞으로지출: '다음 달 큰 지출을 해도 될까요?'
 };
 const FINE = 'AI 답변은 틀릴 수 있습니다. 질문에 계좌번호·연락처 같은 개인정보는 적지 마세요.';
 const NOTICE =
@@ -387,7 +387,7 @@ for (const width of [360, 390]) {
   });
 }
 
-test('채팅 첫 화면: 남는돈 AI · 베타 · 닫기, 첫 말풍선과 추천 칩, 입력 칸 위 안내 한 줄과 ⓘ — 닫기·뒤로 가기는 전송·삭제 없음', async ({
+test('채팅 첫 화면: 남는돈 AI 비서 · 베타 · 닫기, 첫 말풍선과 추천 칩, 입력 칸 위 안내 한 줄과 ⓘ — 닫기·뒤로 가기는 전송·삭제 없음', async ({
   page
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -398,7 +398,7 @@ test('채팅 첫 화면: 남는돈 AI · 베타 · 닫기, 첫 말풍선과 추�
   const dialog = chat(page);
   await expect(dialog).toBeVisible();
   await expect(page.locator('.ai-fab')).toBeHidden();
-  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('남는돈 AI');
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('남는돈 AI 비서');
   await expect(dialog.locator('.ai-badge')).toHaveText('베타');
   await expect(dialog.getByRole('button', { name: '닫기' })).toBeVisible();
   await expect(dialog.locator('.ai-log > .ai-bot').first()).toHaveText(WELCOME);
@@ -872,22 +872,22 @@ test('첫 화면 추천 질문 5개 규칙: 미분류 0원·비교 달 없음·�
   };
   base.current.unknown = 1000;
   const FULL = [
-    { topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적어?' },
-    { topic: '지출비율', text: '인건비는 매출의 몇 %야?' },
-    { topic: '지출구성', text: '월세·공과금은 얼마 나갔어?' },
-    { topic: '기간비교', text: '지난달보다 뭐가 달라졌어?' },
-    { topic: '미분류', text: '아직 안 정한 돈은 뭐야?' }
+    { topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적나요?' },
+    { topic: '지출비율', text: '인건비는 매출의 몇 %인가요?' },
+    { topic: '지출구성', text: '월세·공과금은 얼마 나갔나요?' },
+    { topic: '기간비교', text: '지난달보다 뭐가 달라졌나요?' },
+    { topic: '미분류', text: '아직 안 정한 돈은 무엇인가요?' }
   ];
   expect(await first(base)).toEqual(FULL);
-  // 아직 안 정한 돈 0원 → 미분류 대신 「어느 항목에 가장 많이 썼어?」
+  // 아직 안 정한 돈 0원 → 미분류 대신 「어느 항목에 가장 많이 썼나요?」
   expect(await first({ ...base, current: { ...base.current, unknown: 0 } })).toEqual([
     ...FULL.slice(0, 4),
-    { topic: '지출구성', text: '어느 항목에 가장 많이 썼어?' }
+    { topic: '지출구성', text: '어느 항목에 가장 많이 썼나요?' }
   ]);
-  // 비교할 이전 달 없음 → 기간비교 대신 「차액은 무슨 뜻이야?」
+  // 비교할 이전 달 없음 → 기간비교 대신 「차액은 무슨 뜻인가요?」
   expect(await first({ ...base, previous: [] })).toEqual([
     ...FULL.slice(0, 3),
-    { topic: '용어', text: '차액은 무슨 뜻이야?' },
+    { topic: '용어', text: '차액은 무슨 뜻인가요?' },
     FULL[4]
   ]);
   // 인건비·월세가 0원(또는 없음)이면 그 칩은 빼고 남은 것만
@@ -920,7 +920,7 @@ test('첫 화면 추천 질문 5개 규칙: 미분류 0원·비교 달 없음·�
   };
   expect(await first(renamed)).toEqual(FULL);
   // 새 칩 문장도 그대로 보내면 칩 주제, 직접 쓰면 낱말로 같은 주제
-  for (const c of FULL.concat([{ topic: '지출구성', text: '어느 항목에 가장 많이 썼어?' }])) {
+  for (const c of FULL.concat([{ topic: '지출구성', text: '어느 항목에 가장 많이 썼나요?' }])) {
     expect(await page.evaluate((x) => chatTopicOf(x.text, x), c)).toEqual({
       topic: c.topic,
       source: 'chip'

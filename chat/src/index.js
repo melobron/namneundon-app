@@ -1,4 +1,4 @@
-import { fixedAnswer, checkAnswer, fallbackAnswer } from './answers.js';
+import { fixedAnswer, checkAnswer, fallbackAnswer, latestPrevious } from './answers.js';
 // 모델은 검증방 실측 후 환경 변수로 선택한다. 값이 없으면 실제 호출을 막는다.
 export const MODELS = {
   '@cf/mistralai/mistral-small-3.1-24b-instruct': { input: 31876, output: 50488 },
@@ -278,7 +278,7 @@ async function chat(request, env) {
     return reply({ error: 'invalid_body' }, 400);
   const owner = share ? await hashToken(request) : null;
   if (share && !owner) return reply({ error: 'delete_key_required' }, 400);
-  // 정해진 답(인건비 비율 · 월세·공과금 · 가장 많이 쓴 항목 · 아직 안 정한 돈)은 AI 없이 요약에서 바로 만든다
+  // 정해진 답(인건비 비율 · 월세·공과금 · 가장 많이 쓴 항목 · 아직 안 정한 돈 · 왜 남는 게 적은지)은 AI 없이 요약에서 바로 만든다
   const fixed = fixedAnswer(body.question, body.summary);
   if (fixed) {
     if (share) await saveConversation(env, body, owner, fixed.answer);
@@ -286,9 +286,13 @@ async function chat(request, env) {
   }
   const rate = MODELS[env.CHAT_MODEL];
   if (!rate) return reply({ error: 'model_not_configured' }, 503);
+  // AI 에게는 선택한 달과 바로 앞 달 하나만 보낸다(앱이 보내는 형식은 그대로). 앞 달 셋을 보내면 가운데 달을
+  // 「지난달」로 쓴 답이 나왔다(백테스트 2차). 숫자 검사·대체 답도 AI 가 본 요약으로 한다.
+  const prev = latestPrevious(body.summary);
+  const aiSummary = { ...body.summary, previous: prev ? [prev] : [] };
   const messages = [
     { role: 'system', content: SYSTEM },
-    { role: 'user', content: JSON.stringify({ question: body.question, summary: body.summary }) }
+    { role: 'user', content: JSON.stringify({ question: body.question, summary: aiSummary }) }
   ];
   // UTF-8 바이트 수에 템플릿 여유를 더해 입력 토큰의 보수적 상한을 예약한다.
   const inputBound = new TextEncoder().encode(JSON.stringify(messages)).length + 2048;
@@ -327,8 +331,8 @@ async function chat(request, env) {
     return reply({ error: 'invalid_ai_response' }, 502);
   // 요약에 없는 금액·비율·날짜가 있거나 아직 안 정한 돈을 「가장 큰 항목」으로 말하면 버리고 대체 답.
   // 버린 답 원문은 어디에도 남기지 않는다(운영자 확인을 켠 경우에도 대체 답만 저장).
-  const check = checkAnswer(result.response, body.summary);
-  const answer = check.ok ? result.response.slice(0, 4000) : fallbackAnswer(body.summary);
+  const check = checkAnswer(result.response, aiSummary);
+  const answer = check.ok ? result.response.slice(0, 4000) : fallbackAnswer(aiSummary);
   if (share) await saveConversation(env, body, owner, answer);
   return reply({ answer, saved: share, source: check.ok ? 'ai' : 'fallback' });
 }

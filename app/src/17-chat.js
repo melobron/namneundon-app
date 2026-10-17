@@ -148,16 +148,16 @@ var CHAT_CLOSED = '오늘 AI 질문이 모두 마감됐습니다. 내일 오전 
 /* 주제 코드(고정, 서버 TOPICS 와 같다)와 예상 질문. 칩은 질문 칸을 채우기만 하고 자동으로 보내지 않는다.
    AI 가 추천 질문을 만들지 않는다 — 브라우저가 자료 상태로 고른다. */
 var CHAT_TOPIC_CHIPS = {
-  운영판단: '이번 달 결과, 지난달보다 나아졌어?',
-  용어: '차액은 무슨 뜻이야?',
-  잔액차이: '차액과 통장 잔액은 왜 달라?',
-  기간비교: '지난달보다 뭐가 달라졌어?',
-  지출구성: '어느 항목에 가장 많이 썼어?',
-  지출비율: '재료 비율은 어떻게 계산해?',
-  미분류: '아직 안 정한 돈은 뭐야?',
-  자료범위: '이 자료로 한 달 전체를 비교해도 돼?',
-  업종비교: '같은 업종과 비교하면 어느 수준이야?',
-  앞으로지출: '다음 달 큰 지출을 해도 될까?'
+  운영판단: '이번 달 결과, 지난달보다 나아졌나요?',
+  용어: '차액은 무슨 뜻인가요?',
+  잔액차이: '차액과 통장 잔액은 왜 다른가요?',
+  기간비교: '지난달보다 뭐가 달라졌나요?',
+  지출구성: '어느 항목에 가장 많이 썼나요?',
+  지출비율: '재료 비율은 어떻게 계산하나요?',
+  미분류: '아직 안 정한 돈은 무엇인가요?',
+  자료범위: '이 자료로 한 달 전체를 비교해도 되나요?',
+  업종비교: '같은 업종과 비교하면 어느 수준인가요?',
+  앞으로지출: '다음 달 큰 지출을 해도 될까요?'
 };
 /* 추천 순서: 아직 안 정한 돈이 있으면 미분류가 먼저, 비교할 이전 달(전체 기간 확보)이 있을 때만 기간비교,
    나머지는 용어 · 지출구성 · 잔액차이. 업종비교·앞으로지출은 추천하지 않는다. skip 은 방금 물은 주제. */
@@ -173,8 +173,8 @@ function chatPickChips(summary, skip, max) {
     .slice(0, max);
 }
 /* 첫 화면 추천 질문(최대 5개). 자료 상태로 고르고, 문장마다 주제 코드를 붙인다.
-   - 아직 안 정한 돈이 0원이면 미분류 대신 「어느 항목에 가장 많이 썼어?」
-   - 비교할 이전 달(전체 기간 확보)이 없으면 기간비교 대신 「차액은 무슨 뜻이야?」
+   - 아직 안 정한 돈이 0원이면 미분류 대신 「어느 항목에 가장 많이 썼나요?」
+   - 비교할 이전 달(전체 기간 확보)이 없으면 기간비교 대신 「차액은 무슨 뜻인가요?」
    - 인건비·월세 항목이 0원이면 그 칩은 빼고 남은 것만 둔다(업종별 이름 — 급여·임차료 — 도 같은 항목으로 본다). */
 function chatCatAmount(month, labels) {
   return month.categories
@@ -187,11 +187,11 @@ function chatCatAmount(month, labels) {
 }
 function chatFirstChips(summary) {
   var cur = summary.current;
-  var list = [{ topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적어?' }];
+  var list = [{ topic: '운영판단', text: '번 돈은 느는데 왜 남는 게 적나요?' }];
   if (chatCatAmount(cur, ['인건비', '급여']) > 0)
-    list.push({ topic: '지출비율', text: '인건비는 매출의 몇 %야?' });
+    list.push({ topic: '지출비율', text: '인건비는 매출의 몇 %인가요?' });
   if (chatCatAmount(cur, ['월세', '임차료']) > 0)
-    list.push({ topic: '지출구성', text: '월세·공과금은 얼마 나갔어?' });
+    list.push({ topic: '지출구성', text: '월세·공과금은 얼마 나갔나요?' });
   list.push(
     summary.previous.length
       ? { topic: '기간비교', text: CHAT_TOPIC_CHIPS.기간비교 }
@@ -256,9 +256,9 @@ function drawChatButton(host) {
   if (!chatEnabled()) return;
   var button = el('button', 'ai-fab');
   button.type = 'button';
-  button.setAttribute('aria-label', 'AI에게 결과 묻기');
+  button.setAttribute('aria-label', '남는돈 AI 비서에게 묻기');
   button.setAttribute('aria-haspopup', 'dialog');
-  button.title = 'AI에게 결과 묻기';
+  button.title = '남는돈 AI 비서에게 묻기';
   var mark = document.createElement('img');
   mark.className = 'ai-fab-mark';
   mark.src = BRAND_MARK;
@@ -374,7 +374,7 @@ function openChat() {
   /* 머리 */
   var head = el('div', 'ai-head');
   var titleBox = el('div', 'ai-title');
-  var title = el('h2', null, '남는돈 AI');
+  var title = el('h2', null, '남는돈 AI 비서');
   title.id = 'ai-chat-title';
   titleBox.appendChild(title);
   titleBox.appendChild(el('span', 'ai-badge', '베타'));
