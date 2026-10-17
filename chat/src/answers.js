@@ -191,6 +191,8 @@ const MONEY =
   /(?:\d[\d,]*(?:\.\d+)?\s*(?:억|천만|백만|만)\s*)+(?:\d[\d,]*\s*)?원?|\d[\d,]*(?:\.\d+)?\s*원|\d{1,3}(?:,\d{3})+(?:\.\d+)?/g;
 const BIGGEST_UNKNOWN =
   /가장\s*(?:큰|많은|많이)[^.\n]{0,25}(?:미분류|아직\s*안\s*정한|정하지\s*않은)|(?:미분류|아직\s*안\s*정한|정하지\s*않은)[^.\n]{0,25}가장\s*(?:큰|많은|많이)/;
+const OTHER_NAME =
+  /순이익|순수익|영업\s*이익|남는\s+돈|(?<![가-힣])(?:이익|수익)(?=[은는이가을를도으로입]|\s|$)|통장/;
 function moneyValue(text) {
   let v = 0;
   for (const m of text.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(억|천만|백만|만)?/g))
@@ -252,6 +254,10 @@ export function checkAnswer(answer, summary) {
     if (![...ends].some((e) => Number(e.slice(8, 10)) === Number(m[1])))
       problems.push('날짜 ' + m[0]);
   if (BIGGEST_UNKNOWN.test(answer)) problems.push('아직 안 정한 돈을 가장 큰 항목으로');
+  // 확정 용어(124-6): 차액은 「차액」으로만, 「통장」은 쓰지 않는다. 바꿔 쓰면 문장이 어색해질 수 있어 고치지 않고 버린다.
+  // 「남는돈」(서비스 이름)은 붙여 쓰므로 띄어 쓴 「남는 돈」만 본다.
+  const term = OTHER_NAME.exec(answer);
+  if (term) problems.push('용어 ' + term[0]);
   problems.push(...monthPairs(answer, summary));
   return { ok: problems.length === 0, problems };
 }
